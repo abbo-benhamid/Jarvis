@@ -1,0 +1,128 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens Koudmen (palette de site/koudmen-carte.html).
+ * Utilise les classes Tailwind générées : bg-mer, text-fg, border-line, bg-soleil-soft…
+ * Le thème sombre suit le système (prefers-color-scheme). Ne code jamais une couleur en dur.
+ */
+:root {
+  --bg: #f3f6f5;
+  --surface: #ffffff;
+  --fg: #13302e;
+  --muted: #4f6865;
+  --line: #cfdcd9;
+  --mer: #0e6b63;
+  --mer-strong: #0a544e;
+  --soleil: #e0a21b;
+  --hibiscus: #c2334d;
+  --feuille: #3a8a3f;
+  --mer-soft: #dcefeb;
+  --soleil-soft: #fbefd2;
+  --hibiscus-soft: #f8dde2;
+  --feuille-soft: #e1f0e1;
+  /* Texte posé sur une couleur pleine */
+  --on-mer: #ffffff;
+  --on-soleil: #13302e;
+  --on-hibiscus: #ffffff;
+  --focus: #e0a21b;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c1a19;
+    --surface: #122523;
+    --fg: #e4efed;
+    --muted: #9db5b1;
+    --line: #24403d;
+    --mer: #4cc3b5;
+    --mer-strong: #7dd8cc;
+    --soleil: #f0bd4f;
+    --hibiscus: #ef6f86;
+    --feuille: #7cc47f;
+    --mer-soft: #163a36;
+    --soleil-soft: #3a2f14;
+    --hibiscus-soft: #3d1c24;
+    --feuille-soft: #1a3a1c;
+    --on-mer: #0c1a19;
+    --on-soleil: #0c1a19;
+    --on-hibiscus: #0c1a19;
+    --focus: #f0bd4f;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-mer: var(--mer);
+  --color-mer-strong: var(--mer-strong);
+  --color-soleil: var(--soleil);
+  --color-hibiscus: var(--hibiscus);
+  --color-feuille: var(--feuille);
+  --color-mer-soft: var(--mer-soft);
+  --color-soleil-soft: var(--soleil-soft);
+  --color-hibiscus-soft: var(--hibiscus-soft);
+  --color-feuille-soft: var(--feuille-soft);
+  --color-on-mer: var(--on-mer);
+  --color-on-soleil: var(--on-soleil);
+  --color-on-hibiscus: var(--on-hibiscus);
+  --font-sans: "Source Sans 3", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+/* Focus visible sur TOUT élément interactif (WCAG 2.4.7 / 2.4.11). */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Bande madras (identité visuelle). */
+.madras {
+  height: 6px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--hibiscus) 0 34px,
+    var(--soleil) 34px 58px,
+    var(--mer) 58px 80px,
+    var(--feuille) 80px 92px
+  );
+}
+
+dialog::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

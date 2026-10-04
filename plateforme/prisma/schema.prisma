@@ -1,0 +1,590 @@
+// Schéma Prisma COMPLET du MVP Koudmen.
+// Source de vérité : docs/tech/specification-mvp.md (§ Modèle de données).
+// ATTENTION : les constructeurs ne modifient pas ce fichier sans accord de l'architecte.
+// Données fictives uniquement pendant les tests. Aucun champ de santé détaillé.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────── Enums ───────────────────────────────
+
+/// Rôle d'un compte. L'aîné n'a pas de compte : c'est un profil (modèle Aine).
+enum Role {
+  FAMILLE
+  ACCOMPAGNANT
+  OPERATEUR
+}
+
+/// Lieu de vie du membre de la famille (diaspora = HEXAGONE ou AUTRE).
+enum FamilyLocation {
+  MARTINIQUE
+  HEXAGONE
+  AUTRE
+}
+
+/// Qui donne le consentement pour l'aîné.
+enum ConsentBy {
+  AINE
+  REPRESENTANT
+}
+
+/// Besoins déclarés (catégories non médicales).
+enum NeedType {
+  COMPAGNIE
+  APPEL_REGULIER
+  COURSES
+  REPAS
+  DEMARCHES
+  NUMERIQUE
+  SORTIES
+  RENDEZ_VOUS
+  AIDE_LEVER
+  AIDE_RENFORCEE
+}
+
+/// Formules (00 § 3). Paiement SIMULÉ dans le MVP.
+enum Plan {
+  LAKOU
+  VEYE
+  SERENITE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  RESILIEE
+}
+
+enum PaymentStatus {
+  SIMULE_REUSSI
+  SIMULE_ECHEC
+}
+
+/// Statuts de l'accompagnant (08 § 2). Le statut décide des niveaux autorisés.
+enum CaregiverStatus {
+  SALARIE_FAMILLE_CESU
+  AUTO_ENTREPRENEUR_SAP
+  PROCHE_AIDANT_APA
+  BENEVOLE_ASSO
+  SAAD
+}
+
+/// Cycle de validation par l'opérateur (revue humaine, motif obligatoire si refus/suspension).
+enum CaregiverValidation {
+  BROUILLON
+  EN_ATTENTE
+  VALIDE
+  REFUSE
+  SUSPENDU
+}
+
+enum TimeSlot {
+  MATIN
+  APRES_MIDI
+  SOIR
+}
+
+enum VerificationType {
+  IDENTITE
+  CASIER_B3
+  REFERENCES
+  FORMATION
+  STATUT_PRO
+  PSC1
+  DIPLOME
+}
+
+enum VerificationStatus {
+  A_FOURNIR
+  DECLARE
+  VALIDE
+  REFUSE
+}
+
+enum Frequency {
+  PONCTUELLE
+  HEBDOMADAIRE
+  DEUX_PAR_SEMAINE
+  QUOTIDIENNE
+}
+
+enum RequestStatus {
+  OUVERTE
+  PROPOSEE
+  POURVUE
+  ANNULEE
+}
+
+/// Une proposition peut être refusée SANS pénalité (anti-requalification).
+enum ProposalStatus {
+  EN_ATTENTE
+  ACCEPTEE
+  REFUSEE
+  ANNULEE
+}
+
+enum MissionStatus {
+  ACTIVE
+  TERMINEE
+  ANNULEE
+}
+
+/// VALIDEE = au moins 2 facteurs de preuve valides sur 3.
+enum VisitStatus {
+  PREVUE
+  EN_COURS
+  VALIDEE
+  A_VERIFIER
+}
+
+enum ProofFactor {
+  GPS
+  CODE_DOMICILE
+  CONFIRMATION_AINE
+}
+
+enum Appetite {
+  BON
+  MOYEN
+  FAIBLE
+  NON_OBSERVE
+}
+
+enum Channel {
+  WHATSAPP
+  SMS
+  EMAIL
+  VOIX
+}
+
+enum OutboxStatus {
+  EN_ATTENTE
+  ENVOYE_SIMULE
+  ECHEC
+}
+
+enum FeedbackStatus {
+  NOUVEAU
+  LU
+  TRAITE
+}
+
+// ─────────────────────────────── Comptes ───────────────────────────────
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  role         Role
+  firstName    String
+  lastName     String
+  phone        String?
+  /// Compte de démonstration seedé (connexion par bouton « Essayer en tant que… »).
+  isDemo       Boolean   @default(false)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  familyProfile    FamilyProfile?
+  caregiverProfile CaregiverProfile?
+
+  ownedAines          Aine[]             @relation("AineOwner")
+  lakouMemberships    LakouMember[]
+  invitationsSent     Invitation[]       @relation("InvitationCreator")
+  invitationsAccepted Invitation[]       @relation("InvitationAcceptor")
+  subscriptionsPaid   Subscription[]
+  careRequests        CareRequest[]
+  proposalsMade       MissionProposal[]  @relation("ProposalOperator")
+  proofsRecorded      VisitProof[]
+  journalEntries      JournalEntry[]
+  verificationReviews VerificationItem[]
+  caregiverReviews    CaregiverProfile[] @relation("CaregiverReviewer")
+  notifications       OutboxMessage[]
+  feedbacks           Feedback[]
+  auditLogs           AuditLog[]
+}
+
+model FamilyProfile {
+  id        String         @id @default(cuid())
+  userId    String         @unique
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location  FamilyLocation
+  city      String?
+  createdAt DateTime       @default(now())
+}
+
+// ─────────────────────────────── Aîné et cercle Lakou ───────────────────────────────
+
+model Aine {
+  id            String     @id @default(cuid())
+  firstName     String
+  /// Initiale du nom seulement (minimisation).
+  lastInitial   String?
+  /// Code commune (voir src/lib/communes.ts), ex. "FORT_DE_FRANCE".
+  commune       String
+  /// Indication d'adresse libre et fictive en test (pas d'adresse exacte obligatoire).
+  addressHint   String?
+  /// Position approximative du domicile (centre de la commune par défaut). Sert au facteur GPS.
+  latitude      Float
+  longitude     Float
+  /// Téléphone fixe ou mobile pour l'appel vocal simulé « tapez 1 ».
+  phone         String?
+  needs         NeedType[]
+  /// Niveau d'activité 1 à 4 (1 Lien, 2 Coups de main, 3 Présence, 4 Aide renforcée).
+  activityLevel Int
+  consentGiven  Boolean
+  consentByType ConsentBy
+  /// Nom de la personne qui consent (l'aîné ou son représentant).
+  consentByName String
+  consentAt     DateTime
+  /// Code domicile à 6 caractères (remplace le QR/NFC dans le MVP).
+  homeCode      String     @unique
+  ownerId       String
+  owner         User       @relation("AineOwner", fields: [ownerId], references: [id])
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  members      LakouMember[]
+  invitations  Invitation[]
+  subscription Subscription?
+  requests     CareRequest[]
+  missions     Mission[]
+  visits       Visit[]
+  journal      JournalEntry[]
+
+  @@index([ownerId])
+}
+
+model LakouMember {
+  id       String   @id @default(cuid())
+  aineId   String
+  aine     Aine     @relation(fields: [aineId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Lien avec l'aîné : « fille », « petit-fils », « voisine »…
+  relation String
+  /// Payeur = gestionnaire principal du profil.
+  isPayer  Boolean  @default(false)
+  joinedAt DateTime @default(now())
+
+  @@unique([aineId, userId])
+  @@index([userId])
+}
+
+model Invitation {
+  id           String    @id @default(cuid())
+  aineId       String
+  aine         Aine      @relation(fields: [aineId], references: [id], onDelete: Cascade)
+  /// Jeton aléatoire du lien d'invitation (/invitation/[token]).
+  token        String    @unique
+  email        String?
+  relation     String
+  createdById  String
+  createdBy    User      @relation("InvitationCreator", fields: [createdById], references: [id])
+  expiresAt    DateTime
+  acceptedAt   DateTime?
+  acceptedById String?
+  acceptedBy   User?     @relation("InvitationAcceptor", fields: [acceptedById], references: [id])
+  createdAt    DateTime  @default(now())
+
+  @@index([aineId])
+}
+
+// ─────────────────────────────── Formules (paiement simulé) ───────────────────────────────
+
+model Subscription {
+  id         String             @id @default(cuid())
+  aineId     String             @unique
+  aine       Aine               @relation(fields: [aineId], references: [id], onDelete: Cascade)
+  payerId    String
+  payer      User               @relation(fields: [payerId], references: [id])
+  plan       Plan
+  /// Prix mensuel en centimes (0 pour LAKOU).
+  priceCents Int
+  status     SubscriptionStatus @default(ACTIVE)
+  startedAt  DateTime           @default(now())
+  endedAt    DateTime?
+  payments   SimulatedPayment[]
+}
+
+model SimulatedPayment {
+  id             String        @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  amountCents    Int
+  status         PaymentStatus
+  /// Toujours « SIMULATION » : aucun prestataire de paiement réel.
+  provider       String        @default("SIMULATION")
+  createdAt      DateTime      @default(now())
+}
+
+// ─────────────────────────────── Accompagnants ───────────────────────────────
+
+model CaregiverProfile {
+  id                 String              @id @default(cuid())
+  userId             String              @unique
+  user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Null tant que l'orientation en 5 questions n'est pas faite.
+  status             CaregiverStatus?
+  /// Réponses brutes des 5 questions (voir src/server/rules/orientation.ts).
+  orientationAnswers Json?
+  /// Niveaux autorisés (1 à 4), calculés par le statut. Recalculés côté serveur.
+  allowedLevels      Int[]
+  /// Diplôme DEAES / ADVF déclaré : ouvre le niveau 4 au salarié de la famille.
+  hasDiploma         Boolean             @default(false)
+  /// Codes commune desservies.
+  communes           String[]
+  /// Tarif horaire LIBRE fixé par l'accompagnant, en centimes. Null pour un bénévole.
+  hourlyRateCents    Int?
+  bio                String?
+  associationName    String?
+  saadName           String?
+  siret              String?
+  validation         CaregiverValidation @default(BROUILLON)
+  /// Motif obligatoire si REFUSE ou SUSPENDU (revue humaine).
+  validationReason   String?
+  reviewedById       String?
+  reviewedBy         User?               @relation("CaregiverReviewer", fields: [reviewedById], references: [id])
+  reviewedAt         DateTime?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  availabilities CaregiverAvailability[]
+  verifications  VerificationItem[]
+  proposals      MissionProposal[]
+  missions       Mission[]
+  visits         Visit[]
+}
+
+model CaregiverAvailability {
+  id          String           @id @default(cuid())
+  caregiverId String
+  caregiver   CaregiverProfile @relation(fields: [caregiverId], references: [id], onDelete: Cascade)
+  /// 0 = lundi … 6 = dimanche.
+  dayOfWeek   Int
+  slot        TimeSlot
+
+  @@unique([caregiverId, dayOfWeek, slot])
+}
+
+model VerificationItem {
+  id           String             @id @default(cuid())
+  caregiverId  String
+  caregiver    CaregiverProfile   @relation(fields: [caregiverId], references: [id], onDelete: Cascade)
+  type         VerificationType
+  status       VerificationStatus @default(A_FOURNIR)
+  /// Déclaration de l'accompagnant (ex. « B3 consulté le … »). Aucune pièce stockée dans le MVP.
+  declaration  String?
+  declaredAt   DateTime?
+  reviewedById String?
+  reviewedBy   User?              @relation(fields: [reviewedById], references: [id])
+  reviewedAt   DateTime?
+  reviewNote   String?
+
+  @@unique([caregiverId, type])
+}
+
+// ─────────────────────────────── Demandes, propositions, missions ───────────────────────────────
+
+model CareRequest {
+  id              String        @id @default(cuid())
+  aineId          String
+  aine            Aine          @relation(fields: [aineId], references: [id], onDelete: Cascade)
+  createdById     String
+  createdBy       User          @relation(fields: [createdById], references: [id])
+  /// Niveau demandé 1 à 4.
+  level           Int
+  frequency       Frequency
+  durationMinutes Int           @default(120)
+  startDate       DateTime?
+  notes           String?
+  status          RequestStatus @default(OUVERTE)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  slots     RequestSlot[]
+  proposals MissionProposal[]
+  mission   Mission?
+
+  @@index([status])
+}
+
+model RequestSlot {
+  id        String      @id @default(cuid())
+  requestId String
+  request   CareRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  dayOfWeek Int
+  slot      TimeSlot
+
+  @@unique([requestId, dayOfWeek, slot])
+}
+
+model MissionProposal {
+  id           String           @id @default(cuid())
+  requestId    String
+  request      CareRequest      @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  caregiverId  String
+  caregiver    CaregiverProfile @relation(fields: [caregiverId], references: [id], onDelete: Cascade)
+  proposedById String
+  proposedBy   User             @relation("ProposalOperator", fields: [proposedById], references: [id])
+  message      String?
+  status       ProposalStatus   @default(EN_ATTENTE)
+  /// Motif FACULTATIF. Un refus n'a jamais d'effet sur le profil.
+  declineNote  String?
+  respondedAt  DateTime?
+  createdAt    DateTime         @default(now())
+  mission      Mission?
+
+  @@unique([requestId, caregiverId])
+  @@index([caregiverId, status])
+}
+
+model Mission {
+  id              String           @id @default(cuid())
+  requestId       String           @unique
+  request         CareRequest      @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  proposalId      String           @unique
+  proposal        MissionProposal  @relation(fields: [proposalId], references: [id])
+  aineId          String
+  aine            Aine             @relation(fields: [aineId], references: [id], onDelete: Cascade)
+  caregiverId     String
+  caregiver       CaregiverProfile @relation(fields: [caregiverId], references: [id])
+  /// Copie du tarif libre de l'accompagnant au moment de l'acceptation.
+  hourlyRateCents Int?
+  status          MissionStatus    @default(ACTIVE)
+  createdAt       DateTime         @default(now())
+  visits          Visit[]
+
+  @@index([caregiverId])
+  @@index([aineId])
+}
+
+// ─────────────────────────────── Visites et preuve 2 sur 3 ───────────────────────────────
+
+model Visit {
+  id             String           @id @default(cuid())
+  missionId      String
+  mission        Mission          @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  aineId         String
+  aine           Aine             @relation(fields: [aineId], references: [id], onDelete: Cascade)
+  caregiverId    String
+  caregiver      CaregiverProfile @relation(fields: [caregiverId], references: [id])
+  scheduledStart DateTime
+  scheduledEnd   DateTime
+  status         VisitStatus      @default(PREVUE)
+  checkInAt      DateTime?
+  checkOutAt     DateTime?
+  /// Nombre de facteurs valides (0 à 3). Recalculé par computeVisitProof().
+  proofScore     Int              @default(0)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  proofs  VisitProof[]
+  journal JournalEntry?
+
+  @@index([aineId, scheduledStart])
+  @@index([caregiverId, scheduledStart])
+}
+
+model VisitProof {
+  id             String      @id @default(cuid())
+  visitId        String
+  visit          Visit       @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  factor         ProofFactor
+  valid          Boolean
+  /// true si le facteur est simulé (appel vocal simulé, position de test).
+  simulated      Boolean     @default(false)
+  /// GPS : UNE seule position au check-in, consentie. Jamais de suivi continu.
+  latitude       Float?
+  longitude      Float?
+  accuracyMeters Float?
+  distanceMeters Float?
+  details        String?
+  recordedById   String?
+  recordedBy     User?       @relation(fields: [recordedById], references: [id])
+  recordedAt     DateTime    @default(now())
+
+  @@unique([visitId, factor])
+}
+
+// ─────────────────────────────── Journal Kayé ───────────────────────────────
+
+model JournalEntry {
+  id         String   @id @default(cuid())
+  visitId    String   @unique
+  visit      Visit    @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  aineId     String
+  aine       Aine     @relation(fields: [aineId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id])
+  /// Humeur 1 (très bas) à 5 (très bien).
+  mood       Int
+  activities String[]
+  appetite   Appetite
+  note       String?
+  /// Signal « à surveiller » (NON médical).
+  alertFlag  Boolean  @default(false)
+  alertNote  String?
+  createdAt  DateTime @default(now())
+
+  @@index([aineId, createdAt])
+}
+
+// ─────────────────────────────── Transverse ───────────────────────────────
+
+/// Notifications simulées : rien ne part réellement. L'opérateur voit la boîte d'envoi.
+model OutboxMessage {
+  id              String       @id @default(cuid())
+  channel         Channel
+  /// Destinataire affiché (téléphone ou email fictif).
+  to              String
+  recipientUserId String?
+  recipient       User?        @relation(fields: [recipientUserId], references: [id], onDelete: SetNull)
+  template        String
+  subject         String?
+  body            String
+  status          OutboxStatus @default(ENVOYE_SIMULE)
+  relatedType     String?
+  relatedId       String?
+  createdAt       DateTime     @default(now())
+  sentAt          DateTime?
+
+  @@index([createdAt])
+}
+
+model Feedback {
+  id        String         @id @default(cuid())
+  userId    String?
+  user      User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  role      Role?
+  /// Note 1 à 5.
+  rating    Int
+  message   String
+  pagePath  String
+  userAgent String?
+  status    FeedbackStatus @default(NOUVEAU)
+  createdAt DateTime       @default(now())
+
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  actorRole  Role?
+  /// Action en notation pointée, ex. "caregiver.validate", "visit.proof.elder_confirmed".
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}

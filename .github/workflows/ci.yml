@@ -1,0 +1,87 @@
+name: CI plateforme
+
+on:
+  push:
+    branches: ["**"]
+    paths: ["plateforme/**", ".github/workflows/ci.yml"]
+  pull_request:
+    paths: ["plateforme/**", ".github/workflows/ci.yml"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: plateforme
+
+jobs:
+  verifier:
+    name: Lint, types, tests, build, e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: koudmen
+          POSTGRES_PASSWORD: koudmen
+          POSTGRES_DB: koudmen
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U koudmen"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://koudmen:koudmen@localhost:5432/koudmen?schema=public
+      SESSION_SECRET: ci-secret-uniquement-pour-les-tests-0123456789abcdef
+      DEMO_MODE: "true"
+      NEXT_PUBLIC_TEST_MODE: "true"
+      APP_URL: http://localhost:3100
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: plateforme/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: plateforme/pnpm-lock.yaml
+
+      - name: Installer les dépendances
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Tests unitaires
+        run: pnpm test
+
+      - name: Migrer et seeder la base
+        run: pnpm db:deploy && pnpm db:seed
+
+      - name: Build
+        run: pnpm build
+
+      # En CI (runner GitHub), on installe Chromium. En local, il est déjà dans /opt/pw-browsers.
+      - name: Installer Chromium (Playwright)
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Tests e2e
+        run: pnpm e2e
+
+      - name: Traces Playwright (si échec)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: plateforme/test-results
+          retention-days: 7
