@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "prisma generate && tsc --noEmit",
@@ -21,7 +21,10 @@
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "build:local": "prisma generate && next build",
+    "ops:create-operator": "tsx scripts/create-operator.ts",
+    "ops:purge-sandboxes": "tsx scripts/purge-sandboxes.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

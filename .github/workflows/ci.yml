@@ -35,8 +35,14 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql://koudmen:koudmen@localhost:5432/koudmen?schema=public
+      DIRECT_URL: postgresql://koudmen:koudmen@localhost:5432/koudmen?schema=public
       SESSION_SECRET: ci-secret-uniquement-pour-les-tests-0123456789abcdef
+      CRON_SECRET: ci-cron-secret-0123456789
+      TESTER_INVITE_CODES: E2E-TEST,NADIA-07
       DEMO_MODE: "true"
+      DEMO_PASSWORD: demo-koudmen-ci
+      SEED_OPERATOR_EMAIL: operateur@koudmen.test
+      SEED_OPERATOR_PASSWORD: operateur-ci-koudmen-2026
       NEXT_PUBLIC_TEST_MODE: "true"
       APP_URL: http://localhost:3100
       NEXT_TELEMETRY_DISABLED: "1"

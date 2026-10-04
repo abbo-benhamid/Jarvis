@@ -2,6 +2,12 @@
  * Seed de démonstration Koudmen. TOUTES les données sont FICTIVES.
  * Relancer le seed EFFACE toute la base puis la recrée (idempotent).
  *   pnpm db:seed
+ *
+ * GARDE-FOUS (D1, T1) :
+ * - le seed refuse de tourner si DEMO_MODE != "true" (jamais en production réelle) ;
+ * - le mot de passe des comptes démo vient de DEMO_PASSWORD (jamais dans le code) ;
+ * - AUCUN compte démo « Opérateur » : l'opérateur local est un vrai compte opérateur
+ *   (SEED_OPERATOR_EMAIL / SEED_OPERATOR_PASSWORD), comme ceux de `pnpm ops:create-operator`.
  */
 import { PrismaClient, type ProofFactor, type TimeSlot } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -9,7 +15,21 @@ import { getCommune } from "../src/lib/communes";
 import { allowedLevelsFor } from "../src/server/rules/status-levels";
 import { computeVisitProof, deriveVisitStatus, haversineMeters } from "../src/server/visits/proof";
 import { renderTemplate, type TemplateKey } from "../src/server/notification-templates";
-import { DEMO_ACCOUNTS, DEMO_PASSWORD } from "../src/server/auth/demo";
+import { DEMO_ACCOUNTS } from "../src/server/auth/demo";
+import { upsertOperatorAccount } from "../src/server/ops/operator-account";
+
+if (process.env.DEMO_MODE !== "true") {
+  console.error("Seed refusé : DEMO_MODE doit valoir \"true\". Le seed efface toute la base : jamais en production réelle.");
+  process.exit(1);
+}
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? "";
+const SEED_OPERATOR_EMAIL = process.env.SEED_OPERATOR_EMAIL ?? "operateur@koudmen.test";
+const SEED_OPERATOR_PASSWORD = process.env.SEED_OPERATOR_PASSWORD ?? "";
+if (DEMO_PASSWORD.length < 8 || SEED_OPERATOR_PASSWORD.length < 12) {
+  console.error("Seed refusé : définissez DEMO_PASSWORD (8 caractères min.) et SEED_OPERATOR_PASSWORD (12 caractères min.) dans .env.");
+  process.exit(1);
+}
+const APP_URL = (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
 
 const prisma = new PrismaClient();
 
@@ -30,6 +50,9 @@ function home(code: string, dLat = 0.0012, dLng = -0.0009) {
 
 async function wipe() {
   const tables = [
+    "UsageEvent",
+    "MicroAnswer",
+    "DiscoveryRequest",
     "AuditLog",
     "Feedback",
     "OutboxMessage",
@@ -50,6 +73,7 @@ async function wipe() {
     "Aine",
     "FamilyProfile",
     "User",
+    "Sandbox",
   ];
   await prisma.$executeRawUnsafe(`TRUNCATE ${tables.map((t) => `"${t}"`).join(", ")} CASCADE`);
 }
@@ -82,17 +106,14 @@ async function main() {
   await wipe();
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
 
-  // ───────────── Opérateur ─────────────
-  const operateur = await prisma.user.create({
-    data: {
-      email: DEMO_ACCOUNTS.OPERATEUR.email,
-      passwordHash,
-      role: "OPERATEUR",
-      firstName: "Équipe",
-      lastName: "Koudmen",
-      isDemo: true,
-    },
+  // ───────────── Opérateur (vrai compte opérateur local, jamais un compte démo) ─────────────
+  const op = await upsertOperatorAccount(prisma, {
+    email: SEED_OPERATOR_EMAIL,
+    firstName: "Équipe",
+    lastName: "Koudmen",
+    password: SEED_OPERATOR_PASSWORD,
   });
+  const operateur = { id: op.id };
 
   // ───────────── Familles ─────────────
   const sandrine = await prisma.user.create({
@@ -222,7 +243,7 @@ async function main() {
   // ───────────── Formules (paiement simulé) ─────────────
   const subs = [
     { aine: leonie, payer: sandrine, plan: "SERENITE" as const, price: 14900 },
-    { aine: ernest, payer: patrick, plan: "VEYE" as const, price: 3900 },
+    { aine: ernest, payer: patrick, plan: "KOZE" as const, price: 3900 },
     { aine: yvette, payer: marieClaire, plan: "LAKOU" as const, price: 0 },
   ];
   for (const s of subs) {
@@ -256,6 +277,7 @@ async function main() {
     siret?: string;
     avail: Avail;
     isDemo?: boolean;
+    linkedAineId?: string;
   }) {
     const verifTypes = ["IDENTITE", "CASIER_B3", "REFERENCES", "FORMATION"] as const;
     const extra: ("STATUT_PRO" | "PSC1" | "DIPLOME")[] = [];
@@ -284,6 +306,7 @@ async function main() {
             associationName: p.associationName,
             saadName: p.saadName,
             siret: p.siret,
+            linkedAineId: p.linkedAineId ?? null,
             validation: p.validation,
             reviewedById: validated ? operateur.id : null,
             reviewedAt: validated ? mqDate(-50, 11) : null,
@@ -353,6 +376,8 @@ async function main() {
     rate: 1300,
     bio: "Petite-fille d'Yvette. Proche aidante, salariée via l'APA (exemple fictif).",
     validation: "VALIDE",
+    // D7 : proposée seulement pour Yvette, l'aînée de sa propre famille.
+    linkedAineId: yvette.id,
     avail: [
       [5, "APRES_MIDI"],
       [6, "MATIN"],
@@ -442,6 +467,8 @@ async function main() {
       proposedById: operateur.id,
       message: "Léonie habite près de chez vous. Lundi matin, 2 heures.",
       status: "ACCEPTEE",
+      chosenAt: mqDate(-38, 15),
+      chosenById: sandrine.id,
       respondedAt: mqDate(-37, 18),
       createdAt: mqDate(-38, 11),
     },
@@ -453,6 +480,8 @@ async function main() {
       aineId: leonie.id,
       caregiverId: josiane.profile.id,
       hourlyRateCents: 1500,
+      employerType: "AINE",
+      employerName: "Léonie Joseph (fictive)",
       createdAt: mqDate(-37, 18),
     },
   });
@@ -614,7 +643,7 @@ async function main() {
     });
   }
 
-  // ───────────── Demande 2 : Ernest (niveau 2) → PROPOSEE à Josiane et Kévin ─────────────
+  // ───────────── Demande 2 : Ernest (niveau 2) → 2 profils proposés à Patrick ; il a choisi Josiane (D6) ─────────────
   const r2 = await prisma.careRequest.create({
     data: {
       aineId: ernest.id,
@@ -624,6 +653,8 @@ async function main() {
       durationMinutes: 90,
       startDate: mqDate(7, 14),
       notes: "Courses au marché du Lamentin et aide pour les papiers de la caisse de retraite.",
+      employerType: "REPRESENTANT",
+      employerName: "Patrick Bellance (fictif)",
       status: "PROPOSEE",
       createdAt: mqDate(-3, 8),
       slots: {
@@ -635,15 +666,21 @@ async function main() {
     },
   });
   for (const c of [josiane, kevin]) {
+    const chosen = c === josiane;
     const p = await prisma.missionProposal.create({
       data: {
         requestId: r2.id,
         caregiverId: c.profile.id,
         proposedById: operateur.id,
         message: "Ernest, au Lamentin. Mardi et jeudi après-midi, 1 h 30.",
+        // Josiane : choisie par la famille, attend sa réponse. Kévin : proposé, pas (encore) choisi.
+        status: chosen ? "EN_ATTENTE" : "PROPOSEE_FAMILLE",
+        chosenAt: chosen ? mqDate(-1, 9) : null,
+        chosenById: chosen ? patrick.id : null,
         createdAt: mqDate(-2, 10),
       },
     });
+    if (!chosen) continue;
     await outbox(
       "PROPOSITION_MISSION",
       { prenom: c.user.firstName, niveau: 2, commune: "Le Lamentin" },
@@ -674,7 +711,7 @@ async function main() {
   );
   await outbox(
     "INVITATION_LAKOU",
-    { from: "Sandrine", aine: "Léonie", link: "http://localhost:3000/invitation/demo-invitation-lakou-leonie" },
+    { from: "Sandrine", aine: "Léonie", link: `${APP_URL}/invitation/demo-invitation-lakou-leonie` },
     { channel: "EMAIL", to: "cousine.joseph@demo.koudmen.test", at: mqDate(-5, 20) },
   );
   await outbox(
@@ -704,7 +741,7 @@ async function main() {
       },
       {
         rating: 4,
-        message: "Page d'accueil claire. Je ne comprends pas encore la différence entre Veyé et Sérénité.",
+        message: "Page d'accueil claire. Je ne comprends pas encore la différence entre Kozé et Sérénité.",
         pagePath: "/",
         createdAt: mqDate(-2, 9),
       },
@@ -732,8 +769,9 @@ async function main() {
     outbox: await prisma.outboxMessage.count(),
   };
   console.log("Seed terminé :", counts);
-  console.log(`Comptes démo (mot de passe : ${DEMO_PASSWORD}) :`);
+  console.log("Comptes démo partagés (mot de passe : variable DEMO_PASSWORD) :");
   for (const [role, a] of Object.entries(DEMO_ACCOUNTS)) console.log(`  ${role.padEnd(13)} ${a.email}`);
+  console.log(`Opérateur réel local : ${SEED_OPERATOR_EMAIL} (mot de passe : variable SEED_OPERATOR_PASSWORD)`);
 }
 
 main()
