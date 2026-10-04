@@ -1,5 +1,7 @@
 # Lots de travail du MVP — qui possède quoi
 
+> **S1b (2026-10-04) :** les lots A, B et C sont fusionnés. Le sprint S1b a touché tous les dossiers (socle compris) pour appliquer D1 à D15. Nouveaux modules du **socle** : `src/server/scope.ts`, `src/server/matching/**`, `src/server/sandbox/**`, `src/server/ops/**`, `src/components/sandbox/**`, `src/components/legal/**`, `src/components/ui/use-form-action.tsx`, `src/lib/legal.ts`, `src/lib/measure.ts`, `scripts/**`. Voir `specification-mvp.md` § 14 et ADR 0003.
+
 > **But :** 3 constructeurs travaillent **en parallèle** sans conflit.
 > **Règle d'or :** tu modifies **seulement** les fichiers de ton lot. Pour tout autre fichier, demande à l'orchestrateur.
 > Spécification : [`specification-mvp.md`](specification-mvp.md). Code : `plateforme/`.
@@ -108,7 +110,7 @@ flowchart LR
 | `prisma/schema.prisma`, `prisma/migrations/**` | Schéma complet + migration `init` |
 | `src/server/db.ts` | `db` (client Prisma unique), type `DbClient` |
 | `src/server/env.ts` | `getSessionSecret()`, `isDemoMode()`, `appUrl()` |
-| `src/server/auth/**` | Session, garde, actions de connexion, comptes démo |
+| `src/server/auth/**` | Session, garde (opérateur réel seulement), actions de connexion, comptes démo |
 | `src/server/access.ts` | Contrôle d'accès aux aînés |
 | `src/server/audit.ts` | `logAudit()` |
 | `src/server/outbox.ts`, `notification-templates.ts` | Notifications simulées |
@@ -222,6 +224,8 @@ export async function exempleAction(_prev: ActionResult, formData: FormData): Pr
 |---|---|---|
 | A | `famille@demo.koudmen.test` | Léonie (Fort-de-France, niveau 3, code `LKW7Q3`), formule Sérénité, 3 Kayé dont 1 « à surveiller », 1 visite A_VERIFIER, 2 PREVUE, 1 invitation (`/invitation/demo-invitation-lakou-leonie`) |
 | B | `accompagnant@demo.koudmen.test` | Josiane : mission Léonie, visite PREVUE demain, 1 proposition EN_ATTENTE (Ernest, Le Lamentin) |
-| C | `operateur@demo.koudmen.test` | Steeve EN_ATTENTE ; demande d'Yvette OUVERTE (Schœlcher, niveau 1, samedi après-midi : Nadège et Germaine compatibles) ; 10 messages Outbox ; 3 retours |
+| C | `operateur@koudmen.test` (vrai opérateur local) | Steeve EN_ATTENTE ; demande d'Yvette OUVERTE (Schœlcher, niveau 1, samedi après-midi : Nadège et Germaine compatibles) ; 10 messages Outbox ; 3 retours |
 
-Mot de passe commun : `demo-koudmen-2026`. `pnpm db:seed` remet tout à zéro.
+Mot de passe des comptes démo : variable `DEMO_PASSWORD` (`.env`). L'opérateur local est un **vrai** compte opérateur : `SEED_OPERATOR_EMAIL` / `SEED_OPERATOR_PASSWORD` (D1 : plus de compte démo « Opérateur »). `pnpm db:seed` remet tout à zéro et refuse de tourner si `DEMO_MODE` n'est pas `true`.
+
+Testeurs : « Tester Koudmen » avec un code de `TESTER_INVITE_CODES` → bac à sable personnel (ADR 0003).

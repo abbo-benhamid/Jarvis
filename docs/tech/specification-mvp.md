@@ -1,7 +1,7 @@
 # Spécification MVP Koudmen — version de test web
 
-> **Statut :** S0, à faire critiquer (critique-produit, critique-juridique) avant le sprint de construction.
-> **Décisions liées :** [ADR 0001](adr/0001-mvp-nextjs-fullstack.md) (Next.js full-stack), [ADR 0002](adr/0002-auth-session-cookie.md) (session).
+> **Statut :** S1b « Prêt pour les testeurs » (décisions D1 à D15 de [`../revues/S1-arbitrage.md`](../revues/S1-arbitrage.md) appliquées). Le § 14 résume S1b.
+> **Décisions liées :** [ADR 0001](adr/0001-mvp-nextjs-fullstack.md) (Next.js full-stack), [ADR 0002](adr/0002-auth-session-cookie.md) (session), [ADR 0003](adr/0003-bac-a-sable-par-testeur.md) (bac à sable par testeur).
 > **Code :** `plateforme/`. **Lots :** [`lots.md`](lots.md).
 
 ## 0. En une minute
@@ -9,16 +9,18 @@
 - Koudmen MVP est **une application web** pour des **testeurs réels**.
 - Les testeurs utilisent **uniquement des données fictives**. Aucun paiement réel. Aucun message réel.
 - Quatre rôles : **Famille**, **Aîné** (profil, sans compte), **Accompagnant**, **Opérateur**.
-- Le cœur : une famille demande un accompagnement → l'opérateur propose un accompagnant compatible → l'accompagnant accepte librement → chaque visite est **prouvée (2 facteurs sur 3)** → l'accompagnant écrit le **Kayé** → la famille le lit.
+- Le cœur (D6) : une famille demande un accompagnement → Koudmen **propose 1 à 3 profils** compatibles → **la famille choisit** → l'accompagnant choisi accepte librement → chaque visite est **prouvée (2 facteurs sur 3)** → l'accompagnant écrit le **Kayé** → la famille le lit.
+- Les testeurs entrent par « **Tester Koudmen** » (code d'invitation) dans un **bac à sable personnel** (§ 14).
 
 ```mermaid
 flowchart LR
   F[Famille] -->|1. crée le profil + consentement| AI[Aîné]
-  F -->|2. demande d'accompagnement| O[Opérateur]
-  O -->|3. proposition (matching manuel)| A[Accompagnant]
-  A -->|4. accepte ou refuse, sans pénalité| O
-  A -->|5. visite + preuve 2 sur 3| AI
-  A -->|6. Kayé| F
+  F -->|2. demande + employeur| O[Opérateur]
+  O -->|3. propose 1 à 3 profils| F
+  F -->|4. choisit un profil| A[Accompagnant]
+  A -->|5. accepte ou refuse, sans pénalité| F
+  A -->|6. visite + preuve 2 sur 3| AI
+  A -->|7. Kayé| F
   O -.->|notifications simulées| F
   O -.->|notifications simulées| A
 ```
@@ -28,7 +30,7 @@ flowchart LR
 | # | Principe | Effet dans le MVP |
 |---|---|---|
 | P1 | **Données fictives** | Bandeau sur chaque page. Case obligatoire à l'inscription. Mention sur la page « Mentions et confidentialité ». |
-| P2 | **Anti-requalification** (directive (UE) 2024/2831) | Tarif horaire **libre** fixé par l'accompagnant. Refus **sans pénalité** et sans motif obligatoire. **Aucune note** sur l'accompagnant. Pas de géolocalisation continue. Désactivation **motivée** avec **revue humaine**. |
+| P2 | **Anti-requalification** (directive (UE) 2024/2831) | Tarif horaire **libre** fixé par l'accompagnant ; pour un **salarié**, le formulaire bloque sous le plancher légal (SMIC 2026 et minimum IDCC 3239, D10). Koudmen **propose**, la **famille choisit** (D6). Refus **sans pénalité** et sans motif obligatoire. **Aucune note** sur l'accompagnant. Pas de géolocalisation continue. Désactivation **motivée** avec **revue humaine** et message `ACCOMPAGNANT_SUSPENDU` (motif + réexamen). |
 | P3 | **Le statut décide du niveau** (`docs/08`) | `canStatusDoLevel()` bloque toute proposition interdite. Un auto-entrepreneur n'est **jamais** proposé pour un niveau 3 ou 4. |
 | P4 | **RGPD by design** | Consentement de l'aîné ou de son représentant (nom + date). Aucun champ de santé détaillé. Accès limité au cercle Lakou. Audit des actions sensibles. |
 | P5 | **Retour testeur partout** | Bouton « Donner mon avis » sur toutes les pages. |
@@ -41,7 +43,7 @@ flowchart LR
 | `FAMILLE` | Oui | Payeur, souvent dans la diaspora | Crée le profil de l'aîné, invite le cercle Lakou, demande un accompagnement, lit les visites et le Kayé, choisit une formule |
 | Aîné | **Non** | La personne accompagnée | Profil géré par la famille. Confirme la visite (appel simulé) |
 | `ACCOMPAGNANT` | Oui | Particulier ou professionnel avec un statut | Fait l'orientation statut, remplit son profil, déclare ses vérifications, répond aux propositions, fait les visites, écrit le Kayé |
-| `OPERATEUR` | Oui (seed seulement) | Équipe Koudmen | Valide les accompagnants, fait le matching manuel, surveille les visites, lit l'Outbox et les retours testeurs |
+| `OPERATEUR` | Oui (`pnpm ops:create-operator` ; jamais de démo) | Équipe Koudmen | Valide les accompagnants, fait le matching manuel, surveille les visites, lit l'Outbox et les retours testeurs |
 
 ## 3. Niveaux et statuts
 
@@ -54,7 +56,7 @@ Le MVP numérote les niveaux **de 1 à 4**. Correspondance avec `docs/08` § 3.1
 | **3 — Présence et autonomie** | niveau 2 | Compagnie régulière, aide au repas, rendez-vous, sorties | Salarié famille, proche aidant, SAAD |
 | **4 — Aide renforcée** | niveau 3 | Toilette, transferts, nuits | SAAD ; salarié famille ou proche aidant **avec diplôme validé** |
 
-[À VÉRIFIER] avocat : l'auto-entrepreneur est exclu du niveau 1 « Lien », car le lien est de la compagnie (activité réservée au salarié). `docs/08` § 3.1 dit « Tous » pour ce niveau.
+**Décision D11 :** l'auto-entrepreneur est **exclu** du niveau 1 « Lien » (activités n° 25 et 27). `docs/08` § 3.1 est corrigé. **D7 :** un proche aidant APA n'est proposé que pour l'aîné de **sa** famille (`linkedAineId`, raison `LIEN_FAMILIAL`). **D8 :** un SAAD s'affiche « Structure partenaire ». **D9 :** la formation Koudmen est obligatoire pour tous les statuts.
 
 ```mermaid
 flowchart LR
@@ -118,10 +120,12 @@ sequenceDiagram
   F->>K: Crée le profil de l'aîné + consentement
   K-->>F: Code domicile à 6 caractères
   F->>K: Invite un proche (lien)
-  F->>K: Demande d'accompagnement (niveau, fréquence, créneaux)
+  F->>K: Demande d'accompagnement (niveau, fréquence, créneaux, employeur)
   K-->>O: Demande OUVERTE
-  O->>K: Proposition à 1 ou plusieurs accompagnants compatibles
-  K-->>A: Notification (simulée)
+  O->>K: Propose 1 à 3 profils compatibles (PROPOSEE_FAMILLE)
+  K-->>F: PROFILS_PROPOSES (simulé)
+  F->>K: Choisit un profil (EN_ATTENTE)
+  K-->>A: PROPOSITION_MISSION (simulé)
   A->>K: Accepte
   K-->>F: Mission créée, visites planifiées
   A->>K: Check-in (GPS + code)
@@ -135,9 +139,10 @@ sequenceDiagram
 ```mermaid
 stateDiagram-v2
   [*] --> OUVERTE: famille crée la demande
-  OUVERTE --> PROPOSEE: opérateur propose
-  PROPOSEE --> POURVUE: un accompagnant accepte
-  PROPOSEE --> OUVERTE: toutes les propositions refusées
+  OUVERTE --> PROPOSEE: Koudmen propose 1 à 3 profils
+  PROPOSEE --> PROPOSEE: la famille choisit ; refus → elle en choisit un autre
+  PROPOSEE --> POURVUE: l'accompagnant choisi accepte
+  PROPOSEE --> OUVERTE: plus aucun profil à choisir
   OUVERTE --> ANNULEE: famille annule
   PROPOSEE --> ANNULEE: famille annule
   POURVUE --> [*]
@@ -160,14 +165,16 @@ stateDiagram-v2
 
 Chaque écran existe déjà en **squelette** (`PagePlaceholder`). Le lot propriétaire le remplace.
 
-### 5.1 Écrans publics (socle — FAITS en S0)
+### 5.1 Écrans publics (socle — refaits en S1b)
 
 | Route | Contenu |
 |---|---|
-| `/` | Présentation, étapes, formules, boutons démo « Essayer en tant que Famille / Accompagnant / Opérateur » |
-| `/connexion` | Email + mot de passe ; boutons démo |
-| `/inscription` | Choix Famille / Accompagnant ; prénom, nom, email, mot de passe ; lieu de vie (famille) ; case « données fictives » obligatoire. Accompagnant → redirection `/accompagnant/orientation` |
-| `/mentions` | Mentions et confidentialité (version simple) |
+| `/` | D13 : douleur → exemple de Kayé fictif → 3 promesses → **un seul** bouton « Tester Koudmen ». Aucun bouton opérateur |
+| `/tester` | D2/D3 : code testeur, rôle joué (Famille / Accompagnant), prénom facultatif, cases CGU de test + 18 ans + données fictives → bac à sable. « Reprendre mon test » si l'appareil a un bac à sable |
+| `/tester/reprendre/[jeton]` | Lien de reprise secret (route) |
+| `/connexion` | Email + mot de passe ; lien « Tester Koudmen » ; démo partagée Famille / Accompagnant seulement si `DEMO_MODE=true` |
+| `/inscription` | Code testeur obligatoire, cases CGU de test et 18 ans ; `next` respecté (invitation Lakou) |
+| `/mentions-legales`, `/confidentialite`, `/cgu-test` | D4. Identité de l'éditeur : `EDITEUR_*`, `DIRECTEUR_PUBLICATION` (sinon « [à compléter] »). `/mentions` redirige |
 
 ### 5.2 Espace Famille (Lot A)
 
@@ -177,11 +184,12 @@ Chaque écran existe déjà en **squelette** (`PagePlaceholder`). Le lot propri�
 | F2 | `/famille/aines/nouveau` | Prénom, initiale du nom, commune (liste des 34 communes), indication d'adresse (facultatif), téléphone de l'aîné (fictif), besoins (cases), niveau d'activité 1-4 (avec description), **consentement** : case + type (AINE / REPRESENTANT) + nom de la personne qui consent. Crée : `Aine` (position = centre de la commune, `homeCode` via `generateUniqueHomeCode()`), `LakouMember` (payeur), `Subscription` LAKOU. Audit `aine.created`. |
 | F3 | `/famille/aines/[aineId]` | Fiche : infos, **code domicile en grand** (à afficher chez l'aîné), consentement, formule, liens vers cercle / demandes / visites. Modifier le profil. |
 | F4 | `/famille/aines/[aineId]/cercle` | Membres du cercle. Formulaire d'invitation (lien, email facultatif, relation). Lien copiable `/invitation/[token]`, valable 14 jours. Outbox `INVITATION_LAKOU` si email. Audit `lakou.invited`. |
-| F5 | `/famille/demandes` | Demandes par aîné, statut (`RequestStatusBadge`), propositions en cours (sans détail du refus d'un accompagnant). Bouton « Annuler ». |
-| F6 | `/famille/demandes/nouvelle` | Aîné, niveau (1-4, pré-rempli par le niveau d'activité), fréquence, créneaux (jour × matin / après-midi / soir), durée, date de début, notes. Rappel : « pas d'information médicale ». |
+| F5 | `/famille/demandes` | Demandes par aîné, statut. **D6 : profils proposés** (nom ou « Structure partenaire », statut, communes, tarif, créneaux communs, « vérifications déclarées (test) ») + bouton « Choisir … ». Jamais le nom ni le motif d'un refus. Bouton « Annuler ». |
+| F6 | `/famille/demandes/nouvelle` | Aîné, niveau, fréquence, créneaux, durée, date de début, notes, **employeur** (aîné ou représentant + nom). Rappels : « pas d'information médicale » ; « Koudmen ne déclare pas à votre place » (relevé d'heures, D12). |
 | F7 | `/famille/visites` | Visites à venir et passées : date, accompagnant, statut, facteurs de preuve (icône par facteur, libellé texte). Sur une visite EN_COURS ou A_VERIFIER : bouton **« L'aîné a confirmé (appel simulé) »** → `confirmElderSimulated()`. |
 | F8 | `/famille/kaye` | Fil chronologique des Kayé de tous les aînés du cercle : humeur (1-5, texte + pictogramme), activités, appétit, note, signal « à surveiller » mis en avant. Filtre par aîné. |
-| F9 | `/famille/formule` | 3 formules (`PLANS`). Choix → `Subscription` mise à jour + `SimulatedPayment` (SIMULE_REUSSI) + Outbox `PAIEMENT_SIMULE` + audit `plan.changed`. Mention « Aucun paiement réel ». Seul le payeur change la formule. |
+| F9 | `/famille/formule` | Grille D5 : Lakou 0 €, Kozé 39 €, Sérénité dès 149 €, mention « Offre en test, non commercialisée ». Paiement simulé. Micro-question prix + carte « vraie visite découverte ». |
+| F11 | `/famille/visite-decouverte` | D15 : offre factice (49 €) → prénom + contact du testeur, case de consentement explicite → « Koudmen est en test : nous vous recontacterons ». Bouton « Non merci ». |
 | F10 | `/invitation/[token]` | Page publique. Jeton valide → « Rejoindre le cercle de X ». Pas connecté → connexion / inscription puis retour. Crée `LakouMember`. Jeton expiré ou utilisé → message clair. |
 
 ### 5.3 Espace Accompagnant (Lot B)
@@ -205,17 +213,19 @@ Chaque écran existe déjà en **squelette** (`PagePlaceholder`). Le lot propri�
 | O2 | `/operateur/accompagnants` | Liste filtrable par validation et statut. |
 | O3 | `/operateur/accompagnants/[caregiverId]` | Profil, orientation, vérifications (valider / refuser chaque item avec note). Décision : **Valider**, **Refuser** ou **Suspendre** — **motif obligatoire** pour refuser / suspendre. Le niveau 4 s'ouvre si `DIPLOME` validé (`hasDiploma` + `allowedLevelsFor`). Outbox `ACCOMPAGNANT_VALIDE` / `ACCOMPAGNANT_REFUSE`. Audit. |
 | O4 | `/operateur/demandes` | Demandes OUVERTE et PROPOSEE, ancienneté. |
-| O5 | `/operateur/demandes/[requestId]` | **Matching manuel** : liste de tous les accompagnants avec `checkCompatibility()` → compatibles d'abord, raisons d'incompatibilité affichées (`MATCH_REASON_LABELS`). Tri **sans note ni score de réputation** (critère : créneaux communs, puis nom). Bouton « Proposer » (message facultatif). **Le serveur refuse** une proposition incompatible. Outbox `PROPOSITION_MISSION`. |
+| O5 | `/operateur/demandes/[requestId]` | **Matching manuel** (monde réel seulement) : compatibles d'abord, raisons d'incompatibilité. Tri **sans note**. Bouton « Proposer … à la famille » (1 à 3 profils actifs). **Le serveur refuse** une proposition incompatible. Outbox `PROFILS_PROPOSES` (famille), puis `PROPOSITION_MISSION` quand la famille choisit. |
 | O6 | `/operateur/visites` | Toutes les visites, filtre par statut. Détail des facteurs. Bouton « L'aîné a confirmé (appel simulé) ». |
 | O7 | `/operateur/notifications` | Boîte d'envoi : date, canal, destinataire, modèle, sujet, corps. Filtre par canal. |
 | O8 | `/operateur/retours` | Retours testeurs : note, message, page, rôle, date. Statut NOUVEAU → LU → TRAITE. |
 | O9 | `/operateur/journal-audit` | Journal d'audit (lecture seule), filtre par action / entité. |
+| O10 | `/operateur/test` | D15 : mesure du test (bacs à sable, codes testeurs, pages vues, étapes simulées, micro-questions, contacts de l'offre découverte). Lecture des contacts journalisée. |
 
 ### 5.5 Transverse (socle — FAIT)
 
 - **Bouton « Donner mon avis »** (root layout) : note 1-5 + message + page courante → `Feedback`. Fonctionne connecté ou non.
-- **Bandeau de test** si `NEXT_PUBLIC_TEST_MODE=true`.
-- **Pied de page** avec lien « Mentions et confidentialité ».
+- **Bandeau de test** affiché par défaut (masqué seulement si `NEXT_PUBLIC_TEST_MODE=false`).
+- **Pied de page** : Mentions légales, Confidentialité, CGU du test.
+- **Panneau « Votre test »** (comptes de bac à sable) : 3 scénarios guidés, « Simuler la suite », lien de reprise.
 
 ## 6. Règles métier
 
@@ -224,7 +234,7 @@ Chaque écran existe déjà en **squelette** (`PagePlaceholder`). Le lot propri�
 | RM-01 | Un accompagnant n'est proposé que si `validation = VALIDE`, statut défini, niveau autorisé, commune desservie, au moins un créneau commun (si la demande a des créneaux) | `checkCompatibility()` (Lot C) |
 | RM-02 | Un auto-entrepreneur n'est jamais proposé pour un niveau 3 ou 4 | `canStatusDoLevel()` |
 | RM-03 | `allowedLevels` est toujours **recalculé côté serveur** par `allowedLevelsFor()`. Jamais lu depuis le formulaire | Lots B et C |
-| RM-04 | Le tarif horaire est fixé **par l'accompagnant seul**. L'opérateur et la famille ne le modifient pas | Lot B |
+| RM-04 | Le tarif horaire est fixé **par l'accompagnant seul**. Salarié : bloqué sous `PLANCHER_SALARIE_CENTS` (`src/lib/legal.ts`, D10) | Lot B |
 | RM-05 | Refuser une proposition n'a **aucune conséquence** : pas de compteur, pas de baisse de visibilité | Lots B et C |
 | RM-06 | Aucune note, étoile ou classement des accompagnants | Tous |
 | RM-07 | Refus ou suspension d'un accompagnant : **motif obligatoire**, décision par un opérateur humain, audit | Lot C |
@@ -268,9 +278,10 @@ Rien ne part. Chaque message est créé avec le statut `ENVOYE_SIMULE`. Canal pa
 |---|---|---|---|
 | Invitation Lakou | `INVITATION_LAKOU` | email invité | A |
 | Formule choisie | `PAIEMENT_SIMULE` | payeur | A |
-| Proposition | `PROPOSITION_MISSION` | accompagnant | C |
-| Acceptation / refus | `PROPOSITION_ACCEPTEE` / `PROPOSITION_REFUSEE` | cercle Lakou | B |
-| Validation / refus profil | `ACCOMPAGNANT_VALIDE` / `ACCOMPAGNANT_REFUSE` | accompagnant | C |
+| Profils proposés (D6) | `PROFILS_PROPOSES` | cercle Lakou | socle |
+| La famille choisit | `PROPOSITION_MISSION` | accompagnant choisi | socle |
+| Acceptation / refus | `PROPOSITION_ACCEPTEE` / `PROPOSITION_REFUSEE` (**anonyme**) | cercle Lakou | B |
+| Validation / refus / suspension | `ACCOMPAGNANT_VALIDE` / `ACCOMPAGNANT_REFUSE` / `ACCOMPAGNANT_SUSPENDU` (motif + réexamen) | accompagnant | C |
 | Check-in | `VISITE_COMMENCEE` | cercle Lakou | B |
 | Visite validée / à vérifier | `VISITE_VALIDEE` / `VISITE_A_VERIFIER` | cercle Lakou | socle (auto) |
 | Appel aîné | `APPEL_CONFIRMATION_AINE` (VOIX) | aîné | socle (auto) |
@@ -437,8 +448,91 @@ Données de démo : chaque lot peut démarrer sans attendre les autres. Le seed 
 
 ## 13. Questions ouvertes
 
-1. [À VÉRIFIER] Auto-entrepreneur et niveau 1 « Lien » (voir § 3).
+1. ~~Auto-entrepreneur et niveau 1 « Lien »~~ : tranché (D11, exclu).
 2. [À VÉRIFIER] Rayon GPS de 300 m adapté au relief martiniquais ?
-3. [À VÉRIFIER] Prix affiché de Sérénité (forfait 149 € ou 19,90 € + frais, `docs/00` § 3).
+3. [À VÉRIFIER] Modèle réel de Sérénité (affiché « dès 149 € », en test, D5) — reporté avant le pilote.
 4. [À VÉRIFIER] Centres des communes (coordonnées approximatives).
 5. Faut-il une confirmation de l'aîné par un membre du cercle **présent sur place** plutôt qu'un appel simulé ?
+
+## 14. S1b « Prêt pour les testeurs » (résumé)
+
+### 14.1 Le parcours testeur
+
+```mermaid
+sequenceDiagram
+  actor T as Testeur
+  participant K as Koudmen
+  participant R as Robots du bac à sable
+  T->>K: « Tester Koudmen » + code + CGU de test
+  K->>K: crée un monde fictif (sandboxId) + session + lien de reprise
+  T->>K: Scénario 1 : lit le Kayé, la preuve, invite un proche
+  T->>K: « Simuler la suite »
+  K->>R: l'opérateur robot propose 1 à 3 profils
+  T->>K: choisit un profil (D6)
+  T->>K: « Simuler la suite » (x2)
+  R->>K: l'accompagnant robot accepte, visite 2 sur 3, publie le Kayé
+  T->>K: lit le Kayé → micro-question « Ce Kayé vous rassure-t-il ? »
+  T->>K: Formules → offre factice « vraie visite découverte » (consentement)
+```
+
+Rôle « Accompagnant » : orientation → (robot) compléter et demander la vérification → (robot) validation → (robot) une famille demande, Koudmen propose, la famille choisit → le testeur accepte → (robot) la visite commence (code du domicile donné) → check-in → Kayé → (robot) la famille lit.
+
+### 14.2 Modules ajoutés
+
+| Module | Rôle |
+|---|---|
+| `src/server/scope.ts` | Mondes et cloisonnement (ADR 0003) |
+| `src/server/matching/service.ts` | `proposeProfile()` (1 à 3 profils, même monde), `chooseProfile()` (la famille choisit) |
+| `src/server/sandbox/` | `world.ts` (monde fictif), `robots.ts` (« Simuler la suite »), `scenarios.ts` (checklist, pur), `service.ts` (création, reprise, panneau), `events.ts` (mesure), `purge.ts`, `actions.ts` |
+| `src/lib/legal.ts` | SMIC 2026 et minimum IDCC 3239 [À VÉRIFIER] |
+| `src/lib/measure.ts` | 4 micro-questions, texte du consentement de l'offre factice |
+| `src/components/ui/use-form-action.tsx` | Hook de formulaire du socle (pas de remise à zéro React 19) |
+| `scripts/create-operator.ts`, `scripts/purge-sandboxes.ts` | `pnpm ops:create-operator`, `pnpm ops:purge-sandboxes` |
+
+### 14.3 Modèle de données (migration `s1b_bac_a_sable`)
+
+```mermaid
+erDiagram
+  Sandbox ||--o{ User : "monde"
+  Sandbox ||--o{ Aine : "monde"
+  Sandbox ||--o{ OutboxMessage : "monde"
+  Sandbox ||--o{ UsageEvent : "mesure"
+  Sandbox ||--o{ MicroAnswer : "mesure"
+  Sandbox ||--o{ DiscoveryRequest : "offre factice"
+  Sandbox ||--o{ Feedback : "avis"
+  Sandbox {
+    string testerCode
+    Role role "FAMILLE|ACCOMPAGNANT"
+    string resumeTokenHash UK "SHA-256"
+    datetime cguAcceptedAt
+    int simulationCount
+  }
+  CareRequest {
+    EmployerType employerType "AINE|REPRESENTANT"
+    string employerName
+  }
+  MissionProposal {
+    ProposalStatus status "PROPOSEE_FAMILLE|EN_ATTENTE|..."
+    datetime chosenAt
+    string chosenById
+  }
+  CaregiverProfile {
+    string linkedAineId "D7"
+  }
+```
+
+Autres changements : `Plan.VEYE` renommé `KOZE` (D5) ; `Mission.employerType/employerName` (copie de la demande) ; `Feedback.testerCode`.
+
+### 14.4 Déploiement (Vercel + Neon)
+
+| Variable | Rôle |
+|---|---|
+| `DATABASE_URL` / `DIRECT_URL` | Connexion poolée (application) / directe (migrations) |
+| `SESSION_SECRET`, `CRON_SECRET` | Sessions ; route de purge (Vercel Cron) |
+| `TESTER_INVITE_CODES` | Codes testeurs (D3) |
+| `DEMO_MODE` (= `false` avec de vrais testeurs), `DEMO_PASSWORD` | Démo partagée du fondateur (D1) |
+| `NEXT_PUBLIC_TEST_MODE` | Bandeau + position simulée (actifs par défaut) |
+| `APP_URL` | Liens (repli : URL de production Vercel) |
+| `EDITEUR_NOM`, `EDITEUR_ADRESSE`, `EDITEUR_EMAIL`, `DIRECTEUR_PUBLICATION` | Mentions légales (D4) |
+
+Build : `prisma generate && prisma migrate deploy && next build`. `vercel.json` : cron nocturne de purge. En-têtes : CSP, `X-Frame-Options`, `Referrer-Policy`, HSTS, `X-Robots-Tag: noindex`.

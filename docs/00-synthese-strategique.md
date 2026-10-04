@@ -53,7 +53,7 @@ Ce n'est **pas** « un Yoopies pour l'Outre-mer ». C'est **l'opérateur de conf
 | Statut accompagnant | Auto-entrepreneur **déclaré SAP sur NOVA** | **Salarié de la famille** (emploi direct, CESU+) |
 | Crédit d'impôt 50 % | Oui, avec **avance immédiate** URSSAF | Oui, avec avance immédiate CESU+ |
 | APA / PCH | Non | **Oui** (premier financeur du secteur) |
-| Rôle de Koudmen | Plateforme et logiciel de facturation | Outil de l'employeur : contrat, planning, déclarations, preuve de visite, remplacement |
+| Rôle de Koudmen | Plateforme et logiciel de facturation | Outil de l'employeur : contrat, planning, **relevé d'heures**, preuve de visite, aide au remplacement. **La famille déclare elle-même au CESU** |
 
 **Les paliers :**
 - **Phase 0 :** mise en relation et outillage.
@@ -81,13 +81,13 @@ flowchart LR
 | Auto-entrepreneur déclaré SAP (niveaux 1-2 seulement) | ✅ Oui |
 | SAAD partenaire en renfort | ✅ Oui |
 | Bénévole (via une association partenaire uniquement) | ✅ Oui, niveau 1 |
-| Déclarations CESU faites par Koudmen pour la famille | ⏳ Après l'agrément mandataire |
+| Déclarations CESU faites par Koudmen pour la famille | ⏳ Seulement après un agrément mandataire (ou via un mandataire agréé partenaire). En phase 0 : relevé d'heures, la famille déclare |
 | Coopérative (CAE), étudiants étrangers, fonctionnaires | ⏳ Plus tard |
 | Paiement « au noir », « bénévolat » défrayé au forfait, AE pour la compagnie, portage salarial | ❌ Jamais |
 
 **Règles clés :**
 - **Par défaut, le parent est l'employeur.** L'enfant de la diaspora paie, mais il n'a le crédit d'impôt que dans des cas limités (parent bénéficiaire de l'APA, et il renonce à déduire sa pension alimentaire).
-- **En phase 0, Koudmen prépare les déclarations CESU, mais la famille les envoie elle-même.** Faire les déclarations à la place d'un employeur âgé est une activité de mandataire.
+- **En phase 0, Koudmen fournit un relevé d'heures indicatif (issu des visites prouvées). La famille déclare elle-même sur cesu.urssaf.fr.** Koudmen ne détient jamais les identifiants CESU de la famille. Déclarer, ou même préparer la déclaration, à la place d'un employeur âgé est une activité de mandataire (décision D12, `revues/S1-arbitrage.md`). [À VÉRIFIER AVEC UN AVOCAT]
 - **L'accompagnant paie 0 €, quel que soit son statut.** Le Code du travail (art. L5321-3) interdit aussi de faire payer un travailleur placé.
 - **Chaque statut a ses vérifications** : honorabilité, formation de 21 h, et limites d'activité selon le niveau.
 
@@ -117,9 +117,11 @@ flowchart LR
 
 | Offre | Pour qui | Prix indicatif |
 |---|---|---|
-| **Lakou gratuit** | Tout le monde : cercle familial et carnet | 0 € (porte d'entrée, acquisition diaspora) |
-| **Veyé** | Diaspora : appel hebdomadaire et alertes | 39 €/mois |
-| **Sérénité** | Familles locales et diaspora : visites, preuve, journal, remplacement | 19,90 €/mois + frais dégressifs, ou **forfait tout compris d'environ 149 à 199 €/mois pour 1 visite par semaine** (option recommandée par `06` pour la diaspora) |
+| **Lakou** | Tout le monde : cercle familial et carnet | 0 € (porte d'entrée, acquisition diaspora) |
+| **Kozé** | Diaspora : appel hebdomadaire et alertes | 39 €/mois |
+| **Sérénité** | Familles locales et diaspora : visites, preuve, journal, aide pour trouver un remplaçant | **dès 149 €/mois**. Modèle réel à trancher avant le pilote (abonnement aux seuls services numériques, ou forfait vendu par un SAAD partenaire autorisé) |
+
+> **Grille unique du test (décision D5).** Lakou (0 €), Kozé (39 €/mois), Sérénité (dès 149 €/mois). Le nom « Veyé » est réservé au mode cyclone **Veyé Siklòn** (un terme = un sens). Chaque affichage porte la mention « Offre en test, non commercialisée ». Les heures d'accompagnement se paient à part, à l'accompagnant. [À VÉRIFIER] prix loyaux (art. L111-7 II C. conso) avant le pilote.
 | **Intégral** | Besoins réguliers, emploi direct géré | 39 €/mois + 6 % |
 | **B2B2C** | Employeurs (salariés aidants), mutuelles, caisses de retraite (Agirc-Arrco « Sortir Plus ») | 29 à 34 € HT/h, ou par salarié |
 | **B2G** | Départements/CTM, CCAS : isolement, veille cyclone | 400 à 900 € par bénéficiaire et par an |

@@ -205,11 +205,15 @@ Koudmen classe chaque mission dans **un niveau**. Le niveau décide des statuts 
 
 | Niveau | Activités | Statuts autorisés | Formation minimale |
 |---|---|---|---|
-| **0 — Lien** | Appel de convivialité, visite de courtoisie, promenade, lecture, aide à utiliser le téléphone | Tous, y compris **bénévole** (via association) | Module « Bientraitance et alerte » (3 h en ligne) + charte |
+| **0 — Lien** | Appel de convivialité, visite de courtoisie, promenade, lecture | Tous **sauf l'auto-entrepreneur**, y compris **bénévole** (via association). Voir la note ci-dessous | Module « Bientraitance et alerte » (3 h en ligne) + charte |
 | **1 — Coups de main** | Courses livrées, repas à domicile avec commissions, démarches administratives **à domicile**, numérique, petit entretien | **Salarié de la famille**, **auto-entrepreneur SAP**, CAE déclarée SAP, SAAD | 7 h (niveau 0 + gestion de l'argent des courses + protection des données) |
 | **2 — Présence et autonomie** | Compagnie régulière, aide au repas, aide au lever **sans transfert**, accompagnement aux rendez-vous, sorties | **Salarié de la famille** (dont proche aidant), SAAD | **21 h + PSC1** (`00` § 5) |
 | **3 — Aide renforcée** | Toilette, transferts, nuits, personne en GIR 1 ou 2 | **SAAD autorisé** ou salarié **diplômé** (DEAES, titre ADVF) | Diplôme d'État ou titre professionnel |
 | **Jamais** | Soins infirmiers, préparation de médicaments, gestion du compte bancaire, procuration | Aucun statut | — |
+
+> **Correction S1b (décision D11, `revues/S1-arbitrage.md`).** L'auto-entrepreneur est **exclu** du niveau 0 « Lien ». La visite de courtoisie et la promenade auprès d'un aîné relèvent des activités n° 25 et n° 27 (agrément ou autorisation), pas de la simple déclaration. L'ancienne mention « Tous » contredisait la fiche b et la règle « Ne jamais ouvrir n° 3 ». L'aide au téléphone ou au numérique relève du n° 11 : elle passe au niveau 1 « Coups de main ». Au niveau 1, « courses » veut dire **courses sans l'aîné** (commissions, livraison) ; accompagner l'aîné aux courses relève du niveau 2. Le MVP applique déjà cette règle (`status-levels.ts`). [À VÉRIFIER AVEC UN AVOCAT]
+>
+> **Formation (décision D9).** La formation Koudmen est **obligatoire pour tous les statuts** : la sécurité des aînés passe avant la fluidité de l'inscription. Le risque d'indice de subordination pour l'auto-entrepreneur (`docs/01` § 3.3) reste une question pour l'avocat.
 
 ### 3.2 Le parcours d'inscription en 5 questions
 
