@@ -14,6 +14,8 @@ export type CurrentUser = {
   firstName: string;
   lastName: string;
   isDemo: boolean;
+  /** Bac à sable du testeur (D2). Null = monde réel. */
+  sandboxId: string | null;
 };
 
 /** Utilisateur connecté ou null. Mis en cache pour la durée d'une requête. */
@@ -22,7 +24,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   if (!session) return null;
   const user = await db.user.findUnique({
     where: { id: session.sub },
-    select: { id: true, email: true, role: true, firstName: true, lastName: true, isDemo: true },
+    select: { id: true, email: true, role: true, firstName: true, lastName: true, isDemo: true, sandboxId: true },
   });
   return user;
 });
@@ -39,9 +41,17 @@ export async function requireUser(): Promise<CurrentUser> {
  * de CHAQUE Server Action et de CHAQUE route handler protégé.
  * - Pas connecté → /connexion.
  * - Mauvais rôle → page d'accueil de son propre rôle.
+ * - OPERATEUR : seulement un VRAI opérateur (D1). Un compte démo ou un compte de bac à sable
+ *   n'ouvre jamais l'espace opérateur.
  */
 export async function requireRole(...roles: Role[]): Promise<CurrentUser> {
   const user = await requireUser();
   if (!roles.includes(user.role)) redirect(ROLE_HOME[user.role]);
+  if (user.role === "OPERATEUR" && !isRealOperator(user)) redirect("/connexion?erreur=operateur");
   return user;
+}
+
+/** Un vrai opérateur : créé par `pnpm ops:create-operator`, ni démo, ni bac à sable. */
+export function isRealOperator(user: Pick<CurrentUser, "role" | "isDemo" | "sandboxId">): boolean {
+  return user.role === "OPERATEUR" && !user.isDemo && user.sandboxId === null;
 }

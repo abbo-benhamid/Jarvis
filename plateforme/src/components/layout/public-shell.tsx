@@ -18,14 +18,10 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
                 Mon espace
               </Link>
             ) : (
-              <>
-                <Link className={buttonClasses("ghost")} href="/connexion">
-                  Se connecter
-                </Link>
-                <Link className={buttonClasses("primary", "md", "max-sm:hidden")} href="/inscription">
-                  Créer un compte
-                </Link>
-              </>
+              // D13 : un seul appel à l'action sur la page (« Tester Koudmen ») ; ici, seulement la connexion.
+              <Link className={buttonClasses("ghost")} href="/connexion">
+                Se connecter
+              </Link>
             )}
           </nav>
         </div>

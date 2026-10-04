@@ -1,23 +1,29 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import Link from "next/link";
+import { useState } from "react";
 import { registerAction } from "@/server/auth/actions";
 import { initialActionState } from "@/lib/action-result";
 import { FormField, Fieldset, fieldA11y } from "@/components/ui/form-field";
 import { Checkbox, Input, Radio, Select } from "@/components/ui/input";
-import { SubmitButton } from "@/components/ui/submit-button";
+import { PendingButton, useFormAction } from "@/components/ui/use-form-action";
 import { FormMessage } from "@/components/ui/form-message";
 import { FAMILY_LOCATION_LABELS } from "@/lib/labels";
 
 type RoleChoice = "FAMILLE" | "ACCOMPAGNANT";
 
-export function RegisterForm({ defaultRole }: { defaultRole: RoleChoice }) {
-  const [state, action] = useActionState(registerAction, initialActionState);
+export function RegisterForm({ defaultRole, next }: { defaultRole: RoleChoice; next?: string }) {
+  // Hook du socle : la saisie reste en place après une erreur (pas de remise à zéro par React 19).
+  const { state, onSubmit, pending } = useFormAction(registerAction, initialActionState);
   const [role, setRole] = useState<RoleChoice>(defaultRole);
   const fe = !state.ok ? state.fieldErrors : undefined;
 
   return (
-    <form action={action} className="flex flex-col gap-4" noValidate>
+    <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+      {next ? <input type="hidden" name="next" value={next} /> : null}
+      <FormField label="Code testeur" htmlFor="testerCode" hint="Koudmen est en test sur invitation. Saisissez le code reçu." errors={fe?.testerCode} required>
+        <Input {...fieldA11y("testerCode", fe?.testerCode, true)} autoComplete="off" autoCapitalize="characters" required />
+      </FormField>
       <Fieldset legend="Je crée un compte…" errors={fe?.role}>
         <Radio
           id="role-famille"
@@ -80,8 +86,35 @@ export function RegisterForm({ defaultRole }: { defaultRole: RoleChoice }) {
           {fe.acceptTest.join(" ")}
         </p>
       ) : null}
+      <Checkbox
+        id="acceptCgu"
+        name="acceptCgu"
+        label={
+          <>
+            J&apos;accepte les{" "}
+            <Link href="/cgu-test" target="_blank" className="font-semibold text-mer underline">
+              conditions d&apos;utilisation du test
+            </Link>
+            .
+          </>
+        }
+        required
+      />
+      {fe?.acceptCgu ? (
+        <p className="text-sm font-semibold text-hibiscus" role="alert">
+          {fe.acceptCgu.join(" ")}
+        </p>
+      ) : null}
+      <Checkbox id="adult" name="adult" label="J'ai 18 ans ou plus." required />
+      {fe?.adult ? (
+        <p className="text-sm font-semibold text-hibiscus" role="alert">
+          {fe.adult.join(" ")}
+        </p>
+      ) : null}
       <FormMessage state={state} />
-      <SubmitButton pendingLabel="Création…">Créer mon compte</SubmitButton>
+      <PendingButton pending={pending} pendingLabel="Création…">
+        Créer mon compte
+      </PendingButton>
     </form>
   );
 }

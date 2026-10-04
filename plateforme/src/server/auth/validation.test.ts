@@ -19,6 +19,9 @@ describe("registerSchema", () => {
     password: "motdepasse",
     location: "HEXAGONE",
     acceptTest: "on",
+    testerCode: "NADIA-07",
+    acceptCgu: "on",
+    adult: "on",
   };
   it("normalise l'email", () => {
     const r = registerSchema.safeParse(ok);
@@ -26,6 +29,11 @@ describe("registerSchema", () => {
   });
   it("exige le lieu de vie pour une famille", () => {
     expect(registerSchema.safeParse({ ...ok, location: undefined }).success).toBe(false);
+  });
+  it("exige le code testeur, les CGU de test et l'âge (D3, D4)", () => {
+    expect(registerSchema.safeParse({ ...ok, testerCode: "" }).success).toBe(false);
+    expect(registerSchema.safeParse({ ...ok, acceptCgu: undefined }).success).toBe(false);
+    expect(registerSchema.safeParse({ ...ok, adult: undefined }).success).toBe(false);
   });
   it("exige l'accord « données fictives »", () => {
     expect(registerSchema.safeParse({ ...ok, acceptTest: undefined }).success).toBe(false);

@@ -2,11 +2,13 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { TestBanner } from "@/components/layout/test-banner";
 import { FeedbackButton } from "@/components/feedback/feedback-button";
+import { UsageTracker } from "@/components/sandbox/usage-tracker";
 
 export const metadata: Metadata = {
   title: { default: "Koudmen — le lakou numérique", template: "%s · Koudmen" },
   description: "Le réseau de confiance qui veille sur nos aînés, ici et là-bas. Prototype de test : données fictives uniquement.",
-  robots: { index: false, follow: false },
+  // D3 : aucune page indexée pendant le test (voir aussi l'en-tête X-Robots-Tag et robots.txt).
+  robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
 };
 
 export const viewport: Viewport = {
@@ -26,8 +28,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Aller au contenu
         </a>
         <TestBanner />
-        <div className="flex flex-1 flex-col">{children}</div>
+        {/* pb-24 : le bouton flottant « Donner mon avis » ne cache jamais la fin du contenu (mobile). */}
+        <div className="flex flex-1 flex-col pb-24">{children}</div>
         <FeedbackButton />
+        <UsageTracker />
       </body>
     </html>
   );

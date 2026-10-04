@@ -1,91 +1,112 @@
 import Link from "next/link";
-import { Card } from "@/components/ui/card";
+import { CheckCircle2, HeartHandshake, MapPin, NotebookPen, ShieldCheck, Smile } from "lucide-react";
 import { LinkButton } from "@/components/ui/button";
-import { DemoButtons } from "./demo-buttons";
-import { PLANS } from "@/lib/plans";
 
-const STEPS = [
-  { t: "La famille crée le cercle Lakou", d: "Elle ajoute l'aîné, avec son accord, et invite les proches, ici ou dans l'Hexagone." },
-  { t: "Koudmen propose un accompagnant vérifié", d: "Identité, casier B3, références. L'accompagnant accepte ou refuse librement." },
-  { t: "Chaque visite est prouvée", d: "2 preuves sur 3 : position au check-in, code du domicile, confirmation de l'aîné." },
-  { t: "La famille lit le Kayé", d: "Humeur, activités, appétit, un mot de l'accompagnant. Sans donnée médicale." },
+/**
+ * Page d'accueil (D13) : elle vend la TRANQUILLITÉ, dans cet ordre :
+ * 1. la douleur ; 2. un exemple de Kayé (fictif) ; 3. trois promesses ; 4. UN SEUL bouton « Tester Koudmen ».
+ * Pas de bouton opérateur, pas de démo partagée (D1).
+ */
+const PROMISES = [
+  {
+    icon: MapPin,
+    title: "Quelqu'un du quartier, que vous choisissez",
+    text: "Koudmen vous propose 1 à 3 profils près de chez votre parent. Vous choisissez la personne. Le créole est bienvenu.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Une preuve à chaque visite",
+    text: "Deux preuves sur trois : la position à l'arrivée, le code affiché chez votre parent, son appel de confirmation.",
+  },
+  {
+    icon: NotebookPen,
+    title: "Des nouvelles après chaque visite",
+    text: "Le Kayé arrive sur votre téléphone : humeur, activités, un mot de l'accompagnant. Sans donnée médicale.",
+  },
 ];
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col gap-14">
-      <section className="flex flex-col gap-5 pt-4">
+    <div className="flex flex-col gap-12">
+      {/* 1. La douleur */}
+      <section className="flex flex-col gap-4 pt-2">
         <p className="font-mono text-xs font-semibold tracking-widest text-mer uppercase">Martinique · diaspora</p>
         <h1 className="max-w-3xl text-4xl font-extrabold sm:text-5xl">
-          Le réseau de confiance qui veille sur nos aînés, <span className="text-mer">ici et là-bas.</span>
+          Manman dit « mwen bien ». <span className="text-mer">Vous ne savez jamais vraiment.</span>
         </h1>
         <p className="max-w-2xl text-lg text-muted">
-          Koudmen relie la famille, l&apos;aîné et des accompagnants vérifiés. Chaque visite est prouvée. Chaque visite a son journal.
+          Vous habitez à Créteil, à Lyon ou à Montréal. Elle vit seule à Fort-de-France. Koudmen envoie quelqu&apos;un du quartier, et vous dit ce
+          qui s&apos;est vraiment passé.
         </p>
-        <p className="font-mono text-sm text-muted">« Koudmen » : l&apos;entraide collective, en créole.</p>
-        <div className="flex flex-wrap gap-3">
-          <LinkButton href="/inscription" size="lg">
-            Créer un compte
-          </LinkButton>
-          <LinkButton href="/connexion" size="lg" variant="secondary">
-            Se connecter
-          </LinkButton>
-        </div>
       </section>
 
-      <section aria-labelledby="demo-title" className="rounded-xl border border-line bg-surface p-6">
-        <h2 id="demo-title" className="mb-1 text-2xl font-bold">
-          Essayer sans créer de compte
+      {/* 2. La preuve : un exemple de Kayé (fictif) */}
+      <section aria-labelledby="exemple-kaye" className="flex flex-col gap-3">
+        <h2 id="exemple-kaye" className="text-2xl font-bold">
+          Ce que vous recevez après une visite
         </h2>
-        <p className="mb-4 text-muted">Choisissez un rôle. Les comptes de démonstration contiennent des données fictives.</p>
-        <DemoButtons />
+        <figure className="max-w-xl rounded-2xl border border-line bg-surface p-5 shadow-sm">
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-bold">Kayé de Léonie, 81 ans</p>
+            <p className="text-sm text-muted">samedi, 16 h 10</p>
+          </div>
+          <p className="mt-3 flex items-start gap-2 rounded-lg bg-feuille-soft p-3 text-sm">
+            <CheckCircle2 aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-feuille" />
+            <span>
+              <strong>Visite vérifiée.</strong> Josiane est arrivée à 14 h 02. Position vérifiée. Code du domicile correct.
+            </span>
+          </p>
+          <p className="mt-3 flex items-center gap-2">
+            <Smile aria-hidden="true" className="size-5 text-feuille" />
+            <span>
+              Humeur : <strong>très bien</strong> · Appétit : <strong>bon</strong>
+            </span>
+          </p>
+          <p className="mt-1 text-sm text-muted">Dominos sur la galerie, café, nouvelles du quartier.</p>
+          <blockquote className="mt-3 border-l-4 border-mer pl-3">
+            « Léonie m&apos;a raconté le carnaval de 1962. Elle a beaucoup ri. Elle demande des nouvelles de vos enfants. » — Josiane
+          </blockquote>
+          <figcaption className="mt-3 text-xs text-muted">Exemple fictif. Personnages inventés.</figcaption>
+        </figure>
       </section>
 
-      <section aria-labelledby="how-title">
-        <h2 id="how-title" className="mb-4 text-2xl font-bold">
-          Comment ça marche
+      {/* 3. Trois promesses */}
+      <section aria-labelledby="promesses" className="flex flex-col gap-4">
+        <h2 id="promesses" className="text-2xl font-bold">
+          Trois promesses
         </h2>
-        <ol className="grid gap-4 sm:grid-cols-2">
-          {STEPS.map((s, i) => (
-            <li key={s.t} className="rounded-xl border border-line bg-surface p-5">
-              <p className="font-mono text-sm font-bold text-mer">Étape {i + 1}</p>
-              <p className="text-lg font-bold">{s.t}</p>
-              <p className="text-muted">{s.d}</p>
+        <ul className="grid gap-4 md:grid-cols-3">
+          {PROMISES.map((p) => (
+            <li key={p.title} className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-5">
+              <p.icon aria-hidden="true" className="size-6 text-mer" />
+              <p className="text-lg font-bold">{p.title}</p>
+              <p className="text-muted">{p.text}</p>
             </li>
           ))}
-        </ol>
+        </ul>
       </section>
 
-      <section aria-labelledby="plans-title">
-        <h2 id="plans-title" className="mb-1 text-2xl font-bold">
-          Les formules
+      {/* 4. Un seul bouton */}
+      <section aria-labelledby="tester" className="flex flex-col items-start gap-3 rounded-2xl bg-mer-soft p-6">
+        <h2 id="tester" className="flex items-center gap-2 text-2xl font-bold">
+          <HeartHandshake aria-hidden="true" className="size-6 text-mer" />
+          Voyez comment ça marche pour votre parent
         </h2>
-        <p className="mb-4 text-muted">Prototype : aucun paiement réel n&apos;est demandé.</p>
-        <div className="grid gap-4 md:grid-cols-3">
-          {PLANS.map((p) => (
-            <Card key={p.plan}>
-              <p className="text-xl font-bold">{p.name}</p>
-              <p className="text-2xl font-extrabold text-mer">{p.priceLabel}</p>
-              <p className="mb-2 text-muted">{p.audience}</p>
-              <ul className="list-disc pl-5">
-                {p.features.map((f) => (
-                  <li key={f}>{f}</li>
-                ))}
-              </ul>
-            </Card>
-          ))}
-        </div>
+        <p>Test sur invitation. Un monde fictif rien que pour vous. 10 minutes. Gratuit.</p>
+        <LinkButton href="/tester" size="lg">
+          Tester Koudmen
+        </LinkButton>
+        <p className="text-sm text-muted">
+          Vous voulez accompagner des aînés ? Le test vous propose aussi le rôle « Accompagnant ».{" "}
+          <Link href="/connexion" className="underline">
+            Déjà un compte : se connecter
+          </Link>
+        </p>
       </section>
 
-      <section className="flex flex-col gap-2 rounded-xl bg-mer-soft p-6">
-        <h2 className="text-2xl font-bold">Vous voulez accompagner des aînés ?</h2>
-        <p>Vous fixez votre tarif. Vous choisissez vos missions. Koudmen vous aide à choisir le bon statut, en 5 questions.</p>
-        <div>
-          <Link href="/inscription?role=ACCOMPAGNANT" className="inline-flex min-h-11 items-center font-semibold text-mer underline">
-            Devenir accompagnant
-          </Link>
-        </div>
-      </section>
+      <p className="text-sm text-muted">
+        Koudmen est en test : aucune visite réelle, aucun paiement. Koudmen n&apos;est pas un service d&apos;aide à domicile autorisé.
+      </p>
     </div>
   );
 }

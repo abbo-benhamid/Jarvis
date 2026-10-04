@@ -13,7 +13,8 @@ vi.mock("next/navigation", () => ({
 
 const { requireRole, requireUser } = await import("./guards");
 
-const famille = { id: "u1", email: "f@x.test", role: "FAMILLE", firstName: "S", lastName: "J", isDemo: true };
+const famille = { id: "u1", email: "f@x.test", role: "FAMILLE", firstName: "S", lastName: "J", isDemo: true, sandboxId: null };
+const operateur = { id: "o1", email: "o@x.test", role: "OPERATEUR", firstName: "O", lastName: "K", isDemo: false, sandboxId: null };
 
 describe("requireRole", () => {
   beforeEach(() => {
@@ -42,5 +43,19 @@ describe("requireRole", () => {
     readSession.mockResolvedValue({ sub: "ghost", role: "OPERATEUR", name: "x", demo: false });
     findUnique.mockResolvedValue(null);
     await expect(requireRole("OPERATEUR")).rejects.toThrow("REDIRECT:/connexion");
+  });
+
+  it("ouvre l'espace opérateur à un vrai opérateur", async () => {
+    readSession.mockResolvedValue({ sub: "o1", role: "OPERATEUR", name: "O", demo: false });
+    findUnique.mockResolvedValue(operateur);
+    await expect(requireRole("OPERATEUR")).resolves.toEqual(operateur);
+  });
+
+  it("D1 : refuse l'espace opérateur à un compte démo ou de bac à sable", async () => {
+    readSession.mockResolvedValue({ sub: "o1", role: "OPERATEUR", name: "O", demo: true });
+    findUnique.mockResolvedValue({ ...operateur, isDemo: true });
+    await expect(requireRole("OPERATEUR")).rejects.toThrow("REDIRECT:/connexion?erreur=operateur");
+    findUnique.mockResolvedValue({ ...operateur, sandboxId: "sbx1" });
+    await expect(requireRole("OPERATEUR")).rejects.toThrow("REDIRECT:/connexion?erreur=operateur");
   });
 });

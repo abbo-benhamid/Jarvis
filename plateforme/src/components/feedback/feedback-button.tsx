@@ -1,12 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { MessageSquareHeart, X } from "lucide-react";
 import { submitFeedbackAction } from "@/server/feedback";
 import { initialActionState } from "@/lib/action-result";
 import { Button } from "@/components/ui/button";
-import { SubmitButton } from "@/components/ui/submit-button";
+import { PendingButton, useFormAction } from "@/components/ui/use-form-action";
 import { Textarea } from "@/components/ui/input";
 import { FormField, Fieldset } from "@/components/ui/form-field";
 import { FormMessage } from "@/components/ui/form-message";
@@ -32,14 +32,19 @@ export function FeedbackButton() {
 
   return (
     <>
+      {/*
+        Mobile : bouton rond (icône seule, nom accessible conservé) pour ne pas masquer le contenu.
+        Le contenu a une marge basse (pb-24 dans le layout racine) : la fin de page reste lisible.
+      */}
       <Button
         variant="soleil"
         onClick={open}
-        className="fixed right-4 bottom-4 z-40 rounded-full shadow-lg print:hidden"
+        className="fixed right-3 bottom-3 z-40 size-14 rounded-full p-0 shadow-lg sm:right-4 sm:bottom-4 sm:size-auto sm:px-4 sm:py-2 print:hidden"
         aria-haspopup="dialog"
+        aria-label="Donner mon avis"
       >
-        <MessageSquareHeart aria-hidden="true" size={20} />
-        Donner mon avis
+        <MessageSquareHeart aria-hidden="true" size={22} />
+        <span className="max-sm:sr-only">Donner mon avis</span>
       </Button>
       <dialog
         ref={dialogRef}
@@ -62,7 +67,8 @@ export function FeedbackButton() {
 
 function FeedbackForm({ onDone }: { onDone: () => void }) {
   const pathname = usePathname();
-  const [state, formAction] = useActionState(submitFeedbackAction, initialActionState);
+  // Hook du socle : le message reste en place après une erreur (pas de remise à zéro par React 19).
+  const { state, onSubmit, pending } = useFormAction(submitFeedbackAction, initialActionState);
 
   useEffect(() => {
     if (!state.ok) return;
@@ -71,7 +77,7 @@ function FeedbackForm({ onDone }: { onDone: () => void }) {
   }, [state, onDone]);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4 px-5 py-4">
+    <form onSubmit={onSubmit} className="flex flex-col gap-4 px-5 py-4">
       <input type="hidden" name="pagePath" value={pathname} />
       <Fieldset legend="Votre note" errors={!state.ok ? state.fieldErrors?.rating : undefined}>
         <div className="flex flex-wrap gap-2">
@@ -99,7 +105,9 @@ function FeedbackForm({ onDone }: { onDone: () => void }) {
       <p className="text-sm text-muted">Page concernée : {pathname}</p>
       <FormMessage state={state} />
       <div className="flex justify-end">
-        <SubmitButton pendingLabel="Envoi…">Envoyer mon avis</SubmitButton>
+        <PendingButton pending={pending} pendingLabel="Envoi…">
+          Envoyer mon avis
+        </PendingButton>
       </div>
     </form>
   );
