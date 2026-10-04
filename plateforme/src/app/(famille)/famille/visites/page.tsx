@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { KeyRound, MapPin, PhoneCall } from "lucide-react";
 import { requireRole } from "@/server/auth/guards";
+import { MicroQuestion } from "@/components/sandbox/micro-question";
 import { getFamilyAines, getFamilyVisits } from "@/server/famille/queries";
 import { canConfirmElder, displayVisitStatus, splitVisits } from "@/server/famille/logic";
 import { formatDate, formatTime } from "@/lib/format";
@@ -26,7 +27,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
   const selected = aines.find((a) => a.id === aineFilter)?.id;
   const visits = await getFamilyVisits(user.id, selected);
   const now = new Date();
-  // Statut recalculé : une visite PREVUE dépassée de plus de 2 h s'affiche « À vérifier ».
+  // Le statut est déjà à jour en base (sweepOverdueVisits, cohérent pour tous les espaces). Recalcul = filet de sécurité.
   const { upcoming, past } = splitVisits(
     visits.map((v) => ({ ...v, status: displayVisitStatus(v, now) })),
     now,
@@ -40,6 +41,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
         description="Chaque visite est prouvée. Il faut 2 preuves sur 3 pour la valider."
       />
       <div className="flex flex-col gap-6">
+        {visits.length > 0 ? <MicroQuestion user={user} questionKey="PREUVE_COMPRISE" path="/famille/visites" /> : null}
         {confirmee === "validee" ? (
           <Alert tone="succes" title="Confirmation enregistrée. La visite est validée.">
             L&apos;appel à l&apos;aîné est simulé dans cette version de test.

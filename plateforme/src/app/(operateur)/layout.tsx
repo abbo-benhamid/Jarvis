@@ -9,6 +9,7 @@ const NAV: NavItem[] = [
   { href: "/operateur/visites", label: "Visites" },
   { href: "/operateur/notifications", label: "Notifications" },
   { href: "/operateur/retours", label: "Retours testeurs" },
+  { href: "/operateur/test", label: "Mesure du test" },
   { href: "/operateur/journal-audit", label: "Audit" },
 ];
 

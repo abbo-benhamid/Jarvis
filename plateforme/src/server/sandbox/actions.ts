@@ -1,0 +1,143 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { z } from "zod";
+import { db } from "@/server/db";
+import { getCurrentUser, requireRole } from "@/server/auth/guards";
+import { validTesterCode } from "@/server/env";
+import { logAudit } from "@/server/audit";
+import { fail, type ActionResult } from "@/lib/action-result";
+import { DISCOVERY_CONSENT_TEXT, isValidMicroAnswer } from "@/lib/measure";
+import { createSandbox, SandboxError } from "./service";
+import { simulateNext, type SimulationResult } from "./robots";
+import { trackEvent } from "./events";
+
+/**
+ * Actions du bac à sable (D2, D3, D14, D15). Chaque action vérifie la session ET le bac à sable.
+ */
+
+const startSchema = z.object({
+  testerCode: z.string().trim().min(1, "Saisissez votre code testeur.").max(40),
+  role: z.enum(["FAMILLE", "ACCOMPAGNANT"], { message: "Choisissez le rôle que vous jouez." }),
+  firstName: z
+    .string()
+    .trim()
+    .max(40, "40 caractères maximum.")
+    .optional()
+    .transform((v) => v || undefined),
+  acceptCgu: z.literal("on", { message: "Acceptez les conditions d'utilisation du test." }),
+  adult: z.literal("on", { message: "Le test est réservé aux personnes de 18 ans ou plus." }),
+  acceptTest: z.literal("on", { message: "Confirmez que vous utilisez uniquement des données fictives." }),
+});
+
+function formToObject(formData: FormData): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of formData.entries()) if (typeof v === "string") out[k] = v;
+  return out;
+}
+
+/** « Tester Koudmen » : code valide + CGU de test → un bac à sable neuf pour CE testeur. */
+export async function startSandboxAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const parsed = startSchema.safeParse(formToObject(formData));
+  if (!parsed.success) return fail("Vérifiez les champs en rouge.", parsed.error.flatten().fieldErrors);
+  const code = validTesterCode(parsed.data.testerCode);
+  if (!code) return fail("Ce code testeur n'est pas valide.", { testerCode: ["Code inconnu. Vérifiez le code reçu avec votre invitation."] });
+  let role: "FAMILLE" | "ACCOMPAGNANT";
+  try {
+    ({ role } = await createSandbox({
+      testerCode: code,
+      role: parsed.data.role,
+      firstName: parsed.data.firstName ?? (parsed.data.role === "FAMILLE" ? "Nadia" : "Ghislaine"),
+    }));
+  } catch (e) {
+    if (e instanceof SandboxError) return fail(e.message);
+    throw e;
+  }
+  redirect(role === "FAMILLE" ? "/famille?bienvenue=1" : "/accompagnant?bienvenue=1");
+}
+
+async function sandboxTester() {
+  const user = await requireRole("FAMILLE", "ACCOMPAGNANT");
+  if (!user.sandboxId || (user.role !== "FAMILLE" && user.role !== "ACCOMPAGNANT")) return null;
+  return { ...user, role: user.role, sandboxId: user.sandboxId };
+}
+
+/** « Simuler la suite » (D14) : les robots jouent l'étape suivante. */
+export async function simulateAction(_prev: ActionResult<SimulationResult>): Promise<ActionResult<SimulationResult>> {
+  const tester = await sandboxTester();
+  if (!tester) return fail("La simulation existe seulement dans un bac à sable de test.");
+  const result = await simulateNext(tester);
+  await db.sandbox.update({ where: { id: tester.sandboxId }, data: { simulationCount: { increment: 1 }, lastSeenAt: new Date() } });
+  await trackEvent(tester, "simulate.step", { metadata: { step: result.step, acted: result.acted } });
+  revalidatePath("/", "layout");
+  return { ok: true, data: result, message: result.message };
+}
+
+const microSchema = z.object({ questionKey: z.string().max(40), answer: z.string().max(40), path: z.string().max(200).optional() });
+
+/** Micro-question (D15) : une réponse par compte et par question. */
+export async function microAnswerAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const user = await getCurrentUser();
+  if (!user) return fail("Connectez-vous pour répondre.");
+  const parsed = microSchema.safeParse(formToObject(formData));
+  if (!parsed.success || !isValidMicroAnswer(parsed.data.questionKey, parsed.data.answer)) return fail("Choisissez une réponse.");
+  const sandbox = user.sandboxId ? await db.sandbox.findUnique({ where: { id: user.sandboxId }, select: { testerCode: true } }) : null;
+  await db.microAnswer.upsert({
+    where: { userId_questionKey: { userId: user.id, questionKey: parsed.data.questionKey } },
+    create: {
+      userId: user.id,
+      role: user.role,
+      sandboxId: user.sandboxId,
+      testerCode: sandbox?.testerCode ?? null,
+      questionKey: parsed.data.questionKey,
+      answer: parsed.data.answer,
+    },
+    update: { answer: parsed.data.answer },
+  });
+  await trackEvent(user, "micro.answered", { path: parsed.data.path, metadata: { question: parsed.data.questionKey } });
+  return { ok: true, message: "Merci ! Votre réponse aide l'équipe." };
+}
+
+const discoverySchema = z.object({
+  name: z.string().trim().min(1, "Écrivez votre prénom.").max(80, "80 caractères maximum."),
+  contact: z.string().trim().min(5, "Écrivez un email ou un numéro de téléphone.").max(120, "120 caractères maximum."),
+  consent: z.literal("on", { message: "Cochez la case pour nous autoriser à vous recontacter." }),
+});
+
+/**
+ * Offre factice « Réserver une vraie visite découverte » (D15).
+ * Contact RÉEL du testeur, recueilli SEULEMENT avec son consentement explicite. Aucune donnée sur l'aîné.
+ */
+export async function requestDiscoveryAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const user = await requireRole("FAMILLE");
+  const parsed = discoverySchema.safeParse(formToObject(formData));
+  if (!parsed.success) return fail("Vérifiez les champs en rouge.", parsed.error.flatten().fieldErrors);
+  const sandbox = user.sandboxId ? await db.sandbox.findUnique({ where: { id: user.sandboxId }, select: { testerCode: true } }) : null;
+  const now = new Date();
+  const created = await db.discoveryRequest.create({
+    data: {
+      userId: user.id,
+      sandboxId: user.sandboxId,
+      testerCode: sandbox?.testerCode ?? null,
+      name: parsed.data.name,
+      contact: parsed.data.contact,
+      consentText: DISCOVERY_CONSENT_TEXT,
+      consentAt: now,
+    },
+    select: { id: true },
+  });
+  // Jamais le contact dans l'audit ni dans les événements.
+  await logAudit({ actor: user, action: "discovery.requested", entityType: "DiscoveryRequest", entityId: created.id });
+  await trackEvent(user, "discovery.requested");
+  revalidatePath("/", "layout");
+  redirect("/famille/visite-decouverte?envoye=1");
+}
+
+/** « Non, pas maintenant » : la réponse compte aussi (mesure de la volonté de payer). */
+export async function declineDiscoveryAction(): Promise<void> {
+  const user = await requireRole("FAMILLE");
+  await trackEvent(user, "discovery.declined");
+  revalidatePath("/", "layout");
+  redirect("/famille/visite-decouverte?refus=1");
+}

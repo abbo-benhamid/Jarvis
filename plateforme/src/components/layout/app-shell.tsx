@@ -5,6 +5,7 @@ import { Logo } from "./logo";
 import { NavLink } from "./nav-link";
 import { SiteFooter } from "./site-footer";
 import { Badge } from "@/components/ui/badge";
+import { SandboxPanel } from "@/components/sandbox/sandbox-panel";
 
 export type NavItem = { href: string; label: string; exact?: boolean };
 
@@ -19,7 +20,8 @@ export function AppShell({ user, nav, children }: { user: CurrentUser; nav: NavI
             <span className="hidden text-sm text-muted sm:inline">
               {user.firstName} · {ROLE_LABELS[user.role]}
             </span>
-            {user.isDemo ? <Badge tone="soleil">Démo</Badge> : null}
+            {user.isDemo ? <Badge tone="soleil">Démo partagée</Badge> : null}
+            {user.sandboxId ? <Badge tone="mer">Bac à sable</Badge> : null}
             <form action={logoutAction}>
               <button type="submit" className="inline-flex min-h-11 items-center rounded-lg px-3 font-semibold text-mer hover:bg-mer-soft">
                 Se déconnecter
@@ -41,6 +43,7 @@ export function AppShell({ user, nav, children }: { user: CurrentUser; nav: NavI
         <div className="madras" aria-hidden="true" />
       </header>
       <main id="contenu" className="mx-auto w-full max-w-5xl px-4 py-8">
+        {user.sandboxId ? <SandboxPanel user={user} /> : null}
         {children}
       </main>
       <SiteFooter />

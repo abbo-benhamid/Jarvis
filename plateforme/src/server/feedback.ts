@@ -24,6 +24,8 @@ export async function submitFeedbackAction(_prev: ActionResult, formData: FormDa
   }
   const user = await getCurrentUser();
   const h = await headers();
+  // D15 : l'avis d'un testeur porte son bac à sable et son code testeur.
+  const sandbox = user?.sandboxId ? await db.sandbox.findUnique({ where: { id: user.sandboxId }, select: { id: true, testerCode: true } }) : null;
   await db.feedback.create({
     data: {
       rating: parsed.data.rating,
@@ -32,6 +34,8 @@ export async function submitFeedbackAction(_prev: ActionResult, formData: FormDa
       userId: user?.id ?? null,
       role: user?.role ?? null,
       userAgent: h.get("user-agent")?.slice(0, 300) ?? null,
+      sandboxId: sandbox?.id ?? null,
+      testerCode: sandbox?.testerCode ?? null,
     },
   });
   return { ok: true, message: "Merci ! Votre avis aide à améliorer Koudmen." };

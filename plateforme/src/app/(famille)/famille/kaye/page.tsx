@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Eye, NotebookPen } from "lucide-react";
 import { requireRole } from "@/server/auth/guards";
+import { MicroQuestion } from "@/components/sandbox/micro-question";
 import { getFamilyAines, getKayeFeed } from "@/server/famille/queries";
 import { groupByDay } from "@/server/famille/logic";
 import { MARTINIQUE_TZ } from "@/lib/format";
@@ -56,6 +57,7 @@ export default async function Page({ searchParams }: Props) {
         </EmptyState>
       ) : (
         <div className="flex flex-col gap-6">
+          {entries.length > 0 ? <MicroQuestion user={user} questionKey="KAYE_RASSURE" path="/famille/kaye" /> : null}
           <div className="flex flex-col gap-2">
             {aines.length > 1 ? (
               <FilterTabs

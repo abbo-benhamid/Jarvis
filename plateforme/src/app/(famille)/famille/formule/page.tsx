@@ -9,6 +9,9 @@ import { LinkButton } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { FilterTabs } from "@/components/famille/filter-tabs";
 import { PlanChooser } from "@/components/famille/plan-chooser";
+import { MicroQuestion } from "@/components/sandbox/micro-question";
+import { OFFER_TEST_NOTICE } from "@/lib/plans";
+import { DISCOVERY_PRICE_LABEL } from "@/lib/measure";
 
 export const metadata: Metadata = { title: "Formule" };
 
@@ -39,8 +42,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
     <>
       <PageHeader eyebrow="Formule" title={`La formule de ${aine.firstName}`} description="Choisissez le niveau de veille. Vous pouvez changer à tout moment." />
       <div className="flex flex-col gap-6">
-        <Alert tone="attention" title="Aucun paiement réel.">
-          Version de test : le paiement est simulé. Aucune carte n&apos;est demandée, aucun argent n&apos;est prélevé.
+        <Alert tone="attention" title={OFFER_TEST_NOTICE}>
+          Version de test : le paiement est simulé. Aucune carte n&apos;est demandée, aucun argent n&apos;est prélevé. Les heures
+          d&apos;accompagnement se paient à part, à l&apos;accompagnant ; Koudmen vous donne un relevé d&apos;heures et vous déclarez
+          vous-même (CESU).
         </Alert>
 
         {aines.length > 1 ? (
@@ -57,6 +62,14 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
         ) : null}
 
         <PlanChooser aineId={aine.id} current={aine.subscription?.plan ?? null} canChange={isPayer} />
+
+        <MicroQuestion user={user} questionKey="PRIX_TROP_CHER" path="/famille/formule" />
+
+        <Card className="flex flex-col items-start gap-2 border-mer">
+          <CardTitle>Une vraie visite découverte ({DISCOVERY_PRICE_LABEL})</CardTitle>
+          <p>Vous voulez essayer pour de vrai, avec votre parent ? Dites-le nous : nous vous recontacterons.</p>
+          <LinkButton href="/famille/visite-decouverte">Réserver une vraie visite découverte</LinkButton>
+        </Card>
 
         {isPayer ? (
           <Card>
