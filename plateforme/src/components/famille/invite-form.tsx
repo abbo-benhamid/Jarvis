@@ -1,0 +1,57 @@
+"use client";
+
+import { useActionState } from "react";
+import { inviteLakouAction } from "@/server/famille/actions";
+import type { ActionResult } from "@/lib/action-result";
+import { formatDate } from "@/lib/format";
+import { FormField, fieldA11y } from "@/components/ui/form-field";
+import { Input } from "@/components/ui/input";
+import { FormMessage } from "@/components/ui/form-message";
+import { CopyLink } from "./copy-link";
+import { PendingButton } from "./pending-button";
+import { useKeepForm } from "./use-keep-form";
+
+type InviteState = ActionResult<{ link: string; expiresAt: string }>;
+const initial: InviteState = { ok: false, error: "" };
+
+/** F4 : formulaire d'invitation au cercle Lakou. Affiche le lien copiable après création. */
+export function InviteForm({ aineId, aineFirstName }: { aineId: string; aineFirstName: string }) {
+  const [state, dispatch, pending] = useActionState(inviteLakouAction, initial);
+  const onSubmit = useKeepForm(dispatch);
+  const fe = !state.ok ? state.fieldErrors : undefined;
+  return (
+    <div className="flex flex-col gap-4">
+      <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+        <input type="hidden" name="aineId" value={aineId} />
+        <FormField
+          label={`Lien de cette personne avec ${aineFirstName}`}
+          htmlFor="relation"
+          hint="Exemple : fils, petite-fille, voisine."
+          errors={fe?.relation}
+          required
+        >
+          <Input {...fieldA11y("relation", fe?.relation, true)} autoComplete="off" required maxLength={60} />
+        </FormField>
+        <FormField
+          label="Email de la personne (facultatif)"
+          htmlFor="email"
+          hint="Si vous indiquez un email, Koudmen envoie le lien (envoi simulé en test). Sinon, copiez le lien vous-même."
+          errors={fe?.email}
+        >
+          <Input {...fieldA11y("email", fe?.email, true)} type="email" autoComplete="off" inputMode="email" />
+        </FormField>
+        <FormMessage state={state.ok ? { ok: true } : state} />
+        <PendingButton pending={pending} pendingLabel="Création du lien…" className="sm:self-start">
+          Créer le lien d&apos;invitation
+        </PendingButton>
+      </form>
+      {state.ok && state.data ? (
+        <div className="flex flex-col gap-3 rounded-xl border border-feuille bg-feuille-soft p-4" role="status">
+          <p className="font-bold">{state.message}</p>
+          <CopyLink value={state.data.link} />
+          <p className="text-sm">Ce lien marche une seule fois. Il expire le {formatDate(state.data.expiresAt)}.</p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
