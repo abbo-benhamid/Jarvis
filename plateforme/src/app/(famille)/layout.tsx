@@ -1,11 +1,11 @@
 import { requireRole } from "@/server/auth/guards";
 import { AppShell, type NavItem } from "@/components/layout/app-shell";
 
-// Lot A : propriétaire de ce fichier (la navigation peut évoluer).
+// Lot A : propriétaire de ce fichier. Le Kayé vient en 2e : c'est ce que la famille lit le plus.
 const NAV: NavItem[] = [
   { href: "/famille", label: "Accueil", exact: true },
-  { href: "/famille/visites", label: "Visites" },
   { href: "/famille/kaye", label: "Kayé" },
+  { href: "/famille/visites", label: "Visites" },
   { href: "/famille/demandes", label: "Demandes" },
   { href: "/famille/formule", label: "Formule" },
 ];
