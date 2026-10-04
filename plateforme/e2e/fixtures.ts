@@ -9,13 +9,19 @@ import { PrismaClient, type CaregiverStatus, type TimeSlot, type VerificationTyp
 import bcrypt from "bcryptjs";
 import { allowedLevelsFor } from "../src/server/rules/status-levels";
 import { getCommune } from "../src/lib/communes";
+import { purgeSandboxIds } from "../src/server/sandbox/purge";
 
 export const prisma = new PrismaClient();
 
 export const E2E_DOMAIN = "e2e.koudmen.test";
 export const E2E_PASSWORD = "e2e-koudmen-2026";
-export const DEMO_PASSWORD = "demo-koudmen-2026";
-export const OPERATEUR_EMAIL = "operateur@demo.koudmen.test";
+/** Mots de passe lus dans l'environnement (jamais dans le code, D1). */
+export const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? "";
+/** Opérateur RÉEL local créé par le seed (aucun compte démo opérateur). */
+export const OPERATEUR_EMAIL = process.env.SEED_OPERATOR_EMAIL ?? "operateur@koudmen.test";
+export const OPERATEUR_PASSWORD = process.env.SEED_OPERATOR_PASSWORD ?? "";
+/** Code testeur des e2e : doit figurer dans TESTER_INVITE_CODES. */
+export const E2E_TESTER_CODE = "E2E-TEST";
 /** Marqueur des retours testeurs créés par les tests. */
 export const FEEDBACK_MARK = "[E2E]";
 
@@ -38,7 +44,7 @@ export async function login(page: Page, email: string, password = E2E_PASSWORD) 
 }
 
 export async function loginOperateur(page: Page) {
-  await login(page, OPERATEUR_EMAIL, DEMO_PASSWORD);
+  await login(page, OPERATEUR_EMAIL, OPERATEUR_PASSWORD);
 }
 
 // ─────────────── Créateurs ───────────────
@@ -175,6 +181,13 @@ export async function operatorId(): Promise<string> {
 
 /** Efface toutes les données créées par les tests e2e (comptes @e2e.koudmen.test, retours [E2E], inscriptions e2e). */
 export async function cleanupE2E() {
+  // Bacs à sable des e2e (code E2E-TEST) : purge complète, puis traces de mesure.
+  const sandboxes = await prisma.sandbox.findMany({ where: { testerCode: E2E_TESTER_CODE }, select: { id: true } });
+  await purgeSandboxIds(prisma, sandboxes.map((x) => x.id));
+  await prisma.usageEvent.deleteMany({ where: { testerCode: E2E_TESTER_CODE } });
+  await prisma.microAnswer.deleteMany({ where: { testerCode: E2E_TESTER_CODE } });
+  await prisma.discoveryRequest.deleteMany({ where: { testerCode: E2E_TESTER_CODE } });
+  await prisma.feedback.deleteMany({ where: { testerCode: E2E_TESTER_CODE } });
   const users = await prisma.user.findMany({
     where: { OR: [{ email: { endsWith: `@${E2E_DOMAIN}` } }, { email: { startsWith: "e2e-", endsWith: "@exemple.test" } }] },
     select: { id: true, caregiverProfile: { select: { id: true } } },

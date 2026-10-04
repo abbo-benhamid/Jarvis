@@ -30,7 +30,7 @@ function followUp(r: RequestRow): string {
     case "OUVERTE":
       return "L'équipe Koudmen cherche des profils compatibles. Vous choisirez la personne.";
     case "PROPOSEE":
-      if (chosen) return `Vous avez choisi ${caregiverDisplayName(chosen.caregiver)}. Cette personne est libre d'accepter ou de refuser.`;
+      if (chosen) return `Vous avez choisi ${caregiverDisplayName(chosen.caregiver).replace(/\.$/, "")}. Cette personne est libre d'accepter ou de refuser.`;
       return toChoose > 0
         ? `Koudmen vous propose ${toChoose} profil${toChoose > 1 ? "s" : ""}. À vous de choisir.`
         : "L'équipe Koudmen cherche d'autres profils.";

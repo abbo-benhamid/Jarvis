@@ -7,13 +7,13 @@ export function CopyResumeLink({ url }: { url: string }) {
   const [copied, setCopied] = useState(false);
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="font-semibold">Votre lien de reprise :</span>
+      <span className="w-full font-semibold">Votre lien de reprise :</span>
       <input
         readOnly
         value={url}
         aria-label="Lien de reprise de votre test"
         onFocus={(e) => e.currentTarget.select()}
-        className="min-h-11 min-w-0 flex-1 rounded-lg border border-line bg-surface px-2 font-mono text-xs"
+        className="min-h-11 min-w-0 flex-1 basis-48 rounded-lg border border-line bg-surface px-2 font-mono text-xs"
       />
       <button
         type="button"

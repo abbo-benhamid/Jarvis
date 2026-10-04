@@ -1,4 +1,9 @@
+import { existsSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
+
+// Les tests lisent les mêmes variables que l'application (codes testeurs, mots de passe locaux).
+// En CI, elles viennent de l'environnement du job ; en local, du fichier .env.
+if (existsSync(".env")) process.loadEnvFile(".env");
 
 // Port configurable : E2E_PORT (prioritaire) ou PORT. Utile quand plusieurs serveurs tournent en parallèle.
 const PORT = Number(process.env.E2E_PORT ?? process.env.PORT ?? 3100);

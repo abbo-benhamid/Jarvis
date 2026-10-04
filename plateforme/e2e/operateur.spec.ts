@@ -86,9 +86,9 @@ test("O2/O3 — valider un accompagnant : revue de chaque vérification, motif o
   const decision2 = page.getByRole("region", { name: "Décision (revue humaine)" });
   await decision2.getByLabel("Valider le profil").check();
   await decision2.getByRole("button", { name: "Enregistrer la décision" }).click();
-  await expect(decision2.getByText(/Décision enregistrée : Vérifié/)).toBeVisible();
+  await expect(decision2.getByText(/Décision enregistrée : Validé/)).toBeVisible();
   await page.reload();
-  await expect(page.getByText("Vérifié", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Validé (vérifications déclarées, test)", { exact: true }).first()).toBeVisible();
 
   // Suspendre : motif obligatoire, puis le motif s'affiche sur la fiche.
   const decision3 = page.getByRole("region", { name: "Décision (revue humaine)" });
@@ -101,12 +101,12 @@ test("O2/O3 — valider un accompagnant : revue de chaque vérification, motif o
 
   // Notifications simulées + audit.
   const messages = await prisma.outboxMessage.findMany({ where: { recipientUserId: cg.user.id }, select: { template: true } });
-  expect(messages.map((m) => m.template).sort()).toEqual(["ACCOMPAGNANT_REFUSE", "ACCOMPAGNANT_VALIDE"]);
+  expect(messages.map((m) => m.template).sort()).toEqual(["ACCOMPAGNANT_SUSPENDU", "ACCOMPAGNANT_VALIDE"]);
   await page.goto("/operateur/journal-audit?action=caregiver.suspend");
   await expect(page.getByRole("cell", { name: cg.profile.id })).toBeVisible();
 });
 
-test("O4/O5 — matching manuel : compatibles d'abord, et le serveur REFUSE un auto-entrepreneur sur un niveau 3", async ({ page }) => {
+test("O4/O5 — matching manuel (D6) : compatibles d'abord, profil proposé À LA FAMILLE, refus serveur d'un auto-entrepreneur sur un niveau 3", async ({ page }) => {
   // Le Marin : aucune personne de la démo ne dessert cette commune.
   const fam = await createFamilyWithAine({ aineFirstName: `Aîné${uid()}`, commune: "MARIN", activityLevel: 3 });
   const req = await createRequest({ aineId: fam.aine.id, createdById: fam.user.id, level: 3, slots: [[2, "MATIN"]] });
@@ -140,7 +140,7 @@ test("O4/O5 — matching manuel : compatibles d'abord, et le serveur REFUSE un a
   // Attaque : on modifie le champ caché du formulaire pour viser l'auto-entrepreneur.
   const okCard = compatibles.getByRole("article", { name: ok.fullName });
   await okCard.locator('input[name="caregiverId"]').evaluate((el, id) => ((el as HTMLInputElement).value = id), ae.profile.id);
-  await okCard.getByRole("button", { name: `Proposer à ${ok.fullName}` }).click();
+  await okCard.getByRole("button", { name: `Proposer ${ok.fullName} à la famille` }).click();
   await expect(okCard.getByText(/Proposition refusée : accompagnant incompatible \(Niveau non autorisé pour ce statut\)/)).toBeVisible();
   expect(await prisma.missionProposal.count({ where: { requestId: req.id } })).toBe(0);
 
@@ -149,15 +149,19 @@ test("O4/O5 — matching manuel : compatibles d'abord, et le serveur REFUSE un a
   const okCard2 = page.getByRole("article", { name: ok.fullName });
   await okCard2.getByText("Ajouter un message (facultatif)").click();
   await okCard2.getByLabel(`Message pour ${ok.fullName}`).fill("Mercredi matin, 1 heure. Vous êtes libre de refuser.");
-  await okCard2.getByRole("button", { name: `Proposer à ${ok.fullName}` }).click();
-  await expect(okCard2.getByText("Proposition envoyée", { exact: true })).toBeVisible();
+  await okCard2.getByRole("button", { name: `Proposer ${ok.fullName} à la famille` }).click();
+  await expect(okCard2.getByText(/proposé à la famille/)).toBeVisible();
   await page.reload();
-  await expect(page.getByRole("region", { name: "Propositions envoyées" }).getByText(ok.fullName, { exact: false })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Profils proposés à la famille" }).getByText(ok.fullName, { exact: false })).toBeVisible();
+  await expect(page.getByRole("article", { name: ok.fullName }).getByText("Profil proposé à la famille")).toBeVisible();
   expect((await prisma.careRequest.findUniqueOrThrow({ where: { id: req.id } })).status).toBe("PROPOSEE");
+  // D6 : l'accompagnant n'est PAS encore sollicité ; la famille doit d'abord choisir.
+  const proposal = await prisma.missionProposal.findFirstOrThrow({ where: { requestId: req.id } });
+  expect(proposal.status).toBe("PROPOSEE_FAMILLE");
 
-  // Boîte d'envoi : PROPOSITION_MISSION pour la salariée ; journal : proposition bloquée tracée.
-  await page.goto("/operateur/notifications?modele=PROPOSITION_MISSION");
-  await expect(page.getByText(`à +596 696 99 99 99 (${ok.fullName}`).first()).toBeVisible();
+  // Boîte d'envoi : PROFILS_PROPOSES pour la famille ; journal : proposition bloquée tracée.
+  await page.goto("/operateur/notifications?modele=PROFILS_PROPOSES");
+  await expect(page.getByText(new RegExp(`Des profils pour ${fam.aine.firstName}`)).first()).toBeVisible();
   await page.goto("/operateur/journal-audit?action=proposal.blocked");
   await expect(page.getByRole("cell", { name: req.id })).toBeVisible();
 });
