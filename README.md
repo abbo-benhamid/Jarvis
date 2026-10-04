@@ -4,6 +4,8 @@ Le réseau de confiance qui veille sur nos aînés, ici et là-bas (Antilles, R�
 
 **Phase actuelle : conception stratégique (pas de code).**
 
+Vue interactive : https://claude.ai/artifact/UpbeKxwSkZGde9dtgZZycy (source : `site/koudmen-carte.html`).
+
 Commencer par **[docs/00-synthese-strategique.md](docs/00-synthese-strategique.md)**, puis les études détaillées :
 
 1. [Juridique & réglementaire](docs/01-juridique-reglementaire.md)

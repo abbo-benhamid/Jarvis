@@ -1,0 +1,327 @@
+<title>Koudmen, la carte du projet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout : une colonne éditoriale (max 980px), sections séparées par des bandes "madras" fines ; le schéma et le simulateur sont les deux pièces centrales. */
+:root{
+  --bg:#f3f6f5; --surface:#ffffff; --fg:#13302e; --muted:#4f6865; --line:#cfdcd9;
+  --sea:#0e6b63; --sun:#e0a21b; --hibiscus:#c2334d; --leaf:#3a8a3f;
+  --sea-soft:#dcefeb; --sun-soft:#fbefd2; --hib-soft:#f8dde2;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c1a19; --surface:#122523; --fg:#e4efed; --muted:#9db5b1; --line:#24403d;
+  --sea:#4cc3b5; --sun:#f0bd4f; --hibiscus:#ef6f86; --leaf:#7cc47f;
+  --sea-soft:#163a36; --sun-soft:#3a2f14; --hib-soft:#3d1c24; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1a19; --surface:#122523; --fg:#e4efed; --muted:#9db5b1; --line:#24403d;
+  --sea:#4cc3b5; --sun:#f0bd4f; --hibiscus:#ef6f86; --leaf:#7cc47f;
+  --sea-soft:#163a36; --sun-soft:#3a2f14; --hib-soft:#3d1c24; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:17px/1.6 var(--f-body);padding-inline:16px;padding-block:0 48px}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.1;margin:0}
+h2{font-size:clamp(26px,4vw,36px);font-weight:800}
+h3{font-size:19px;font-weight:700}
+p{margin:0;max-width:65ch}
+.eyebrow{font:600 12px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--sea)}
+.madras{height:6px;border-radius:3px;background:repeating-linear-gradient(90deg,var(--hibiscus) 0 34px,var(--sun) 34px 58px,var(--sea) 58px 80px,var(--leaf) 80px 92px)}
+section{display:flex;flex-direction:column;gap:18px}
+.lead{color:var(--muted);font-size:18px}
+/* Hero */
+header.hero{padding-top:40px;display:flex;flex-direction:column;gap:18px}
+.hero h1{font-size:clamp(38px,7vw,68px);font-weight:800;letter-spacing:-.02em}
+.hero h1 em{font-style:normal;color:var(--sea)}
+.kreyol{font:500 15px var(--f-mono);color:var(--muted)}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.fact{border-top:3px solid var(--sea);padding-top:10px;display:flex;flex-direction:column;gap:4px}
+.fact b{font:700 26px var(--f-display);font-variant-numeric:tabular-nums}
+.fact span{color:var(--muted);font-size:15px}
+.fact:nth-child(2){border-color:var(--sun)} .fact:nth-child(3){border-color:var(--hibiscus)}
+/* Pivot table */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:15.5px}
+th,td{padding:11px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+th{font:600 12px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+td.old{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--hibiscus)}
+td.new{font-weight:600}
+/* Diagram */
+.diagram{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.diagram svg{display:block;min-width:720px;width:100%;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:14px;color:var(--muted)}
+.legend i{display:inline-block;width:22px;height:3px;vertical-align:middle;margin-right:6px;border-radius:2px}
+/* Simulator */
+.sim{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:24px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px}
+@media (max-width:760px){.sim{grid-template-columns:1fr}}
+.controls{display:flex;flex-direction:column;gap:18px}
+.ctl{display:flex;flex-direction:column;gap:6px}
+.ctl label{font-weight:600;display:flex;justify-content:space-between;gap:8px}
+.ctl output{font:600 15px var(--f-mono);color:var(--sea)}
+input[type=range]{width:100%;accent-color:var(--sea)}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{font:600 14px var(--f-body);padding:8px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--sea);color:var(--surface);border-color:var(--sea)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.bars{display:flex;flex-direction:column;gap:16px}
+.bar{display:flex;flex-direction:column;gap:6px}
+.bar-head{display:flex;justify-content:space-between;gap:10px;font-size:15px}
+.bar-head b{font:700 18px var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.track{height:14px;background:var(--bg);border-radius:7px;overflow:hidden;display:flex}
+.track span{height:100%;transition:width .35s ease}
+.note{font-size:13.5px;color:var(--muted)}
+.verdict{padding:12px 14px;border-radius:8px;background:var(--sea-soft);font-weight:600}
+/* Proof */
+.proof{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.factor{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:8px;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.factor .tag{font:600 12px var(--f-mono);color:var(--muted)}
+.factor[aria-pressed="true"]{border-color:var(--leaf);box-shadow:inset 0 0 0 1px var(--leaf)}
+.factor[aria-pressed="true"] .tag{color:var(--leaf)}
+#proofState{padding:12px 14px;border-radius:8px;font-weight:600}
+/* Roadmap */
+.road{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+.step{border-left:3px solid var(--sea);padding:4px 0 4px 14px;display:flex;flex-direction:column;gap:6px}
+.step .when{font:600 13px var(--f-mono);color:var(--sea)}
+.step.gate{border-color:var(--hibiscus)} .step.gate .when{color:var(--hibiscus)}
+.step ul{margin:0;padding-left:18px;font-size:15.5px}
+/* Risks */
+.risks{display:flex;flex-direction:column;gap:10px}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px}
+summary{cursor:pointer;font-weight:600;display:flex;gap:10px;align-items:baseline}
+summary .sev{font:600 11px var(--f-mono);padding:2px 7px;border-radius:5px;background:var(--hib-soft);color:var(--hibiscus);flex-shrink:0}
+details p{margin-top:8px;color:var(--muted)}
+.qs{counter-reset:q;display:flex;flex-direction:column;gap:10px;padding:0;margin:0;list-style:none}
+.qs li{counter-increment:q;display:flex;gap:12px;align-items:baseline}
+.qs li::before{content:counter(q);font:700 15px var(--f-mono);color:var(--surface);background:var(--sea);border-radius:50%;width:26px;height:26px;display:inline-grid;place-items:center;flex-shrink:0}
+footer{font-size:13.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:16px}
+@media (prefers-reduced-motion: reduce){.track span{transition:none}}
+</style>
+
+<div class="wrap">
+<header class="hero">
+  <div class="eyebrow">Projet · Octobre 2026 · Conception</div>
+  <h1>Koudmen veille sur nos aînés, <em>ici et là-bas.</em></h1>
+  <p class="kreyol">koudmen (n.) : entraide collective. lakou (n.) : la cour familiale partagée.</p>
+  <p class="lead">Koudmen n'est pas une marketplace d'heures. Koudmen est l'opérateur de confiance de la veille à distance. Une famille en Hexagone sait, chaque semaine, que son parent aux Antilles va bien.</p>
+  <div class="facts">
+    <div class="fact"><b>85 000 – 120 000</b><span>familles de la diaspora avec un parent âgé au pays (estimation)</span></div>
+    <div class="fact"><b>~40 %</b><span>de 60 ans et plus en Martinique en 2030, territoire pilote</span></div>
+    <div class="fact"><b>15,80 € net/h</b><span>pour l'accompagnant, contre ~9,95 € en SAAD</span></div>
+  </div>
+</header>
+
+<div class="madras" role="presentation"></div>
+
+<section id="pivot">
+  <div class="eyebrow">1 · Ce que les agents ont changé</div>
+  <h2>Le pivot</h2>
+  <p class="lead">Le modèle de départ évitait la réglementation. L'étude montre que ce choix coûte le crédit d'impôt à la famille. La famille part alors au 2ᵉ mois.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Sujet</th><th>Idée de départ</th><th>Décision</th></tr></thead>
+    <tbody>
+      <tr><td>Statut</td><td class="old">Intermédiaire « light », sans agrément</td><td class="new">2 voies, puis agrément (M9-M12), puis autorisation</td></tr>
+      <tr><td>Client payeur</td><td class="old">Famille locale</td><td class="new">Enfant de la diaspora en Hexagone, puis familles locales et institutions</td></tr>
+      <tr><td>Produit</td><td class="old">Des heures d'aide</td><td class="new">La tranquillité : preuve de visite, journal, remplacement</td></tr>
+      <tr><td>Revenu</td><td class="old">Commission 12-20 % + abonnement accompagnant</td><td class="new">Abonnement famille. 0 € prélevé sur l'accompagnant</td></tr>
+      <tr><td>Outils phase 0</td><td class="old">Airtable + Google Sheets</td><td class="new">Tally, Grist/Baserow (UE), WhatsApp. Aucune donnée de santé</td></tr>
+      <tr><td>Pilote</td><td class="old">Réunion ou Guadeloupe</td><td class="new">Martinique (Fort-de-France, Schœlcher)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="modele">
+  <div class="eyebrow">2 · Qui fait quoi, qui paie quoi</div>
+  <h2>Le modèle en un schéma</h2>
+  <div class="diagram">
+  <svg viewBox="0 0 900 430" role="img" aria-label="Schéma des flux entre la famille diaspora, Koudmen, l'accompagnant, l'aîné et l'URSSAF">
+    <defs>
+      <marker id="aSea" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="var(--sea)"/></marker>
+      <marker id="aSun" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="var(--sun)"/></marker>
+      <marker id="aHib" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="var(--hibiscus)"/></marker>
+    </defs>
+    <!-- zones -->
+    <rect x="10" y="10" width="250" height="410" rx="12" fill="var(--sea-soft)"/>
+    <text x="24" y="36" fill="var(--sea)" font-family="var(--f-mono)" font-size="12" font-weight="600" letter-spacing="1.5">HEXAGONE</text>
+    <rect x="580" y="10" width="310" height="410" rx="12" fill="var(--sun-soft)"/>
+    <text x="594" y="36" fill="var(--fg)" font-family="var(--f-mono)" font-size="12" font-weight="600" letter-spacing="1.5">MARTINIQUE</text>
+    <!-- nodes -->
+    <g font-family="var(--f-body)">
+      <rect x="40" y="150" width="190" height="80" rx="10" fill="var(--surface)" stroke="var(--sea)" stroke-width="2"/>
+      <text x="135" y="183" text-anchor="middle" fill="var(--fg)" font-size="17" font-weight="700">Enfant diaspora</text>
+      <text x="135" y="206" text-anchor="middle" fill="var(--muted)" font-size="13">payeur · cercle Lakou</text>
+
+      <rect x="330" y="150" width="190" height="80" rx="10" fill="var(--sea)"/>
+      <text x="425" y="183" text-anchor="middle" fill="var(--surface)" font-size="19" font-weight="800">Koudmen</text>
+      <text x="425" y="206" text-anchor="middle" fill="var(--surface)" font-size="13">outil · preuve · confiance</text>
+
+      <rect x="640" y="70" width="210" height="76" rx="10" fill="var(--surface)" stroke="var(--fg)" stroke-width="1.5"/>
+      <text x="745" y="102" text-anchor="middle" fill="var(--fg)" font-size="17" font-weight="700">Accompagnant</text>
+      <text x="745" y="124" text-anchor="middle" fill="var(--muted)" font-size="13">AE déclaré SAP ou salarié CESU</text>
+
+      <rect x="640" y="290" width="210" height="76" rx="10" fill="var(--surface)" stroke="var(--fg)" stroke-width="1.5"/>
+      <text x="745" y="322" text-anchor="middle" fill="var(--fg)" font-size="17" font-weight="700">Aîné</text>
+      <text x="745" y="344" text-anchor="middle" fill="var(--muted)" font-size="13">consent · confirme la visite</text>
+
+      <rect x="330" y="330" width="190" height="62" rx="10" fill="var(--surface)" stroke="var(--line)" stroke-width="1.5"/>
+      <text x="425" y="358" text-anchor="middle" fill="var(--fg)" font-size="16" font-weight="700">URSSAF</text>
+      <text x="425" y="378" text-anchor="middle" fill="var(--muted)" font-size="13">avance immédiate −50 %</text>
+    </g>
+    <!-- flows -->
+    <g font-family="var(--f-mono)" font-size="12" fill="none" stroke-width="2.5">
+      <path d="M230 172 L328 172" stroke="var(--sun)" marker-end="url(#aSun)"/>
+      <path d="M200 150 C 260 60, 560 50, 638 95" stroke="var(--sun)" marker-end="url(#aSun)"/>
+      <path d="M745 148 L745 288" stroke="var(--hibiscus)" marker-end="url(#aHib)"/>
+      <path d="M638 330 C 560 300, 540 260, 520 222" stroke="var(--sea)" marker-end="url(#aSea)"/>
+      <path d="M328 208 L232 208" stroke="var(--sea)" marker-end="url(#aSea)"/>
+      <path d="M425 330 L425 234" stroke="var(--line)" stroke-dasharray="5 5"/>
+      <path d="M522 360 C 600 360, 640 200, 700 150" stroke="var(--line)" stroke-dasharray="5 5" marker-end="url(#aSea)"/>
+    </g>
+    <g font-family="var(--f-mono)" font-size="12">
+      <text x="240" y="164" fill="var(--fg)">abonnement</text>
+      <text x="360" y="58" fill="var(--fg)">heures payées en direct (−50 %)</text>
+      <text x="756" y="222" fill="var(--hibiscus)">visite</text>
+      <text x="530" y="300" fill="var(--sea)">preuve 2/3</text>
+      <text x="236" y="230" fill="var(--sea)">journal Kayé</text>
+      <text x="436" y="300" fill="var(--muted)">API tiers</text>
+    </g>
+  </svg>
+  </div>
+  <div class="legend">
+    <span><i style="background:var(--sun)"></i>argent</span>
+    <span><i style="background:var(--hibiscus)"></i>présence humaine</span>
+    <span><i style="background:var(--sea)"></i>information et preuve</span>
+    <span><i style="background:var(--line)"></i>crédit d'impôt</span>
+  </div>
+  <p>Koudmen ne prend rien sur l'heure de l'accompagnant. Koudmen vend l'abonnement : preuve de visite, journal, remplacement sous 24-48 h, coordination de la fratrie.</p>
+</section>
+
+<section id="simulateur">
+  <div class="eyebrow">3 · Pourquoi le crédit d'impôt décide de tout</div>
+  <h2>Simulateur de reste à charge</h2>
+  <p class="lead">Change les valeurs. Compare ce que paie la famille chaque mois.</p>
+  <div class="sim">
+    <div class="controls">
+      <div class="ctl"><label for="hours">Heures par mois <output id="hoursOut">20 h</output></label><input id="hours" type="range" min="4" max="60" step="2" value="20"></div>
+      <div class="ctl"><label for="rate">Tarif horaire payé <output id="rateOut">22 €</output></label><input id="rate" type="range" min="16" max="30" step="1" value="22"></div>
+      <div class="ctl"><label id="planLbl">Abonnement Koudmen</label>
+        <div class="seg" role="group" aria-labelledby="planLbl">
+          <button type="button" data-plan="0" aria-pressed="false">Lakou · 0 €</button>
+          <button type="button" data-plan="39" aria-pressed="true">Veyé · 39 €</button>
+          <button type="button" data-plan="79" aria-pressed="false">Sérénité+ · 79 €</button>
+        </div>
+      </div>
+      <p class="note">Estimation. Le crédit d'impôt couvre 50 % des heures éligibles. L'abonnement n'y ouvre pas droit. Plafonds, APA et cotisations CESU non inclus. [À VÉRIFIER avec un expert-comptable]</p>
+    </div>
+    <div class="bars" aria-live="polite">
+      <div class="bar">
+        <div class="bar-head"><span>Modèle « light » de départ<br><small class="note">AE sans autorisation : pas de crédit d'impôt</small></span><b id="vLight">—</b></div>
+        <div class="track"><span id="tLight" style="background:var(--hibiscus)"></span></div>
+      </div>
+      <div class="bar">
+        <div class="bar-head"><span>Koudmen<br><small class="note">heures −50 % + abonnement</small></span><b id="vK">—</b></div>
+        <div class="track"><span id="tKh" style="background:var(--sea)"></span><span id="tKs" style="background:var(--sun)"></span></div>
+      </div>
+      <div class="bar">
+        <div class="bar-head"><span>Emploi direct « seul »<br><small class="note">CESU sans aucun service</small></span><b id="vC">—</b></div>
+        <div class="track"><span id="tC" style="background:var(--muted)"></span></div>
+      </div>
+      <div class="verdict" id="verdict">—</div>
+    </div>
+  </div>
+</section>
+
+<section id="preuve">
+  <div class="eyebrow">4 · L'innovation centrale</div>
+  <h2>La preuve de visite</h2>
+  <p class="lead">Une visite est validée avec 2 facteurs sur 3. Elle déclenche le paiement et le journal. Clique sur les facteurs.</p>
+  <div class="proof">
+    <button type="button" class="factor" data-f aria-pressed="true"><span class="tag">FACTEUR 1 · LIEU</span><h3>GPS au check-in</h3><span class="note">Position vérifiée à l'arrivée seulement. Pas de suivi continu (directive UE 2024/2831).</span></button>
+    <button type="button" class="factor" data-f aria-pressed="false"><span class="tag">FACTEUR 2 · OBJET</span><h3>Tag NFC ou QR chez l'aîné</h3><span class="note">L'accompagnant scanne un tag collé au domicile.</span></button>
+    <button type="button" class="factor" data-f aria-pressed="true"><span class="tag">FACTEUR 3 · PERSONNE</span><h3>L'aîné confirme</h3><span class="note">Appel vocal automatique : « tapez 1 si la visite a eu lieu ». Messages enregistrés en créole.</span></button>
+  </div>
+  <div id="proofState">—</div>
+</section>
+
+<section id="feuille">
+  <div class="eyebrow">5 · Les étapes</div>
+  <h2>Feuille de route</h2>
+  <div class="road">
+    <div class="step"><span class="when">J1 – J30</span><h3>Valider</h3><ul><li>Avocat SAP + avis DEETS et CTM</li><li>30 entretiens terrain</li><li>Recherche INPI « Koudmen »</li></ul></div>
+    <div class="step"><span class="when">S1 – S12</span><h3>Pilote manuel</h3><ul><li>10-12 accompagnantes, 1 à 3 communes</li><li>Outils UE, sans données de santé</li><li>Budget ~25 k€</li></ul></div>
+    <div class="step gate"><span class="when">S12 · GO / NO-GO</span><h3>Seuil avant le code</h3><ul><li>≥ 25 familles payantes récurrentes</li><li>&lt; 30 % de fuite</li><li>0 incident grave non maîtrisé</li></ul></div>
+    <div class="step"><span class="when">M4 – M8</span><h3>MVP codé</h3><ul><li>Hébergement HDS, preuve de visite</li><li>Guadeloupe à M4-M6</li><li>100-150 k€</li></ul></div>
+    <div class="step"><span class="when">M9 – M12</span><h3>Agrément</h3><ul><li>Agrément mandataire (DEETS)</li><li>Contrats Agirc-Arrco, mutuelles</li><li>Cible : 450 visites/semaine</li></ul></div>
+  </div>
+</section>
+
+<section id="risques">
+  <div class="eyebrow">6 · Ce qui peut tuer le projet</div>
+  <h2>Risques principaux</h2>
+  <div class="risks">
+    <details open><summary><span class="sev">P0</span>Cadre légal mal maîtrisé</summary><p>Obtiens un avis écrit de la DEETS, de la CTM et d'un avocat avant la première mission. Utilise le montage à 2 voies.</p></details>
+    <details><summary><span class="sev">P0</span>Incident grave avec une personne vulnérable</summary><p>Applique la preuve de visite, le bouclier anti-abus (pas de dons, procurations ni carte bancaire), le protocole de crise et l'assurance de groupe. Prépare la communication de crise avant le lancement.</p></details>
+    <details><summary><span class="sev">P0</span>Désintermédiation</summary><p>Garde une valeur continue : journal, remplacement, crédit d'impôt, coordination. Ne prélève rien sur l'accompagnant. Le mode « Passerelle » transforme la fuite en revenu.</p></details>
+    <details><summary><span class="sev">P1</span>Marché insulaire trop petit</summary><p>Vise la rentabilité d'abord. Ouvre ensuite les payeurs institutionnels, l'Hexagone et les autres diasporas.</p></details>
+    <details><summary><span class="sev">P1</span>Suppression de l'avance immédiate pour les plateformes</summary><p>Le modèle ne dépend pas de l'avance immédiate. La voie CESU+ reste un plan de repli.</p></details>
+  </div>
+</section>
+
+<section id="questions">
+  <div class="eyebrow">7 · À toi de répondre</div>
+  <h2>Questions au fondateur</h2>
+  <ol class="qs">
+    <li>Où vis-tu ? As-tu un réseau en Martinique, Guadeloupe ou à La Réunion ?</li>
+    <li>Es-tu seul ? Qui a un profil tech, opérations ou social autour de toi ?</li>
+    <li>Quel budget peux-tu engager sur 6 mois ?</li>
+    <li>Veux-tu une PME rentable à impact, ou une startup qui vise l'Hexagone et l'international ?</li>
+    <li>Es-tu prêt à viser l'agrément puis l'autorisation ?</li>
+  </ol>
+</section>
+
+<footer>Sources : 8 études dans <code>docs/</code> du dépôt (juridique, marché, business, innovation, tech, lancement, red team, multi-statuts). Les chiffres marqués [À VÉRIFIER] doivent être confirmés avant toute décision.</footer>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id)};
+  var plan=39;
+  var eur=function(n){return Math.round(n).toLocaleString('fr-FR')+' €'};
+  function sim(){
+    var h=+$('hours').value, r=+$('rate').value;
+    $('hoursOut').textContent=h+' h'; $('rateOut').textContent=r+' €';
+    var light=h*r, hoursK=h*r*0.5, k=hoursK+plan, cesu=h*r*0.5;
+    var max=Math.max(light,k,cesu)||1;
+    $('vLight').textContent=eur(light)+'/mois';
+    $('vK').textContent=eur(k)+'/mois';
+    $('vC').textContent=eur(cesu)+'/mois';
+    $('tLight').style.width=(light/max*100)+'%';
+    $('tKh').style.width=(hoursK/max*100)+'%';
+    $('tKs').style.width=(plan/max*100)+'%';
+    $('tC').style.width=(cesu/max*100)+'%';
+    var gain=light-k;
+    $('verdict').textContent = gain>0
+      ? 'Avec Koudmen, la famille économise '+eur(gain)+' par mois par rapport au modèle « light », avec les services en plus.'
+      : 'À ce volume, l’abonnement pèse plus que l’économie. Propose la formule Lakou gratuite.';
+  }
+  ['hours','rate'].forEach(function(id){$(id).addEventListener('input',sim)});
+  document.querySelectorAll('[data-plan]').forEach(function(b){
+    b.addEventListener('click',function(){
+      plan=+b.dataset.plan;
+      document.querySelectorAll('[data-plan]').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});
+      sim();
+    });
+  });
+  function proof(){
+    var n=document.querySelectorAll('[data-f][aria-pressed="true"]').length, s=$('proofState');
+    if(n>=2){s.textContent='✓ '+n+'/3 facteurs : visite validée. Paiement libéré sous 48 h. Journal envoyé à la famille.';s.style.background='var(--sea-soft)';s.style.color='var(--fg)'}
+    else{s.textContent='✗ '+n+'/3 facteur : visite non validée. Un humain de l’équipe Koudmen appelle l’aîné.';s.style.background='var(--hib-soft)';s.style.color='var(--fg)'}
+  }
+  document.querySelectorAll('[data-f]').forEach(function(b){
+    b.addEventListener('click',function(){b.setAttribute('aria-pressed',b.getAttribute('aria-pressed')==='true'?'false':'true');proof()});
+  });
+  sim(); proof();
+})();
+</script>
