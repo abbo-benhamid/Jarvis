@@ -245,8 +245,26 @@ footer{font-size:13.5px;color:var(--muted);border-top:1px solid var(--line);padd
   <div id="proofState">—</div>
 </section>
 
+<section id="statuts">
+  <div class="eyebrow">5 · Ouvert aux particuliers, comme Yoojo</div>
+  <h2>Qui peut devenir accompagnant ?</h2>
+  <p class="lead">Un simple particulier peut faire le job. Il devient salarié de la famille en CESU+. Le niveau de l'activité décide du statut autorisé. Choisis un niveau.</p>
+  <div class="seg" role="group" aria-label="Niveau d'activité">
+    <button type="button" data-lvl="0" aria-pressed="true">1 · Lien</button>
+    <button type="button" data-lvl="1" aria-pressed="false">2 · Coups de main</button>
+    <button type="button" data-lvl="2" aria-pressed="false">3 · Présence et autonomie</button>
+    <button type="button" data-lvl="3" aria-pressed="false">4 · Aide renforcée</button>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Statut</th><th>Autorisé à ce niveau ?</th></tr></thead>
+    <tbody id="lvlBody"></tbody>
+  </table></div>
+  <p class="note" id="lvlNote"></p>
+  <p>Par défaut, le parent est l'employeur. L'accompagnant ne paie rien, quel que soit son statut. Jamais de paiement « au noir », ni de « bénévolat » défrayé au forfait.</p>
+</section>
+
 <section id="feuille">
-  <div class="eyebrow">5 · Les étapes</div>
+  <div class="eyebrow">6 · Les étapes</div>
   <h2>Feuille de route</h2>
   <div class="road">
     <div class="step"><span class="when">J1 – J30</span><h3>Valider</h3><ul><li>Avocat SAP + avis DEETS et CTM</li><li>30 entretiens terrain</li><li>Recherche INPI « Koudmen »</li></ul></div>
@@ -258,7 +276,7 @@ footer{font-size:13.5px;color:var(--muted);border-top:1px solid var(--line);padd
 </section>
 
 <section id="risques">
-  <div class="eyebrow">6 · Ce qui peut tuer le projet</div>
+  <div class="eyebrow">7 · Ce qui peut tuer le projet</div>
   <h2>Risques principaux</h2>
   <div class="risks">
     <details open><summary><span class="sev">P0</span>Cadre légal mal maîtrisé</summary><p>Obtiens un avis écrit de la DEETS, de la CTM et d'un avocat avant la première mission. Utilise le montage à 2 voies.</p></details>
@@ -270,7 +288,7 @@ footer{font-size:13.5px;color:var(--muted);border-top:1px solid var(--line);padd
 </section>
 
 <section id="questions">
-  <div class="eyebrow">7 · À toi de répondre</div>
+  <div class="eyebrow">8 · À toi de répondre</div>
   <h2>Questions au fondateur</h2>
   <ol class="qs">
     <li>Où vis-tu ? As-tu un réseau en Martinique, Guadeloupe ou à La Réunion ?</li>
@@ -322,6 +340,15 @@ footer{font-size:13.5px;color:var(--muted);border-top:1px solid var(--line);padd
   document.querySelectorAll('[data-f]').forEach(function(b){
     b.addEventListener('click',function(){b.setAttribute('aria-pressed',b.getAttribute('aria-pressed')==='true'?'false':'true');proof()});
   });
-  sim(); proof();
+  var ST=['Salarié de la famille (CESU+) : étudiant, retraité, chômeur, RSA, temps partiel','Proche aidant payé par l’APA (sauf conjoint)','Auto-entrepreneur déclaré SAP','SAAD partenaire','Bénévole via une association partenaire'];
+  var M=[[1,1,1,1,1],[1,1,1,1,0],[1,1,0,1,0],[0,0,0,1,0]];
+  var NOTES=['Appels, visio, messages. Tous les statuts vérifiés sont acceptés.','Courses, aide administrative, numérique. L’AE déclaré SAP permet l’avance immédiate du crédit d’impôt.','Compagnie, sorties, rendez-vous. Une autorisation est exigée en prestataire : l’AE est exclu.','Toilette, lever, coucher. Uniquement un SAAD autorisé (plus tard : Koudmen autorisé).'];
+  function lvl(i){
+    document.querySelectorAll('[data-lvl]').forEach(function(x){x.setAttribute('aria-pressed',+x.dataset.lvl===i?'true':'false')});
+    $('lvlBody').innerHTML=ST.map(function(s,j){var ok=M[i][j];return '<tr><td>'+s+'</td><td style="font-weight:600;color:var('+(ok?'--leaf':'--hibiscus')+')">'+(ok?'✓ Oui':'✗ Non')+'</td></tr>'}).join('');
+    $('lvlNote').textContent=NOTES[i];
+  }
+  document.querySelectorAll('[data-lvl]').forEach(function(b){b.addEventListener('click',function(){lvl(+b.dataset.lvl)})});
+  sim(); proof(); lvl(0);
 })();
 </script>

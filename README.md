@@ -15,5 +15,6 @@ Commencer par **[docs/00-synthese-strategique.md](docs/00-synthese-strategique.m
 5. [Architecture technique & sécurité](docs/05-architecture-tech-securite.md)
 6. [Go-to-market & opérations](docs/06-go-to-market-operations.md)
 7. [Red team & risques](docs/07-red-team-risques.md)
+8. [Particuliers & multi-statuts (style Yoojo)](docs/08-particuliers-multi-statuts.md)
 
 > Les éléments marqués [À VÉRIFIER] / ⚠️ doivent être confirmés (sources officielles, avocat) avant toute décision.

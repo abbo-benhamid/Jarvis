@@ -62,6 +62,39 @@ Ce n'est **pas** « un Yoopies pour l'Outre-mer ». C'est **l'opérateur de conf
 
 **Partenariats avec les SAAD dès le départ.** On cherche à être leur renfort, pas leur ennemi.
 
+### Qui peut devenir accompagnant ? Le modèle multi-statuts (détails : `08`)
+
+**Oui, un simple particulier peut faire le job, comme chez Yoojo.** Il devient **salarié de la famille** en CESU+ (voie B). Le niveau de l'activité décide des statuts autorisés.
+
+```mermaid
+flowchart LR
+  N1[Niveau 1 · Lien<br/>appels, visio] --> S1[Tous statuts vérifiés<br/>+ bénévoles via asso]
+  N2[Niveau 2 · Coups de main<br/>courses, administratif] --> S2[Salarié CESU<br/>ou AE déclaré SAP]
+  N3[Niveau 3 · Présence et autonomie<br/>compagnie, sorties, RDV] --> S3[Salarié CESU uniquement<br/>ou SAAD partenaire]
+  N4[Niveau 4 · Aide renforcée<br/>toilette, lever] --> S4[SAAD partenaire<br/>plus tard : Koudmen autorisé]
+```
+
+| Statut | Pilote ? |
+|---|---|
+| Salarié de la famille : étudiant, retraité, chômeur, bénéficiaire du RSA, salarié à temps partiel | ✅ Oui, c'est le cœur |
+| Proche aidant payé par l'APA (sauf conjoint) | ✅ Oui |
+| Auto-entrepreneur déclaré SAP (niveaux 1-2 seulement) | ✅ Oui |
+| SAAD partenaire en renfort | ✅ Oui |
+| Bénévole (via une association partenaire uniquement) | ✅ Oui, niveau 1 |
+| Déclarations CESU faites par Koudmen pour la famille | ⏳ Après l'agrément mandataire |
+| Coopérative (CAE), étudiants étrangers, fonctionnaires | ⏳ Plus tard |
+| Paiement « au noir », « bénévolat » défrayé au forfait, AE pour la compagnie, portage salarial | ❌ Jamais |
+
+**Règles clés :**
+- **Par défaut, le parent est l'employeur.** L'enfant de la diaspora paie, mais il n'a le crédit d'impôt que dans des cas limités (parent bénéficiaire de l'APA, et il renonce à déduire sa pension alimentaire).
+- **En phase 0, Koudmen prépare les déclarations CESU, mais la famille les envoie elle-même.** Faire les déclarations à la place d'un employeur âgé est une activité de mandataire.
+- **L'accompagnant paie 0 €, quel que soit son statut.** Le Code du travail (art. L5321-3) interdit aussi de faire payer un travailleur placé.
+- **Chaque statut a ses vérifications** : honorabilité, formation de 21 h, et limites d'activité selon le niveau.
+
+> **Correction (`08`)** : depuis juillet 2026 (décret 2026-261), l'exonération de charges patronales commence à **80 ans**, et non plus à 70. Les bénéficiaires de l'APA ou de la PCH la gardent. Les documents `01` et `03` doivent être lus avec cette correction [À VÉRIFIER].
+>
+> **Nouveau à partir du 1ᵉʳ janvier 2027** : le précompte des cotisations des auto-entrepreneurs devient obligatoire pour toutes les plateformes.
+
 **Règles produit imposées par la directive européenne sur le travail via plateforme** (UE 2024/2831, à transposer avant le 2 décembre 2026) :
 - tarif libre fixé par l'accompagnant ;
 - droit de refuser une mission sans pénalité ;
@@ -221,3 +254,4 @@ Le plan change selon tes réponses :
 | 05 | `05-architecture-tech-securite.md` | Phases 0/1/2, stack, WhatsApp et voix, paiements et avance immédiate, IA et créole, modèle de données, sécurité et confiance, budget, roadmap 18 mois |
 | 06 | `06-go-to-market-operations.md` | Amorçage du marché, acteurs locaux réels, recrutement et formation, opérations, plan S1-S12 puis M4-M12, scripts, KPIs, partenariats |
 | 07 | `07-red-team-risques.md` | Post-mortems du secteur, 15 risques, hypothèses à valider en priorité, pre-mortem 2028, due diligence, verdict |
+| 08 | `08-particuliers-multi-statuts.md` | Fonctionnement de Yoojo et des plateformes comparables, 7 statuts possibles, 4 niveaux d'activité, parcours d'inscription en 5 questions, recommandation pour le pilote |
