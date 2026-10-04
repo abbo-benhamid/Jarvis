@@ -8,7 +8,7 @@ import { Button, LinkButton } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { ChoiceCard } from "./choice-card";
 import { OrientationResultView } from "./orientation-result";
-import { PendingButton, useFormAction } from "./use-form-action";
+import { PendingButton, useFormAction } from "@/components/ui/use-form-action";
 
 type Draft = Partial<OrientationAnswers>;
 type Option<V extends string> = { value: V; label: string; hint?: string };

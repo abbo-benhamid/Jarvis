@@ -1,5 +1,6 @@
 import "server-only";
 import { db } from "@/server/db";
+import { sweepOverdueVisits } from "@/server/visits/service";
 import { planVisits } from "./schedule";
 import { getOrCreateProfile, ownedVisitWhere } from "./service";
 import type { ProfileSnapshot } from "./rules";
@@ -40,6 +41,8 @@ const VISIT_LIST_SELECT = {
 
 export async function getDashboard(userId: string, now: Date = new Date()) {
   const profile = await getOrCreateProfile(userId);
+  // Statut cohérent partout : les visites dépassées passent « À vérifier » en base.
+  await sweepOverdueVisits({ caregiverId: profile.id }, now);
   const startOfToday = new Date(now.getTime() - 12 * 3_600_000);
   const [pendingProposals, nextVisits, kayeToWrite] = await Promise.all([
     db.missionProposal.count({ where: { caregiverId: profile.id, status: "EN_ATTENTE" } }),
@@ -95,6 +98,7 @@ export async function getPendingProposals(userId: string, now: Date = new Date()
 
 export async function getVisits(userId: string, now: Date = new Date()) {
   const profile = await getOrCreateProfile(userId);
+  await sweepOverdueVisits({ caregiverId: profile.id }, now);
   const cutoff = new Date(now.getTime() - 12 * 3_600_000);
   const [upcoming, past] = await Promise.all([
     db.visit.findMany({

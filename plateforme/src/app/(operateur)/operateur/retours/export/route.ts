@@ -11,9 +11,9 @@ export async function GET() {
   const user = await requireRole("OPERATEUR");
   const rows = await listFeedback({});
   await logAudit({ actor: user, action: "feedback.export", entityType: "Feedback", metadata: { count: rows.length } });
-  const header = ["date", "statut", "note", "role", "page", "message"].map(csvCell).join(";");
+  const header = ["date", "statut", "note", "role", "code_testeur", "page", "message"].map(csvCell).join(";");
   const lines = rows.map((f) =>
-    [f.createdAt.toISOString(), FEEDBACK_STATUS_LABELS[f.status], f.rating, f.role ? ROLE_LABELS[f.role] : "Visiteur", f.pagePath, f.message]
+    [f.createdAt.toISOString(), FEEDBACK_STATUS_LABELS[f.status], f.rating, f.role ? ROLE_LABELS[f.role] : "Visiteur", f.testerCode, f.pagePath, f.message]
       .map(csvCell)
       .join(";"),
   );

@@ -8,8 +8,11 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Connexion poolée (Neon : URL « -pooler ») pour l'application.
+  url       = env("DATABASE_URL")
+  // Connexion directe (sans pooler) pour les migrations Prisma.
+  directUrl = env("DIRECT_URL")
 }
 
 // ─────────────────────────────── Enums ───────────────────────────────
@@ -48,10 +51,10 @@ enum NeedType {
   AIDE_RENFORCEE
 }
 
-/// Formules (00 § 3). Paiement SIMULÉ dans le MVP.
+/// Formules (00 § 3, décision D5). Paiement SIMULÉ dans le MVP. « Veyé » est réservé à Veyé Siklòn.
 enum Plan {
   LAKOU
-  VEYE
+  KOZE
   SERENITE
 }
 
@@ -121,11 +124,20 @@ enum RequestStatus {
 }
 
 /// Une proposition peut être refusée SANS pénalité (anti-requalification).
+/// Flux D6 : Koudmen propose le profil à la famille (PROPOSEE_FAMILLE), la famille choisit
+/// (EN_ATTENTE = choisi, en attente de l'accompagnant), l'accompagnant accepte ou refuse.
 enum ProposalStatus {
+  PROPOSEE_FAMILLE
   EN_ATTENTE
   ACCEPTEE
   REFUSEE
   ANNULEE
+}
+
+/// Qui emploie l'accompagnant (ou reçoit la facture) : l'aîné ou son représentant (D6).
+enum EmployerType {
+  AINE
+  REPRESENTANT
 }
 
 enum MissionStatus {
@@ -186,6 +198,9 @@ model User {
   phone        String?
   /// Compte de démonstration seedé (connexion par bouton « Essayer en tant que… »).
   isDemo       Boolean   @default(false)
+  /// Bac à sable du testeur (D2). Null = monde réel. Jamais visible depuis un autre bac à sable.
+  sandboxId    String?
+  sandbox      Sandbox?  @relation(fields: [sandboxId], references: [id])
   lastLoginAt  DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -207,6 +222,9 @@ model User {
   notifications       OutboxMessage[]
   feedbacks           Feedback[]
   auditLogs           AuditLog[]
+  proposalsChosen     MissionProposal[]  @relation("ProposalChooser")
+
+  @@index([sandboxId])
 }
 
 model FamilyProfile {
@@ -244,6 +262,9 @@ model Aine {
   consentAt     DateTime
   /// Code domicile à 6 caractères (remplace le QR/NFC dans le MVP).
   homeCode      String     @unique
+  /// Bac à sable du testeur (D2). Null = monde réel.
+  sandboxId     String?
+  sandbox       Sandbox?   @relation(fields: [sandboxId], references: [id])
   ownerId       String
   owner         User       @relation("AineOwner", fields: [ownerId], references: [id])
   createdAt     DateTime   @default(now())
@@ -258,6 +279,7 @@ model Aine {
   journal      JournalEntry[]
 
   @@index([ownerId])
+  @@index([sandboxId])
 }
 
 model LakouMember {
@@ -345,6 +367,8 @@ model CaregiverProfile {
   associationName    String?
   saadName           String?
   siret              String?
+  /// Proche aidant APA : l'aîné de SA famille. Il n'est proposé qu'à cet aîné (D7).
+  linkedAineId       String?
   validation         CaregiverValidation @default(BROUILLON)
   /// Motif obligatoire si REFUSE ou SUSPENDU (revue humaine).
   validationReason   String?
@@ -403,6 +427,9 @@ model CareRequest {
   durationMinutes Int           @default(120)
   startDate       DateTime?
   notes           String?
+  /// Employeur (ou client) de l'accompagnant : l'aîné ou son représentant (D6).
+  employerType    EmployerType  @default(AINE)
+  employerName    String?
   status          RequestStatus @default(OUVERTE)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -436,6 +463,10 @@ model MissionProposal {
   status       ProposalStatus   @default(EN_ATTENTE)
   /// Motif FACULTATIF. Un refus n'a jamais d'effet sur le profil.
   declineNote  String?
+  /// D6 : la famille choisit ce profil (passage PROPOSEE_FAMILLE → EN_ATTENTE).
+  chosenAt     DateTime?
+  chosenById   String?
+  chosenBy     User?            @relation("ProposalChooser", fields: [chosenById], references: [id])
   respondedAt  DateTime?
   createdAt    DateTime         @default(now())
   mission      Mission?
@@ -456,6 +487,9 @@ model Mission {
   caregiver       CaregiverProfile @relation(fields: [caregiverId], references: [id])
   /// Copie du tarif libre de l'accompagnant au moment de l'acceptation.
   hourlyRateCents Int?
+  /// Copie de l'employeur de la demande (D6).
+  employerType    EmployerType     @default(AINE)
+  employerName    String?
   status          MissionStatus    @default(ACTIVE)
   createdAt       DateTime         @default(now())
   visits          Visit[]
@@ -551,26 +585,35 @@ model OutboxMessage {
   status          OutboxStatus @default(ENVOYE_SIMULE)
   relatedType     String?
   relatedId       String?
+  /// Bac à sable d'origine (D2). Null = monde réel.
+  sandboxId       String?
+  sandbox         Sandbox?     @relation(fields: [sandboxId], references: [id], onDelete: Cascade)
   createdAt       DateTime     @default(now())
   sentAt          DateTime?
 
   @@index([createdAt])
+  @@index([sandboxId])
 }
 
 model Feedback {
-  id        String         @id @default(cuid())
-  userId    String?
-  user      User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
-  role      Role?
+  id         String         @id @default(cuid())
+  userId     String?
+  user       User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  role       Role?
   /// Note 1 à 5.
-  rating    Int
-  message   String
-  pagePath  String
-  userAgent String?
-  status    FeedbackStatus @default(NOUVEAU)
-  createdAt DateTime       @default(now())
+  rating     Int
+  message    String
+  pagePath   String
+  userAgent  String?
+  /// Mesure (D15) : bac à sable et code testeur. Le code reste après la purge du bac à sable.
+  sandboxId  String?
+  sandbox    Sandbox?       @relation(fields: [sandboxId], references: [id], onDelete: SetNull)
+  testerCode String?
+  status     FeedbackStatus @default(NOUVEAU)
+  createdAt  DateTime       @default(now())
 
   @@index([createdAt])
+  @@index([testerCode])
 }
 
 model AuditLog {
@@ -586,5 +629,92 @@ model AuditLog {
   createdAt  DateTime @default(now())
 
   @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────── Test utilisateurs (S1b : D2, D3, D14, D15) ───────────────────────────────
+
+/// Bac à sable d'un testeur : un monde fictif isolé (aîné, famille, accompagnants, opérateur « robots »).
+/// Créé à la volée après un code d'invitation valide. Purgé après 30 jours.
+model Sandbox {
+  id              String   @id @default(cuid())
+  /// Code d'invitation testeur utilisé (TESTER_INVITE_CODES). Relie retours et mesures au testeur.
+  testerCode      String
+  /// Rôle joué par le testeur : FAMILLE ou ACCOMPAGNANT.
+  role            Role
+  /// Empreinte SHA-256 du jeton du lien de reprise. Le jeton lui-même n'est jamais stocké.
+  resumeTokenHash String   @unique
+  /// Acceptation des CGU de test (D4).
+  cguAcceptedAt   DateTime
+  /// Nombre de clics sur « Simuler la suite » (D14).
+  simulationCount Int      @default(0)
+  lastSeenAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  users        User[]
+  aines        Aine[]
+  outbox       OutboxMessage[]
+  feedbacks    Feedback[]
+  usageEvents  UsageEvent[]
+  microAnswers MicroAnswer[]
+  discoveries  DiscoveryRequest[]
+
+  @@index([createdAt])
+  @@index([testerCode])
+}
+
+/// Événement d'usage (D15) : page vue ou action clé. Aucune donnée personnelle ni texte libre.
+model UsageEvent {
+  id         String   @id @default(cuid())
+  sandboxId  String?
+  sandbox    Sandbox? @relation(fields: [sandboxId], references: [id], onDelete: SetNull)
+  testerCode String?
+  /// Id du compte (sans clé étrangère : l'événement reste après la purge, anonyme).
+  userId     String?
+  role       Role?
+  /// Notation pointée : "page.view", "sandbox.created", "simulate.step", "profile.chosen"…
+  name       String
+  path       String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([name, createdAt])
+  @@index([sandboxId])
+  @@index([testerCode])
+}
+
+/// Réponse à une micro-question contextuelle (D15). Une réponse par compte et par question.
+model MicroAnswer {
+  id          String   @id @default(cuid())
+  sandboxId   String?
+  sandbox     Sandbox? @relation(fields: [sandboxId], references: [id], onDelete: SetNull)
+  testerCode  String?
+  userId      String
+  role        Role?
+  questionKey String
+  answer      String
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, questionKey])
+  @@index([questionKey])
+}
+
+/// Offre factice « Réserver une vraie visite découverte » (D15). Contact RÉEL du testeur,
+/// recueilli seulement avec son consentement explicite. Aucune donnée sur l'aîné.
+model DiscoveryRequest {
+  id          String         @id @default(cuid())
+  sandboxId   String?
+  sandbox     Sandbox?       @relation(fields: [sandboxId], references: [id], onDelete: SetNull)
+  testerCode  String?
+  userId      String?
+  name        String
+  /// Email ou téléphone donné par le testeur.
+  contact     String
+  /// Texte exact de la case cochée (preuve du consentement).
+  consentText String
+  consentAt   DateTime
+  status      FeedbackStatus @default(NOUVEAU)
+  createdAt   DateTime       @default(now())
+
   @@index([createdAt])
 }

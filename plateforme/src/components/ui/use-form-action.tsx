@@ -1,9 +1,10 @@
 "use client";
 
 import { startTransition, useActionState, type FormEvent } from "react";
-import { Button, type ButtonSize, type ButtonVariant } from "@/components/ui/button";
+import { Button, type ButtonSize, type ButtonVariant } from "./button";
 
 /**
+ * SOCLE — hook commun à TOUS les formulaires (connexion, inscription, avis, familles, accompagnants).
  * Envoie un formulaire à une Server Action SANS la réinitialisation automatique de React 19.
  * Raison : avec `<form action>`, React remet les champs à leur valeur par défaut après l'envoi.
  * Les champs contrôlés (cases cochées, textes) gardent alors un état React différent du DOM,

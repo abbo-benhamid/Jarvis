@@ -1,6 +1,5 @@
 "use client";
 
-import { useActionState } from "react";
 import { inviteLakouAction } from "@/server/famille/actions";
 import type { ActionResult } from "@/lib/action-result";
 import { formatDate } from "@/lib/format";
@@ -8,16 +7,14 @@ import { FormField, fieldA11y } from "@/components/ui/form-field";
 import { Input } from "@/components/ui/input";
 import { FormMessage } from "@/components/ui/form-message";
 import { CopyLink } from "./copy-link";
-import { PendingButton } from "./pending-button";
-import { useKeepForm } from "./use-keep-form";
+import { PendingButton, useFormAction } from "@/components/ui/use-form-action";
 
 type InviteState = ActionResult<{ link: string; expiresAt: string }>;
 const initial: InviteState = { ok: false, error: "" };
 
 /** F4 : formulaire d'invitation au cercle Lakou. Affiche le lien copiable après création. */
 export function InviteForm({ aineId, aineFirstName }: { aineId: string; aineFirstName: string }) {
-  const [state, dispatch, pending] = useActionState(inviteLakouAction, initial);
-  const onSubmit = useKeepForm(dispatch);
+  const { state, onSubmit, pending } = useFormAction(inviteLakouAction, initial);
   const fe = !state.ok ? state.fieldErrors : undefined;
   return (
     <div className="flex flex-col gap-4">

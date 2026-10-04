@@ -19,6 +19,7 @@ import type {
   VisitStatus,
   ProofFactor,
   FamilyLocation,
+  EmployerType,
 } from "@prisma/client";
 
 export const ROLE_LABELS: Record<Role, string> = {
@@ -71,13 +72,19 @@ export const CAREGIVER_STATUS_LABELS: Record<CaregiverStatus, string> = {
   AUTO_ENTREPRENEUR_SAP: "Auto-entrepreneur déclaré SAP",
   PROCHE_AIDANT_APA: "Proche aidant salarié (APA)",
   BENEVOLE_ASSO: "Bénévole via une association",
-  SAAD: "Salarié d'un SAAD partenaire",
+  SAAD: "Structure partenaire (SAAD)",
+};
+
+/** Qui emploie l'accompagnant (D6). */
+export const EMPLOYER_TYPE_LABELS: Record<EmployerType, string> = {
+  AINE: "L'aîné lui-même",
+  REPRESENTANT: "Un représentant de l'aîné (enfant, tuteur…)",
 };
 
 export const VALIDATION_LABELS: Record<CaregiverValidation, string> = {
   BROUILLON: "Profil incomplet",
   EN_ATTENTE: "En attente de vérification",
-  VALIDE: "Vérifié",
+  VALIDE: "Validé (vérifications déclarées, test)",
   REFUSE: "Refusé",
   SUSPENDU: "Suspendu",
 };
@@ -116,13 +123,14 @@ export const FREQUENCY_LABELS: Record<Frequency, string> = {
 
 export const REQUEST_STATUS_LABELS: Record<RequestStatus, string> = {
   OUVERTE: "Ouverte",
-  PROPOSEE: "Proposition envoyée",
+  PROPOSEE: "Profils proposés",
   POURVUE: "Accompagnant trouvé",
   ANNULEE: "Annulée",
 };
 
 export const PROPOSAL_STATUS_LABELS: Record<ProposalStatus, string> = {
-  EN_ATTENTE: "En attente de réponse",
+  PROPOSEE_FAMILLE: "Profil proposé à la famille",
+  EN_ATTENTE: "Choisi par la famille, en attente de réponse",
   ACCEPTEE: "Acceptée",
   REFUSEE: "Refusée",
   ANNULEE: "Annulée",
@@ -178,6 +186,6 @@ export const CHANNEL_LABELS: Record<Channel, string> = {
 
 export const PLAN_LABELS: Record<Plan, string> = {
   LAKOU: "Lakou",
-  VEYE: "Veyé",
+  KOZE: "Kozé",
   SERENITE: "Sérénité",
 };

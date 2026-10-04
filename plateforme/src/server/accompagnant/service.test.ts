@@ -73,7 +73,7 @@ beforeEach(() => {
   m.recordProof.mockReset();
   m.refreshVisitStatus.mockReset();
   m.isDemoMode.mockReset().mockReturnValue(false);
-  delete process.env.NEXT_PUBLIC_TEST_MODE;
+  process.env.NEXT_PUBLIC_TEST_MODE = "false";
 });
 
 // ─────────────────────────────── Acceptation ───────────────────────────────
@@ -144,7 +144,7 @@ describe("acceptProposal — transaction d'acceptation", () => {
     expect(visits).toHaveLength(8);
     expect(visits.every((v) => v.missionId === "mission-1" && v.caregiverId === "cg-josiane")).toBe(true);
     expect(m.tx.missionProposal.updateMany.mock.calls[1]![0]).toEqual({
-      where: { requestId: "req-ernest", id: { not: "prop-ernest-josiane" }, status: "EN_ATTENTE" },
+      where: { requestId: "req-ernest", id: { not: "prop-ernest-josiane" }, status: { in: ["EN_ATTENTE", "PROPOSEE_FAMILLE"] } },
       data: { status: "ANNULEE", respondedAt: NOW },
     });
     // Audit et notification passent le client de transaction.

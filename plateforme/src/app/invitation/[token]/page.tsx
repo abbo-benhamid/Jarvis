@@ -3,14 +3,13 @@ import Link from "next/link";
 import { Users } from "lucide-react";
 import { PublicShell } from "@/components/layout/public-shell";
 import { getCurrentUser } from "@/server/auth/guards";
-import { rememberInvitationAction } from "@/server/famille/actions";
+import { sameScope } from "@/server/scope";
 import { getInvitationByToken, isLakouMember } from "@/server/famille/queries";
 import { tokenSchema } from "@/server/famille/schemas";
 import { formatDate } from "@/lib/format";
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/button";
-import { SubmitButton } from "@/components/ui/submit-button";
 import { JoinCircleForm } from "@/components/famille/join-circle-form";
 
 export const metadata: Metadata = { title: "Invitation au cercle Lakou" };
@@ -24,11 +23,19 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
   const valid = tokenSchema.safeParse(token);
   const inv = valid.success ? await getInvitationByToken(token) : null;
   const user = await getCurrentUser();
+  const next = encodeURIComponent(`/invitation/${token}`);
+  // Un lien de bac à sable (D2) ne s'ouvre que dans ce bac à sable.
+  const otherWorld = inv ? (user ? !sameScope(inv.aine.sandboxId, user.sandboxId) : inv.aine.sandboxId !== null) : false;
 
   return (
     <PublicShell>
       <div className="mx-auto flex max-w-xl flex-col gap-6">
-        {!inv ? (
+        {otherWorld ? (
+          <Problem title="Ce lien appartient à un bac à sable de test.">
+            En test, un lien d&apos;invitation s&apos;ouvre seulement dans le bac à sable qui l&apos;a créé. Aucune vraie personne n&apos;est
+            invitée.
+          </Problem>
+        ) : !inv ? (
           <Problem title="Ce lien d'invitation n'est pas valide.">
             Vérifiez que vous avez copié le lien en entier. Sinon, demandez un nouveau lien à la personne qui vous a invité(e).
           </Problem>
@@ -61,16 +68,13 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
               {!user ? (
                 <>
                   <p className="font-semibold">Pour rejoindre le cercle, connectez-vous ou créez un compte Famille.</p>
-                  <LinkButton href={`/connexion?next=${encodeURIComponent(`/invitation/${token}`)}`} size="lg">
+                  <LinkButton href={`/connexion?next=${next}`} size="lg">
                     J&apos;ai déjà un compte : me connecter
                   </LinkButton>
-                  <form action={rememberInvitationAction}>
-                    <input type="hidden" name="token" value={token} />
-                    <SubmitButton variant="secondary" size="lg" className="w-full" pendingLabel="Un instant…">
-                      Créer un compte Famille
-                    </SubmitButton>
-                  </form>
-                  <p className="text-sm text-muted">Après la création du compte, votre accueil vous propose de rejoindre le cercle.</p>
+                  <LinkButton href={`/inscription?role=FAMILLE&next=${next}`} variant="secondary" size="lg">
+                    Créer un compte Famille
+                  </LinkButton>
+                  <p className="text-sm text-muted">Après la création du compte, vous revenez sur cette page pour rejoindre le cercle.</p>
                 </>
               ) : user.role !== "FAMILLE" ? (
                 <Alert tone="attention" title="Ce lien est réservé à un compte Famille.">

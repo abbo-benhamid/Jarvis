@@ -3,15 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
 import { requireRole } from "@/server/auth/guards";
 import { assertAineAccess } from "@/server/access";
 import { db } from "@/server/db";
 import { logAudit } from "@/server/audit";
 import { notifyUser } from "@/server/outbox";
 import { confirmElderSimulated } from "@/server/visits/service";
-import { checkCompatibility } from "@/server/rules/matching";
-import { communeLabel } from "@/lib/communes";
+import { MatchingError, proposeProfile } from "@/server/matching/service";
+import { REAL_WORLD, sameScope } from "@/server/scope";
 import { VALIDATION_LABELS } from "@/lib/labels";
 import { fail, type ActionResult } from "@/lib/action-result";
 import {
@@ -21,7 +20,6 @@ import {
   decisionSchema,
   feedbackStatusSchema,
   FEEDBACK_STATUS_LABELS,
-  proposalBlockReason,
   proposalSchema,
   recomputeLevels,
   validationBlockers,
@@ -59,9 +57,10 @@ export async function decideCaregiverAction(_prev: ActionResult, formData: FormD
 
   const cg = await db.caregiverProfile.findUnique({
     where: { id: caregiverId },
-    include: { verifications: { select: { type: true, status: true } }, user: { select: { id: true, firstName: true } } },
+    include: { verifications: { select: { type: true, status: true } }, user: { select: { id: true, firstName: true, sandboxId: true } } },
   });
-  if (!cg) return fail("Accompagnant introuvable.");
+  // Cloisonnement (D2) : l'opérateur réel n'agit que sur le monde réel.
+  if (!cg || !sameScope(cg.user.sandboxId, REAL_WORLD)) return fail("Accompagnant introuvable.");
   if (!allowedDecisions(cg.validation).includes(decision)) {
     return fail(`Cette décision n'est pas possible. État actuel du profil : ${VALIDATION_LABELS[cg.validation]}.`);
   }
@@ -121,13 +120,12 @@ export async function decideCaregiverAction(_prev: ActionResult, formData: FormD
         },
         tx,
       );
-      // [À VÉRIFIER] Le socle n'a pas de modèle « suspendu » : la suspension utilise ACCOMPAGNANT_REFUSE (avec le motif).
       if (to === "VALIDE") {
         await notifyUser(cg.user.id, "ACCOMPAGNANT_VALIDE", { prenom: cg.user.firstName }, { type: "CaregiverProfile", id: cg.id }, tx);
       } else {
         await notifyUser(
           cg.user.id,
-          "ACCOMPAGNANT_REFUSE",
+          to === "SUSPENDU" ? "ACCOMPAGNANT_SUSPENDU" : "ACCOMPAGNANT_REFUSE",
           { prenom: cg.user.firstName, motif: reason },
           { type: "CaregiverProfile", id: cg.id },
           tx,
@@ -153,9 +151,13 @@ export async function reviewVerificationAction(_prev: ActionResult, formData: Fo
 
   const item = await db.verificationItem.findUnique({
     where: { id: verificationId },
-    include: { caregiver: { select: { id: true, status: true, verifications: { select: { id: true, type: true, status: true } } } } },
+    include: {
+      caregiver: {
+        select: { id: true, status: true, user: { select: { sandboxId: true } }, verifications: { select: { id: true, type: true, status: true } } },
+      },
+    },
   });
-  if (!item) return fail("Vérification introuvable.");
+  if (!item || !sameScope(item.caregiver.user?.sandboxId, REAL_WORLD)) return fail("Vérification introuvable.");
   if (item.status === "A_FOURNIR") return fail("L'accompagnant n'a pas encore déclaré cette pièce.");
 
   await db.$transaction(async (tx) => {
@@ -185,83 +187,29 @@ export async function reviewVerificationAction(_prev: ActionResult, formData: Fo
   return { ok: true, message: verdict === "VALIDE" ? "Vérification validée." : "Vérification refusée." };
 }
 
-// ─────────────── O5 Proposition (matching manuel) ───────────────
+// ─────────────── O5 Proposition à la famille (matching manuel, flux D6) ───────────────
 
+/**
+ * Koudmen PROPOSE un profil à la famille (1 à 3 profils par demande). La famille choisit ensuite.
+ * Toutes les règles (monde réel, compatibilité, maximum de 3) sont dans le service partagé.
+ */
 export async function proposeCaregiverAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireRole("OPERATEUR");
   const parsed = proposalSchema.safeParse(formToObject(formData));
   if (!parsed.success) return fail("Vérifiez la proposition.", parsed.error.flatten().fieldErrors);
   const { requestId, caregiverId, message } = parsed.data;
 
-  let outcome: { ok: true; name: string } | { ok: false; error: string };
+  let name: string;
   try {
-    outcome = await db.$transaction(async (tx) => {
-      const request = await tx.careRequest.findUnique({
-        where: { id: requestId },
-        select: { id: true, level: true, status: true, aine: { select: { commune: true } }, slots: { select: { dayOfWeek: true, slot: true } } },
-      });
-      const cg = await tx.caregiverProfile.findUnique({
-        where: { id: caregiverId },
-        select: {
-          id: true,
-          status: true,
-          validation: true,
-          hasDiploma: true,
-          communes: true,
-          availabilities: { select: { dayOfWeek: true, slot: true } },
-          user: { select: { id: true, firstName: true, lastName: true } },
-        },
-      });
-      if (!request || !cg) return { ok: false as const, error: "Demande ou accompagnant introuvable." };
-
-      const existing = await tx.missionProposal.findUnique({
-        where: { requestId_caregiverId: { requestId, caregiverId } },
-        select: { status: true },
-      });
-      // RÈGLE SERVEUR : on recalcule la compatibilité ici. Le formulaire ne fait jamais foi (RM-01, RM-02).
-      const match = checkCompatibility(cg, { level: request.level, commune: request.aine.commune, slots: request.slots });
-      const blocked = proposalBlockReason({ requestStatus: request.status, match, existingProposal: existing?.status ?? null });
-      if (blocked) return { ok: false as const, error: blocked };
-
-      const proposal = await tx.missionProposal.create({
-        data: { requestId, caregiverId, proposedById: user.id, message: message || null },
-      });
-      if (request.status === "OUVERTE") {
-        await tx.careRequest.update({ where: { id: requestId }, data: { status: "PROPOSEE" } });
-      }
-      await notifyUser(
-        cg.user.id,
-        "PROPOSITION_MISSION",
-        { prenom: cg.user.firstName, niveau: request.level, commune: communeLabel(request.aine.commune) },
-        { type: "MissionProposal", id: proposal.id },
-        tx,
-      );
-      await logAudit(
-        { actor: user, action: "proposal.created", entityType: "MissionProposal", entityId: proposal.id, metadata: { requestId, caregiverId } },
-        tx,
-      );
-      return { ok: true as const, name: `${cg.user.firstName} ${cg.user.lastName}` };
-    });
+    ({ caregiverName: name } = await proposeProfile(user, { requestId, caregiverId, message }, REAL_WORLD));
   } catch (e) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      return fail("Cet accompagnant a déjà reçu une proposition pour cette demande.");
-    }
-    throw e;
-  }
-
-  if (!outcome.ok) {
+    if (!(e instanceof MatchingError)) throw e;
     // Trace de sécurité : une proposition refusée par le serveur est journalisée.
-    await logAudit({
-      actor: user,
-      action: "proposal.blocked",
-      entityType: "CareRequest",
-      entityId: requestId,
-      metadata: { caregiverId, reason: outcome.error },
-    });
-    return fail(outcome.error);
+    await logAudit({ actor: user, action: "proposal.blocked", entityType: "CareRequest", entityId: requestId, metadata: { caregiverId, reason: e.message } });
+    return fail(e.message);
   }
   revalidatePath("/operateur", "layout");
-  return { ok: true, message: `Proposition envoyée à ${outcome.name}. Message simulé dans la boîte d'envoi.` };
+  return { ok: true, message: `Profil de ${name} proposé à la famille. La famille choisit. Message simulé dans la boîte d'envoi.` };
 }
 
 // ─────────────── O6 Confirmation simulée de l'aîné ───────────────
@@ -274,9 +222,9 @@ export async function confirmElderAction(_prev: ActionResult, formData: FormData
   if (!parsed.success) return fail("Visite invalide.");
   const visit = await db.visit.findUnique({
     where: { id: parsed.data.visitId },
-    select: { id: true, aineId: true, status: true, proofs: { select: { factor: true, valid: true } } },
+    select: { id: true, aineId: true, status: true, aine: { select: { sandboxId: true } }, proofs: { select: { factor: true, valid: true } } },
   });
-  if (!visit) return fail("Visite introuvable.");
+  if (!visit || !sameScope(visit.aine?.sandboxId, REAL_WORLD)) return fail("Visite introuvable.");
   await assertAineAccess(user, visit.aineId);
   if (visit.status !== "EN_COURS" && visit.status !== "A_VERIFIER") {
     return fail("La confirmation est possible pour une visite en cours ou à vérifier.");

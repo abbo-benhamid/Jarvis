@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import type { ConsentBy, NeedType } from "@prisma/client";
 import { createAineAction, updateAineAction } from "@/server/famille/actions";
 import { initialActionState } from "@/lib/action-result";
@@ -12,8 +12,7 @@ import { Alert } from "@/components/ui/alert";
 import { FormField, Fieldset, fieldA11y } from "@/components/ui/form-field";
 import { Checkbox, Input, Radio, Select } from "@/components/ui/input";
 import { FormMessage } from "@/components/ui/form-message";
-import { PendingButton } from "./pending-button";
-import { useKeepForm } from "./use-keep-form";
+import { PendingButton, useFormAction } from "@/components/ui/use-form-action";
 
 export type AineFormDefaults = {
   aineId: string;
@@ -31,8 +30,7 @@ export type AineFormDefaults = {
 /** F2 (création) et modification du profil de l'aîné. Garde la saisie en cas d'erreur. */
 export function AineForm({ defaults }: { defaults?: AineFormDefaults }) {
   const editing = Boolean(defaults);
-  const [state, dispatch, pending] = useActionState(editing ? updateAineAction : createAineAction, initialActionState);
-  const onSubmit = useKeepForm(dispatch);
+  const { state, onSubmit, pending } = useFormAction(editing ? updateAineAction : createAineAction, initialActionState);
   const [consentBy, setConsentBy] = useState<ConsentBy>(defaults?.consentByType ?? "AINE");
   const fe = !state.ok ? state.fieldErrors : undefined;
 

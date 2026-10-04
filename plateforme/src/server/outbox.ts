@@ -11,6 +11,8 @@ export type NotificationInput = {
   template: TemplateKey;
   vars: Record<string, string | number>;
   related?: { type: string; id: string };
+  /** Bac à sable d'origine (D2). Null ou absent = monde réel. */
+  sandboxId?: string | null;
 };
 
 /**
@@ -32,6 +34,7 @@ export async function enqueueNotification(input: NotificationInput, client: DbCl
       sentAt: new Date(),
       relatedType: input.related?.type ?? null,
       relatedId: input.related?.id ?? null,
+      sandboxId: input.sandboxId ?? null,
     },
   });
 }
@@ -44,7 +47,7 @@ export async function notifyUser(
   related?: { type: string; id: string },
   client: DbClient = db,
 ) {
-  const user = await client.user.findUnique({ where: { id: userId }, select: { email: true, phone: true } });
+  const user = await client.user.findUnique({ where: { id: userId }, select: { email: true, phone: true, sandboxId: true } });
   if (!user) return null;
   return enqueueNotification(
     {
@@ -54,6 +57,7 @@ export async function notifyUser(
       template,
       vars,
       related,
+      sandboxId: user.sandboxId,
     },
     client,
   );

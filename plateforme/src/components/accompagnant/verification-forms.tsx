@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { PendingButton, useFormAction } from "./use-form-action";
+import { PendingButton, useFormAction } from "@/components/ui/use-form-action";
 import type { VerificationStatus, VerificationType } from "@prisma/client";
 import { declareVerificationAction, submitForReviewAction } from "@/server/accompagnant/actions";
 import { initialActionState } from "@/lib/action-result";

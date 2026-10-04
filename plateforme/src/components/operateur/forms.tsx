@@ -87,7 +87,7 @@ export function VerificationReviewForm({ verificationId }: { verificationId: str
   );
 }
 
-/** Bouton « Proposer » d'un candidat compatible. Le serveur revérifie la compatibilité. */
+/** D6 : proposer le profil d'un candidat compatible À LA FAMILLE. Le serveur revérifie tout. */
 export function ProposeForm({ requestId, caregiverId, name }: { requestId: string; caregiverId: string; name: string }) {
   const [state, action] = useActionState(proposeCaregiverAction, initialActionState);
   const id = `message-${caregiverId}`;
@@ -98,13 +98,13 @@ export function ProposeForm({ requestId, caregiverId, name }: { requestId: strin
       <input type="hidden" name="caregiverId" value={caregiverId} />
       <details className="rounded-lg border border-line px-3 py-1">
         <summary className="flex min-h-11 cursor-pointer items-center font-semibold">Ajouter un message (facultatif)</summary>
-        <FormField label={`Message pour ${name}`} htmlFor={id} hint="Rappel : l'accompagnant est libre d'accepter ou de refuser.">
+        <FormField label={`Message pour ${name}`} htmlFor={id} hint="Rappel : la famille choisit, puis l'accompagnant est libre d'accepter ou de refuser.">
           <Textarea id={id} name="message" rows={2} maxLength={500} aria-describedby={`${id}-hint`} />
         </FormField>
       </details>
       <FormMessage state={state} />
       <div>
-        <SubmitButton pendingLabel="Envoi…">{`Proposer à ${name}`}</SubmitButton>
+        <SubmitButton pendingLabel="Envoi…">{`Proposer ${name} à la famille`}</SubmitButton>
       </div>
     </form>
   );

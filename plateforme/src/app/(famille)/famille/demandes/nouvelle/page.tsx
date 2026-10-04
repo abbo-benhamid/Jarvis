@@ -22,7 +22,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
       <PageHeader
         eyebrow="Demandes"
         title="Demander un accompagnement"
-        description="Décrivez le besoin. L'équipe Koudmen propose ensuite un accompagnant vérifié, près de chez l'aîné."
+        description="Décrivez le besoin. Koudmen vous propose ensuite 1 à 3 profils près de chez l'aîné. Vous choisissez."
       />
       {aines.length === 0 ? (
         <EmptyState

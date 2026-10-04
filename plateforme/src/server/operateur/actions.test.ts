@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * Point clé : le SERVEUR refuse une proposition incompatible, même si le formulaire est modifié.
  */
 
-const operator = { id: "op1", email: "o@x.test", role: "OPERATEUR" as const, firstName: "Équipe", lastName: "Koudmen", isDemo: true };
+const operator = { id: "op1", email: "o@x.test", role: "OPERATEUR" as const, firstName: "Équipe", lastName: "Koudmen", isDemo: false, sandboxId: null };
 const requireRole = vi.fn(async (..._roles: string[]) => operator);
 const logAudit = vi.fn(async (..._a: unknown[]) => undefined);
 const notifyUser = vi.fn(async (..._a: unknown[]) => null);
@@ -33,6 +33,9 @@ vi.mock("@/server/audit", () => ({ logAudit: (...a: unknown[]) => logAudit(...a)
 vi.mock("@/server/outbox", () => ({ notifyUser: (...a: unknown[]) => notifyUser(...a) }));
 vi.mock("@/server/visits/service", () => ({ confirmElderSimulated: (...a: unknown[]) => confirmElderSimulated(...a) }));
 vi.mock("@/server/access", () => ({ assertAineAccess: async () => undefined }));
+const proposeProfile = vi.fn();
+class MatchingError extends Error {}
+vi.mock("@/server/matching/service", () => ({ proposeProfile: (...a: unknown[]) => proposeProfile(...a), MatchingError }));
 vi.mock("next/cache", () => ({ revalidatePath: () => undefined }));
 vi.mock("next/navigation", () => ({
   redirect: (url: string) => {
@@ -52,22 +55,6 @@ function form(data: Record<string, string>) {
   return f;
 }
 
-const level3Request = {
-  id: REQ,
-  level: 3,
-  status: "OUVERTE",
-  aine: { commune: "SCHOELCHER" },
-  slots: [{ dayOfWeek: 5, slot: "APRES_MIDI" }],
-};
-const caregiver = (status: string, validation = "VALIDE") => ({
-  id: CG,
-  status,
-  validation,
-  hasDiploma: false,
-  communes: ["SCHOELCHER"],
-  availabilities: [{ dayOfWeek: 5, slot: "APRES_MIDI" }],
-  user: { id: "u-cg", firstName: "Kévin", lastName: "M." },
-});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -79,54 +66,29 @@ describe("proposeCaregiverAction", () => {
     requireRole.mockRejectedValueOnce(new Error("REDIRECT:/famille"));
     await expect(proposeCaregiverAction(initialActionState, form({ requestId: REQ, caregiverId: CG }))).rejects.toThrow("REDIRECT");
     expect(requireRole).toHaveBeenCalledWith("OPERATEUR");
-    expect(tx.missionProposal.create).not.toHaveBeenCalled();
+    expect(proposeProfile).not.toHaveBeenCalled();
   });
 
-  it("REFUSE un auto-entrepreneur sur une demande de niveau 3 (aucune écriture, audit de blocage)", async () => {
-    tx.careRequest.findUnique.mockResolvedValue(level3Request);
-    tx.caregiverProfile.findUnique.mockResolvedValue(caregiver("AUTO_ENTREPRENEUR_SAP"));
-    tx.missionProposal.findUnique.mockResolvedValue(null);
+  it("propose le profil à la famille, dans le monde réel seulement", async () => {
+    proposeProfile.mockResolvedValue({ proposalId: "p1", caregiverName: "Kévin M.", activeCount: 1 });
+    const res = await proposeCaregiverAction(initialActionState, form({ requestId: REQ, caregiverId: CG, message: "Bonjour" }));
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.message).toMatch(/proposé à la famille/);
+    expect(proposeProfile).toHaveBeenCalledWith(operator, { requestId: REQ, caregiverId: CG, message: "Bonjour" }, null);
+  });
 
+  it("journalise une proposition bloquée par le serveur", async () => {
+    proposeProfile.mockRejectedValue(new MatchingError("Proposition refusée : accompagnant incompatible (Niveau non autorisé pour ce statut)."));
     const res = await proposeCaregiverAction(initialActionState, form({ requestId: REQ, caregiverId: CG }));
-
     expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.error).toMatch(/Niveau non autorisé pour ce statut/);
-    expect(tx.missionProposal.create).not.toHaveBeenCalled();
-    expect(tx.careRequest.update).not.toHaveBeenCalled();
-    expect(notifyUser).not.toHaveBeenCalled();
+    if (!res.ok) expect(res.error).toMatch(/Niveau non autorisé/);
     expect(logAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "proposal.blocked", entityId: REQ }));
   });
 
-  it("REFUSE un profil non vérifié", async () => {
-    tx.careRequest.findUnique.mockResolvedValue({ ...level3Request, level: 1 });
-    tx.caregiverProfile.findUnique.mockResolvedValue(caregiver("SALARIE_FAMILLE_CESU", "EN_ATTENTE"));
-    tx.missionProposal.findUnique.mockResolvedValue(null);
-    const res = await proposeCaregiverAction(initialActionState, form({ requestId: REQ, caregiverId: CG }));
-    expect(res.ok).toBe(false);
-    expect(tx.missionProposal.create).not.toHaveBeenCalled();
-  });
-
-  it("crée la proposition compatible, passe la demande en PROPOSEE, notifie et audite", async () => {
-    tx.careRequest.findUnique.mockResolvedValue(level3Request);
-    tx.caregiverProfile.findUnique.mockResolvedValue(caregiver("SALARIE_FAMILLE_CESU"));
-    tx.missionProposal.findUnique.mockResolvedValue(null);
-    tx.missionProposal.create.mockResolvedValue({ id: "prop1" });
-
-    const res = await proposeCaregiverAction(initialActionState, form({ requestId: REQ, caregiverId: CG, message: "Bonjour" }));
-
-    expect(res.ok).toBe(true);
-    expect(tx.missionProposal.create).toHaveBeenCalledWith({
-      data: { requestId: REQ, caregiverId: CG, proposedById: "op1", message: "Bonjour" },
-    });
-    expect(tx.careRequest.update).toHaveBeenCalledWith({ where: { id: REQ }, data: { status: "PROPOSEE" } });
-    expect(notifyUser).toHaveBeenCalledWith("u-cg", "PROPOSITION_MISSION", expect.objectContaining({ niveau: 3, commune: "Schœlcher" }), expect.anything(), tx);
-    expect(logAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "proposal.created" }), tx);
-  });
-
-  it("refuse un identifiant invalide sans toucher la base", async () => {
+  it("refuse un identifiant invalide sans appeler le service", async () => {
     const res = await proposeCaregiverAction(initialActionState, form({ requestId: "x", caregiverId: CG }));
     expect(res.ok).toBe(false);
-    expect(db.$transaction).not.toHaveBeenCalled();
+    expect(proposeProfile).not.toHaveBeenCalled();
   });
 });
 
@@ -191,7 +153,15 @@ describe("decideCaregiverAction", () => {
     expect(res.ok).toBe(true);
     expect(tx.missionProposal.updateMany).toHaveBeenCalledWith({ where: { id: { in: ["p1"] } }, data: expect.objectContaining({ status: "ANNULEE" }) });
     expect(tx.careRequest.updateMany).toHaveBeenCalledWith({ where: { id: REQ, status: "PROPOSEE" }, data: { status: "OUVERTE" } });
-    expect(notifyUser).toHaveBeenCalledWith("u-cg", "ACCOMPAGNANT_REFUSE", expect.objectContaining({ motif: expect.stringMatching(/Plainte/) }), expect.anything(), tx);
+    expect(notifyUser).toHaveBeenCalledWith("u-cg", "ACCOMPAGNANT_SUSPENDU", expect.objectContaining({ motif: expect.stringMatching(/Plainte/) }), expect.anything(), tx);
+  });
+
+  it("D2 : refuse d'agir sur un accompagnant d'un bac à sable", async () => {
+    db.caregiverProfile.findUnique = vi.fn().mockResolvedValue({ ...pending, user: { ...pending.user, sandboxId: "sbx1" } });
+    const res = await decideCaregiverAction(initialActionState, form({ caregiverId: CG, decision: "VALIDER" }));
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toBe("Accompagnant introuvable.");
+    expect(db.$transaction).not.toHaveBeenCalled();
   });
 
   it("signale un conflit si un autre opérateur a déjà décidé", async () => {

@@ -42,4 +42,14 @@ describe("checkCompatibility", () => {
     const r = checkCompatibility({ ...josiane, validation: "EN_ATTENTE", status: null }, { level: 1, commune: "FORT_DE_FRANCE", slots: [] });
     expect(r.reasons).toEqual(expect.arrayContaining(["NON_VALIDE", "SANS_STATUT"]));
   });
+
+  it("D7 : propose un proche aidant seulement pour l'aîné de sa famille", () => {
+    const nadege: CaregiverForMatching = { ...josiane, status: "PROCHE_AIDANT_APA", linkedAineId: "aine-yvette" };
+    const sienne = checkCompatibility(nadege, { level: 1, commune: "SCHOELCHER", slots: [], aineId: "aine-yvette" });
+    expect(sienne.compatible).toBe(true);
+    const autre = checkCompatibility(nadege, { level: 1, commune: "SCHOELCHER", slots: [], aineId: "aine-leonie" });
+    expect(autre.reasons).toEqual(["LIEN_FAMILIAL"]);
+    const sansLien = checkCompatibility({ ...nadege, linkedAineId: null }, { level: 1, commune: "SCHOELCHER", slots: [], aineId: "aine-yvette" });
+    expect(sansLien.reasons).toEqual(["LIEN_FAMILIAL"]);
+  });
 });

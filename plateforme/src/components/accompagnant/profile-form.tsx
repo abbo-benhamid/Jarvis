@@ -12,7 +12,7 @@ import { Input, Textarea } from "@/components/ui/input";
 import { Card, CardTitle } from "@/components/ui/card";
 import { FormMessage } from "@/components/ui/form-message";
 import { ChoiceCard } from "./choice-card";
-import { PendingButton, useFormAction } from "./use-form-action";
+import { PendingButton, useFormAction } from "@/components/ui/use-form-action";
 
 const SLOTS = ["MATIN", "APRES_MIDI", "SOIR"] as const;
 
@@ -33,7 +33,7 @@ export function ProfileForm({
 }: {
   status: CaregiverStatus;
   initial: ProfileFormValues;
-  /** Rappel du SMIC si le statut est salarié, sinon null. */
+  /** Plancher salarié (D10) si le statut est salarié, sinon null. */
   smicCents: number | null;
 }) {
   const { state, onSubmit, pending } = useFormAction(saveProfileAction, initialActionState);
@@ -73,8 +73,8 @@ export function ProfileForm({
           </FormField>
           {smicCents != null ? (
             <p className="text-sm text-muted">
-              Rappel : vous êtes salarié(e). Votre tarif ne peut pas être sous le SMIC horaire brut (
-              {formatEuros(smicCents)} en 2025, montant à confirmer).
+              Vous êtes salarié(e) : votre tarif est un salaire horaire brut. Il ne peut pas être sous{" "}
+              {formatEuros(smicCents)} (SMIC 2026 et minimum de la convention IDCC 3239, à confirmer). Le formulaire refuse un montant plus bas.
             </p>
           ) : null}
         </Card>

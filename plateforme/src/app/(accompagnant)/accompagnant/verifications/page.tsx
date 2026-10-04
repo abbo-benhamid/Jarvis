@@ -64,7 +64,7 @@ export default async function Page() {
           {profile.validation === "EN_ATTENTE" ? (
             <Alert tone="attention">Votre demande est envoyée. L&apos;équipe Koudmen vérifie votre profil.</Alert>
           ) : profile.validation === "VALIDE" ? (
-            <Alert tone="succes">Votre profil est vérifié. Vous pouvez recevoir des propositions.</Alert>
+            <Alert tone="succes">Votre profil est validé (vérifications déclarées, test). Des familles peuvent vous choisir.</Alert>
           ) : profile.validation === "SUSPENDU" ? (
             <Alert tone="danger">
               Votre profil est suspendu. {profile.validationReason ? `Motif : ${profile.validationReason}` : null}

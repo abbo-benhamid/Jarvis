@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CircleCheck, CircleDashed } from "lucide-react";
 import { requireRole } from "@/server/auth/guards";
+import { MicroQuestion } from "@/components/sandbox/micro-question";
 import { getDashboard, profileSnapshot } from "@/server/accompagnant/queries";
 import { missingProfileItems, verificationsReady } from "@/server/accompagnant/rules";
 import { PageHeader } from "@/components/ui/page-header";
@@ -38,6 +39,7 @@ export default async function Page() {
     <>
       <PageHeader eyebrow="Accueil" title={`Bonjour ${user.firstName}`} actions={<ValidationBadge status={profile.validation} />} />
       <div className="flex flex-col gap-6">
+        {profile.status ? <MicroQuestion user={user} questionKey="INSCRIPTION_REELLE" path="/accompagnant" /> : null}
         {!profile.status ? (
           <EmptyState
             title="Première étape : votre statut"

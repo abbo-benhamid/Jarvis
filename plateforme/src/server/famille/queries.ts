@@ -1,10 +1,9 @@
 import "server-only";
-import { cookies } from "next/headers";
 import { db } from "@/server/db";
 import { canAccessAine, familyAineIds } from "@/server/access";
 import type { CurrentUser } from "@/server/auth/guards";
+import { sweepOverdueVisits } from "@/server/visits/service";
 import { invitationState } from "./logic";
-import { INVITATION_COOKIE } from "./constants";
 
 /**
  * Lectures de l'espace Famille. Chaque fonction filtre par le cercle Lakou
@@ -20,6 +19,8 @@ const visitInclude = {
 
 /** F1 : aînés du cercle avec prochaine visite et dernier Kayé. */
 export async function getFamilyHome(userId: string, now: Date = new Date()) {
+  // Statut cohérent partout : les visites dépassées passent « À vérifier » en base.
+  await sweepOverdueVisits({ aine: { members: { some: { userId } } } }, now);
   const memberships = await db.lakouMember.findMany({
     where: { userId },
     orderBy: { joinedAt: "asc" },
@@ -126,9 +127,32 @@ export async function getFamilyRequests(userId: string) {
       aine: { select: { id: true, firstName: true, lastInitial: true } },
       createdBy: { select: { firstName: true } },
       slots: { select: { dayOfWeek: true, slot: true }, orderBy: [{ dayOfWeek: "asc" }, { slot: "asc" }] },
-      // Seulement le nombre de propositions en attente : jamais le nom ni le motif d'un refus.
-      _count: { select: { proposals: { where: { status: "EN_ATTENTE" } } } },
-      mission: { select: { caregiver: { select: { user: { select: { firstName: true } } } } } },
+      employerType: true,
+      employerName: true,
+      // D6 : profils proposés par Koudmen (à choisir) et profil choisi (en attente de réponse).
+      // Jamais le nom ni le motif d'un refus (RM-05).
+      proposals: {
+        where: { status: { in: ["PROPOSEE_FAMILLE", "EN_ATTENTE"] } },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          status: true,
+          message: true,
+          caregiver: {
+            select: {
+              status: true,
+              saadName: true,
+              associationName: true,
+              communes: true,
+              hourlyRateCents: true,
+              bio: true,
+              availabilities: { select: { dayOfWeek: true, slot: true } },
+              user: { select: { firstName: true, lastName: true } },
+            },
+          },
+        },
+      },
+      mission: { select: { caregiver: { select: { status: true, saadName: true, user: { select: { firstName: true, lastName: true } } } } } },
     },
   });
 }
@@ -138,6 +162,7 @@ export async function getFamilyVisits(userId: string, aineId?: string) {
   const aineIds = await familyAineIds(userId);
   const ids = aineId ? aineIds.filter((x) => x === aineId) : aineIds;
   if (ids.length === 0) return [];
+  await sweepOverdueVisits({ aineId: { in: ids } });
   return db.visit.findMany({
     where: { aineId: { in: ids } },
     orderBy: { scheduledStart: "desc" },
@@ -203,7 +228,7 @@ export async function getInvitationByToken(token: string, now: Date = new Date()
       relation: true,
       expiresAt: true,
       acceptedAt: true,
-      aine: { select: { firstName: true, lastInitial: true } },
+      aine: { select: { firstName: true, lastInitial: true, sandboxId: true } },
       createdBy: { select: { firstName: true } },
     },
   });
@@ -214,16 +239,4 @@ export async function getInvitationByToken(token: string, now: Date = new Date()
 export async function isLakouMember(aineId: string, userId: string): Promise<boolean> {
   const m = await db.lakouMember.findUnique({ where: { aineId_userId: { aineId, userId } }, select: { id: true } });
   return m !== null;
-}
-
-/** Invitation mémorisée avant une inscription (cookie), encore valide et pas encore utilisée par cet utilisateur. */
-export async function getPendingInvitation(userId: string) {
-  const store = await cookies();
-  const token = store.get(INVITATION_COOKIE)?.value;
-  if (!token || !/^[A-Za-z0-9_-]{16,128}$/.test(token)) return null;
-  const inv = await getInvitationByToken(token);
-  if (!inv || inv.state !== "VALIDE") return null;
-  const member = await db.lakouMember.findUnique({ where: { aineId_userId: { aineId: inv.aineId, userId } }, select: { id: true } });
-  if (member) return null;
-  return { token, aineFirstName: inv.aine.firstName, from: inv.createdBy.firstName };
 }

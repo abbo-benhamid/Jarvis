@@ -16,10 +16,10 @@ import { COMMUNE_CODES } from "@/lib/communes";
 // ─────────────────────────────── Tarif ───────────────────────────────
 
 /**
- * SMIC horaire brut, en centimes. Rappel affiché au salarié. Le tarif reste LIBRE.
- * [À VÉRIFIER] montant en vigueur (valeur 2025 : 11,88 €). À mettre à jour chaque année.
+ * SMIC et plancher salarié : source unique dans @/lib/legal (D10).
+ * Le tarif reste LIBRE, mais un salarié ne peut pas être payé sous le plancher.
  */
-export const SMIC_HORAIRE_BRUT_CENTS = 1188;
+export { SMIC_HORAIRE_BRUT_CENTS, PLANCHER_SALARIE_CENTS } from "@/lib/legal";
 export const RATE_MIN_CENTS = 100;
 export const RATE_MAX_CENTS = 15_000;
 

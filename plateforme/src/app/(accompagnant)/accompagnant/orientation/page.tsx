@@ -39,7 +39,7 @@ export default async function Page() {
       <div className="mx-auto flex max-w-2xl flex-col gap-4">
         {!canRedo ? (
           <Alert tone="info">
-            Votre profil est vérifié. Pour changer de statut, écrivez à l&apos;équipe Koudmen avec le bouton « Donner mon avis ».
+            Votre profil est validé. Pour changer de statut, écrivez à l&apos;équipe Koudmen avec le bouton « Donner mon avis ».
           </Alert>
         ) : profile.validation === "EN_ATTENTE" ? (
           <Alert tone="attention">

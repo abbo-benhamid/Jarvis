@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
 import { createRequestAction } from "@/server/famille/actions";
 import { initialActionState } from "@/lib/action-result";
-import { DAY_LABELS, FREQUENCY_LABELS, LEVEL_DESCRIPTIONS, LEVEL_LABELS, SLOT_LABELS } from "@/lib/labels";
+import { DAY_LABELS, EMPLOYER_TYPE_LABELS, FREQUENCY_LABELS, LEVEL_DESCRIPTIONS, LEVEL_LABELS, SLOT_LABELS } from "@/lib/labels";
 import { DURATION_OPTIONS, FREQUENCY_VALUES, SLOT_VALUES } from "@/server/famille/schemas";
 import { durationLabel } from "@/server/famille/logic";
 import { Alert } from "@/components/ui/alert";
@@ -11,18 +11,17 @@ import { Card } from "@/components/ui/card";
 import { FormField, Fieldset, fieldA11y } from "@/components/ui/form-field";
 import { Input, Radio, Select, Textarea } from "@/components/ui/input";
 import { FormMessage } from "@/components/ui/form-message";
-import { PendingButton } from "./pending-button";
-import { useKeepForm } from "./use-keep-form";
+import { PendingButton, useFormAction } from "@/components/ui/use-form-action";
 
 export type RequestAineOption = { id: string; firstName: string; lastInitial: string | null; activityLevel: number; communeLabel: string };
 
 /** F6 : demande d'accompagnement. Le niveau est pré-rempli par le niveau d'activité de l'aîné. */
 export function RequestForm({ aines, defaultAineId, today }: { aines: RequestAineOption[]; defaultAineId?: string; today: string }) {
-  const [state, dispatch, pending] = useActionState(createRequestAction, initialActionState);
-  const onSubmit = useKeepForm(dispatch);
+  const { state, onSubmit, pending } = useFormAction(createRequestAction, initialActionState);
   const initialAine = aines.find((a) => a.id === defaultAineId) ?? aines[0];
   const [aineId, setAineId] = useState(initialAine?.id ?? "");
   const [level, setLevel] = useState(initialAine?.activityLevel ?? 1);
+  const [employerType, setEmployerType] = useState<"AINE" | "REPRESENTANT">("AINE");
   const fe = !state.ok ? state.fieldErrors : undefined;
   const aine = aines.find((a) => a.id === aineId);
 
@@ -153,6 +152,44 @@ export function RequestForm({ aines, defaultAineId, today }: { aines: RequestAin
         <FormField label="Notes" htmlFor="notes" hint="Exemple : elle aime parler du carnaval, il a un petit chien." errors={fe?.notes}>
           <Textarea {...fieldA11y("notes", fe?.notes, true)} maxLength={500} />
         </FormField>
+      </Card>
+
+      <Card className="flex flex-col gap-4">
+        <h2 className="text-xl font-bold">4. Qui emploie l&apos;accompagnant ?</h2>
+        <p className="text-sm text-muted">
+          Koudmen met en relation. Koudmen n&apos;est pas l&apos;employeur. L&apos;employeur (ou le client d&apos;un auto-entrepreneur) est
+          l&apos;aîné ou son représentant.
+        </p>
+        <Fieldset legend="L'employeur est…" errors={fe?.employerType}>
+          {(["AINE", "REPRESENTANT"] as const).map((t) => (
+            <Radio
+              key={t}
+              id={`employer-${t}`}
+              name="employerType"
+              value={t}
+              checked={employerType === t}
+              onChange={() => setEmployerType(t)}
+              label={EMPLOYER_TYPE_LABELS[t]}
+            />
+          ))}
+        </Fieldset>
+        <FormField
+          label="Nom de l'employeur (fictif)"
+          htmlFor="employerName"
+          hint={employerType === "AINE" ? "Exemple : le nom de l'aîné." : "Exemple : votre nom, si vous êtes le représentant."}
+          errors={fe?.employerName}
+        >
+          <Input {...fieldA11y("employerName", fe?.employerName, true)} maxLength={120} autoComplete="off" />
+        </FormField>
+        {employerType === "REPRESENTANT" ? (
+          <Alert tone="attention">
+            Un enfant employeur a droit au crédit d&apos;impôt seulement dans certains cas (par exemple si le parent remplit les conditions de
+            l&apos;APA). [À VÉRIFIER] avec un conseiller avant toute vraie embauche.
+          </Alert>
+        ) : null}
+        <Alert tone="info">
+          Koudmen ne déclare pas à votre place. Koudmen vous donne un relevé d&apos;heures. Vous déclarez vous-même sur cesu.urssaf.fr.
+        </Alert>
       </Card>
 
       <FormMessage state={state} />

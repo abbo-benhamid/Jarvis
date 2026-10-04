@@ -79,10 +79,13 @@ export async function saveProfileAction(_prev: ActionResult, formData: FormData)
   const parsed = profileSchema.safeParse(formDataToObject(formData, ["communes", "availabilities"]));
   if (!parsed.success) return fail(CHECK, parsed.error.flatten().fieldErrors);
   try {
-    const { warning } = await saveProfile(me, parsed.data);
+    await saveProfile(me, parsed.data);
     revalidatePath("/accompagnant", "layout");
-    return { ok: true, message: warning ? `Profil enregistré. Attention : ${warning}` : "Profil enregistré." };
+    return { ok: true, message: "Profil enregistré." };
   } catch (e) {
+    if (e instanceof AccompagnantError && e.code === "TARIF") {
+      return fail(e.message, { hourlyRate: [e.message] });
+    }
     return toFailure(e);
   }
 }

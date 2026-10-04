@@ -11,7 +11,7 @@ import { FormField, Fieldset, fieldA11y } from "@/components/ui/form-field";
 import { FormMessage } from "@/components/ui/form-message";
 import { cn } from "@/lib/cn";
 import { MOOD_ICONS } from "./kaye-view";
-import { PendingButton, useFormAction } from "./use-form-action";
+import { PendingButton, useFormAction } from "@/components/ui/use-form-action";
 
 const APPETITES: Appetite[] = ["BON", "MOYEN", "FAIBLE", "NON_OBSERVE"];
 

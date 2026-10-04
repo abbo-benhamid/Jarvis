@@ -76,6 +76,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
                   <p className="mt-2 text-sm text-muted">
                     Page <code className="font-mono">{f.pagePath}</code> · {f.role ? ROLE_LABELS[f.role] : "Visiteur non connecté"}
                     {f.user ? ` (${f.user.firstName} ${f.user.lastName})` : ""} · {formatDateTime(f.createdAt)}
+                    {f.testerCode ? ` · code testeur ${f.testerCode}` : ""}
                   </p>
                   <div className="mt-3">
                     <FeedbackStatusForm feedbackId={f.id} current={f.status} />

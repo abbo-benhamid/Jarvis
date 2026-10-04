@@ -13,7 +13,7 @@ import { MOOD_LABELS } from "@/lib/labels";
 import { planVisits } from "./schedule";
 import {
   MAX_CODE_ATTEMPTS,
-  SMIC_HORAIRE_BRUT_CENTS,
+  PLANCHER_SALARIE_CENTS,
   canDeclare,
   canRedoOrientation,
   canSubmitForReview,
@@ -35,7 +35,7 @@ import {
 
 export type Actor = { id: string; role: Role; firstName: string };
 
-export type AccompagnantErrorCode = "INTROUVABLE" | "INTERDIT" | "CONFLIT" | "INVALIDE";
+export type AccompagnantErrorCode = "INTROUVABLE" | "INTERDIT" | "CONFLIT" | "INVALIDE" | "TARIF";
 
 /** Erreur métier : `message` s'affiche tel quel à l'accompagnant. */
 export class AccompagnantError extends Error {
@@ -48,9 +48,12 @@ export class AccompagnantError extends Error {
   }
 }
 
-/** Mode test : bouton « Simuler ma position » et check-in hors horaire autorisés. */
+/**
+ * Mode test : bouton « Simuler ma position » et check-in hors horaire autorisés.
+ * Actif PAR DÉFAUT pendant la phase de test (T9) ; désactivé seulement par NEXT_PUBLIC_TEST_MODE="false".
+ */
 export function isTestMode(): boolean {
-  return process.env.NEXT_PUBLIC_TEST_MODE === "true" || isDemoMode();
+  return process.env.NEXT_PUBLIC_TEST_MODE !== "false" || isDemoMode();
 }
 
 // ─────────────────────────────── Propriété des ressources ───────────────────────────────
@@ -95,7 +98,7 @@ export async function saveOrientation(actor: Actor, answers: OrientationAnswers)
   const profile = await getOrCreateProfile(actor.id);
   if (!canRedoOrientation(profile.validation)) {
     throw new AccompagnantError(
-      "Votre profil est vérifié. Pour changer de statut, contactez l'équipe Koudmen.",
+      "Votre profil est validé. Pour changer de statut, contactez l'équipe Koudmen.",
       "INTERDIT",
     );
   }
@@ -150,6 +153,13 @@ export async function saveProfile(actor: Actor, input: ProfileInput): Promise<{ 
   const paid = statusIsPaid(status);
   // RM-04 : le tarif vient de l'accompagnant seul.
   const hourlyRateCents = paid ? input.hourlyRate : null;
+  // D10 : un salarié (CESU, proche aidant) ne peut pas être payé sous le SMIC ni sous le minimum IDCC 3239.
+  if (statusIsSalaried(status) && hourlyRateCents != null && hourlyRateCents < PLANCHER_SALARIE_CENTS) {
+    throw new AccompagnantError(
+      `Votre tarif est sous le minimum légal d'un salarié (${(PLANCHER_SALARIE_CENTS / 100).toFixed(2).replace(".", ",")} € brut de l'heure). Augmentez votre tarif.`,
+      "TARIF",
+    );
+  }
 
   await db.$transaction(async (tx) => {
     await tx.caregiverProfile.update({
@@ -185,12 +195,6 @@ export async function saveProfile(actor: Actor, input: ProfileInput): Promise<{ 
     );
   });
 
-  if (statusIsSalaried(status) && hourlyRateCents != null && hourlyRateCents < SMIC_HORAIRE_BRUT_CENTS) {
-    return {
-      warning:
-        "Votre tarif est sous le SMIC horaire brut. Un salarié ne peut pas être payé sous le SMIC. Vérifiez votre montant.",
-    };
-  }
   return {};
 }
 
@@ -267,7 +271,7 @@ export async function acceptProposal(actor: Actor, proposalId: string, now: Date
     const cg = proposal.caregiver;
     const request = proposal.request;
     if (cg.validation !== "VALIDE" || !cg.status) {
-      throw new AccompagnantError("Votre profil doit être vérifié pour accepter une mission.", "INTERDIT");
+      throw new AccompagnantError("Votre profil doit être validé pour accepter une mission.", "INTERDIT");
     }
     if (!canStatusDoLevel(cg.status, request.level, { hasDiploma: cg.hasDiploma })) {
       throw new AccompagnantError("Votre statut ne permet pas ce niveau d'accompagnement.", "INTERDIT");
@@ -296,6 +300,9 @@ export async function acceptProposal(actor: Actor, proposalId: string, now: Date
         aineId: request.aineId,
         caregiverId: cg.id,
         hourlyRateCents: paid ? cg.hourlyRateCents : null,
+        // D6 : l'employeur (ou client) déclaré par la famille dans la demande.
+        employerType: request.employerType,
+        employerName: request.employerName,
       },
     });
 
@@ -320,8 +327,9 @@ export async function acceptProposal(actor: Actor, proposalId: string, now: Date
       });
     }
 
+    // Les autres profils proposés à la famille (ou choisis) ne servent plus.
     const cancelled = await tx.missionProposal.updateMany({
-      where: { requestId: request.id, id: { not: proposal.id }, status: "EN_ATTENTE" },
+      where: { requestId: request.id, id: { not: proposal.id }, status: { in: ["EN_ATTENTE", "PROPOSEE_FAMILLE"] } },
       data: { status: "ANNULEE", respondedAt: now },
     });
 
@@ -363,9 +371,10 @@ export async function declineProposal(actor: Actor, proposalId: string, declineN
     });
     if (p.count !== 1) throw new AccompagnantError("Cette proposition n'est plus en attente.", "CONFLIT");
 
-    // Toutes les propositions refusées → la demande redevient OUVERTE (spec § 4.2).
+    // Plus aucun profil à choisir ni en attente → la demande redevient OUVERTE (spec § 4.2).
+    // S'il reste des profils proposés, la famille en choisit un autre (D6).
     const remaining = await tx.missionProposal.count({
-      where: { requestId: proposal.requestId, status: { in: ["EN_ATTENTE", "ACCEPTEE"] } },
+      where: { requestId: proposal.requestId, status: { in: ["PROPOSEE_FAMILLE", "EN_ATTENTE", "ACCEPTEE"] } },
     });
     let reopened = false;
     if (remaining === 0) {
@@ -385,10 +394,11 @@ export async function declineProposal(actor: Actor, proposalId: string, declineN
       },
       tx,
     );
+    // Message ANONYME : la famille ne sait pas qui refuse ni pourquoi (RM-05).
     await notifyLakou(
       proposal.request.aineId,
       "PROPOSITION_REFUSEE",
-      { accompagnant: actor.firstName, aine: proposal.request.aine.firstName },
+      { aine: proposal.request.aine.firstName },
       { type: "MissionProposal", id: proposal.id },
       tx,
     );

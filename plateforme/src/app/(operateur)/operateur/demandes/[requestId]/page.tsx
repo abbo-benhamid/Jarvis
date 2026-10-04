@@ -4,7 +4,7 @@ import { z } from "zod";
 import { requireRole } from "@/server/auth/guards";
 import { getRequestWithCandidates } from "@/server/operateur/queries";
 import { ageLabel } from "@/server/operateur/rules";
-import { MATCH_REASON_LABELS } from "@/server/rules/matching";
+import { MATCH_REASON_LABELS, MAX_PROFILES_PER_REQUEST } from "@/server/rules/matching";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
@@ -26,7 +26,8 @@ export default async function Page({ params }: { params: Promise<{ requestId: st
   const data = await getRequestWithCandidates(requestId);
   if (!data) notFound();
   const { request: r, candidates } = data;
-  const canPropose = r.status === "OUVERTE" || r.status === "PROPOSEE";
+  const active = r.proposals.filter((p) => p.status === "PROPOSEE_FAMILLE" || p.status === "EN_ATTENTE").length;
+  const canPropose = (r.status === "OUVERTE" || r.status === "PROPOSEE") && active < MAX_PROFILES_PER_REQUEST;
   const compatible = candidates.filter((c) => c.match.compatible);
   const incompatible = candidates.filter((c) => !c.match.compatible);
 
@@ -60,9 +61,12 @@ export default async function Page({ params }: { params: Promise<{ requestId: st
 
       {r.proposals.length > 0 ? (
         <section aria-labelledby="t-props" className="mt-6">
-          <h2 id="t-props" className="mb-3 text-2xl font-bold">
-            Propositions envoyées
+          <h2 id="t-props" className="mb-1 text-2xl font-bold">
+            Profils proposés à la famille
           </h2>
+          <p className="mb-3 text-muted">
+            {active} profil(s) actif(s) sur {MAX_PROFILES_PER_REQUEST} au maximum. La famille choisit ; la personne choisie accepte ou refuse.
+          </p>
           <ul className="flex flex-col gap-2">
             {r.proposals.map((p) => (
               <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-line bg-surface px-4 py-2">
@@ -84,7 +88,9 @@ export default async function Page({ params }: { params: Promise<{ requestId: st
       ) : null}
       {!canPropose && !r.mission ? (
         <Alert tone="info" className="mt-6">
-          Cette demande n&apos;accepte plus de proposition.
+          {active >= MAX_PROFILES_PER_REQUEST
+            ? `La famille a déjà ${MAX_PROFILES_PER_REQUEST} profils à choisir. C'est le maximum.`
+            : "Cette demande n'accepte plus de proposition."}
         </Alert>
       ) : null}
 
@@ -93,7 +99,8 @@ export default async function Page({ params }: { params: Promise<{ requestId: st
           Accompagnants compatibles ({compatible.length})
         </h2>
         <p className="mb-4 text-muted">
-          Tri : nombre de créneaux communs, puis nom. Aucune note, aucun classement. L&apos;accompagnant reste libre de refuser.
+          Tri : nombre de créneaux communs, puis nom. Aucune note, aucun classement. Vous proposez 1 à 3 profils ; la famille choisit ;
+          l&apos;accompagnant reste libre de refuser.
         </p>
         {compatible.length === 0 ? (
           <Alert tone="attention">Aucun accompagnant compatible. Lisez les raisons ci-dessous, ou contactez la famille pour ajuster les créneaux.</Alert>
@@ -157,9 +164,13 @@ function CandidateCard({ c, requestId, canPropose }: { c: C; requestId: string; 
           </div>
         ) : null}
         <div className="mt-3">
-          {d.proposalStatus === "EN_ATTENTE" ? (
-            <Alert tone="succes" title="Proposition envoyée">
-              En attente de réponse. L&apos;accompagnant reçoit un message (simulé) et reste libre de refuser.
+          {d.proposalStatus === "PROPOSEE_FAMILLE" ? (
+            <Alert tone="succes" title="Profil proposé à la famille">
+              La famille choisit. Si elle choisit ce profil, l&apos;accompagnant reçoit un message (simulé) et reste libre de refuser.
+            </Alert>
+          ) : d.proposalStatus === "EN_ATTENTE" ? (
+            <Alert tone="succes" title="Choisi par la famille">
+              En attente de la réponse de l&apos;accompagnant. Il reste libre de refuser.
             </Alert>
           ) : d.proposalStatus ? (
             <p className="flex items-center gap-2">

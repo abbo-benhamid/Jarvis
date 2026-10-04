@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ─────────── Mocks : aucun accès réel à la base (les données de démo restent intactes) ───────────
 
-const user = { id: "cmuser000000000000000001", email: "f@x.test", role: "FAMILLE" as const, firstName: "Sandrine", lastName: "J", isDemo: true };
+const user = { id: "cmuser000000000000000001", email: "f@x.test", role: "FAMILLE" as const, firstName: "Sandrine", lastName: "J", isDemo: true, sandboxId: null };
 const requireRole = vi.fn(async () => user);
 const canAccessAine = vi.fn(async () => true);
 const logAudit = vi.fn(async () => undefined);
@@ -170,7 +170,7 @@ describe("joinCircleAction", () => {
   const future = () => new Date(Date.now() + 86_400_000);
 
   it("refuse un lien expiré", async () => {
-    db.invitation.findUnique.mockResolvedValue({ id: "i", aineId: AINE, relation: "nièce", expiresAt: new Date(Date.now() - 1000), acceptedAt: null });
+    db.invitation.findUnique.mockResolvedValue({ id: "i", aineId: AINE, relation: "nièce", expiresAt: new Date(Date.now() - 1000), acceptedAt: null, aine: { sandboxId: null } });
     const r = await actions.joinCircleAction(empty, fd({ token }));
     expect(r.ok).toBe(false);
     expect(!r.ok && r.error).toContain("expiré");
@@ -178,13 +178,13 @@ describe("joinCircleAction", () => {
   });
 
   it("refuse un lien déjà utilisé", async () => {
-    db.invitation.findUnique.mockResolvedValue({ id: "i", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: new Date() });
+    db.invitation.findUnique.mockResolvedValue({ id: "i", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: new Date(), aine: { sandboxId: null } });
     const r = await actions.joinCircleAction(empty, fd({ token }));
     expect(!r.ok && r.error).toContain("déjà été utilisé");
   });
 
   it("refuse si un autre compte a utilisé le lien entre-temps (course)", async () => {
-    db.invitation.findUnique.mockResolvedValue({ id: "i", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: null });
+    db.invitation.findUnique.mockResolvedValue({ id: "i", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: null, aine: { sandboxId: null } });
     db.lakouMember.findUnique.mockResolvedValue(null);
     db.invitation.updateMany.mockResolvedValue({ count: 0 });
     const r = await actions.joinCircleAction(empty, fd({ token }));
@@ -193,13 +193,19 @@ describe("joinCircleAction", () => {
   });
 
   it("ajoute le membre au cercle, journalise et redirige", async () => {
-    db.invitation.findUnique.mockResolvedValue({ id: "i", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: null });
+    db.invitation.findUnique.mockResolvedValue({ id: "i", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: null, aine: { sandboxId: null } });
     db.lakouMember.findUnique.mockResolvedValue(null);
     db.invitation.updateMany.mockResolvedValue({ count: 1 });
     await expect(actions.joinCircleAction(empty, fd({ token }))).rejects.toThrow(`REDIRECT:/famille/aines/${AINE}?bienvenue=1`);
     expect(db.lakouMember.create).toHaveBeenCalledWith({ data: { aineId: AINE, userId: user.id, relation: "nièce", isPayer: false } });
     expect((logAudit.mock.calls[0] as unknown as [{ action: string }])[0].action).toBe("lakou.joined");
-    expect(cookieStore.delete).toHaveBeenCalled();
+  });
+
+  it("D2 : refuse un lien qui vient d'un autre monde (bac à sable)", async () => {
+    db.invitation.findUnique.mockResolvedValue({ id: "i", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: null, aine: { sandboxId: "sbx-autre" } });
+    const r = await actions.joinCircleAction(empty, fd({ token }));
+    expect(!r.ok && r.error).toContain("pas valide");
+    expect(db.lakouMember.create).not.toHaveBeenCalled();
   });
 
   it("refuse un jeton mal formé sans requête", async () => {
@@ -304,14 +310,14 @@ describe("confirmVisitAction", () => {
 describe("changePlanAction", () => {
   it("refuse un membre non payeur (RM-14)", async () => {
     db.lakouMember.findUnique.mockResolvedValue({ isPayer: false });
-    const r = await actions.changePlanAction(empty, fd({ aineId: AINE, plan: "VEYE" }));
+    const r = await actions.changePlanAction(empty, fd({ aineId: AINE, plan: "KOZE" }));
     expect(r).toEqual({ ok: false, error: "Seul le payeur peut changer la formule." });
     expect(db.subscription.upsert).not.toHaveBeenCalled();
   });
 
   it("refuse un aîné hors du cercle", async () => {
     db.lakouMember.findUnique.mockResolvedValue(null);
-    const r = await actions.changePlanAction(empty, fd({ aineId: OTHER, plan: "VEYE" }));
+    const r = await actions.changePlanAction(empty, fd({ aineId: OTHER, plan: "KOZE" }));
     expect(r.ok).toBe(false);
   });
 
@@ -319,19 +325,19 @@ describe("changePlanAction", () => {
     db.lakouMember.findUnique.mockResolvedValue({ isPayer: true });
     db.aine.findUniqueOrThrow.mockResolvedValue({ firstName: "Léonie", subscription: { plan: "LAKOU" } });
     db.subscription.upsert.mockResolvedValue({ id: "sub1" });
-    const r = await actions.changePlanAction(empty, fd({ aineId: AINE, plan: "VEYE" }));
+    const r = await actions.changePlanAction(empty, fd({ aineId: AINE, plan: "KOZE" }));
     expect(r.ok).toBe(true);
     expect(db.simulatedPayment.create).toHaveBeenCalledWith({ data: { subscriptionId: "sub1", amountCents: 3900, status: "SIMULE_REUSSI" } });
-    expect(notifyUser).toHaveBeenCalledWith(user.id, "PAIEMENT_SIMULE", expect.objectContaining({ formule: "Veyé", aine: "Léonie" }), { type: "Subscription", id: "sub1" }, db);
+    expect(notifyUser).toHaveBeenCalledWith(user.id, "PAIEMENT_SIMULE", expect.objectContaining({ formule: "Kozé", aine: "Léonie" }), { type: "Subscription", id: "sub1" }, db);
     const audit = (logAudit.mock.calls[0] as unknown as [{ action: string; metadata: { from: string; to: string } }])[0];
     expect(audit.action).toBe("plan.changed");
-    expect(audit.metadata).toMatchObject({ from: "LAKOU", to: "VEYE" });
+    expect(audit.metadata).toMatchObject({ from: "LAKOU", to: "KOZE" });
   });
 
   it("ne crée pas de paiement si la formule est déjà active", async () => {
     db.lakouMember.findUnique.mockResolvedValue({ isPayer: true });
-    db.aine.findUniqueOrThrow.mockResolvedValue({ firstName: "Léonie", subscription: { plan: "VEYE" } });
-    const r = await actions.changePlanAction(empty, fd({ aineId: AINE, plan: "VEYE" }));
+    db.aine.findUniqueOrThrow.mockResolvedValue({ firstName: "Léonie", subscription: { plan: "KOZE" } });
+    const r = await actions.changePlanAction(empty, fd({ aineId: AINE, plan: "KOZE" }));
     expect(r.ok).toBe(true);
     expect(db.simulatedPayment.create).not.toHaveBeenCalled();
   });

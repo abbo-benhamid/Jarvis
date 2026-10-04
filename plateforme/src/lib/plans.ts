@@ -1,6 +1,9 @@
 import type { Plan } from "@prisma/client";
 
-/** Formules (docs/00 § 3). Paiement SIMULÉ dans le MVP : aucun vrai prélèvement. */
+/**
+ * Formules (D5 : une seule grille). Paiement SIMULÉ dans le MVP : aucun vrai prélèvement.
+ * « Veyé » est réservé au mode cyclone Veyé Siklòn : la formule d'appel s'appelle « Kozé ».
+ */
 export type PlanInfo = {
   plan: Plan;
   name: string;
@@ -9,6 +12,9 @@ export type PlanInfo = {
   audience: string;
   features: string[];
 };
+
+/** Mention obligatoire sur chaque affichage des formules (T6). */
+export const OFFER_TEST_NOTICE = "Offre en test, non commercialisée. Prix et contenu à l'étude.";
 
 export const PLANS: readonly PlanInfo[] = [
   {
@@ -20,21 +26,26 @@ export const PLANS: readonly PlanInfo[] = [
     features: ["Cercle familial Lakou", "Fiche de l'aîné", "Journal Kayé partagé"],
   },
   {
-    plan: "VEYE",
-    name: "Veyé",
+    plan: "KOZE",
+    name: "Kozé",
     priceCents: 3900,
     priceLabel: "39 € / mois",
     audience: "Pour la famille à distance",
-    features: ["Tout Lakou", "Appel hebdomadaire de veille", "Alertes WhatsApp ou SMS"],
+    features: ["Tout Lakou", "Appel hebdomadaire à l'aîné", "Alertes WhatsApp ou SMS"],
   },
   {
     plan: "SERENITE",
     name: "Sérénité",
-    // [À VÉRIFIER] 00 § 3 : 19,90 €/mois + frais, ou forfait 149 à 199 €. MVP : forfait 149 € affiché.
+    // [À VÉRIFIER] Modèle réel de Sérénité (S1-arbitrage, « reporté avant le pilote »).
     priceCents: 14900,
-    priceLabel: "à partir de 149 € / mois",
+    priceLabel: "dès 149 € / mois",
     audience: "Visites régulières avec preuve",
-    features: ["Tout Veyé", "1 visite par semaine", "Preuve de visite 2 sur 3", "Remplacement"],
+    features: [
+      "Tout Kozé",
+      "1 visite par semaine",
+      "Preuve de visite 2 sur 3",
+      "Aide pour trouver un remplaçant (sans garantie)",
+    ],
   },
 ] as const;
 

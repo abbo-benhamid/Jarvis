@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { FormField, fieldA11y } from "@/components/ui/form-field";
 import { Textarea } from "@/components/ui/input";
 import { SubmitButton } from "@/components/ui/submit-button";
-import { PendingButton, useFormAction } from "./use-form-action";
+import { PendingButton, useFormAction } from "@/components/ui/use-form-action";
 import { FormMessage } from "@/components/ui/form-message";
 
 /** Accepter / Refuser une proposition. Le refus est libre, sans motif obligatoire, sans pénalité. */

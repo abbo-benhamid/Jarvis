@@ -17,7 +17,7 @@ import { Checkbox, Input } from "@/components/ui/input";
 import { FormField, fieldA11y } from "@/components/ui/form-field";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { FormMessage } from "@/components/ui/form-message";
-import { PendingButton, useFormAction } from "./use-form-action";
+import { PendingButton, useFormAction } from "@/components/ui/use-form-action";
 
 const initialGps: ActionResult<CheckInData> = { ok: false, error: "" };
 

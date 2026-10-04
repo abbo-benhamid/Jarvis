@@ -43,6 +43,7 @@ export function RequestStatusBadge({ status }: { status: RequestStatus }) {
 }
 
 const PROPOSAL_TONE: Record<ProposalStatus, BadgeTone> = {
+  PROPOSEE_FAMILLE: "mer",
   EN_ATTENTE: "soleil",
   ACCEPTEE: "feuille",
   REFUSEE: "neutre",

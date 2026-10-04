@@ -1,11 +1,11 @@
 import "server-only";
 import { randomInt } from "node:crypto";
-import type { ProofFactor, Role } from "@prisma/client";
+import type { Prisma, ProofFactor, Role } from "@prisma/client";
 import { db } from "@/server/db";
 import { logAudit } from "@/server/audit";
 import { enqueueNotification, notifyLakou } from "@/server/outbox";
 import { formatDate } from "@/lib/format";
-import { computeVisitProof, deriveVisitStatus, generateHomeCode } from "./proof";
+import { computeVisitProof, deriveVisitStatus, generateHomeCode, VISIT_GRACE_MINUTES } from "./proof";
 
 type Actor = { id: string; role: Role };
 
@@ -92,6 +92,7 @@ export async function confirmElderSimulated(visitId: string, actor: Actor) {
     template: "APPEL_CONFIRMATION_AINE",
     vars: { aine: visit.aine.firstName, accompagnant: visit.caregiver.user.firstName },
     related: { type: "Visit", id: visitId },
+    sandboxId: visit.aine.sandboxId,
   });
   return recordProof(
     visitId,
@@ -103,4 +104,21 @@ export async function confirmElderSimulated(visitId: string, actor: Actor) {
     },
     actor,
   );
+}
+
+/**
+ * Statut des visites dépassées, COHÉRENT PARTOUT (famille, accompagnant, opérateur).
+ * Une visite PREVUE ou EN_COURS dont la fin prévue est passée depuis plus de
+ * VISIT_GRACE_MINUTES passe « À vérifier » (ou « Validée » si elle a 2 preuves) EN BASE.
+ * À appeler avant chaque lecture de visites. `where` limite le balayage (cercle, accompagnant, monde).
+ */
+export async function sweepOverdueVisits(where: Prisma.VisitWhereInput = {}, now: Date = new Date()): Promise<number> {
+  const limit = new Date(now.getTime() - VISIT_GRACE_MINUTES * 60_000);
+  const overdue = await db.visit.findMany({
+    where: { AND: [where, { status: { in: ["PREVUE", "EN_COURS"] }, scheduledEnd: { lt: limit } }] },
+    select: { id: true },
+    take: 200,
+  });
+  for (const v of overdue) await refreshVisitStatus(v.id, now);
+  return overdue.length;
 }

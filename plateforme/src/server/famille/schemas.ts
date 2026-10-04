@@ -20,7 +20,7 @@ export const NEED_VALUES = [
 
 export const FREQUENCY_VALUES = ["PONCTUELLE", "HEBDOMADAIRE", "DEUX_PAR_SEMAINE", "QUOTIDIENNE"] as const;
 export const SLOT_VALUES = ["MATIN", "APRES_MIDI", "SOIR"] as const;
-export const PLAN_VALUES = ["LAKOU", "VEYE", "SERENITE"] as const;
+export const PLAN_VALUES = ["LAKOU", "KOZE", "SERENITE"] as const;
 export const DURATION_OPTIONS = [60, 90, 120, 180, 240] as const;
 
 const id = z.string({ message: "Identifiant manquant." }).cuid("Identifiant invalide.");
@@ -140,8 +140,13 @@ export function careRequestSchema(today: string) {
       .refine((n) => (DURATION_OPTIONS as readonly number[]).includes(n), "Choisissez une durée."),
     startDate: startDateField(today),
     notes: optionalText(500, "500 caractères maximum."),
+    // D6 : qui emploie l'accompagnant (ou reçoit la facture).
+    employerType: z.enum(["AINE", "REPRESENTANT"], { message: "Indiquez qui emploie l'accompagnant." }).default("AINE"),
+    employerName: optionalText(120, "120 caractères maximum."),
   });
 }
+
+export const chooseProfileSchema = z.object({ proposalId: id });
 
 export const cancelRequestSchema = z.object({ requestId: id });
 export const confirmVisitSchema = z.object({ visitId: id });

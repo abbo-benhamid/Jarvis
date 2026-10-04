@@ -149,7 +149,7 @@ describe("careRequestSchema", () => {
 
 describe("changePlanSchema", () => {
   it("accepte seulement les 3 formules", () => {
-    expect(changePlanSchema.safeParse({ aineId: "cmabc123def456ghi789jkl0m", plan: "VEYE" }).success).toBe(true);
+    expect(changePlanSchema.safeParse({ aineId: "cmabc123def456ghi789jkl0m", plan: "KOZE" }).success).toBe(true);
     expect(changePlanSchema.safeParse({ aineId: "cmabc123def456ghi789jkl0m", plan: "GRATUIT" }).success).toBe(false);
   });
 });

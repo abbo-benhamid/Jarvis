@@ -2,7 +2,6 @@
 
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireRole } from "@/server/auth/guards";
 import { canAccessAine } from "@/server/access";
@@ -10,7 +9,9 @@ import { db } from "@/server/db";
 import { logAudit } from "@/server/audit";
 import { enqueueNotification, notifyUser } from "@/server/outbox";
 import { appUrl } from "@/server/env";
+import { sameScope } from "@/server/scope";
 import { confirmElderSimulated, generateUniqueHomeCode } from "@/server/visits/service";
+import { chooseProfile, MatchingError } from "@/server/matching/service";
 import { getCommune } from "@/lib/communes";
 import { getPlan } from "@/lib/plans";
 import { formatEuros } from "@/lib/format";
@@ -20,6 +21,7 @@ import {
   aineUpdateSchema,
   cancelRequestSchema,
   careRequestSchema,
+  chooseProfileSchema,
   changePlanSchema,
   confirmVisitSchema,
   formDataToObject,
@@ -28,7 +30,6 @@ import {
   todayIso,
 } from "./schemas";
 import { canCancelRequest, canConfirmElder, changedFields, displayVisitStatus, invitationExpiry, invitationState } from "./logic";
-import { INVITATION_COOKIE } from "./constants";
 
 const CHECK_FIELDS = "Vérifiez les champs en rouge.";
 const NOT_FOUND = "Nous ne trouvons pas cet élément dans votre cercle Lakou.";
@@ -64,6 +65,8 @@ export async function createAineAction(_prev: ActionResult, formData: FormData):
         consentByName: v.consentByName,
         consentAt: now,
         homeCode,
+        // Le profil appartient au même monde que la famille (bac à sable ou monde réel).
+        sandboxId: user.sandboxId,
         ownerId: user.id,
         members: { create: { userId: user.id, relation: v.myRelation, isPayer: true } },
         subscription: { create: { payerId: user.id, plan: "LAKOU", priceCents: 0 } },
@@ -156,6 +159,7 @@ export async function inviteLakouAction(
           template: "INVITATION_LAKOU",
           vars: { from: user.firstName, aine: aine.firstName, link },
           related: { type: "Invitation", id: inv.id },
+          sandboxId: user.sandboxId,
         },
         tx,
       );
@@ -176,18 +180,16 @@ export async function joinCircleAction(_prev: ActionResult, formData: FormData):
   const user = await requireRole("FAMILLE");
   const parsed = joinSchema.safeParse(formDataToObject(formData));
   if (!parsed.success) return { ok: false, error: "Ce lien d'invitation n'est pas valide." };
-  const inv = await db.invitation.findUnique({ where: { token: parsed.data.token } });
-  if (!inv) return { ok: false, error: "Ce lien d'invitation n'est pas valide." };
+  const inv = await db.invitation.findUnique({ where: { token: parsed.data.token }, include: { aine: { select: { sandboxId: true } } } });
+  // Cloisonnement (D2) : un lien d'un bac à sable ne s'ouvre pas depuis un autre monde.
+  if (!inv || !sameScope(inv.aine.sandboxId, user.sandboxId)) return { ok: false, error: "Ce lien d'invitation n'est pas valide." };
   const now = new Date();
   const state = invitationState(inv, now);
   if (state === "EXPIREE") return { ok: false, error: "Ce lien a expiré. Demandez un nouveau lien à la personne qui vous a invité(e)." };
   if (state === "UTILISEE") return { ok: false, error: "Ce lien a déjà été utilisé. Demandez un nouveau lien à la personne qui vous a invité(e)." };
 
   const existing = await db.lakouMember.findUnique({ where: { aineId_userId: { aineId: inv.aineId, userId: user.id } } });
-  if (existing) {
-    (await cookies()).delete(INVITATION_COOKIE);
-    redirect(`/famille/aines/${inv.aineId}`);
-  }
+  if (existing) redirect(`/famille/aines/${inv.aineId}`);
 
   const joined = await db.$transaction(async (tx) => {
     // Une seule utilisation : la mise à jour échoue si un autre compte a utilisé le lien entre-temps.
@@ -201,27 +203,8 @@ export async function joinCircleAction(_prev: ActionResult, formData: FormData):
     return true;
   });
   if (!joined) return { ok: false, error: "Ce lien a déjà été utilisé. Demandez un nouveau lien à la personne qui vous a invité(e)." };
-  (await cookies()).delete(INVITATION_COOKIE);
   revalidatePath("/famille");
   redirect(`/famille/aines/${inv.aineId}?bienvenue=1`);
-}
-
-/**
- * F10 sans compte : mémorise le lien (cookie httpOnly, 14 jours max) puis ouvre l'inscription.
- * Après l'inscription, l'accueil famille propose de rejoindre le cercle.
- */
-export async function rememberInvitationAction(formData: FormData): Promise<void> {
-  const parsed = joinSchema.safeParse(formDataToObject(formData));
-  if (parsed.success) {
-    (await cookies()).set(INVITATION_COOKIE, parsed.data.token, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production" && appUrl().startsWith("https://"),
-      path: "/",
-      maxAge: 14 * 24 * 60 * 60,
-    });
-  }
-  redirect("/inscription?role=FAMILLE");
 }
 
 // ─────────────────────────────── F5 / F6 : demandes ───────────────────────────────
@@ -246,6 +229,8 @@ export async function createRequestAction(_prev: ActionResult, formData: FormDat
         durationMinutes: v.durationMinutes,
         startDate: v.startDate ? new Date(`${v.startDate}T12:00:00Z`) : null,
         notes: v.notes ?? null,
+        employerType: v.employerType,
+        employerName: v.employerName ?? null,
         status: "OUVERTE",
         slots: { create: slots },
       },
@@ -275,6 +260,32 @@ export async function cancelRequestAction(_prev: ActionResult, formData: FormDat
   revalidatePath("/famille/demandes");
   revalidatePath("/famille");
   redirect("/famille/demandes?annulee=1");
+}
+
+/**
+ * F5 (D6) : la famille CHOISIT un des profils proposés par Koudmen.
+ * Ensuite, l'accompagnant choisi accepte ou refuse librement.
+ */
+export async function chooseProfileAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const user = await requireRole("FAMILLE");
+  const parsed = chooseProfileSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success) return { ok: false, error: NOT_FOUND };
+  const proposal = await db.missionProposal.findUnique({
+    where: { id: parsed.data.proposalId },
+    select: { id: true, request: { select: { aineId: true } } },
+  });
+  // Contrôle d'accès : le profil concerne un aîné du cercle Lakou (cloisonne aussi les bacs à sable).
+  if (!proposal || !(await canAccessAine(user, proposal.request.aineId))) return { ok: false, error: NOT_FOUND };
+  let chosen: { caregiverFirstName: string };
+  try {
+    chosen = await chooseProfile(user, proposal.id);
+  } catch (e) {
+    if (e instanceof MatchingError) return { ok: false, error: e.message };
+    throw e;
+  }
+  revalidatePath("/famille/demandes");
+  revalidatePath("/famille");
+  redirect(`/famille/demandes?choisi=${encodeURIComponent(chosen.caregiverFirstName)}`);
 }
 
 // ─────────────────────────────── F7 : visites ───────────────────────────────

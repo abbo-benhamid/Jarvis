@@ -131,7 +131,7 @@ describe("proposalBlockReason (refus serveur)", () => {
       match: checkCompatibility({ ...cesu, validation: "SUSPENDU" }, level3),
       existingProposal: null,
     });
-    expect(reason).toMatch(/Profil pas encore vérifié/);
+    expect(reason).toMatch(/Profil pas encore validé/);
   });
 });
 

@@ -4,11 +4,13 @@
  */
 export type TemplateKey =
   | "INVITATION_LAKOU"
+  | "PROFILS_PROPOSES"
   | "PROPOSITION_MISSION"
   | "PROPOSITION_ACCEPTEE"
   | "PROPOSITION_REFUSEE"
   | "ACCOMPAGNANT_VALIDE"
   | "ACCOMPAGNANT_REFUSE"
+  | "ACCOMPAGNANT_SUSPENDU"
   | "VISITE_COMMENCEE"
   | "VISITE_VALIDEE"
   | "VISITE_A_VERIFIER"
@@ -24,25 +26,34 @@ const TEMPLATES: Record<TemplateKey, { subject: string; body: string }> = {
     subject: "Invitation au cercle Lakou de {aine}",
     body: "{from} vous invite dans le cercle Lakou de {aine}. Ouvrez ce lien : {link}",
   },
+  PROFILS_PROPOSES: {
+    subject: "Des profils pour {aine}",
+    body: "Koudmen vous propose {nombre} profil(s) pour {aine}. Vous choisissez la personne. Ouvrez Koudmen pour voir les profils.",
+  },
   PROPOSITION_MISSION: {
-    subject: "Nouvelle proposition de mission",
-    body: "Bonjour {prenom}, une mission de niveau {niveau} à {commune} vous est proposée. Vous êtes libre d'accepter ou de refuser.",
+    subject: "Une famille vous a choisi(e)",
+    body: "Bonjour {prenom}, une famille vous a choisi(e) pour une mission de niveau {niveau} à {commune}. Vous êtes libre d'accepter ou de refuser, sans pénalité.",
   },
   PROPOSITION_ACCEPTEE: {
     subject: "Accompagnant trouvé pour {aine}",
     body: "{accompagnant} a accepté d'accompagner {aine}. Les visites apparaissent dans votre espace.",
   },
   PROPOSITION_REFUSEE: {
-    subject: "Proposition déclinée",
-    body: "{accompagnant} a décliné la proposition pour {aine}. L'équipe Koudmen cherche une autre personne.",
+    // Anonyme : la famille ne sait pas qui a refusé ni pourquoi (refus libre, sans pénalité).
+    subject: "Le profil choisi n'est pas disponible",
+    body: "Le profil choisi pour {aine} n'est pas disponible. Vous pouvez choisir un autre profil dans votre espace.",
   },
   ACCOMPAGNANT_VALIDE: {
-    subject: "Votre profil est vérifié",
-    body: "Bonjour {prenom}, votre profil Koudmen est vérifié. Vous pouvez recevoir des propositions.",
+    subject: "Votre profil est validé",
+    body: "Bonjour {prenom}, votre profil Koudmen est validé (vérifications déclarées, version de test). Des familles peuvent maintenant voir votre profil.",
   },
   ACCOMPAGNANT_REFUSE: {
     subject: "Votre profil n'est pas validé",
     body: "Bonjour {prenom}, votre profil n'est pas validé. Motif : {motif}. Vous pouvez répondre à ce message pour en parler.",
+  },
+  ACCOMPAGNANT_SUSPENDU: {
+    subject: "Votre profil est suspendu",
+    body: "Bonjour {prenom}, votre profil est suspendu. Motif : {motif}. Effet : vous ne recevez plus de nouvelles propositions. Vos accords en cours restent décidés avec les familles. Vous pouvez demander un réexamen par une personne de l'équipe : répondez à ce message.",
   },
   VISITE_COMMENCEE: {
     subject: "Visite commencée",
@@ -54,7 +65,7 @@ const TEMPLATES: Record<TemplateKey, { subject: string; body: string }> = {
   },
   VISITE_A_VERIFIER: {
     subject: "Visite à vérifier",
-    body: "La visite chez {aine} du {date} n'a pas assez de preuves. L'équipe Koudmen vérifie.",
+    body: "La visite chez {aine} du {date} n'a pas assez de preuves. Ouvrez Koudmen pour voir le détail et demander la confirmation de {aine}.",
   },
   APPEL_CONFIRMATION_AINE: {
     subject: "Appel de confirmation (simulé)",

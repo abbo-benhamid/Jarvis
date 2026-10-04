@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Eye, HandHeart, NotebookPen, Plus, UserPlus } from "lucide-react";
 import { requireRole } from "@/server/auth/guards";
-import { countRecentSignals, getFamilyHome, getPendingInvitation } from "@/server/famille/queries";
-import { Alert } from "@/components/ui/alert";
+import { countRecentSignals, getFamilyHome } from "@/server/famille/queries";
 import { LinkButton } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { AineCard } from "@/components/famille/aine-card";
@@ -13,11 +12,7 @@ export const metadata: Metadata = { title: "Accueil famille" };
 /** F1 : aînés du cercle Lakou. */
 export default async function Page() {
   const user = await requireRole("FAMILLE");
-  const [{ memberships, visitsToCheck }, pending, signals] = await Promise.all([
-    getFamilyHome(user.id),
-    getPendingInvitation(user.id),
-    countRecentSignals(user.id),
-  ]);
+  const [{ memberships, visitsToCheck }, signals] = await Promise.all([getFamilyHome(user.id), countRecentSignals(user.id)]);
 
   return (
     <>
@@ -36,14 +31,6 @@ export default async function Page() {
       />
 
       <div className="flex flex-col gap-6">
-        {pending ? (
-          <Alert tone="info" title={`${pending.from} vous invite dans le cercle Lakou de ${pending.aineFirstName}.`}>
-            <Link href={`/invitation/${pending.token}`} className="font-semibold text-mer underline">
-              Voir l&apos;invitation et rejoindre le cercle
-            </Link>
-          </Alert>
-        ) : null}
-
         {signals > 0 || visitsToCheck > 0 ? (
           <ul className="flex flex-col gap-2 sm:flex-row">
             {signals > 0 ? (
@@ -101,7 +88,7 @@ export default async function Page() {
 const STEPS = [
   { icon: Plus, title: "Créez le profil de votre aîné", text: "Prénom, commune, besoins et son accord. 2 minutes." },
   { icon: UserPlus, title: "Invitez vos proches", text: "Frères, sœurs, cousins : tout le cercle Lakou lit les nouvelles." },
-  { icon: HandHeart, title: "Demandez un accompagnement", text: "Koudmen propose un accompagnant vérifié près de chez lui." },
+  { icon: HandHeart, title: "Demandez un accompagnement", text: "Koudmen vous propose 1 à 3 profils près de chez lui. Vous choisissez." },
 ] as const;
 
 function EmptyHome() {

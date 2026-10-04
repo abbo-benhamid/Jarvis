@@ -30,7 +30,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
       <PageHeader
         eyebrow="Propositions"
         title="Propositions de mission"
-        description="L'équipe Koudmen vous propose des missions. Vous êtes libre d'accepter ou de refuser."
+        description="Une famille a vu votre profil et vous a choisi(e). Vous êtes libre d'accepter ou de refuser."
       />
       <div className="mx-auto flex max-w-3xl flex-col gap-4">
         {refus === "ok" ? (
@@ -44,7 +44,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
         </Alert>
 
         {profile.validation !== "VALIDE" && proposals.length > 0 ? (
-          <Alert tone="attention">Votre profil doit être vérifié avant d&apos;accepter une mission.</Alert>
+          <Alert tone="attention">Votre profil doit être validé avant d&apos;accepter une mission.</Alert>
         ) : null}
         {profile.validation === "VALIDE" && paid && profile.hourlyRateCents == null ? (
           <Alert tone="attention">
@@ -64,7 +64,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
               </LinkButton>
             }
           >
-            <p>Quand l&apos;équipe Koudmen vous propose une mission, elle apparaît ici. Vous recevez aussi un message.</p>
+            <p>Koudmen montre votre profil aux familles compatibles. Quand une famille vous choisit, la proposition apparaît ici. Vous recevez aussi un message.</p>
           </EmptyState>
         ) : (
           <ul className="flex flex-col gap-4">
