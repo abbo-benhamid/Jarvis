@@ -6,3 +6,5 @@
 export * from "./erreurs";
 export * from "./auth";
 export * from "./moi";
+export * from "./visits";
+export * from "./visits-propositions";

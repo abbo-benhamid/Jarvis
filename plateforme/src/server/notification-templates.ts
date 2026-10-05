@@ -22,7 +22,8 @@ export type TemplateKey =
   | "MISSION_SUSPENDUE"
   | "DEMANDE_ANNULEE"
   | "PROCHE_AIDANT_INVITATION"
-  | "PROCHE_AIDANT_RATTACHE";
+  | "PROCHE_AIDANT_RATTACHE"
+  | "SOS_ACCOMPAGNANT";
 
 type Vars = Record<string, string | number>;
 
@@ -105,6 +106,11 @@ const TEMPLATES: Record<TemplateKey, { subject: string; body: string }> = {
   PROCHE_AIDANT_RATTACHE: {
     subject: "Proche aidant rattaché à {aine}",
     body: "{accompagnant} est rattaché(e) à {aine} comme proche aidant. Koudmen peut maintenant vous proposer son profil pour {aine} seulement.",
+  },
+  // Lot A2 : SOS de l'app accompagnant, envoyé aux opérateurs du même monde. Aucune donnée de santé ni position.
+  SOS_ACCOMPAGNANT: {
+    subject: "SOS d'un accompagnant",
+    body: "SOS : {accompagnant} demande de l'aide ({heure}). Rappelez cette personne tout de suite. Ouvrez Koudmen pour voir la visite.",
   },
   PAIEMENT_SIMULE: {
     subject: "Formule {formule} activée",

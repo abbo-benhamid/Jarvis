@@ -66,6 +66,20 @@ describe("deriveVisitStatus", () => {
   it("A_VERIFIER si le délai est dépassé sans check-in", () => {
     expect(deriveVisitStatus({ checkInAt: null, checkOutAt: null, scheduledEnd: end }, none, muchLater)).toBe("A_VERIFIER");
   });
+  it("A_VERIFIER si l'horloge de l'appareil est suspecte, même avec 2 facteurs de l'appareil (lot A2)", () => {
+    const skew = { checkInAt: before, checkOutAt: null, scheduledEnd: end, clockSkewAt: before };
+    expect(deriveVisitStatus(skew, two, before)).toBe("A_VERIFIER");
+    expect(deriveVisitStatus({ ...skew, checkInAt: null }, none, before)).toBe("A_VERIFIER");
+  });
+  it("horloge suspecte : la confirmation de l'aîné permet de valider", () => {
+    const confirmed = computeVisitProof([
+      { factor: "GPS", valid: true },
+      { factor: "CONFIRMATION_AINE", valid: true },
+    ]);
+    const skew = { checkInAt: before, checkOutAt: end, scheduledEnd: end, clockSkewAt: before };
+    expect(deriveVisitStatus(skew, confirmed, end)).toBe("VALIDEE");
+    expect(deriveVisitStatus({ ...skew, clockSkewAt: null }, two, end)).toBe("VALIDEE");
+  });
 });
 
 describe("GPS", () => {

@@ -42,6 +42,8 @@ export type VisitTiming = {
   checkInAt: Date | null;
   checkOutAt: Date | null;
   scheduledEnd: Date;
+  /** Lot A2 : écart d'horloge > 12 h détecté sur un événement de l'app (null ou absent sinon). */
+  clockSkewAt?: Date | null;
 };
 
 /**
@@ -51,8 +53,11 @@ export type VisitTiming = {
  * - EN_COURS après le check-in, avant le check-out ;
  * - A_VERIFIER après le check-out (ou le délai) avec moins de 2 facteurs.
  * Une confirmation tardive de l'aîné peut faire passer A_VERIFIER → VALIDEE.
+ * Lot A2 : écart d'horloge > 12 h sur un événement de l'app → A_VERIFIER tant que l'aîné n'a pas confirmé
+ * (le GPS et le code viennent de l'appareil, dont l'heure n'est pas fiable).
  */
 export function deriveVisitStatus(timing: VisitTiming, proof: VisitProofSummary, now: Date = new Date()): VisitStatus {
+  if (timing.clockSkewAt && !proof.validFactors.includes("CONFIRMATION_AINE")) return "A_VERIFIER";
   if (proof.isProven) return "VALIDEE";
   const overdue = now.getTime() > timing.scheduledEnd.getTime() + VISIT_GRACE_MINUTES * 60_000;
   if (timing.checkOutAt) return "A_VERIFIER";
