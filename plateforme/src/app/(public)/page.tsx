@@ -33,9 +33,9 @@ export default function HomePage() {
   return (
     <div className="flex flex-col gap-12">
       {/* 1. La douleur, le bouton et le prix : tout dans le premier écran */}
-      <section className="flex flex-col gap-4 pt-2">
+      <section className="flex flex-col gap-3">
         <p className="font-mono text-xs font-semibold tracking-widest text-mer uppercase">Martinique · diaspora</p>
-        <h1 className="max-w-3xl text-4xl font-extrabold sm:text-5xl">
+        <h1 className="max-w-3xl text-3xl font-extrabold sm:text-5xl">
           {"Manman dit «\u00a0mwen bien\u00a0»."} <span className="text-mer">Vous ne savez jamais vraiment.</span>
         </h1>
         <p className="max-w-2xl text-lg text-muted">
@@ -116,7 +116,7 @@ export default function HomePage() {
         </p>
         <ul className="grid gap-4 md:grid-cols-3">
           {PLANS.map((p) => (
-            <li key={p.plan} className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-5">
+            <li key={p.plan} className="flex min-w-0 flex-col gap-2 rounded-xl border border-line bg-surface p-4 sm:p-5">
               <p className="text-lg font-bold">
                 {p.name} · {p.priceLabel}
               </p>

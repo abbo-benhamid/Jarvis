@@ -25,7 +25,7 @@ export function PlanChooser({ aineId, current, canChange }: { aineId: string; cu
           return (
             <li
               key={p.plan}
-              className={cn("flex flex-col gap-3 rounded-2xl border bg-surface p-5", active ? "border-2 border-mer" : "border-line")}
+              className={cn("flex min-w-0 flex-col gap-3 rounded-2xl border bg-surface p-4 sm:p-5", active ? "border-2 border-mer" : "border-line")}
             >
               <div className="flex items-start justify-between gap-2">
                 <h2 className="text-2xl font-bold">{p.name}</h2>
