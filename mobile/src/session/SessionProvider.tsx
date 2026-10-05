@@ -1,31 +1,69 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import { api, type Session } from '@/api';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { api, messageErreur, type Moi } from '@/api';
+
+type Etat =
+  /** Au démarrage : reprise de la connexion gardée sur l'appareil. */
+  | { statut: 'demarrage' }
+  | { statut: 'connecte'; moi: Moi }
+  /** `message` : pourquoi l'accompagnant doit se (re)connecter (jeton révoqué, réseau absent au démarrage). */
+  | { statut: 'deconnecte'; message: string | null; reprisePossible: boolean };
 
 type SessionValue = {
-  session: Session | null;
-  connecter: (telephone: string, code: string) => Promise<void>;
+  etat: Etat;
+  /** Le compte connecté, ou `null`. */
+  session: Moi | null;
+  connecter: (email: string, motDePasse: string) => Promise<void>;
+  connecterDemo: () => Promise<void>;
   deconnecter: () => Promise<void>;
+  /** Relance la reprise de connexion (après une coupure réseau au démarrage). */
+  reprendre: () => Promise<void>;
 };
 
 const SessionContext = createContext<SessionValue | null>(null);
 
 /**
- * Session en mémoire (lot M1).
- * Lot M2 : jetons dans expo-secure-store, rotation, effacement des données locales à la déconnexion.
+ * Session de l'accompagnant (lot M2).
+ * - Jetons gérés par `@/api` (accès en mémoire, renouvellement dans expo-secure-store).
+ * - Au démarrage : reprise silencieuse si un jeton de renouvellement est gardé.
+ * - Jeton refusé ou réutilisé : retour à l'écran de connexion, avec un message clair.
  */
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [etat, setEtat] = useState<Etat>({ statut: 'demarrage' });
 
-  const connecter = useCallback(async (telephone: string, code: string) => {
-    setSession(await api.connecter(telephone, code));
+  const reprendre = useCallback(async () => {
+    setEtat({ statut: 'demarrage' });
+    try {
+      const moi = await api.restaurer();
+      setEtat(moi ? { statut: 'connecte', moi } : { statut: 'deconnecte', message: null, reprisePossible: false });
+    } catch (e) {
+      setEtat({ statut: 'deconnecte', message: messageErreur(e), reprisePossible: true });
+    }
+  }, []);
+
+  useEffect(() => {
+    void reprendre();
+    return api.surSessionPerdue((message) => setEtat({ statut: 'deconnecte', message, reprisePossible: false }));
+  }, [reprendre]);
+
+  const connecter = useCallback(async (email: string, motDePasse: string) => {
+    const moi = await api.connecter(email, motDePasse);
+    setEtat({ statut: 'connecte', moi });
+  }, []);
+
+  const connecterDemo = useCallback(async () => {
+    const moi = await api.connecterDemo();
+    setEtat({ statut: 'connecte', moi });
   }, []);
 
   const deconnecter = useCallback(async () => {
     await api.deconnecter();
-    setSession(null);
+    setEtat({ statut: 'deconnecte', message: null, reprisePossible: false });
   }, []);
 
-  const value = useMemo(() => ({ session, connecter, deconnecter }), [session, connecter, deconnecter]);
+  const value = useMemo<SessionValue>(
+    () => ({ etat, session: etat.statut === 'connecte' ? etat.moi : null, connecter, connecterDemo, deconnecter, reprendre }),
+    [etat, connecter, connecterDemo, deconnecter, reprendre],
+  );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 

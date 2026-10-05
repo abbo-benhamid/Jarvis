@@ -1,43 +1,48 @@
 import { StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import Constants from 'expo-constants';
-import { euros } from '@/lib/format';
+import { api } from '@/api';
 import { useSession } from '@/session/SessionProvider';
 import { useTheme, type ThemePreference } from '@/theme';
-import { Avatar, Button, Card, Choice, Icon, type IconName, MadrasLine, Screen, SectionHeader, TabBarSpace, Text } from '@/ui';
+import { Avatar, Badge, Button, Card, Choice, Icon, type IconName, MadrasLine, Screen, SectionHeader, TabBarSpace, Text } from '@/ui';
 
-const STATUTS = {
-  AUTO_ENTREPRENEUR: 'Auto-entrepreneur',
-  CESU: 'Salarié CESU',
-  BENEVOLE: 'Bénévole',
-} as const;
-
+/** Profil : le compte connecté (GET /api/v1/me), la vie privée, l'affichage, la déconnexion. */
 export default function Profil() {
   const { c, preference, setPreference } = useTheme();
   const { session, deconnecter } = useSession();
   if (!session) return null;
-  const a = session.accompagnant;
 
   return (
     <Screen testID="ecran-profil" bottomInset={TabBarSpace}>
       <View style={styles.head}>
-        <Avatar initiale={a.prenom.charAt(0)} teinte="mer" size={56} />
-        <View style={{ flex: 1 }}>
+        <Avatar initiale={session.prenom.charAt(0)} teinte="mer" size={56} />
+        <View style={{ flex: 1, minWidth: 0 }}>
           <Text variant="h2" accessibilityRole="header">
-            {a.prenom} {a.nom}
+            {session.prenom} {session.nom}
           </Text>
-          <Text variant="small" tone="muted">
-            Espace accompagnant · {a.commune}
+          <Text variant="small" tone="muted" numberOfLines={1}>
+            {session.email}
           </Text>
         </View>
       </View>
+      {session.demo || session.bacASable ? (
+        <View style={{ flexDirection: 'row', marginTop: 12 }}>
+          <Badge kind="soleil" icon="info" label={session.bacASable ? 'Version de test' : 'Compte de démonstration'} />
+        </View>
+      ) : null}
       <MadrasLine style={{ marginTop: 20 }} />
 
       <SectionHeader title="Votre activité" />
       <Card padding={0} style={{ paddingHorizontal: 18 }}>
-        <Ligne icon="wallet" titre="Votre tarif" valeur={`${euros(a.tarifHoraireCentimes)} / heure`} detail="Vous le fixez. Koudmen ne le change pas." />
-        <Ligne icon="user" titre="Votre statut" valeur={STATUTS[a.statut]} separe />
-        <Ligne icon="flag" titre="Refuser une visite" detail="Toujours possible, sans pénalité." separe />
+        <Ligne icon="wallet" titre="Votre tarif" detail="Vous le fixez. Koudmen ne le change pas." />
+        <Ligne
+          icon="flag"
+          titre="Refuser une visite"
+          detail="Toujours possible, sans pénalité."
+          separe
+          onPress={() => router.push('/propositions')}
+          action="Voir les propositions"
+        />
       </Card>
 
       <SectionHeader title="Vie privée" />
@@ -74,21 +79,37 @@ export default function Profil() {
         }}
       />
       <Text variant="caption" tone="muted" center style={{ marginTop: 16 }} num>
-        Koudmen {Constants.expoConfig?.version ?? ''} · données de démonstration
+        Koudmen {Constants.expoConfig?.version ?? ''} · {api.mode === 'simule' ? 'données simulées' : api.url}
       </Text>
       <View style={{ height: 8, backgroundColor: c.bg }} />
     </Screen>
   );
 }
 
-function Ligne({ icon, titre, valeur, detail, separe }: { icon: IconName; titre: string; valeur?: string; detail?: string; separe?: boolean }) {
+function Ligne({
+  icon,
+  titre,
+  valeur,
+  detail,
+  separe,
+  onPress,
+  action,
+}: {
+  icon: IconName;
+  titre: string;
+  valeur?: string;
+  detail?: string;
+  separe?: boolean;
+  onPress?: () => void;
+  action?: string;
+}) {
   const { c } = useTheme();
   return (
-    <View style={[styles.ligne, separe && { borderTopWidth: 1, borderTopColor: c.line }]} accessible accessibilityLabel={[titre, valeur, detail].filter(Boolean).join('. ')}>
+    <View style={[styles.ligne, separe && { borderTopWidth: 1, borderTopColor: c.line }]}>
       <View style={[styles.ic, { backgroundColor: c.merSoft }]}>
         <Icon name={icon} size={18} color={c.mer} />
       </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
+      <View style={{ flex: 1, minWidth: 0 }} accessible={!onPress} accessibilityLabel={[titre, valeur, detail].filter(Boolean).join('. ')}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
           <Text variant="bodyStrong">{titre}</Text>
           {valeur ? (
@@ -101,6 +122,11 @@ function Ligne({ icon, titre, valeur, detail, separe }: { icon: IconName; titre:
           <Text variant="small" tone="muted">
             {detail}
           </Text>
+        ) : null}
+        {onPress && action ? (
+          <View style={{ alignItems: 'flex-start' }}>
+            <Button variant="link" label={action} onPress={onPress} />
+          </View>
         ) : null}
       </View>
     </View>

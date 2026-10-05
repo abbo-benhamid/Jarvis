@@ -1,28 +1,66 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { api, ApiError, type Appetit, type Humeur, type KayeBrouillon } from '@/api';
+import { api, messageErreur, type BrouillonKaye, type KayePublie } from '@/api';
 import { useAsync } from '@/lib/useAsync';
-import { useTheme } from '@/theme';
+import { retourAuxVisites } from '@/session/navigation';
+import { fonts, useTheme } from '@/theme';
 import { Avatar, Button, Card, Choice, Em, Field, Icon, IconButton, Kreyol, Screen, SwitchRow, Text, type ChoiceOption } from '@/ui';
 
+type Appetit = KayePublie['appetit'];
+type Humeur = '1' | '2' | '3' | '4' | '5';
+
+/** Mêmes libellés que le web (plateforme/src/lib/labels.ts). */
+const ACTIVITES = ['Discussion', 'Promenade', 'Lecture', 'Jeux de société', 'Courses', 'Repas partagé', 'Musique', 'Jardin'] as const;
+
+type Formulaire = {
+  humeur: Humeur | null;
+  appetit: Appetit | null;
+  activites: string[];
+  note: string;
+  aSurveiller: boolean;
+  noteSurveillance: string;
+};
+
+function depuisBrouillon(b: BrouillonKaye | null): Formulaire {
+  return {
+    humeur: b?.humeur ? (String(b.humeur) as Humeur) : null,
+    appetit: b?.appetit ?? null,
+    activites: b?.activites ?? [],
+    note: b?.note ?? '',
+    aSurveiller: b?.aSurveiller ?? false,
+    noteSurveillance: b?.noteSurveillance ?? '',
+  };
+}
+
+function versBrouillon(k: Formulaire): BrouillonKaye {
+  return {
+    ...(k.humeur ? { humeur: Number(k.humeur) } : {}),
+    ...(k.appetit ? { appetit: k.appetit } : {}),
+    activites: k.activites,
+    note: k.note.trim() || null,
+    aSurveiller: k.aSurveiller,
+    noteSurveillance: k.aSurveiller ? k.noteSurveillance.trim() || null : null,
+  };
+}
+
 /**
- * Kayé rapide : humeur, appétit, une note, « à surveiller ».
- * Lot M1 : simulé. Lot M3 : brouillon gardé hors ligne (file d'événements).
+ * Kayé rapide : humeur, appétit, activités, une note, « à surveiller ».
+ * Brouillon : événement KAYE_BROUILLON (gardé côté serveur). Envoi : KAYE_PUBLICATION.
+ * Le texte publié n'est jamais relu par l'app (RGPD).
  */
 export default function KayeFormulaire() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { c } = useTheme();
   const visite = useAsync(() => api.lireVisite(id), [id]);
-  const brouillonInitial = useAsync(() => api.lireBrouillonKaye(id), [id]);
-  const [k, setK] = useState<KayeBrouillon | null>(null);
+  const [k, setK] = useState<Formulaire | null>(null);
   const [envoi, setEnvoi] = useState<'brouillon' | 'envoi' | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [fini, setFini] = useState<'brouillon' | 'envoye' | null>(null);
 
   useEffect(() => {
-    if (brouillonInitial.donnees && !k) setK(brouillonInitial.donnees);
-  }, [brouillonInitial.donnees, k]);
+    if (visite.donnees && !k) setK(depuisBrouillon(visite.donnees.brouillonKaye));
+  }, [visite.donnees, k]);
 
   const prenom = visite.donnees?.aine.prenom ?? '';
   const retour = () => (router.canGoBack() ? router.back() : router.replace('/kaye'));
@@ -37,6 +75,20 @@ export default function KayeFormulaire() {
     </View>
   );
 
+  if (visite.statut === 'erreur' && !visite.donnees) {
+    return (
+      <Screen header={header}>
+        <Card style={{ marginTop: 16 }}>
+          <Text variant="bodyStrong">Le Kayé n’est pas chargé.</Text>
+          <Text variant="small" tone="muted" style={{ marginTop: 4 }}>
+            {messageErreur(visite.erreur)}
+          </Text>
+          <Button label="Réessayer" variant="quiet" onPress={() => void visite.recharger()} style={{ marginTop: 14 }} />
+        </Card>
+      </Screen>
+    );
+  }
+
   if (!k || !visite.donnees) {
     return (
       <Screen header={header}>
@@ -45,19 +97,20 @@ export default function KayeFormulaire() {
     );
   }
 
-  if (fini) {
+  if (fini || visite.donnees.kayePublie) {
+    const envoye = fini !== 'brouillon';
     return (
       <Screen
         header={header}
         testID="ecran-kaye-fini"
-        dock={<Button large variant="primary" label="Retour aux visites" icon="left" onPress={() => router.replace('/visites')} />}
+        dock={<Button large variant="primary" label="Retour aux visites" icon="left" onPress={retourAuxVisites} />}
       >
         <Card hero style={{ marginTop: 16, alignItems: 'center', paddingVertical: 32 }}>
           <View style={[styles.okRond, { backgroundColor: c.feuilleSoft }]}>
-            <Icon name={fini === 'envoye' ? 'check' : 'pen'} size={24} color={c.feuille} />
+            <Icon name={envoye ? 'check' : 'pen'} size={24} color={c.feuille} />
           </View>
           <Text variant="h2" center style={{ marginTop: 18 }} accessibilityRole="header">
-            {fini === 'envoye' ? (
+            {envoye ? (
               <>
                 Kayé <Em tone="feuille">envoyé.</Em>
               </>
@@ -68,42 +121,59 @@ export default function KayeFormulaire() {
             )}
           </Text>
           <Text variant="body" tone="muted" center style={{ marginTop: 10 }}>
-            {fini === 'envoye'
-              ? `La famille de ${prenom} le reçoit maintenant.${k.aSurveiller ? ' Elle reçoit aussi une alerte « à surveiller ».' : ''}`
-              : 'Vous pouvez le finir plus tard, depuis l’onglet Kayé.'}
+            {envoye
+              ? `La famille de ${prenom} le reçoit maintenant.${fini && k.aSurveiller ? ' Elle reçoit aussi une alerte « à surveiller ».' : ''}`
+              : 'Vous pouvez le finir plus tard, depuis l’onglet Kayé, sur ce téléphone ou un autre.'}
           </Text>
-          {fini === 'envoye' ? <Kreyol style={{ marginTop: 14 }}>Mèsi anpil !</Kreyol> : null}
+          {envoye ? <Kreyol style={{ marginTop: 14 }}>Mèsi anpil !</Kreyol> : null}
         </Card>
       </Screen>
     );
   }
 
   const humeurs: ChoiceOption<Humeur>[] = [
-    { value: 'BIEN', label: 'Bonne', dot: c.feuille },
-    { value: 'CALME', label: 'Calme', dot: c.mer },
-    { value: 'FATIGUEE', label: 'Fatigue', dot: c.soleil },
-    { value: 'TRISTE', label: 'Tristesse', dot: c.hibiscus },
+    { value: '5', label: 'Très bien', dot: c.feuille },
+    { value: '4', label: 'Bien', dot: c.feuille },
+    { value: '3', label: 'Correct', dot: c.mer },
+    { value: '2', label: 'Bas', dot: c.soleil },
+    { value: '1', label: 'Très bas', dot: c.hibiscus },
   ];
   const appetits: ChoiceOption<Appetit>[] = [
     { value: 'BON', label: 'Bon' },
     { value: 'MOYEN', label: 'Moyen' },
     { value: 'FAIBLE', label: 'Faible' },
+    { value: 'NON_OBSERVE', label: 'Pas vu' },
   ];
+
+  const pret = !!k.humeur && !!k.appetit && (!k.aSurveiller || k.noteSurveillance.trim().length >= 3);
 
   const enregistrer = async (envoyer: boolean) => {
     setErreur(null);
     setEnvoi(envoyer ? 'envoi' : 'brouillon');
     try {
-      await api.enregistrerKaye(k, envoyer);
+      if (envoyer) {
+        if (!k.humeur || !k.appetit) return;
+        await api.publierKaye(id, {
+          humeur: Number(k.humeur),
+          appetit: k.appetit,
+          activites: k.activites,
+          note: k.note.trim() || null,
+          aSurveiller: k.aSurveiller,
+          noteSurveillance: k.aSurveiller ? k.noteSurveillance.trim() : null,
+        });
+      } else {
+        await api.enregistrerBrouillonKaye(id, versBrouillon(k));
+      }
       setFini(envoyer ? 'envoye' : 'brouillon');
     } catch (e) {
-      setErreur(e instanceof ApiError ? e.message : 'Le service ne répond pas. Votre texte reste ici.');
+      setErreur(`${messageErreur(e)} Votre texte reste ici.`);
     } finally {
       setEnvoi(null);
     }
   };
 
-  const pret = !!k.humeur && !!k.appetit && (!k.aSurveiller || k.aSurveillerDetail.trim().length >= 3);
+  const basculerActivite = (a: string) =>
+    setK({ ...k, activites: k.activites.includes(a) ? k.activites.filter((x) => x !== a) : [...k.activites, a].slice(0, 10) });
 
   return (
     <Screen
@@ -111,9 +181,9 @@ export default function KayeFormulaire() {
       testID="ecran-kaye-formulaire"
       dock={
         <>
-          <Button testID="bouton-envoyer-kaye" large label="Envoyer à la famille" icon="arrow" onPress={() => void enregistrer(true)} loading={envoi === 'envoi'} disabled={!pret} />
+          <Button testID="bouton-envoyer-kaye" large label="Envoyer à la famille" icon="arrow" onPress={() => void enregistrer(true)} loading={envoi === 'envoi'} disabled={!pret || envoi !== null} />
           <View style={{ alignItems: 'center', marginTop: 4 }}>
-            <Button variant="link" label="Garder en brouillon" onPress={() => void enregistrer(false)} />
+            <Button testID="bouton-brouillon-kaye" variant="link" label="Garder en brouillon" loading={envoi === 'brouillon'} disabled={envoi !== null} onPress={() => void enregistrer(false)} />
           </View>
         </>
       }
@@ -121,22 +191,45 @@ export default function KayeFormulaire() {
       <View style={styles.intro}>
         <Avatar initiale={prenom.charAt(0)} teinte="soleil" aine size={48} />
         <Text variant="h2" style={{ flex: 1 }} accessibilityRole="header">
-          Comment va {prenom} <Em>aujourd’hui ?</Em>
+          Comment va {prenom} <Em>aujourd’hui ?</Em>
         </Text>
       </View>
 
       <Card style={{ marginTop: 20, gap: 22 }}>
-        <Choice testID="humeur" label="Humeur" options={humeurs} value={k.humeur} onChange={(humeur) => setK({ ...k, humeur })} />
-        <Choice testID="appetit" label="Appétit" options={appetits} value={k.appetit} columns={3} onChange={(appetit) => setK({ ...k, appetit })} />
+        <Choice testID="humeur" label="Humeur" options={humeurs} value={k.humeur} columns={3} onChange={(humeur) => setK({ ...k, humeur })} />
+        <Choice testID="appetit" label="Appétit" options={appetits} value={k.appetit} columns={2} onChange={(appetit) => setK({ ...k, appetit })} />
+        <View style={{ gap: 10 }}>
+          <Text variant="smallStrong">Activités (facultatif)</Text>
+          <View style={styles.activites}>
+            {ACTIVITES.map((a) => {
+              const on = k.activites.includes(a);
+              return (
+                <Pressable
+                  key={a}
+                  testID={`activite-${a}`}
+                  onPress={() => basculerActivite(a)}
+                  accessibilityRole="checkbox"
+                  accessibilityLabel={a}
+                  accessibilityState={{ checked: on }}
+                  aria-checked={on}
+                  style={[styles.activite, { backgroundColor: on ? c.merSoft : c.surface, borderColor: on ? c.mer : c.lineStrong, borderWidth: on ? 2 : 1.5 }]}
+                >
+                  {on ? <Icon name="check" size={16} color={c.mer} /> : null}
+                  <Text style={{ fontFamily: on ? fonts.sansSemiBold : fonts.sansMedium, fontSize: 15, color: on ? c.mer : c.fg }}>{a}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
         <Field
           testID="champ-note"
           label="Une note pour la famille"
-          placeholder={`Ex. : « Nous avons joué aux dominos. ${prenom} a gagné deux fois. »`}
+          placeholder={`Ex. : « Nous avons joué aux dominos. ${prenom} a gagné deux fois. »`}
           multiline
           value={k.note}
           onChangeText={(note) => setK({ ...k, note })}
           aide="Facultatif. Des faits simples, sans diagnostic."
-          maxLength={600}
+          maxLength={500}
         />
       </Card>
 
@@ -152,17 +245,17 @@ export default function KayeFormulaire() {
           <>
             <Field
               testID="champ-a-surveiller"
-              label="Qu’avez-vous remarqué ?"
-              placeholder="Ex. : « Elle boit peu. Sa cheville est gonflée. »"
+              label="Qu’avez-vous remarqué ?"
+              placeholder="Ex. : « Elle boit peu. Sa cheville est gonflée. »"
               multiline
-              value={k.aSurveillerDetail}
-              onChangeText={(aSurveillerDetail) => setK({ ...k, aSurveillerDetail })}
-              maxLength={400}
+              value={k.noteSurveillance}
+              onChangeText={(noteSurveillance) => setK({ ...k, noteSurveillance })}
+              maxLength={300}
             />
             <View style={[styles.urgence, { backgroundColor: c.hibiscusSoft }]}>
               <Icon name="info" size={18} color={c.hibiscus} />
               <Text variant="small" style={{ flex: 1, color: c.hibiscus }}>
-                Urgence : appelez le 15 ou le 112. Ce Kayé n’est pas un avis médical.
+                Urgence : appelez le 15 ou le 112. Ce Kayé n’est pas un avis médical.
               </Text>
             </View>
           </>
@@ -170,14 +263,12 @@ export default function KayeFormulaire() {
       </Card>
 
       {erreur ? (
-        <Text variant="small" tone="hibiscus" role="alert" style={{ marginTop: 12 }}>
+        <Text variant="small" tone="hibiscus" role="alert" style={{ marginTop: 12 }} testID="erreur-kaye">
           {erreur}
         </Text>
       ) : !pret ? (
-        <Text variant="small" tone="muted" style={{ marginTop: 12 }}>
-          {!k.humeur || !k.appetit
-            ? 'Choisissez l’humeur et l’appétit pour envoyer.'
-            : 'Décrivez ce qu’il faut surveiller pour envoyer.'}
+        <Text variant="small" tone="muted" style={{ marginTop: 12 }} testID="aide-kaye">
+          {!k.humeur || !k.appetit ? 'Choisissez l’humeur et l’appétit pour envoyer.' : 'Décrivez ce qu’il faut surveiller pour envoyer.'}
         </Text>
       ) : null}
     </Screen>
@@ -188,5 +279,7 @@ const styles = StyleSheet.create({
   topbar: { flexDirection: 'row', alignItems: 'center', minHeight: 56, gap: 8 },
   intro: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 12 },
   okRond: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+  activites: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  activite: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 14, borderRadius: 999 },
   urgence: { flexDirection: 'row', gap: 10, padding: 14, borderRadius: 16, alignItems: 'flex-start' },
 });

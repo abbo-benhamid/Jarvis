@@ -1,47 +1,40 @@
 import { useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { router } from 'expo-router';
-import { api, ApiError, CODE_DEMO } from '@/api';
+import { api, EMAIL_DEMO, messageErreur, MOT_DE_PASSE_DEMO } from '@/api';
 import { useSession } from '@/session/SessionProvider';
 import { fonts, useTheme } from '@/theme';
 import { Badge, Button, CaseIllustration, Em, Field, Icon, Kreyol, Logo, MadrasLine, Screen, Text } from '@/ui';
 
 /**
- * Connexion de l'accompagnant : numéro de mobile, puis code reçu par SMS.
- * Simulé au lot M1 (code 123456). Lot M2 : POST /api/v1/auth/code puis /auth/token.
+ * Connexion de l'accompagnant (lot M2) : e-mail et mot de passe.
+ * Flux A1 : POST /api/v1/auth/code (défi PKCE S256) → /auth/token → GET /me.
+ * Le jeton de renouvellement va dans le stockage sûr du téléphone (expo-secure-store).
  */
 export default function Connexion() {
   const { c } = useTheme();
   const { width } = useWindowDimensions();
-  const { connecter } = useSession();
-  const [etape, setEtape] = useState<'telephone' | 'code'>('telephone');
-  const [telephone, setTelephone] = useState('');
-  const [code, setCode] = useState('');
+  const { etat, connecter, connecterDemo, reprendre } = useSession();
+  const [email, setEmail] = useState('');
+  const [motDePasse, setMotDePasse] = useState('');
   const [erreur, setErreur] = useState<string | null>(null);
-  const [envoi, setEnvoi] = useState(false);
+  const [envoi, setEnvoi] = useState<'compte' | 'demo' | null>(null);
 
-  const demanderCode = async () => {
-    setErreur(null);
-    setEnvoi(true);
-    try {
-      await api.demanderCode(telephone);
-      setEtape('code');
-    } catch (e) {
-      setErreur(e instanceof ApiError ? e.message : 'Le service ne répond pas. Réessayez.');
-    } finally {
-      setEnvoi(false);
-    }
-  };
+  const avis = etat.statut === 'deconnecte' ? etat.message : null;
+  const reprisePossible = etat.statut === 'deconnecte' && etat.reprisePossible;
+  const pret = email.includes('@') && motDePasse.length > 0;
 
-  const valider = async () => {
+  const valider = async (demo: boolean) => {
+    if (!demo && !pret) return;
     setErreur(null);
-    setEnvoi(true);
+    setEnvoi(demo ? 'demo' : 'compte');
     try {
-      await connecter(telephone, code.trim());
+      if (demo) await connecterDemo();
+      else await connecter(email, motDePasse);
       router.replace('/visites');
     } catch (e) {
-      setErreur(e instanceof ApiError ? e.message : 'Le service ne répond pas. Réessayez.');
-      setEnvoi(false);
+      setErreur(messageErreur(e));
+      setEnvoi(null);
     }
   };
 
@@ -67,67 +60,67 @@ export default function Connexion() {
         Vos visites, <Em>pas à pas.</Em>
       </Text>
       <Text variant="body" tone="muted" style={{ marginTop: 12 }}>
-        {etape === 'telephone'
-          ? 'Entrez votre numéro de mobile. Nous vous envoyons un code par SMS.'
-          : `Nous avons envoyé un code au ${telephone}. Entrez-le ici.`}
+        Entrez l’e-mail et le mot de passe de votre compte Koudmen.
       </Text>
 
+      {avis ? (
+        <View style={[styles.avis, { backgroundColor: c.soleilSoft }]} role="alert" testID="avis-session">
+          <Icon name="info" size={18} color={c.soleilInk} />
+          <View style={{ flex: 1, gap: 8 }}>
+            <Text variant="small" tone="soleilInk">
+              {avis}
+            </Text>
+            {reprisePossible ? <Button variant="link" label="Réessayer sans mot de passe" onPress={() => void reprendre()} /> : null}
+          </View>
+        </View>
+      ) : null}
+
       <View style={{ marginTop: 24, gap: 16 }}>
-        {etape === 'telephone' ? (
-          <>
-            <Field
-              testID="champ-telephone"
-              label="Numéro de mobile"
-              placeholder="0696 12 34 56"
-              keyboardType="phone-pad"
-              autoComplete="tel"
-              textContentType="telephoneNumber"
-              value={telephone}
-              onChangeText={setTelephone}
-              onSubmitEditing={demanderCode}
-              erreur={erreur}
-              returnKeyType="next"
-            />
-            <Button testID="bouton-recevoir-code" label="Recevoir un code" trailing="arrow" onPress={demanderCode} loading={envoi} disabled={telephone.trim().length < 9} />
-          </>
-        ) : (
-          <>
-            <Field
-              testID="champ-code"
-              label="Code à 6 chiffres"
-              placeholder="······"
-              keyboardType="number-pad"
-              autoComplete="one-time-code"
-              textContentType="oneTimeCode"
-              maxLength={6}
-              grand
-              value={code}
-              onChangeText={(t) => setCode(t.replace(/\D/g, ''))}
-              onSubmitEditing={valider}
-              erreur={erreur}
-              aide={`Mode démonstration : tapez ${CODE_DEMO}.`}
-            />
-            <Button testID="bouton-connexion" label="Me connecter" icon="lock" onPress={valider} loading={envoi} disabled={code.length !== 6} />
-            <Button
-              label="Changer de numéro"
-              variant="link"
-              onPress={() => {
-                setEtape('telephone');
-                setCode('');
-                setErreur(null);
-              }}
-            />
-          </>
-        )}
+        <Field
+          testID="champ-email"
+          label="E-mail"
+          placeholder="prenom@exemple.fr"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          autoComplete="email"
+          textContentType="username"
+          value={email}
+          onChangeText={setEmail}
+          returnKeyType="next"
+        />
+        <Field
+          testID="champ-mot-de-passe"
+          label="Mot de passe"
+          secureTextEntry
+          autoCapitalize="none"
+          autoComplete="current-password"
+          textContentType="password"
+          value={motDePasse}
+          onChangeText={setMotDePasse}
+          onSubmitEditing={() => void valider(false)}
+          returnKeyType="go"
+          erreur={erreur}
+          aide={api.mode === 'simule' ? `Démo hors ligne : ${EMAIL_DEMO}, mot de passe « ${MOT_DE_PASSE_DEMO} ».` : undefined}
+        />
+        <Button testID="bouton-connexion" label="Me connecter" icon="lock" onPress={() => void valider(false)} loading={envoi === 'compte'} disabled={!pret || envoi !== null} />
+        <Button
+          testID="bouton-demo"
+          variant="link"
+          label="Essayer avec le compte de démonstration"
+          onPress={() => void valider(true)}
+          loading={envoi === 'demo'}
+          disabled={envoi !== null}
+        />
       </View>
 
       <View style={[styles.note, { borderColor: c.line }]}>
         <Icon name="shield" size={18} color={c.feuille} />
         <View style={{ flex: 1 }}>
           <Text variant="small" tone="muted">
-            Vous gardez la main : vous fixez votre tarif et vous pouvez refuser une visite sans pénalité.
+            Vous gardez la main : vous fixez votre tarif et vous pouvez refuser une visite sans pénalité.
           </Text>
-          <Kreyol style={{ marginTop: 6, fontSize: 16 }}>Bonjou ! Sa ka maché ?</Kreyol>
+          <Kreyol style={{ marginTop: 6, fontSize: 16 }}>Bonjou ! Sa ka maché ?</Kreyol>
         </View>
       </View>
     </Screen>
@@ -137,5 +130,6 @@ export default function Connexion() {
 const styles = StyleSheet.create({
   brand: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 56 },
   illus: { marginTop: 20, borderRadius: 28, alignItems: 'center', overflow: 'hidden' },
+  avis: { flexDirection: 'row', gap: 10, marginTop: 20, padding: 14, borderRadius: 16, alignItems: 'flex-start' },
   note: { flexDirection: 'row', gap: 12, marginTop: 28, padding: 16, borderRadius: 20, borderWidth: 1 },
 });

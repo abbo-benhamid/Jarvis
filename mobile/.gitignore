@@ -41,3 +41,6 @@ yarn-error.*
 /android
 test-results/
 playwright-report/
+
+# Export web de la démo hors ligne (lot M2)
+dist-simule/

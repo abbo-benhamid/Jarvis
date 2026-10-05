@@ -1,37 +1,47 @@
-import { PREUVES_REQUISES, type Preuve, type PreuveType, type Visite } from '@/api';
+import type { FacteurPreuve, Visite } from '@/api';
 import { memeJour } from '@/lib/format';
 import type { IconName } from '@/ui/Icon';
 
-/** Ordre des étapes d'arrivée : position, code du domicile, confirmation de l'aîné. */
-export const ORDRE_PREUVES: PreuveType[] = ['POSITION', 'CODE', 'CONFIRMATION_AINE'];
+/**
+ * Règles d'affichage des visites (contrat API v1, lot M2).
+ * Le serveur calcule la preuve (`preuve.score`) et les actions permises (`actions`) : l'app les affiche.
+ */
+
+/** Ordre des facteurs de preuve : position, code du domicile, confirmation de l'aîné. */
+export const ORDRE_PREUVES: FacteurPreuve[] = ['GPS', 'CODE_DOMICILE', 'CONFIRMATION_AINE'];
 
 export function nbPreuves(v: Visite): number {
-  return v.preuves.filter((p) => p.obtenueA).length;
+  return v.preuve.score;
 }
 
 export function estProuvee(v: Visite): boolean {
-  return nbPreuves(v) >= PREUVES_REQUISES;
+  return v.preuve.score >= v.preuve.seuil;
 }
 
 export function estDuJour(v: Visite): boolean {
   return memeJour(v.debut, new Date());
 }
 
-export function preuve(v: Visite, type: PreuveType): Preuve | undefined {
-  return v.preuves.find((p) => p.type === type);
+export function aLaPreuve(v: Visite, f: FacteurPreuve): boolean {
+  return v.preuve.facteursValides.includes(f);
 }
 
-/** Première étape non faite, dans l'ordre. `null` si tout est fait. */
-export function etapeCourante(v: Visite): PreuveType | null {
-  return ORDRE_PREUVES.find((t) => !preuve(v, t)?.obtenueA) ?? null;
+/** « Léonie B. » */
+export function nomAine(v: Pick<Visite, 'aine'>): string {
+  return v.aine.initialeNom ? `${v.aine.prenom} ${v.aine.initialeNom}` : v.aine.prenom;
 }
 
-export function libellePreuve(type: PreuveType, prenomAine: string): { titre: string; icone: IconName } {
-  switch (type) {
-    case 'POSITION':
-      return { titre: 'Position au domicile', icone: 'pin' };
-    case 'CODE':
-      return { titre: 'Code du domicile', icone: 'scan' };
+/** « Quartier Désert, Sainte-Luce » (adresse approximative seulement). */
+export function lieuAine(v: Pick<Visite, 'aine'>): string {
+  return v.aine.adresseApproximative ? `${v.aine.adresseApproximative}, ${v.aine.communeLibelle}` : v.aine.communeLibelle;
+}
+
+export function libellePreuve(f: FacteurPreuve, prenomAine: string): { titre: string; icone: IconName } {
+  switch (f) {
+    case 'GPS':
+      return { titre: 'Position à l’arrivée', icone: 'pin' };
+    case 'CODE_DOMICILE':
+      return { titre: 'Code du domicile', icone: 'key' };
     case 'CONFIRMATION_AINE':
       return { titre: `Confirmation de ${prenomAine}`, icone: 'phone' };
   }
@@ -39,13 +49,13 @@ export function libellePreuve(type: PreuveType, prenomAine: string): { titre: st
 
 export function libelleStatut(v: Visite): string {
   switch (v.statut) {
+    case 'PREVUE':
+      return 'à venir';
     case 'EN_COURS':
       return 'en cours';
-    case 'TERMINEE':
-      return 'terminée';
-    case 'ANNULEE':
-      return 'annulée';
-    case 'A_VENIR':
-      return 'à venir';
+    case 'VALIDEE':
+      return 'validée';
+    case 'A_VERIFIER':
+      return 'à vérifier';
   }
 }

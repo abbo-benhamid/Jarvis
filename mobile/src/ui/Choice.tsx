@@ -38,6 +38,7 @@ export function Choice<V extends string>({ label, options, value, onChange, colu
               accessibilityRole="radio"
               accessibilityLabel={o.label}
               accessibilityState={{ checked: on, selected: on }}
+              aria-checked={on}
               style={({ pressed }) => [
                 styles.option,
                 {
@@ -89,6 +90,7 @@ export function SwitchRow({
       accessibilityLabel={label}
       accessibilityHint={detail}
       accessibilityState={{ checked: value }}
+      aria-checked={value}
       style={styles.switchRow}
     >
       <View style={{ flex: 1 }}>
