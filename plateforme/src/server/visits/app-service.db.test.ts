@@ -318,6 +318,13 @@ describe.runIf(enabled)("Lot A2 (API v1 : visites, événements, propositions) s
     expect(await db.auditLog.count({ where: { actorId: eva.user.id, action: "sos.triggered" } })).toBe(0);
   });
 
+  it("m9 : proposition déjà acceptée → même mission pour CET accompagnant, rien pour un autre", async () => {
+    const v = await visitFor(alice);
+    const mission = await db.mission.findUniqueOrThrow({ where: { id: v.missionId } });
+    expect(await app.acceptedProposal(alice.user.id, mission.proposalId)).toEqual({ missionId: mission.id, visitCount: 1 });
+    expect(await app.acceptedProposal(bruno.user.id, mission.proposalId)).toBeNull();
+  });
+
   it("propositions : liste, refus SANS pénalité (profil inchangé, propositions suivantes toujours visibles)", async () => {
     const mk = async () => {
       const r = await db.careRequest.create({

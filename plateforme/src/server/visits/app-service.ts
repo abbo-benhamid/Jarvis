@@ -13,6 +13,7 @@ import {
   createKaye,
   getOrCreateProfile,
   isTestMode,
+  ownedProposalWhere,
   ownedVisitWhere,
   type Actor,
 } from "@/server/accompagnant/service";
@@ -350,6 +351,18 @@ async function flagClockSkew(actor: Actor, visitId: string, now: Date) {
 }
 
 // ─────────────── Propositions ───────────────
+
+/**
+ * Code m9 : « Accepter » idempotent. Si la proposition est déjà ACCEPTÉE par CET accompagnant (réponse perdue,
+ * second appui), on renvoie la mission créée au lieu d'un CONFLIT. Null sinon.
+ */
+export async function acceptedProposal(userId: string, proposalId: string): Promise<{ missionId: string; visitCount: number } | null> {
+  const p = await db.missionProposal.findFirst({
+    where: { ...ownedProposalWhere(userId, proposalId), status: "ACCEPTEE" },
+    select: { mission: { select: { id: true, _count: { select: { visits: true } } } } },
+  });
+  return p?.mission ? { missionId: p.mission.id, visitCount: p.mission._count.visits } : null;
+}
 
 export async function listAppProposals(userId: string, now: Date = new Date()): Promise<Proposition[]> {
   const { proposals } = await getPendingProposals(userId, now);
