@@ -235,6 +235,8 @@ model User {
   proposalsChosen     MissionProposal[]  @relation("ProposalChooser")
   /// Jetons de renouvellement de l'API v1 (app mobile, ADR 0008).
   refreshTokens       RefreshToken[]
+  appEvents           AppEvent[]
+  kayeDrafts          KayeDraft[]
 
   @@index([sandboxId])
 }
@@ -529,11 +531,15 @@ model Visit {
   checkOutAt     DateTime?
   /// Nombre de facteurs valides (0 à 3). Recalculé par computeVisitProof().
   proofScore     Int              @default(0)
+  /// Lot A2 : un événement de l'app a un écart d'horloge > 12 h. La visite reste « À vérifier »
+  /// tant que l'aîné ne l'a pas confirmée (deriveVisitStatus).
+  clockSkewAt    DateTime?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
-  proofs  VisitProof[]
-  journal JournalEntry?
+  proofs    VisitProof[]
+  journal   JournalEntry?
+  kayeDraft KayeDraft?
 
   @@index([aineId, scheduledStart])
   @@index([caregiverId, scheduledStart])
@@ -779,4 +785,45 @@ model RefreshToken {
   @@index([userId])
   @@index([familyId])
   @@index([expiresAt])
+}
+
+// ─────────────────────────────── API v1 : événements de l'app (lot A2, ADR 0008) ───────────────────────────────
+
+/// Événement envoyé par l'app accompagnant (file hors ligne). Sert à l'IDEMPOTENCE : un même clientEventId
+/// n'est traité qu'une fois par compte. Ne contient AUCUNE donnée personnelle (ni code, ni position, ni texte).
+model AppEvent {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// UUID créé par l'appareil.
+  clientEventId String
+  /// CHECK_IN, CHECK_OUT, KAYE_BROUILLON, KAYE_PUBLICATION, SOS.
+  type          String
+  visitId       String?
+  /// Heure de l'appareil.
+  occurredAt    DateTime
+  /// Heure de réception par le serveur.
+  receivedAt    DateTime @default(now())
+  /// Écart d'horloge > 12 h entre occurredAt et receivedAt.
+  clockSkew     Boolean  @default(false)
+  /// Résultat renvoyé à l'app (rejoué tel quel pour un doublon). Null pendant le traitement.
+  outcome       Json?
+
+  @@unique([userId, clientEventId])
+  @@index([visitId])
+  @@index([receivedAt])
+}
+
+/// Brouillon de Kayé synchronisé depuis l'app. Effacé à la publication du Kayé (RGPD : minimum).
+model KayeDraft {
+  id         String   @id @default(cuid())
+  visitId    String   @unique
+  visit      Visit    @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  /// Champs du Kayé en cours (humeur, appétit, activités, notes).
+  content    Json
+  /// Heure de l'appareil du dernier brouillon retenu (le plus récent gagne).
+  occurredAt DateTime
+  updatedAt  DateTime @updatedAt
 }
