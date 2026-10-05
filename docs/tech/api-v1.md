@@ -269,11 +269,11 @@ L'app retire l'appareil avant la déconnexion. Si elle ne peut pas (réseau coup
 
 | Événement | Destinataire | Titre | Écran (`data.ecran`) |
 |---|---|---|---|
-| La famille choisit un profil (`PROPOSITION_MISSION`) | Accompagnant | « Nouvelle proposition » | `propositions` |
-| Kayé publié (`KAYE_PUBLIE`) | Cercle Lakou | « Nouveau Kayé pour {prénom de l'aîné} » | `kaye` + `visiteId` |
-| Kayé « à surveiller » (`ALERTE_A_SURVEILLER`) | Cercle Lakou | « À lire : visite chez {prénom de l'aîné} » | `visite` + `visiteId` |
+| La famille choisit un profil (`PROPOSITION_MISSION`) | Accompagnant | « Koudmen · Nouvelle proposition » | `propositions` |
+| Kayé publié (`KAYE_PUBLIE`) | Cercle Lakou | « Koudmen · Nouvelles de votre proche » | `kaye` + `visiteId` |
+| Kayé « à surveiller » (`ALERTE_A_SURVEILLER`) | Cercle Lakou | « Koudmen · Nouvelles de votre proche » | `visite` + `visiteId` |
 
-- Jamais : humeur, appétit, note, motif, nom de l'accompagnant, commune.
+- Jamais : prénom de l'aîné, « à surveiller », humeur, appétit, note, motif, nom de l'accompagnant, commune (V1c, X2).
 - Le push s'ajoute au canal par défaut (WhatsApp ou e-mail). Il ne le remplace pas.
 - `data` suit `donneesPushSchema` (`{ ecran, visiteId?, lien }`). L'app ignore des données hors contrat.
 
@@ -301,5 +301,5 @@ pnpm build:local && E2E_PORT=3714 pnpm e2e e2e/api-v1-push.spec.ts              
 Le journal du serveur montre alors :
 
 ```
-[push:console] ANDROID …5e70 | Nouveau Kayé pour Ginette | Ouvrez Koudmen pour le lire. | ecran=kaye:cm…
+[push:console] ANDROID …5e70 | ecran=kaye:cm…
 ```

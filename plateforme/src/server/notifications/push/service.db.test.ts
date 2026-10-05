@@ -67,14 +67,14 @@ describe.runIf(enabled)("service push (base réelle)", async () => {
     const rows = await db.outboxMessage.findMany({ where: { recipientUserId: u.id }, orderBy: { channel: "asc" } });
     expect(rows.map((r) => r.channel).sort()).toEqual(["PUSH", "WHATSAPP"]);
     const push = rows.find((r) => r.channel === "PUSH")!;
-    expect(push).toMatchObject({ status: "EN_ATTENTE", subject: "Nouveau Kayé pour Léonie", body: "Ouvrez Koudmen pour le lire." });
+    expect(push).toMatchObject({ status: "EN_ATTENTE", subject: "Koudmen · Nouvelles de votre proche", body: "Un nouveau Kayé est arrivé. Ouvrez Koudmen pour le lire." });
     expect(`${push.subject} ${push.body}`).not.toMatch(/Triste|Marius/);
 
     const { port, recus } = portSimule();
     const bilan = await svc.flushPendingPush(port, new Date(), { userIds: [u.id] });
     expect(bilan).toEqual({ traites: 1, envoyes: 1, echecs: 0 });
     expect(recus).toEqual([
-      { jeton: j, plateforme: "ANDROID", titre: "Nouveau Kayé pour Léonie", corps: "Ouvrez Koudmen pour le lire.", donnees: { ecran: "kaye", visiteId: "cmvisitepush0001", lien: "/famille/kaye" } },
+      { jeton: j, plateforme: "ANDROID", titre: "Koudmen · Nouvelles de votre proche", corps: "Un nouveau Kayé est arrivé. Ouvrez Koudmen pour le lire.", donnees: { ecran: "kaye", visiteId: "cmvisitepush0001", lien: "/famille/kaye" } },
     ]);
     expect(await db.outboxMessage.findUnique({ where: { id: push.id } })).toMatchObject({ status: "ENVOYE", to: "1/1 appareil(s)" });
 

@@ -101,6 +101,15 @@ export function productionConfigProblems(env: Env = process.env): string[] {
     if (p) out.push(`TESTER_INVITE_CODES : ${p}. Générez des codes avec : pnpm ops:generate-codes`);
   }
   if (env.RATE_LIMIT_DISABLED === "true") out.push("RATE_LIMIT_DISABLED est interdit en production.");
+  // X2 (sécurité PB1) et PM3 : push réel par Expo (États-Unis) seulement après la validation du DPO.
+  if (env.ADAPTER_PUSH?.trim().toLowerCase() === "expo") {
+    if (env.PUSH_DPO_VALIDE?.trim() !== "true") out.push("ADAPTER_PUSH=expo est refusé tant que le DPO n'a pas validé le push (PUSH_DPO_VALIDE=true).");
+    if (!env.EXPO_ACCESS_TOKEN?.trim()) out.push("ADAPTER_PUSH=expo exige EXPO_ACCESS_TOKEN (sécurité renforcée des push Expo).");
+  }
+  // PM1 : seules valeurs connues pour la confiance dans le proxy.
+  if (env.TRUST_PROXY && !["vercel", "clevercloud", "aucun"].includes(env.TRUST_PROXY.trim().toLowerCase())) {
+    out.push("TRUST_PROXY doit valoir vercel, clevercloud ou aucun.");
+  }
   if (env.TEST_END_DATE && !/^\d{4}-\d{2}-\d{2}$/.test(env.TEST_END_DATE.trim())) out.push("TEST_END_DATE n'est pas une date (format AAAA-MM-JJ).");
   return out;
 }

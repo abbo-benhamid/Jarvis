@@ -73,13 +73,13 @@ Règles :
 
 | Modèle | Titre | Corps |
 |---|---|---|
-| `PROPOSITION_MISSION` | Nouvelle proposition | Une famille vous propose un accompagnement. Vous êtes libre de répondre oui ou non. |
-| `KAYE_PUBLIE` | Nouveau Kayé pour {aine} | Ouvrez Koudmen pour le lire. |
-| `ALERTE_A_SURVEILLER` | À lire : visite chez {aine} | L'accompagnant a noté un point à surveiller. Ouvrez Koudmen. Urgence : appelez le 15 ou le 112. |
+| `PROPOSITION_MISSION` | Koudmen · Nouvelle proposition | Une famille vous propose un accompagnement. Vous êtes libre de répondre oui ou non. |
+| `KAYE_PUBLIE` | Koudmen · Nouvelles de votre proche | Un nouveau Kayé est arrivé. Ouvrez Koudmen pour le lire. |
+| `ALERTE_A_SURVEILLER` | Koudmen · Nouvelles de votre proche | Un message de l'accompagnant vous attend. Ouvrez Koudmen. Urgence : appelez le 15 ou le 112. |
 
-- Seule variable recopiée : `{aine}` (prénom, 40 caractères au plus). Les autres variables sont **ignorées**, même si le métier les passe (test : `push.test.ts`).
-- [À VÉRIFIER] Le prénom de l'aîné passe par Expo (États-Unis) et s'affiche sur l'écran verrouillé. La demande du lot le prévoit (« Nouveau Kayé pour Léonie »). Option plus stricte : « Nouveau Kayé » sans prénom. Décision DPO avant le passage en `expo`.
-- [À VÉRIFIER] « point à surveiller » n'est pas une donnée de santé (signal non médical, spécification § 8). À relire avec le DPO.
+- V1c (arbitrage X2) : **aucune variable** n'est recopiée dans un push (ni prénom, ni « à surveiller »). Test : `push.test.ts`.
+- Journal `console` : plateforme, jeton masqué et écran visé seulement (ni titre ni texte).
+- Production stricte : `ADAPTER_PUSH=expo` refusé sans `PUSH_DPO_VALIDE=true` et sans `EXPO_ACCESS_TOKEN` (`config-check.ts`).
 
 ## 5. App mobile
 
