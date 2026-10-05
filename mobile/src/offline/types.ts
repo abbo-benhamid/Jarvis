@@ -52,7 +52,23 @@ export interface StockageHorsLigne {
   toutEffacer(): Promise<void>;
 }
 
-/** Chiffrement au repos d'un texte. Lève une erreur si le texte chiffré est illisible (clé changée). */
+/**
+ * La clé de chiffrement ne peut pas être lue POUR L'INSTANT (Keychain / Keystore indisponible, erreur passagère,
+ * clé absente alors que des données chiffrées existent). Ce n'est PAS une donnée illisible : on n'efface rien,
+ * on ne crée pas de clé neuve, on réessaie plus tard.
+ */
+export class CleIndisponible extends Error {
+  constructor(message = 'Clé de chiffrement indisponible pour l’instant.') {
+    super(message);
+    this.name = 'CleIndisponible';
+  }
+}
+
+/**
+ * Chiffrement au repos d'un texte.
+ * - Texte illisible avec une clé bien lue (clé changée, donnée abîmée) : erreur ordinaire → la donnée est effacée.
+ * - Clé indisponible : `CleIndisponible` → rien n'est effacé.
+ */
 export interface Chiffreur {
   chiffrer(texte: string): Promise<string>;
   dechiffrer(texteChiffre: string): Promise<string>;

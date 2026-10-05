@@ -2,8 +2,10 @@ import { expect, test } from '@playwright/test';
 import type { Evenement } from '../../contracts';
 import { ApiError } from '../../api/types';
 import { classerErreur, creerFile, MAX_EN_COURS, type Transport } from '../file';
+import { stockageChiffre } from '../chiffre';
 import { stockageMemoire } from '../memoire';
-import { ev, laisserFinir, minuteursManuels, serveurFactice } from './aides';
+import { CleIndisponible } from '../types';
+import { chiffreurWebCrypto, ev, laisserFinir, minuteursManuels, serveurFactice } from './aides';
 
 /**
  * Sprint V1c (revue de code V1) : la file ne se bloque jamais à vie et ne perd rien en silence.
@@ -190,6 +192,35 @@ test.describe('M4 et m10 : stockage', () => {
     await laisserFinir();
     expect(serveur.recus.map((e) => e.type)).toEqual(['SOS', 'KAYE_PUBLICATION']);
     expect(file.etat()).toMatchObject({ enAttente: 0, blocage: null });
+  });
+
+  test('M4 : clé indisponible une fois → aucune ligne ni cache effacé ; donnée vraiment illisible → effacée', async () => {
+    const brut = stockageMemoire();
+    const vrai = await chiffreurWebCrypto();
+    let panne = 1;
+    const chiffreur = {
+      chiffrer: vrai.chiffrer,
+      async dechiffrer(t: string) {
+        if (panne-- > 0) throw new CleIndisponible();
+        return vrai.dechiffrer(t);
+      },
+    };
+    const s = stockageChiffre(brut, chiffreur);
+    await s.ecrireLigne({ id: 'e1', seq: 1, type: 'KAYE_PUBLICATION', visiteId: 'v1', statut: 'EN_ATTENTE', tentatives: 0, contenu: '{"note":"Elle boit peu"}' });
+    await s.ecrireCache('moi', { valeur: '{}', enregistreA: 1 });
+
+    await expect(s.listerLignes()).rejects.toBeInstanceOf(CleIndisponible);
+    expect(brut.brut().lignes.size).toBe(1);
+    expect((await s.listerLignes())[0]?.contenu).toContain('boit peu');
+
+    panne = 1;
+    expect(await s.lireCache('moi')).toBeNull();
+    expect(brut.brut().cache.size).toBe(1);
+
+    // Donnée abîmée avec une clé bien lue : effacée (jamais renvoyée).
+    brut.brut().lignes.set('e2', { id: 'e2', seq: 2, type: 'SOS', visiteId: null, statut: 'EN_ATTENTE', tentatives: 0, contenu: 'v1:abime' });
+    expect((await s.listerLignes()).map((l) => l.id)).toEqual(['e1']);
+    expect(brut.brut().lignes.has('e2')).toBe(false);
   });
 
   test('m10 : écriture impossible → le message ne promet PAS « gardé sur ce téléphone »', async () => {

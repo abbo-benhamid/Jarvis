@@ -1,9 +1,11 @@
-import type { Chiffreur, StockageHorsLigne } from './types';
+import { CleIndisponible, type Chiffreur, type StockageHorsLigne } from './types';
 
 /**
  * Enveloppe de chiffrement au repos.
  * Chiffre `contenu` (file) et `valeur` (cache) avant l'écriture ; déchiffre à la lecture.
- * Une donnée illisible (clé effacée ou changée) est SUPPRIMÉE, jamais renvoyée.
+ * - Donnée illisible avec une clé bien lue (clé changée, donnée abîmée) : SUPPRIMÉE, jamais renvoyée.
+ * - Clé indisponible pour l'instant (`CleIndisponible`) : RIEN n'est supprimé. La lecture de la file échoue
+ *   (la file réessaie plus tard) ; la lecture du cache renvoie « absent ».
  */
 export function stockageChiffre(base: StockageHorsLigne, chiffreur: Chiffreur): StockageHorsLigne {
   return {
@@ -12,8 +14,8 @@ export function stockageChiffre(base: StockageHorsLigne, chiffreur: Chiffreur): 
       if (!e) return null;
       try {
         return { valeur: await chiffreur.dechiffrer(e.valeur), enregistreA: e.enregistreA };
-      } catch {
-        await base.effacerCache(cle);
+      } catch (err) {
+        if (!(err instanceof CleIndisponible)) await base.effacerCache(cle);
         return null;
       }
     },
@@ -27,7 +29,9 @@ export function stockageChiffre(base: StockageHorsLigne, chiffreur: Chiffreur): 
       for (const l of await base.listerLignes()) {
         try {
           sortie.push({ ...l, contenu: await chiffreur.dechiffrer(l.contenu) });
-        } catch {
+        } catch (err) {
+          // Clé indisponible : on arrête tout, sans rien effacer (la file relira plus tard).
+          if (err instanceof CleIndisponible) throw err;
           await base.supprimerLigne(l.id);
         }
       }

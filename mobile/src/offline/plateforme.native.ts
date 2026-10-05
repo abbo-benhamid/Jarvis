@@ -3,7 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as SQLite from 'expo-sqlite';
 import { depuisUtf8, stockageChiffre, versUtf8 } from './chiffre';
 import type { Plateforme } from './plateforme.types';
-import type { Chiffreur, LigneStockee, StockageHorsLigne } from './types';
+import { CleIndisponible, type Chiffreur, type LigneStockee, type StockageHorsLigne } from './types';
 
 /**
  * iOS / Android (lot M3) : SQLite + chiffrement applicatif.
@@ -15,6 +15,8 @@ import type { Chiffreur, LigneStockee, StockageHorsLigne } from './types';
  * - La clé (256 bits, aléatoire) est dans `expo-secure-store` (Keychain / Keystore),
  *   lisible après le premier déverrouillage, jamais sauvegardée hors de l'appareil.
  * - Déconnexion : lignes effacées ET clé effacée. Un reste éventuel dans le fichier devient illisible.
+ * - V1c (M4) : une erreur de lecture de la clé n'efface RIEN (`CleIndisponible`). Une clé neuve est créée
+ *   seulement si aucune donnée chiffrée n'existe (repère `cle` dans la table `meta`), et jamais par-dessus une clé existante.
  */
 
 const NOM_BASE = 'koudmen-hors-ligne.db';
@@ -104,20 +106,61 @@ function stockageSqlite(): StockageHorsLigne {
   };
 }
 
-function chiffreurAes(): Chiffreur & { oublierCle(): Promise<void> } {
+/** Repère en clair dans `meta` : « une clé a été créée et des données ont pu être chiffrées avec elle ». */
+const META_CLE = 'cle';
+
+/** Lit la clé gardée. Une erreur du stockage sûr devient `CleIndisponible` (passagère, rien n'est effacé). */
+async function lireCleGardee(): Promise<string | null> {
+  try {
+    return await SecureStore.getItemAsync(CLE_SECURE_STORE, OPTIONS_CLE);
+  } catch {
+    throw new CleIndisponible();
+  }
+}
+
+async function importer(texte: string): Promise<AESEncryptionKey> {
+  try {
+    return await AESEncryptionKey.import(texte, 'base64');
+  } catch {
+    throw new CleIndisponible('Clé de chiffrement illisible.');
+  }
+}
+
+function chiffreurAes(base: StockageHorsLigne): Chiffreur & { oublierCle(): Promise<void> } {
   let cle: Promise<AESEncryptionKey> | null = null;
 
-  const lireCle = () => {
+  /**
+   * `creer` : seulement pour CHIFFRER (écriture). Lire une donnée n'a jamais besoin d'une clé neuve.
+   * Règles : 1. clé gardée → elle sert ; 2. erreur de lecture → `CleIndisponible` ;
+   * 3. clé absente MAIS repère présent (des données chiffrées existent) → `CleIndisponible` (pas de clé neuve) ;
+   * 4. clé absente, sans repère → clé neuve, écrite seulement si aucune clé n'est apparue entre-temps.
+   */
+  const lireCle = (creer: boolean) => {
     if (!cle) {
-      cle = (async () => {
-        const gardee = await SecureStore.getItemAsync(CLE_SECURE_STORE, OPTIONS_CLE);
-        if (gardee) return AESEncryptionKey.import(gardee, 'base64');
+      const p = (async () => {
+        const gardee = await lireCleGardee();
+        if (gardee) {
+          const k = await importer(gardee);
+          // Installations d'avant V1c : poser le repère une fois.
+          if (!(await base.lireMeta(META_CLE).catch(() => null))) await base.ecrireMeta(META_CLE, '1').catch(() => undefined);
+          return k;
+        }
+        const repere = await base.lireMeta(META_CLE).catch(() => {
+          throw new CleIndisponible();
+        });
+        if (repere) throw new CleIndisponible('Clé de chiffrement absente alors que des données chiffrées existent.');
+        if (!creer) throw new CleIndisponible('Pas encore de clé de chiffrement.');
         const neuve = await AESEncryptionKey.generate(AESKeySize.AES256);
+        // Jamais par-dessus une clé existante : on relit juste avant d'écrire.
+        const entreTemps = await lireCleGardee();
+        if (entreTemps) return importer(entreTemps);
         await SecureStore.setItemAsync(CLE_SECURE_STORE, await neuve.encoded('base64'), OPTIONS_CLE);
+        await base.ecrireMeta(META_CLE, '1');
         return neuve;
-      })().catch((e) => {
-        cle = null;
-        throw e;
+      })();
+      cle = p;
+      p.catch(() => {
+        if (cle === p) cle = null;
       });
     }
     return cle;
@@ -125,13 +168,13 @@ function chiffreurAes(): Chiffreur & { oublierCle(): Promise<void> } {
 
   return {
     async chiffrer(texte) {
-      const scelle = await aesEncryptAsync(versUtf8(texte), await lireCle());
+      const scelle = await aesEncryptAsync(versUtf8(texte), await lireCle(true));
       return VERSION + (await scelle.combined('base64'));
     },
     async dechiffrer(texteChiffre) {
       if (!texteChiffre.startsWith(VERSION)) throw new Error('Format chiffré inconnu');
       const scelle = AESSealedData.fromCombined(texteChiffre.slice(VERSION.length));
-      const octets = await aesDecryptAsync(scelle, await lireCle());
+      const octets = await aesDecryptAsync(scelle, await lireCle(false));
       return depuisUtf8(octets);
     },
     async oublierCle() {
@@ -142,9 +185,10 @@ function chiffreurAes(): Chiffreur & { oublierCle(): Promise<void> } {
 }
 
 export function creerPlateforme(): Plateforme {
-  const chiffreur = chiffreurAes();
+  const sqlite = stockageSqlite();
+  const chiffreur = chiffreurAes(sqlite);
   return {
-    stockage: stockageChiffre(stockageSqlite(), chiffreur),
+    stockage: stockageChiffre(sqlite, chiffreur),
     oublierCle: () => chiffreur.oublierCle(),
     description: 'SQLite, contenus chiffrés AES-256-GCM (clé dans le stockage sûr)',
   };

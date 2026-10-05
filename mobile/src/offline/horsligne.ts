@@ -44,6 +44,8 @@ export function assemblerHorsLigne(o: { transport: Transport; plateforme: Platef
 
   let enLigne: boolean | null = null;
   let arreter: (() => void) | null = null;
+  /** Le dernier effacement du stockage a échoué : on le refait à la prochaine ouverture de session. */
+  let purgeIncomplete = false;
   const abonnes = new Set<(e: EtatHorsLigne) => void>();
 
   const etat = (): EtatHorsLigne => ({ ...file.etat(), enLigne });
@@ -55,7 +57,10 @@ export function assemblerHorsLigne(o: { transport: Transport; plateforme: Platef
 
   async function purger() {
     file.vider();
-    await stockage.toutEffacer().catch(() => undefined);
+    purgeIncomplete = !(await stockage
+      .toutEffacer()
+      .then(() => true)
+      .catch(() => false));
     await plateforme.oublierCle().catch(() => undefined);
   }
 
@@ -78,7 +83,7 @@ export function assemblerHorsLigne(o: { transport: Transport; plateforme: Platef
 
     async ouvrir(compteId) {
       const avant = await stockage.lireMeta(CLE_COMPTE).catch(() => null);
-      if (avant && avant !== compteId) await purger();
+      if (purgeIncomplete || (avant && avant !== compteId)) await purger();
       await stockage.ecrireMeta(CLE_COMPTE, compteId).catch(() => undefined);
       if (!arreter) {
         arreter = surveiller(
