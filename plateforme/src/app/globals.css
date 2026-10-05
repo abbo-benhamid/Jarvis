@@ -180,42 +180,70 @@
 /* Bascule manuelle (data-theme="dark" sur <html>). Les jetons gèrent aussi la préférence système. */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-html {
-  -webkit-text-size-adjust: 100%;
-  /* Les ancres ciblées (#prix…) ne passent pas sous le haut de l'écran. */
-  scroll-padding-top: 1rem;
+/* Base : en couche « base » pour que les classes utilitaires (font-sans, text-…) gardent la priorité. */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    /* Les ancres ciblées (#prix…) ne passent pas sous le haut de l'écran. */
+    scroll-padding-top: 1rem;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 17px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
 }
 
-body {
-  background: var(--bg);
-  color: var(--fg);
-  font-family: var(--font-sans);
-  font-size: 17px;
-  line-height: 1.55;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+/* Classes partagées : en couche « components » (une classe utilitaire peut les ajuster). */
+@layer components {
+  /* Chiffres : tabulaires et alignés (2/3, 10:04, 49,67 €). */
+  .num {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
 
-h1,
-h2,
-h3 {
-  font-family: var(--font-display);
-  font-optical-sizing: auto;
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  text-wrap: balance;
-}
+  /* Mot ou phrase en créole : Fraunces italique, couleur soleil lisible. */
+  .kreyol {
+    font-family: var(--font-display);
+    font-style: italic;
+    color: var(--soleil-ink);
+  }
 
-/* Chiffres : tabulaires et alignés (2/3, 10:04, 49,67 €). */
-.num {
-  font-variant-numeric: tabular-nums lining-nums;
-}
+  /* Filet madras : 2 px, réservé à ce qui compte (séparateur de page, haut du reçu). */
+  .madras {
+    height: 2px;
+    background: var(--madras);
+  }
 
-/* Mot ou phrase en créole : Fraunces italique, couleur soleil lisible. */
-.kreyol {
-  font-family: var(--font-display);
-  font-style: italic;
-  color: var(--soleil-ink);
+  /* Anneau madras de l'aîné (2 px) : seul le bord du dégradé conique reste visible. */
+  .kd-madras-ring {
+    padding: 2px;
+    background: var(--madras-ring);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+
+  /* Photo réelle ou illustration « photo » : adoucie en sombre. */
+  .photo-filter {
+    filter: var(--photo-filter);
+  }
 }
 
 /*
@@ -226,28 +254,6 @@ h3 {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
   box-shadow: 0 0 0 5px var(--focus-halo);
-}
-
-/* Filet madras : 2 px, réservé à ce qui compte (séparateur de page, haut du reçu). */
-.madras {
-  height: 2px;
-  background: var(--madras);
-}
-
-/* Anneau madras de l'aîné (2 px) : seul le bord du dégradé conique reste visible. */
-.kd-madras-ring {
-  padding: 2px;
-  background: var(--madras-ring);
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-}
-
-/* Photo réelle ou illustration « photo » : adoucie en sombre. */
-.photo-filter {
-  filter: var(--photo-filter);
 }
 
 dialog::backdrop {

@@ -109,7 +109,7 @@ export function VisitReceipt({
         {v.valid ? <ShieldCheck aria-hidden="true" strokeWidth={1.6} /> : <ShieldAlert aria-hidden="true" strokeWidth={1.6} />}
         <div>
           <b className="block text-base font-bold">{verdictTitle ?? v.title}</b>
-          {verdictText ? <span className="text-sm text-fg opacity-80">{verdictText}</span> : null}
+          {verdictText ? <span className="block text-sm leading-snug text-fg opacity-80">{verdictText}</span> : null}
         </div>
       </div>
     </section>

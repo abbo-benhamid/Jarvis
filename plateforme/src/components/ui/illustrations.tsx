@@ -124,7 +124,7 @@ export function CaseIllustration({ size = 120, className }: { size?: number; cla
     <svg viewBox="0 0 120 120" width={size} height={size} aria-hidden="true" className={cn("shrink-0", className)}>
       <circle cx={60} cy={60} r={56} style={{ fill: "var(--surface-2)" }} />
       <circle cx={84} cy={38} r={13} style={{ fill: "var(--soleil)" }} opacity={0.55} />
-      <path d="M10 86c18-10 34-12 50-8s32 4 50-4v18a56 56 0 0 1-100 0z" style={{ fill: "var(--hill)" }} opacity={0.8} />
+      <path d="M8 82c22-10 38-12 52-6s32 4 53-4A56 56 0 0 1 8 82z" style={{ fill: "var(--hill)" }} opacity={0.8} />
       <g fill="none" style={{ stroke: "var(--stroke)" }} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" opacity={0.85}>
         <path d="M36 62l16-14 16 14" />
         <path d="M39 60v22h26V60" />
