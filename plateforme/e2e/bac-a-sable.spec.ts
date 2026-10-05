@@ -42,7 +42,7 @@ test("famille : entrée avec code → Simuler la suite → choisir un profil →
   // A8 : panneau compact (une ligne + prochaine étape) ; les scénarios sont repliés.
   await expect(panel.getByText(/Test 0\/10/)).toBeVisible();
   await expect(panel.getByText("1. Des nouvelles de Léonie")).toBeHidden();
-  await panel.getByText("Voir les 3 scénarios et mon lien de reprise").click();
+  await panel.getByRole("button", { name: /^Détails/ }).click();
   await expect(panel.getByText("1. Des nouvelles de Léonie")).toBeVisible();
   await expect(page.getByText("Mode test", { exact: true })).toBeVisible();
 
@@ -128,7 +128,7 @@ test("famille : entrée avec code → Simuler la suite → choisir un profil →
 test("le lien de reprise rouvre le bac à sable sur un autre appareil", async ({ page, browser }) => {
   await startSandbox(page, "Accompagnant");
   await expect(page).toHaveURL(/\/accompagnant\?bienvenue=1$/);
-  await page.getByText("Voir les 3 scénarios et mon lien de reprise").click();
+  await page.getByRole("region", { name: /Votre test/ }).getByRole("button", { name: /^Détails/ }).click();
   const link = await page.getByLabel("Lien de reprise de votre test").inputValue();
   const path = new URL(link).pathname;
   expect(path).toMatch(/^\/tester\/reprendre\/[A-Za-z0-9_-]{40,}$/);
