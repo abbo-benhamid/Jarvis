@@ -90,16 +90,17 @@ export function OrientationWizard({
       <div className="flex flex-col gap-4">
         {result ? <p className="sr-only" role="status">Résultat enregistré.</p> : null}
         <OrientationResultView result={displayed} />
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex flex-col gap-2">
           {displayed.outcome === "RECOMMANDE" ? (
-            <LinkButton href="/accompagnant/profil" size="lg">
+            <LinkButton href="/accompagnant/profil" size="xl" fullWidth>
               Compléter mon profil
             </LinkButton>
           ) : null}
           {canRedo ? (
             <Button
-              variant="secondary"
+              variant="quiet"
               size="lg"
+              fullWidth
               onClick={() => {
                 setDraft({ situations: [] });
                 setStep(0);
@@ -128,17 +129,19 @@ export function OrientationWizard({
     <form onSubmit={onSubmit} className="flex flex-col gap-5">
       <input type="hidden" name="answers" value={JSON.stringify(draft)} />
       <div className="flex flex-col gap-2">
-        <p className="font-semibold text-muted" aria-live="polite">
+        <p className="num text-[15px] font-semibold text-muted" aria-live="polite">
           Question {step + 1} sur 5
         </p>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-line" aria-hidden="true">
-          <div className="h-full rounded-full bg-mer transition-all" style={{ width: `${((step + 1) / 5) * 100}%` }} />
-        </div>
+        <ol className="m-0 grid list-none grid-cols-5 gap-1.5 p-0" aria-hidden="true">
+          {QUESTIONS.map((q, i) => (
+            <li key={q} className={`h-1.5 rounded-full ${i <= step ? "bg-mer" : "bg-line"}`} />
+          ))}
+        </ol>
       </div>
 
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-3">
-          <h2 ref={titleRef} tabIndex={-1} className="text-2xl font-bold outline-none">
+          <h2 ref={titleRef} tabIndex={-1} className="font-display text-[24px] leading-[1.2] font-normal tracking-[-.015em] text-balance outline-none">
             {QUESTIONS[step]}
           </h2>
         </legend>
@@ -180,7 +183,7 @@ export function OrientationWizard({
           ))}
         {step === 3 && (
           <>
-            <p className="text-muted">Plusieurs réponses sont possibles. Aucune ne vous concerne ? Passez à la suite.</p>
+            <p className="text-[15px] text-muted">Plusieurs réponses sont possibles. Aucune ne vous concerne ? Passez à la suite.</p>
             {Q4.map((o) => (
               <ChoiceCard
                 key={o.value}
@@ -217,21 +220,15 @@ export function OrientationWizard({
 
       <FormMessage state={state.ok ? undefined : state} />
       {/* m9 : le bouton reste actif ; sans réponse, un message explique quoi faire. */}
-      <p role="status" className="font-semibold text-hibiscus">
+      <p role="status" className="text-[15px] font-semibold text-hibiscus">
         {needAnswer && !answered[step] ? "Choisissez une réponse pour continuer." : ""}
       </p>
 
-      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
-        {step > 0 ? (
-          <Button variant="secondary" size="lg" onClick={() => setStep((s) => s - 1)}>
-            Question précédente
-          </Button>
-        ) : (
-          <span />
-        )}
+      <div className="flex flex-col gap-2">
         {step < 4 ? (
           <Button
-            size="lg"
+            size="xl"
+            fullWidth
             onClick={() => {
               if (!answered[step]) {
                 setNeedAnswer(true);
@@ -244,14 +241,19 @@ export function OrientationWizard({
             Question suivante
           </Button>
         ) : complete ? (
-          <PendingButton pending={pending} size="lg" pendingLabel="Calcul…">
+          <PendingButton pending={pending} size="xl" pendingLabel="Calcul…" className="w-full">
             Voir mon statut
           </PendingButton>
         ) : (
-          <Button size="lg" onClick={() => setNeedAnswer(true)}>
+          <Button size="xl" fullWidth onClick={() => setNeedAnswer(true)}>
             Voir mon statut
           </Button>
         )}
+        {step > 0 ? (
+          <Button variant="link" size="lg" fullWidth onClick={() => setStep((s) => s - 1)}>
+            Question précédente
+          </Button>
+        ) : null}
       </div>
     </form>
   );

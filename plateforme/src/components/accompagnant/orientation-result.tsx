@@ -18,10 +18,14 @@ export function OrientationResultView({ result }: { result: OrientationResult })
   return (
     <Card className="flex flex-col gap-4" aria-labelledby="resultat-titre">
       <div className="flex flex-col gap-1">
-        <h2 id="resultat-titre" className="text-xl font-bold">
+        <h2 id="resultat-titre" className="font-sans text-[15px] leading-snug font-semibold text-muted">
           {OUTCOME_TITLES[result.outcome]}
         </h2>
-        {ok ? <p className="text-2xl font-bold text-mer">{CAREGIVER_STATUS_LABELS[result.status!]}</p> : null}
+        {ok ? (
+          <p className="font-display text-[28px] leading-[1.15] font-normal tracking-[-.02em] text-balance text-mer">
+            {CAREGIVER_STATUS_LABELS[result.status!]}
+          </p>
+        ) : null}
         {result.status === "SALARIE_FAMILLE_CESU" ? (
           <p className="text-sm">
             Mot utile : <Term id="cesu" />
@@ -32,11 +36,11 @@ export function OrientationResultView({ result }: { result: OrientationResult })
           </p>
         ) : null}
       </div>
-      <p className="text-lg">{result.explanation}</p>
+      <p className="text-[17px] leading-[1.5]">{result.explanation}</p>
 
       {ok ? (
         <div className="flex flex-col gap-2">
-          <h3 className="font-bold">Ce que vous pouvez faire</h3>
+          <h3 className="text-[15px] font-semibold text-muted">Ce que vous pouvez faire</h3>
           <ul className="flex flex-wrap gap-2">
             {result.allowedLevels.map((l) => (
               <li key={l}>
@@ -45,7 +49,7 @@ export function OrientationResultView({ result }: { result: OrientationResult })
             ))}
           </ul>
           {result.targetLevel > Math.max(...result.allowedLevels) ? (
-            <p className="text-muted">
+            <p className="text-[15px] text-muted">
               Le niveau que vous visez s&apos;ouvre plus tard, après la vérification de votre diplôme.
             </p>
           ) : null}
@@ -64,8 +68,8 @@ export function OrientationResultView({ result }: { result: OrientationResult })
 
       {result.requiredVerifications.length > 0 ? (
         <div className="flex flex-col gap-2">
-          <h3 className="font-bold">Vérifications à déclarer</h3>
-          <ul className="list-disc pl-5">
+          <h3 className="text-[15px] font-semibold text-muted">Vérifications à déclarer</h3>
+          <ul className="list-disc pl-5 text-[15px]">
             {result.requiredVerifications.map((v) => (
               <li key={v}>{VERIFICATION_TYPE_LABELS[v]}</li>
             ))}

@@ -49,7 +49,7 @@ export function VerificationRow({ item }: { item: VerificationRowData }) {
   return (
     <Card className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-bold">{VERIFICATION_TYPE_LABELS[item.type]}</h2>
+        <h2 className="font-sans text-[17px] leading-[1.3] font-semibold">{VERIFICATION_TYPE_LABELS[item.type]}</h2>
         <Badge tone={TONE[item.status]}>{VERIFICATION_STATUS_LABELS[item.status]}</Badge>
       </div>
       {item.status === "REFUSE" && item.reviewNote ? (
@@ -58,7 +58,7 @@ export function VerificationRow({ item }: { item: VerificationRowData }) {
         </p>
       ) : null}
       {item.status === "VALIDE" ? (
-        <p className="text-muted">L&apos;équipe Koudmen a validé ce point.</p>
+        <p className="text-[15px] text-muted">L&apos;équipe Koudmen a validé ce point.</p>
       ) : (
         <form onSubmit={onSubmit} className="flex flex-col gap-3">
           <input type="hidden" name="itemId" value={item.id} />
@@ -74,7 +74,7 @@ export function VerificationRow({ item }: { item: VerificationRowData }) {
             />
           </FormField>
           <FormMessage state={state} />
-          <PendingButton pending={pending} variant={item.status === "DECLARE" ? "secondary" : "primary"} pendingLabel="Enregistrement…">
+          <PendingButton pending={pending} variant={item.status === "DECLARE" ? "quiet" : "primary"} size="lg" pendingLabel="Enregistrement…" className="w-full">
             {item.status === "DECLARE" ? "Modifier ma déclaration" : "J'ai fourni"}
           </PendingButton>
         </form>
@@ -134,9 +134,9 @@ export function QuickDeclareForm({ items, canRequestReview }: { items: Verificat
 
   return (
     <Card className="flex flex-col gap-3">
-      <h2 className="text-lg font-bold">Vos documents</h2>
-      <p className="text-sm">Version de test : aucun fichier à envoyer. Cochez les documents que vous avez.</p>
-      <fieldset className="flex flex-col">
+      <h2 className="font-sans text-[17px] leading-[1.3] font-semibold">Vos documents</h2>
+      <p className="text-[15px] text-muted">Version de test : aucun fichier à envoyer. Cochez les documents que vous avez.</p>
+      <fieldset className="flex flex-col divide-y divide-line">
         <legend className="sr-only">Documents que vous avez</legend>
         {items.map((i) => (
           <div key={i.id} className="flex flex-col">
@@ -162,7 +162,7 @@ export function QuickDeclareForm({ items, canRequestReview }: { items: Verificat
       </fieldset>
       {error ? <Alert tone="danger">{error}</Alert> : null}
       {done ? <Alert tone="succes">{done}</Alert> : null}
-      <Button size="lg" onClick={submit} disabled={pending} aria-busy={pending} className="sm:self-start">
+      <Button size="xl" fullWidth onClick={submit} disabled={pending} aria-busy={pending}>
         {pending ? "Envoi…" : canRequestReview ? "Déclarer et demander la vérification" : "Déclarer mes documents"}
       </Button>
     </Card>
@@ -174,7 +174,7 @@ export function SubmitReviewForm() {
   return (
     <form action={action} className="flex flex-col gap-3">
       <FormMessage state={state} />
-      <SubmitButton size="lg" pendingLabel="Envoi…">
+      <SubmitButton size="xl" pendingLabel="Envoi…" className="w-full">
         Demander la vérification
       </SubmitButton>
     </form>
