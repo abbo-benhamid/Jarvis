@@ -67,10 +67,15 @@ test.describe("API v1 — authentification par jeton", () => {
     expect(t3.jetonRenouvellement).not.toBe(t2.jetonRenouvellement);
     expect((await request.get("/api/v1/me", { headers: { Authorization: `Bearer ${t3.jetonAcces}` } })).status()).toBe(200);
 
-    // 4. Réutilisation de l'ancien jeton : détectée, toute la famille est révoquée.
-    await expectError(await request.post("/api/v1/auth/refresh", { data: { jetonRenouvellement: t2.jetonRenouvellement } }), 401, "JETON_REUTILISE");
-    await expectError(await request.get("/api/v1/me", { headers: { Authorization: `Bearer ${t3.jetonAcces}` } }), 401, "NON_AUTHENTIFIE");
-    await expectError(await request.post("/api/v1/auth/refresh", { data: { jetonRenouvellement: t3.jetonRenouvellement } }), 401, "JETON_INVALIDE");
+    // 4. X1 : rejeu de l'ancien jeton dans les 30 s (réponse perdue) → nouveau couple ; t3 est remplacé.
+    const g = await request.post("/api/v1/auth/refresh", { data: { jetonRenouvellement: t2.jetonRenouvellement } });
+    expect(g.status()).toBe(200);
+    const t3b = reponseJetonsSchema.parse(await g.json());
+    expect(t3b.jetonRenouvellement).not.toBe(t3.jetonRenouvellement);
+    // Le jeton remplacé revient quand même : deux détenteurs → réutilisation détectée, toute la famille est révoquée.
+    await expectError(await request.post("/api/v1/auth/refresh", { data: { jetonRenouvellement: t3.jetonRenouvellement } }), 401, "JETON_REUTILISE");
+    await expectError(await request.get("/api/v1/me", { headers: { Authorization: `Bearer ${t3b.jetonAcces}` } }), 401, "NON_AUTHENTIFIE");
+    await expectError(await request.post("/api/v1/auth/refresh", { data: { jetonRenouvellement: t3b.jetonRenouvellement } }), 401, "JETON_INVALIDE");
 
     // 5. Nouvelle connexion, puis déconnexion : les deux jetons meurent.
     const { tokens: t4 } = await login(request);
