@@ -68,6 +68,12 @@ describe("configuration de production (B1, B3)", () => {
     expect(productionConfigProblems(prodEnv({ TEST_END_DATE: "fin octobre" }))).toHaveLength(1);
   });
 
+  it("PM1 : TRUST_PROXY inconnu refusé en production ; vercel, clevercloud et aucun acceptés", () => {
+    const base = { VERCEL_ENV: "production" };
+    expect(productionConfigProblems({ ...base, TRUST_PROXY: "nginx" }).join(" ")).toContain("TRUST_PROXY");
+    for (const v of ["vercel", "clevercloud", "aucun"]) expect(productionConfigProblems({ ...base, TRUST_PROXY: v }).join(" ")).not.toContain("TRUST_PROXY");
+  });
+
   it("ne contrôle rien hors production (local, CI, e2e)", () => {
     expect(productionConfigProblems({ NODE_ENV: "production", SESSION_SECRET: "remplacez-moi", TESTER_INVITE_CODES: "E2E-TEST" })).toEqual([]);
   });

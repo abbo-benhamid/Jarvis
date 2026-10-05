@@ -60,14 +60,43 @@ export async function hitRateLimits(checks: [RateRuleName, string][], now: Date 
   return worst;
 }
 
+export type ModeProxy = "vercel" | "clevercloud" | "aucun";
+
 /**
- * IP du client. Sur Vercel, `x-vercel-forwarded-for` et `x-forwarded-for` sont posés par le proxy
- * (une valeur envoyée par le client est remplacée). Hors Vercel : première valeur, sinon « inconnue ».
+ * PM1 (sécurité) : proxy de confiance, choisi par `TRUST_PROXY` (vercel | clevercloud | aucun).
+ * Absent : « vercel » si la plateforme Vercel est détectée (`VERCEL=1`, posée par Vercel), sinon « aucun ».
  */
-export function clientIpFrom(h: Pick<Headers, "get">): string {
-  const raw = h.get("x-vercel-forwarded-for") ?? h.get("x-real-ip") ?? h.get("x-forwarded-for") ?? "";
-  const first = raw.split(",")[0]?.trim();
-  return first && first.length <= 64 ? first : "inconnue";
+export function proxyMode(env: Record<string, string | undefined> = process.env): ModeProxy {
+  const v = env.TRUST_PROXY?.trim().toLowerCase();
+  if (v === "vercel" || v === "clevercloud" || v === "aucun") return v;
+  return env.VERCEL === "1" ? "vercel" : "aucun";
+}
+
+function cleanIp(v: string | undefined): string {
+  const ip = v?.trim();
+  return ip && ip.length <= 64 && /^[0-9A-Fa-f:.]+$/.test(ip) ? ip : "inconnue";
+}
+
+/**
+ * IP du client (limites de débit). PM1 : on lit un en-tête SEULEMENT s'il est posé par un proxy de confiance.
+ * - vercel : `x-vercel-forwarded-for` (posé par Vercel ; une valeur du client est remplacée), sinon la PREMIÈRE
+ *   valeur de `x-forwarded-for` (Vercel la réécrit aussi).
+ * - clevercloud : la DERNIÈRE valeur de `x-forwarded-for` (ajoutée par le proxy de Clever Cloud ; les valeurs
+ *   précédentes viennent du client). [À VÉRIFIER] avec la documentation Clever Cloud avant le pilote.
+ * - aucun : aucun en-tête n'est cru (le client peut tout écrire) → « inconnue » (un seul compteur partagé ;
+ *   les compteurs par compte restent actifs).
+ */
+export function clientIpFrom(h: Pick<Headers, "get">, env: Record<string, string | undefined> = process.env): string {
+  const mode = proxyMode(env);
+  if (mode === "vercel") {
+    const raw = h.get("x-vercel-forwarded-for") ?? h.get("x-forwarded-for") ?? "";
+    return cleanIp(raw.split(",")[0]);
+  }
+  if (mode === "clevercloud") {
+    const parts = (h.get("x-forwarded-for") ?? "").split(",");
+    return cleanIp(parts[parts.length - 1]);
+  }
+  return "inconnue";
 }
 
 export async function clientIp(): Promise<string> {
