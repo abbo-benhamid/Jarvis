@@ -34,9 +34,9 @@ export function ProposalActions({
 
   if (declining) {
     return (
-      <form onSubmit={onDecline} className="flex flex-col gap-3 rounded-xl border-2 border-line p-4">
+      <form onSubmit={onDecline} className="flex flex-col gap-3 rounded-md bg-surface-2 p-4">
         <input type="hidden" name="proposalId" value={proposalId} />
-        <p className="font-bold">Refuser cette proposition</p>
+        <p className="text-[17px] font-semibold">Refuser cette proposition</p>
         <p>Votre refus n&apos;a aucun effet sur votre profil ni sur vos prochaines propositions.</p>
         <FormField
           label="Un mot pour l'équipe Koudmen (facultatif)"
@@ -55,11 +55,11 @@ export function ProposalActions({
           />
         </FormField>
         <FormMessage state={declineState} />
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <PendingButton pending={declinePending} variant="danger" size="lg" pendingLabel="Envoi…">
+        <div className="flex flex-col gap-2">
+          <PendingButton pending={declinePending} variant="danger" size="lg" pendingLabel="Envoi…" className="w-full">
             Confirmer le refus
           </PendingButton>
-          <Button variant="secondary" size="lg" onClick={() => setDeclining(false)}>
+          <Button variant="link" size="lg" fullWidth onClick={() => setDeclining(false)}>
             Revenir
           </Button>
         </div>
@@ -70,21 +70,21 @@ export function ProposalActions({
   return (
     <div className="flex flex-col gap-3">
       <FormMessage state={acceptState} />
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="flex flex-col gap-2">
         {canAccept ? (
           <form action={accept} className="flex flex-col">
             <input type="hidden" name="proposalId" value={proposalId} />
-            <SubmitButton size="lg" pendingLabel="Acceptation…">
+            <SubmitButton size="xl" pendingLabel="Acceptation…" className="w-full">
               Accepter
             </SubmitButton>
           </form>
         ) : null}
-        <Button variant="secondary" size="lg" onClick={() => setDeclining(true)}>
+        <Button variant="quiet" size="lg" fullWidth onClick={() => setDeclining(true)}>
           Refuser
         </Button>
       </div>
       {canAccept ? (
-        <p className="text-sm text-muted">
+        <p className="text-center text-sm text-muted">
           Si vous acceptez, Koudmen planifie {plannedVisits} visite{plannedVisits > 1 ? "s" : ""} sur les 4 prochaines semaines.
         </p>
       ) : null}

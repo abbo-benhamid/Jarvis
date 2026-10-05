@@ -4,7 +4,6 @@ import { getProfile } from "@/server/accompagnant/queries";
 import { canRedoOrientation } from "@/server/accompagnant/rules";
 import { orientCaregiver, orientationSchema, type OrientationResult } from "@/server/rules/orientation";
 import { isLevel } from "@/server/rules/status-levels";
-import { PageHeader } from "@/components/ui/page-header";
 import { Alert } from "@/components/ui/alert";
 import { Card, CardTitle } from "@/components/ui/card";
 import { LevelBadge } from "@/components/status-badges";
@@ -31,12 +30,13 @@ export default async function Page() {
 
   return (
     <>
-      <PageHeader
-        eyebrow="Mon statut"
-        title="Mon statut en 5 questions"
-        description="Répondez à 5 questions courtes. Koudmen vous indique le statut le plus simple et le plus sûr pour vous."
-      />
-      <div className="mx-auto flex max-w-2xl flex-col gap-4">
+      <header className="mb-[18px]">
+        <h1 className="font-display text-[30px] leading-[1.1] font-normal tracking-[-.02em] text-balance">Mon statut en 5 questions</h1>
+        <p className="mt-1 text-[15px] leading-[1.45] text-muted">
+          Répondez à 5 questions courtes. Koudmen vous indique le statut le plus simple et le plus sûr pour vous.
+        </p>
+      </header>
+      <div className="flex flex-col gap-4">
         {!canRedo ? (
           <Alert tone="info">
             Votre profil est validé. Pour changer de statut, écrivez à l&apos;équipe Koudmen avec le bouton « Donner mon avis ».
@@ -49,7 +49,7 @@ export default async function Page() {
         {!canRedo && !initialResult ? (
           <Card className="flex flex-col gap-3">
             <CardTitle>Votre statut</CardTitle>
-            <p className="text-2xl font-bold text-mer">
+            <p className="font-display text-[28px] leading-[1.15] tracking-[-.02em] text-mer">
               {profile.status ? CAREGIVER_STATUS_LABELS[profile.status] : "Non défini"}
             </p>
             <ul className="flex flex-wrap gap-2">
