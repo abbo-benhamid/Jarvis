@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { db } from "@/server/db";
 import { getCurrentUser } from "@/server/auth/guards";
+import { clientIpFrom, hitRateLimit, retryMessage } from "@/server/rate-limit";
 import type { ActionResult } from "@/lib/action-result";
 
 const feedbackSchema = z.object({
@@ -24,6 +25,9 @@ export async function submitFeedbackAction(_prev: ActionResult, formData: FormDa
   }
   const user = await getCurrentUser();
   const h = await headers();
+  // M4 : avis anonymes ≤ 5 par heure et par IP ; avis connectés ≤ 20 par heure et par compte.
+  const limited = await hitRateLimit(user ? "avis:compte" : "avis:ip", user ? user.id : clientIpFrom(h));
+  if (!limited.allowed) return { ok: false, error: retryMessage(limited.retryAfterSeconds) };
   // D15 : l'avis d'un testeur porte son bac à sable et son code testeur.
   const sandbox = user?.sandboxId ? await db.sandbox.findUnique({ where: { id: user.sandboxId }, select: { id: true, testerCode: true } }) : null;
   await db.feedback.create({

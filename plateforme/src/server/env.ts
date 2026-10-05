@@ -26,6 +26,11 @@ export function isDemoMode(): boolean {
   return process.env.DEMO_MODE === "true";
 }
 
+/** A10 / M1 : l'inscription libre (comptes du monde réel) existe seulement en mode démo. */
+export function registrationOpen(): boolean {
+  return isDemoMode();
+}
+
 /**
  * URL publique de l'application (liens d'invitation, lien de reprise du bac à sable).
  * Ordre : APP_URL, puis l'URL de production Vercel, puis l'URL du déploiement Vercel, puis localhost.

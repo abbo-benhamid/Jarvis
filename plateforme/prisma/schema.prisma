@@ -140,10 +140,18 @@ enum EmployerType {
   REPRESENTANT
 }
 
+/// SUSPENDUE (A1) : l'accompagnant est suspendu ou refusé. Plus de check-in ni de Kayé ; visites futures annulées.
 enum MissionStatus {
   ACTIVE
   TERMINEE
   ANNULEE
+  SUSPENDUE
+}
+
+/// Lien d'invitation : entrer dans le cercle Lakou, ou rattacher un proche aidant à l'aîné (A6, D7).
+enum InvitationKind {
+  LAKOU
+  PROCHE_AIDANT
 }
 
 /// VALIDEE = au moins 2 facteurs de preuve valides sur 3.
@@ -189,21 +197,23 @@ enum FeedbackStatus {
 // ─────────────────────────────── Comptes ───────────────────────────────
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  passwordHash String
-  role         Role
-  firstName    String
-  lastName     String
-  phone        String?
+  id             String    @id @default(cuid())
+  email          String    @unique
+  passwordHash   String
+  role           Role
+  firstName      String
+  lastName       String
+  phone          String?
   /// Compte de démonstration seedé (connexion par bouton « Essayer en tant que… »).
-  isDemo       Boolean   @default(false)
+  isDemo         Boolean   @default(false)
   /// Bac à sable du testeur (D2). Null = monde réel. Jamais visible depuis un autre bac à sable.
-  sandboxId    String?
-  sandbox      Sandbox?  @relation(fields: [sandboxId], references: [id])
-  lastLoginAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  sandboxId      String?
+  sandbox        Sandbox?  @relation(fields: [sandboxId], references: [id])
+  lastLoginAt    DateTime?
+  /// Version de session (M7) : incrémentée à la déconnexion. Un jeton d'une autre version est refusé.
+  sessionVersion Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   familyProfile    FamilyProfile?
   caregiverProfile CaregiverProfile?
@@ -299,20 +309,22 @@ model LakouMember {
 }
 
 model Invitation {
-  id           String    @id @default(cuid())
+  id           String         @id @default(cuid())
   aineId       String
-  aine         Aine      @relation(fields: [aineId], references: [id], onDelete: Cascade)
+  aine         Aine           @relation(fields: [aineId], references: [id], onDelete: Cascade)
   /// Jeton aléatoire du lien d'invitation (/invitation/[token]).
-  token        String    @unique
+  token        String         @unique
+  /// LAKOU = rejoindre le cercle ; PROCHE_AIDANT = rattacher un accompagnant proche aidant à cet aîné (A6).
+  kind         InvitationKind @default(LAKOU)
   email        String?
   relation     String
   createdById  String
-  createdBy    User      @relation("InvitationCreator", fields: [createdById], references: [id])
+  createdBy    User           @relation("InvitationCreator", fields: [createdById], references: [id])
   expiresAt    DateTime
   acceptedAt   DateTime?
   acceptedById String?
-  acceptedBy   User?     @relation("InvitationAcceptor", fields: [acceptedById], references: [id])
-  createdAt    DateTime  @default(now())
+  acceptedBy   User?          @relation("InvitationAcceptor", fields: [acceptedById], references: [id])
+  createdAt    DateTime       @default(now())
 
   @@index([aineId])
 }
@@ -637,19 +649,21 @@ model AuditLog {
 /// Bac à sable d'un testeur : un monde fictif isolé (aîné, famille, accompagnants, opérateur « robots »).
 /// Créé à la volée après un code d'invitation valide. Purgé après 30 jours.
 model Sandbox {
-  id              String   @id @default(cuid())
+  id                    String    @id @default(cuid())
   /// Code d'invitation testeur utilisé (TESTER_INVITE_CODES). Relie retours et mesures au testeur.
-  testerCode      String
+  testerCode            String
   /// Rôle joué par le testeur : FAMILLE ou ACCOMPAGNANT.
-  role            Role
+  role                  Role
   /// Empreinte SHA-256 du jeton du lien de reprise. Le jeton lui-même n'est jamais stocké.
-  resumeTokenHash String   @unique
+  resumeTokenHash       String    @unique
   /// Acceptation des CGU de test (D4).
-  cguAcceptedAt   DateTime
+  cguAcceptedAt         DateTime
   /// Nombre de clics sur « Simuler la suite » (D14).
-  simulationCount Int      @default(0)
-  lastSeenAt      DateTime @default(now())
-  createdAt       DateTime @default(now())
+  simulationCount       Int       @default(0)
+  /// Verrou de « Simuler la suite » (une seule simulation à la fois par bac à sable).
+  simulationLockedUntil DateTime?
+  lastSeenAt            DateTime  @default(now())
+  createdAt             DateTime  @default(now())
 
   users        User[]
   aines        Aine[]
@@ -702,19 +716,32 @@ model MicroAnswer {
 /// Offre factice « Réserver une vraie visite découverte » (D15). Contact RÉEL du testeur,
 /// recueilli seulement avec son consentement explicite. Aucune donnée sur l'aîné.
 model DiscoveryRequest {
-  id          String         @id @default(cuid())
-  sandboxId   String?
-  sandbox     Sandbox?       @relation(fields: [sandboxId], references: [id], onDelete: SetNull)
-  testerCode  String?
-  userId      String?
-  name        String
+  id                String         @id @default(cuid())
+  sandboxId         String?
+  sandbox           Sandbox?       @relation(fields: [sandboxId], references: [id], onDelete: SetNull)
+  testerCode        String?
+  userId            String?
+  name              String
   /// Email ou téléphone donné par le testeur.
-  contact     String
+  contact           String
   /// Texte exact de la case cochée (preuve du consentement).
-  consentText String
-  consentAt   DateTime
-  status      FeedbackStatus @default(NOUVEAU)
-  createdAt   DateTime       @default(now())
+  consentText       String
+  consentAt         DateTime
+  /// Empreinte SHA-256 du jeton du lien « Retirer mon accord ». Le jeton n'est jamais stocké.
+  withdrawTokenHash String?        @unique
+  status            FeedbackStatus @default(NOUVEAU)
+  createdAt         DateTime       @default(now())
 
   @@index([createdAt])
+}
+
+/// Limite de débit (M4, M5) en base : compatible serverless (pas de mémoire partagée).
+/// Clé = action + empreinte (IP ou compte), jamais une IP ou un email en clair.
+model RateLimit {
+  key         String   @id
+  count       Int
+  windowStart DateTime
+  expiresAt   DateTime
+
+  @@index([expiresAt])
 }

@@ -7,6 +7,7 @@ import { db } from "@/server/db";
 import { getCurrentUser, requireRole } from "@/server/auth/guards";
 import { validTesterCode } from "@/server/env";
 import { logAudit } from "@/server/audit";
+import { clientIp, hitRateLimit, hitRateLimits, retryMessage } from "@/server/rate-limit";
 import { fail, type ActionResult } from "@/lib/action-result";
 import { DISCOVERY_CONSENT_TEXT, isValidMicroAnswer } from "@/lib/measure";
 import { createSandbox, SandboxError } from "./service";
@@ -41,6 +42,12 @@ function formToObject(formData: FormData): Record<string, string> {
 export async function startSandboxAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const parsed = startSchema.safeParse(formToObject(formData));
   if (!parsed.success) return fail("Vérifiez les champs en rouge.", parsed.error.flatten().fieldErrors);
+  // B1 : limite d'essais par IP (codes devinés en masse, bacs à sable créés en masse).
+  const limited = await hitRateLimit("code-testeur:ip", await clientIp());
+  if (!limited.allowed) {
+    await logAudit({ action: "sandbox.rate_limited", entityType: "Sandbox" });
+    return fail(retryMessage(limited.retryAfterSeconds));
+  }
   const code = validTesterCode(parsed.data.testerCode);
   if (!code) return fail("Ce code testeur n'est pas valide.", { testerCode: ["Code inconnu. Vérifiez le code reçu avec votre invitation."] });
   let role: "FAMILLE" | "ACCOMPAGNANT";
@@ -113,6 +120,11 @@ export async function requestDiscoveryAction(_prev: ActionResult, formData: Form
   const user = await requireRole("FAMILLE");
   const parsed = discoverySchema.safeParse(formToObject(formData));
   if (!parsed.success) return fail("Vérifiez les champs en rouge.", parsed.error.flatten().fieldErrors);
+  const limited = await hitRateLimits([
+    ["decouverte:compte", user.id],
+    ["decouverte:ip", await clientIp()],
+  ]);
+  if (!limited.allowed) return fail(retryMessage(limited.retryAfterSeconds));
   const sandbox = user.sandboxId ? await db.sandbox.findUnique({ where: { id: user.sandboxId }, select: { testerCode: true } }) : null;
   const now = new Date();
   const created = await db.discoveryRequest.create({

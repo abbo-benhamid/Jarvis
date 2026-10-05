@@ -35,12 +35,15 @@ export default async function ConnexionPage({ searchParams }: { searchParams: Pr
           Tester Koudmen avec votre code
         </Link>
       </p>
-      <p>
-        Pas encore de compte ?{" "}
-        <Link className="font-semibold text-mer underline" href={next ? `/inscription?next=${encodeURIComponent(next)}` : "/inscription"}>
-          Créer un compte
-        </Link>
-      </p>
+      {/* A10 / M1 : l'inscription libre existe seulement en mode démo. */}
+      {isDemoMode() ? (
+        <p>
+          Pas encore de compte ?{" "}
+          <Link className="font-semibold text-mer underline" href={next ? `/inscription?next=${encodeURIComponent(next)}` : "/inscription"}>
+            Créer un compte
+          </Link>
+        </p>
+      ) : null}
       {isDemoMode() ? (
         <section aria-labelledby="demo" className="flex flex-col gap-3">
           <h2 id="demo" className="text-xl font-bold">
