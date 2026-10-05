@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 import { fonts, radius, useTheme } from '@/theme';
 import { Icon, type IconName } from './Icon';
+import { Pulsation } from './Mouvement';
 import { Text } from './Text';
 
 type Kind = 'preuve' | 'soleil' | 'neutre' | 'alerte' | 'mer' | 'verre';
@@ -44,8 +45,17 @@ export function Badge({ label, kind = 'neutre', icon, testID }: Props) {
  */
 export function ProofBadge({ obtenues, requises }: { obtenues: number; requises: number }) {
   const label = `${obtenues} preuve${obtenues > 1 ? 's' : ''} sur 3`;
-  if (obtenues >= requises) return <Badge kind="preuve" icon="shield" label={label} testID="badge-preuve" />;
-  return <Badge kind="soleil" icon="clock" label={label} testID="badge-preuve" />;
+  const atteint = obtenues >= requises;
+  // V2-app : léger « pop » au moment où le seuil est atteint (pas au montage, figé si animations réduites).
+  return (
+    <Pulsation signal={atteint} style={{ alignSelf: 'flex-start' }}>
+      {atteint ? (
+        <Badge kind="preuve" icon="shield" label={label} testID="badge-preuve" />
+      ) : (
+        <Badge kind="soleil" icon="clock" label={label} testID="badge-preuve" />
+      )}
+    </Pulsation>
+  );
 }
 
 /** Puce neutre (centres d'intérêt). */

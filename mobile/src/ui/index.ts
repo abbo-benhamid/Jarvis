@@ -10,3 +10,5 @@ export * from './Madras';
 export * from './Screen';
 export * from './TabBar';
 export * from './Text';
+export * from './Mouvement';
+export * from './haptique';

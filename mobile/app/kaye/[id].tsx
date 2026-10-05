@@ -6,7 +6,24 @@ import { useAsync } from '@/lib/useAsync';
 import { proposerNotifications } from '@/push';
 import { retourAuxVisites } from '@/session/navigation';
 import { fonts, useTheme } from '@/theme';
-import { Avatar, Button, Card, Choice, Em, Field, Icon, IconButton, Kreyol, Screen, SwitchRow, Text, type ChoiceOption } from '@/ui';
+import {
+  Apparition,
+  Avatar,
+  Button,
+  Card,
+  Choice,
+  Em,
+  Field,
+  Icon,
+  IconButton,
+  Kreyol,
+  retourHaptique,
+  Screen,
+  SuccesAnime,
+  SwitchRow,
+  Text,
+  type ChoiceOption,
+} from '@/ui';
 
 type Appetit = KayePublie['appetit'];
 type Humeur = '1' | '2' | '3' | '4' | '5';
@@ -124,28 +141,35 @@ export default function KayeFormulaire() {
         testID="ecran-kaye-fini"
         dock={<Button large variant="primary" label="Retour aux visites" icon="left" onPress={retourAuxVisites} />}
       >
-        <Card hero style={{ marginTop: 16, alignItems: 'center', paddingVertical: 32 }}>
-          <View style={[styles.okRond, { backgroundColor: c.feuilleSoft }]}>
-            <Icon name={envoye ? 'check' : 'pen'} size={24} color={c.feuille} />
-          </View>
-          <Text variant="h2" center style={{ marginTop: 18 }} accessibilityRole="header">
+        <Apparition jouer={fini !== null}>
+          <Card hero style={{ marginTop: 16, alignItems: 'center', paddingVertical: 32 }}>
             {envoye ? (
-              <>
-                Kayé <Em tone="feuille">envoyé.</Em>
-              </>
+              // V2-app : petite animation de succès, seulement juste après l'envoi (figée si animations réduites).
+              <SuccesAnime jouer={fini === 'envoye'} fond={c.feuilleSoft} couleur={c.feuille} />
             ) : (
-              <>
-                Brouillon <Em>gardé.</Em>
-              </>
+              <View style={[styles.okRond, { backgroundColor: c.feuilleSoft }]}>
+                <Icon name="pen" size={24} color={c.feuille} />
+              </View>
             )}
-          </Text>
-          <Text variant="body" tone="muted" center style={{ marginTop: 10 }}>
-            {envoye
-              ? `La famille de ${prenom} le reçoit maintenant.${fini && k.aSurveiller ? ' Elle reçoit aussi une alerte « à surveiller ».' : ''}`
-              : 'Vous pouvez le finir plus tard, depuis l’onglet Kayé, sur ce téléphone ou un autre.'}
-          </Text>
-          {envoye ? <Kreyol style={{ marginTop: 14 }}>Mèsi anpil !</Kreyol> : null}
-        </Card>
+            <Text variant="h2" center style={{ marginTop: 18 }} accessibilityRole="header">
+              {envoye ? (
+                <>
+                  Kayé <Em tone="feuille">envoyé.</Em>
+                </>
+              ) : (
+                <>
+                  Brouillon <Em>gardé.</Em>
+                </>
+              )}
+            </Text>
+            <Text variant="body" tone="muted" center style={{ marginTop: 10 }}>
+              {envoye
+                ? `La famille de ${prenom} le reçoit maintenant.${fini && k.aSurveiller ? ' Elle reçoit aussi une alerte « à surveiller ».' : ''}`
+                : 'Vous pouvez le finir plus tard, depuis l’onglet Kayé, sur ce téléphone ou un autre.'}
+            </Text>
+            {envoye ? <Kreyol style={{ marginTop: 14 }}>Mèsi anpil !</Kreyol> : null}
+          </Card>
+        </Apparition>
       </Screen>
     );
   }
@@ -182,6 +206,7 @@ export default function KayeFormulaire() {
     setErreur(null);
     setGardeIci(null);
     setEnvoi(envoyer ? 'envoi' : 'brouillon');
+    if (envoyer) retourHaptique('leger');
     try {
       if (envoyer) {
         if (!k.humeur || !k.appetit) return;
@@ -197,6 +222,7 @@ export default function KayeFormulaire() {
         await api.enregistrerBrouillonKaye(id, versBrouillon(k));
       }
       setFini(envoyer ? 'envoye' : 'brouillon');
+      if (envoyer) retourHaptique('succes');
       // Lot N1 : après une action réussie, proposer les notifications (une fois par appareil).
       if (envoyer) proposerNotifications();
     } catch (e) {

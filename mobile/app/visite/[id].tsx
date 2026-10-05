@@ -16,7 +16,22 @@ import { useAsync } from '@/lib/useAsync';
 import { lireQrDomicile, MESSAGES_QR, natif, normaliserCode, type NumeroUrgence } from '@/native';
 import { retourAuxVisites } from '@/session/navigation';
 import { fonts, radius, useTheme } from '@/theme';
-import { Badge, Button, Card, Field, Icon, IconButton, ProofBadge, Screen, SectionHeader, SwitchRow, Text } from '@/ui';
+import {
+  Apparition,
+  Badge,
+  Button,
+  Card,
+  CocheDessinee,
+  Field,
+  Icon,
+  IconButton,
+  ProofBadge,
+  retourHaptique,
+  Screen,
+  SectionHeader,
+  SwitchRow,
+  Text,
+} from '@/ui';
 import { aLaPreuve, estDuJour, estProuvee, libellePreuve, nbPreuves, ORDRE_PREUVES } from '@/visites/regles';
 import { AineCarte } from '@/visites/VisiteResume';
 
@@ -108,6 +123,9 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
   const n = nbPreuves(v);
   const prouvee = estProuvee(v);
   const duJour = estDuJour(v);
+  // V2-app : seules les preuves obtenues SOUS LES YEUX s'animent (pas celles déjà là à l'ouverture).
+  const faitsAuMontage = useRef(new Set(ORDRE_PREUVES.filter((f) => aLaPreuve(v, f))));
+  const prouveeAuMontage = useRef(prouvee);
   const gpsPossible = natif.position.disponible();
   const scanPossible = natif.scanner.disponible();
   const Scanner = natif.scanner.Vue;
@@ -134,6 +152,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
     }
     setErreur(null);
     setEnvoi('arrivee');
+    retourHaptique('leger');
     try {
       let position: PositionPonctuelle | undefined;
       let avisPosition: string | null = null;
@@ -147,6 +166,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
       }
       const r = await api.checkIn(v.id, { codeDomicile: code.trim() || undefined, position });
       setRetour(avisPosition ? { ...r, preuves: { ...r.preuves, position: { valide: false, message: avisPosition } } } : r);
+      retourHaptique('succes');
       setCode('');
       setAccordPosition(false);
       setAvisQr(null);
@@ -289,7 +309,11 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
               accessibilityLabel={`${titre}. ${fait ? 'Obtenue' : 'À faire'}. ${detail}`}
             >
               <View style={[styles.st, fait ? { backgroundColor: c.feuille } : { borderWidth: 1.5, borderColor: c.lineStrong }]}>
-                <Icon name={fait ? 'check' : icone} size={16} color={fait ? c.surface : c.muted} />
+                {fait ? (
+                  <CocheDessinee size={16} color={c.surface} jouer={!faitsAuMontage.current.has(f)} />
+                ) : (
+                  <Icon name={icone} size={16} color={c.muted} />
+                )}
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={{ fontFamily: fonts.sansMedium, fontSize: 16, lineHeight: 21, color: c.fg }}>{titre}</Text>
@@ -371,9 +395,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
               onChangeText={(t) => setCode(normaliserCode(t))}
               erreur={verifie && !pretArrivee ? 'Entrez le code du domicile, ou acceptez la lecture de la position plus bas.' : null}
               aide={
-                API_MODE === 'simule'
-                  ? `Démo : le code de ${v.aine.prenom} est ${CODE_DOMICILE_DEMO} (le même que sur le site).`
-                  : 'Il n’est pas gardé sur ce téléphone.'
+                API_MODE === 'simule' ? `Code d’exemple : ${CODE_DOMICILE_DEMO}` : 'Il n’est pas gardé sur ce téléphone.'
               }
             />
             {gpsPossible ? (
@@ -402,20 +424,22 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
       ) : null}
 
       {retour?.preuves ? (
-        <View style={{ marginTop: 12, gap: 8 }} accessibilityLiveRegion="polite" testID="retour-arrivee">
-          {(['code', 'position'] as const).map((k) => {
-            const p = retour.preuves?.[k];
-            if (!p) return null;
-            return (
-              <View key={k} style={[styles.bandeau, { marginTop: 0, backgroundColor: p.valide ? c.feuilleSoft : c.soleilSoft }]}>
-                <Icon name={p.valide ? 'check' : 'info'} size={18} color={p.valide ? c.feuille : c.soleilInk} />
-                <Text variant="small" style={{ flex: 1, color: p.valide ? c.feuille : c.soleilInk }}>
-                  {k === 'code' ? 'Code du domicile' : 'Position à l’arrivée'} : {p.message ?? (p.valide ? 'obtenue.' : 'non obtenue.')}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
+        <Apparition style={{ marginTop: 12, gap: 8 }}>
+          <View style={{ gap: 8 }} accessibilityLiveRegion="polite" testID="retour-arrivee">
+            {(['code', 'position'] as const).map((k) => {
+              const p = retour.preuves?.[k];
+              if (!p) return null;
+              return (
+                <View key={k} style={[styles.bandeau, { marginTop: 0, backgroundColor: p.valide ? c.feuilleSoft : c.soleilSoft }]}>
+                  <Icon name={p.valide ? 'check' : 'info'} size={18} color={p.valide ? c.feuille : c.soleilInk} />
+                  <Text variant="small" style={{ flex: 1, color: p.valide ? c.feuille : c.soleilInk }}>
+                    {k === 'code' ? 'Code du domicile' : 'Position à l’arrivée'} : {p.message ?? (p.valide ? 'obtenue.' : 'non obtenue.')}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        </Apparition>
       ) : null}
 
       {erreur ? (
@@ -425,18 +449,20 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
       ) : null}
 
       {prouvee ? (
-        <View style={[styles.verdict, { backgroundColor: c.feuilleSoft }]} testID="verdict-preuve">
-          <Icon name="shield" size={24} color={c.feuille} />
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontFamily: fonts.sansBold, fontSize: 16, lineHeight: 21, color: c.feuille }}>
-              {n}
-              {NBSP}preuves sur 3 · visite prouvée
-            </Text>
-            <Text variant="small" style={{ fontSize: 14, opacity: 0.85 }}>
-              La famille voit la preuve avec votre Kayé.
-            </Text>
+        <Apparition jouer={!prouveeAuMontage.current} index={1}>
+          <View style={[styles.verdict, { backgroundColor: c.feuilleSoft }]} testID="verdict-preuve">
+            <Icon name="shield" size={24} color={c.feuille} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: fonts.sansBold, fontSize: 16, lineHeight: 21, color: c.feuille }}>
+                {n}
+                {NBSP}preuves sur 3 · visite prouvée
+              </Text>
+              <Text variant="small" style={{ fontSize: 14, opacity: 0.85 }}>
+                La famille voit la preuve avec votre Kayé.
+              </Text>
+            </View>
           </View>
-        </View>
+        </Apparition>
       ) : v.preuve.checkInA && duJour ? (
         <Text variant="small" tone="muted" style={{ marginTop: 12 }}>
           Arrivée à {heureTexte(v.preuve.checkInA)}. La confirmation de l’aîné ({v.aine.prenom} tape 1 au téléphone) peut donner une autre preuve.

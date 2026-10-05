@@ -6,7 +6,7 @@ import { dateLongue, heureCourte, plageHoraire, pluriel } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 import { useSession } from '@/session/SessionProvider';
 import { fonts, radius, useTheme } from '@/theme';
-import { Avatar, Button, Card, CaseIllustration, Icon, Kreyol, Screen, SectionHeader, TabBarSpace, Text } from '@/ui';
+import { Apparition, Avatar, Button, Card, CaseIllustration, Icon, Kreyol, Screen, SectionHeader, TabBarSpace, Text } from '@/ui';
 import { estDuJour, libelleStatut } from '@/visites/regles';
 import { AineCarte, VisiteBadge, VisiteLigne } from '@/visites/VisiteResume';
 
@@ -115,29 +115,31 @@ export default function Visites() {
       ) : null}
 
       {vedette ? (
-        <Card style={{ marginTop: 16 }} padding={16} testID="visite-vedette" accessibilityLabel={`Visite chez ${vedette.aine.prenom}`}>
-          <AineCarte v={vedette} />
-          <View style={[styles.consigne, { borderTopColor: c.line }]}>
-            <Text variant="caption" tone="muted" num>
-              {plageHoraire(vedette.debut, vedette.fin)} · {libelleStatut(vedette)}
-            </Text>
-            {vedette.demande.consignes ? (
-              <Text variant="body" style={{ marginTop: 4 }}>
-                {vedette.demande.consignes}
+        <Apparition style={{ marginTop: 16 }}>
+          <Card padding={16} testID="visite-vedette" accessibilityLabel={`Visite chez ${vedette.aine.prenom}`}>
+            <AineCarte v={vedette} />
+            <View style={[styles.consigne, { borderTopColor: c.line }]}>
+              <Text variant="caption" tone="muted" num>
+                {plageHoraire(vedette.debut, vedette.fin)} · {libelleStatut(vedette)}
               </Text>
-            ) : null}
-          </View>
-          <View style={styles.vedetteBas}>
-            <VisiteBadge v={vedette} />
-          </View>
-          <Button
-            testID="ouvrir-visite-vedette"
-            label={vedette.statut === 'EN_COURS' ? 'Continuer la visite' : 'Ouvrir la visite'}
-            trailing="arrow"
-            onPress={() => ouvrir(vedette)}
-            style={{ marginTop: 14 }}
-          />
-        </Card>
+              {vedette.demande.consignes ? (
+                <Text variant="body" style={{ marginTop: 4 }}>
+                  {vedette.demande.consignes}
+                </Text>
+              ) : null}
+            </View>
+            <View style={styles.vedetteBas}>
+              <VisiteBadge v={vedette} />
+            </View>
+            <Button
+              testID="ouvrir-visite-vedette"
+              label={vedette.statut === 'EN_COURS' ? 'Continuer la visite' : 'Ouvrir la visite'}
+              trailing="arrow"
+              onPress={() => ouvrir(vedette)}
+              style={{ marginTop: 14 }}
+            />
+          </Card>
+        </Apparition>
       ) : visites.statut === 'pret' ? (
         <Card style={{ marginTop: 16, alignItems: 'center' }} testID="aucune-visite">
           <CaseIllustration width={200} />
@@ -154,8 +156,10 @@ export default function Visites() {
         <>
           <SectionHeader title="Aujourd’hui, aussi" />
           <View style={{ gap: 12 }}>
-            {autresDuJour.map((v) => (
-              <VisiteLigne key={v.id} v={v} onPress={() => ouvrir(v)} />
+            {autresDuJour.map((v, i) => (
+              <Apparition key={v.id} index={i + 1}>
+                <VisiteLigne v={v} onPress={() => ouvrir(v)} />
+              </Apparition>
             ))}
           </View>
         </>
@@ -165,8 +169,10 @@ export default function Visites() {
         <>
           <SectionHeader title="Les 7 prochains jours" />
           <View style={{ gap: 12 }}>
-            {aVenir.map((v) => (
-              <VisiteLigne key={v.id} v={v} onPress={() => ouvrir(v)} />
+            {aVenir.map((v, i) => (
+              <Apparition key={v.id} index={i + 1 + autresDuJour.length}>
+                <VisiteLigne v={v} onPress={() => ouvrir(v)} />
+              </Apparition>
             ))}
           </View>
         </>
