@@ -3,7 +3,7 @@ import { Prisma, type Role } from "@prisma/client";
 import { db } from "@/server/db";
 import { logAudit } from "@/server/audit";
 import { notifyLakou } from "@/server/outbox";
-import { flushPendingPushSafe } from "@/server/notifications/push/service";
+import { schedulePushFlush } from "@/server/notifications/push/service";
 import { sameScope } from "@/server/scope";
 import { isDemoMode } from "@/server/env";
 import { orientCaregiver, type OrientationAnswers, type OrientationResult } from "@/server/rules/orientation";
@@ -621,6 +621,8 @@ export async function createKaye(actor: Actor, input: KayeInput) {
           alertNote: input.alertNote,
         },
       });
+      // M8 (RGPD) : le brouillon synchronisé par l'app ne sert plus, que le Kayé vienne du web ou de l'app.
+      await tx.kayeDraft.deleteMany({ where: { visitId: visit.id } });
       // Jamais le texte du Kayé dans l'audit.
       await logAudit(
         { actor, action: "journal.created", entityType: "JournalEntry", entityId: entry.id, metadata: { alertFlag: input.alertFlag } },
@@ -634,7 +636,8 @@ export async function createKaye(actor: Actor, input: KayeInput) {
       return entry;
     });
     // Lot N1 : push générique au cercle Lakou, après la validation de la transaction.
-    await flushPendingPushSafe();
+    // M2 : envoi APRÈS la réponse (jamais attendu par la requête métier).
+    schedulePushFlush();
     return created;
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {

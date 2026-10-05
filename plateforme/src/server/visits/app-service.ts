@@ -107,11 +107,14 @@ export async function processAppEvents(user: AppUser, events: Evenement[], recei
       });
       claimId = claim.id;
     } catch (err) {
-      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      if (!(err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002")) throw err;
+      // M1 : une réservation sans résultat depuis plus de 60 s est orpheline (processus arrêté) : on la reprend.
+      const resumed = await resumeStaleClaim(user.id, e.clientEventId, receivedAt);
+      if (!resumed) {
         results.push(await duplicateResult(user.id, e));
         continue;
       }
-      throw err;
+      claimId = resumed;
     }
 
     let result: ResultatEvenement;
@@ -137,6 +140,27 @@ export async function processAppEvents(user: AppUser, events: Evenement[], recei
     }
   }
   return results;
+}
+
+/** M1 : durée après laquelle une réservation sans résultat (`outcome` null) peut être reprise. */
+export const CLAIM_TIMEOUT_MS = 60_000;
+
+/**
+ * Reprend une réservation orpheline : `outcome` null et réservée depuis plus de CLAIM_TIMEOUT_MS.
+ * Mise à jour conditionnelle : un seul renvoi gagne la reprise. Les services métier refusent déjà
+ * les vrais doublons (Kayé unique, check-out unique, preuve déjà validée).
+ */
+async function resumeStaleClaim(userId: string, clientEventId: string, now: Date): Promise<string | null> {
+  const prev = await db.appEvent.findUnique({
+    where: { userId_clientEventId: { userId, clientEventId } },
+    select: { id: true, outcome: true, receivedAt: true },
+  });
+  if (!prev || prev.outcome !== null || now.getTime() - prev.receivedAt.getTime() <= CLAIM_TIMEOUT_MS) return null;
+  const r = await db.appEvent.updateMany({
+    where: { id: prev.id, outcome: { equals: Prisma.DbNull }, receivedAt: prev.receivedAt },
+    data: { receivedAt: now },
+  });
+  return r.count === 1 ? prev.id : null;
 }
 
 async function duplicateResult(userId: string, e: Evenement): Promise<ResultatEvenement> {
@@ -178,22 +202,48 @@ async function handleEvent(actor: Actor, user: AppUser, e: Evenement, active: bo
       case "KAYE_BROUILLON":
         return await saveDraft(actor, e, new Date(e.survenuA));
       case "KAYE_PUBLICATION": {
-        await createKaye(actor, {
-          visitId: e.visiteId,
-          mood: e.kaye.humeur,
-          appetite: e.kaye.appetit,
-          activities: [...new Set(e.kaye.activites)].slice(0, 10),
-          note: e.kaye.note || null,
-          alertFlag: e.kaye.aSurveiller,
-          alertNote: e.kaye.aSurveiller ? (e.kaye.noteSurveillance ?? null) : null,
-        });
-        // RGPD : le brouillon ne sert plus.
-        await db.kayeDraft.deleteMany({ where: { visitId: e.visiteId } });
+        try {
+          // M8 : createKaye efface aussi le brouillon serveur, dans sa transaction.
+          await createKaye(actor, {
+            visitId: e.visiteId,
+            mood: e.kaye.humeur,
+            appetite: e.kaye.appetit,
+            activities: [...new Set(e.kaye.activites)].slice(0, 10),
+            note: e.kaye.note || null,
+            alertFlag: e.kaye.aSurveiller,
+            alertNote: e.kaye.aSurveiller ? (e.kaye.noteSurveillance ?? null) : null,
+          });
+        } catch (err) {
+          if (!(err instanceof AccompagnantError) || (err.code !== "INVALIDE" && err.code !== "INTERDIT")) throw err;
+          // M9 : refus récupérable (ex. check-in refusé juste avant) : le texte n'est pas perdu.
+          // Il reste côté serveur en brouillon (relu par GET /visites/:id → brouillonKaye).
+          const out = refused(err);
+          if (await keepRefusedKayeAsDraft(actor, e)) {
+            out.message = `${err.message} Votre Kayé est gardé en brouillon : vous pourrez l'envoyer ensuite.`.slice(0, 300);
+          }
+          return out;
+        }
         return { statut: "ACCEPTE" };
       }
     }
   } catch (err) {
     if (err instanceof AccompagnantError) return refused(err);
+    throw err;
+  }
+}
+
+/**
+ * M9 : garde le texte d'un Kayé refusé en brouillon serveur. Seulement si la visite est à cet accompagnant,
+ * sans Kayé publié, mission active. Un brouillon plus récent n'est pas écrasé. Renvoie true si le texte est gardé.
+ */
+async function keepRefusedKayeAsDraft(actor: Actor, e: Extract<Evenement, { type: "KAYE_PUBLICATION" }>): Promise<boolean> {
+  const parsed = brouillonKayeSchema.safeParse(e.kaye);
+  if (!parsed.success) return false;
+  try {
+    const r = await saveDraft(actor, { ...e, type: "KAYE_BROUILLON", kaye: parsed.data }, new Date(e.survenuA));
+    return r.statut === "ACCEPTE" && !r.message;
+  } catch (err) {
+    if (err instanceof AccompagnantError) return false;
     throw err;
   }
 }
@@ -304,7 +354,7 @@ export async function listAppProposals(userId: string, now: Date = new Date()): 
   }));
 }
 
-/** Purge : événements reçus depuis plus de 30 jours (l'app a déjà vidé sa file). [À BRANCHER] sur la purge nocturne. */
+/** Purge : événements reçus depuis plus de 30 jours (l'app a déjà vidé sa file). Appelée par la purge nocturne (X9). */
 export async function purgeAppEvents(now: Date = new Date()): Promise<number> {
   const r = await db.appEvent.deleteMany({ where: { receivedAt: { lt: new Date(now.getTime() - 30 * 24 * H) } } });
   return r.count;
