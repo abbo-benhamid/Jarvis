@@ -44,3 +44,6 @@ playwright-report/
 
 # Export web de la démo hors ligne (lot M2)
 dist-simule/
+
+# Export web pour l'e2e hors ligne (lot M3)
+dist-hors-ligne/
