@@ -1,6 +1,6 @@
-# API v1 — référence (lots A1 et A2)
+# API v1 — référence (lots A1, A2 et N1)
 
-- **Statut :** livré. A1 (ADR 0008) : socle et authentification par jeton (§ 1 à 8). A2 : visites, événements, propositions (§ 9).
+- **Statut :** livré. A1 (ADR 0008) : socle et authentification par jeton (§ 1 à 8). A2 : visites, événements, propositions (§ 9). N1 : appareils et notifications push (§ 10).
 - **Code :** `plateforme/src/app/api/v1/**`, contrats `plateforme/src/contracts/v1/**`, services `plateforme/src/server/auth/token*.ts` (A1) et `plateforme/src/server/visits/app-*.ts` (A2).
 - **Public :** app Expo accompagnant (`mobile/`). Le web garde le cookie de session (ADR 0002).
 
@@ -232,3 +232,74 @@ pnpm build:local && E2E_PORT=3713 pnpm e2e e2e/api-v1-visites.spec.ts           
 - SOS : pas encore d'incident P1 ni d'appel d'astreinte (lot VX). L'alerte part dans la boîte d'envoi simulée des opérateurs.
 - Une visite à l'horloge suspecte refuse ensuite un nouveau facteur (statut `A_VERIFIER`). La famille ou l'opérateur confirme par l'appel « tapez 1 ».
 - Les contrats ont changé (`erreurs.ts` : `CONFLIT`, `ACTION_IMPOSSIBLE`) : relancer `mobile/scripts/sync-contracts.mjs` (lot M2).
+
+## 10. Lot N1 — appareils et notifications push
+
+Contrat : `src/contracts/v1/appareils.ts`. Service : `src/server/notifications/push/**`. Détail de l'intégration : [`integrations/push.md`](integrations/push.md).
+
+### 10.1 Routes
+
+Ces routes demandent un jeton d'accès. Tout rôle accepté par l'API (accompagnant, famille).
+
+| Méthode | Route | Corps | Réponse |
+|---|---|---|---|
+| POST | `/api/v1/appareils` | `{ jeton: "ExponentPushToken[…]", plateforme: "IOS" \| "ANDROID" }` | `200 { id, enregistreA }` ; `400` si le jeton n'a pas la forme Expo |
+| DELETE | `/api/v1/appareils/:id` | — | `204` toujours (idempotent ; un appareil inconnu ou d'un autre compte n'est pas touché) |
+
+Règles :
+1. L'app appelle `POST /appareils` à **chaque ouverture** (le jeton Expo peut changer). Même jeton → même ligne (`lastSeenAt` mis à jour).
+2. Un jeton déjà connu sur **un autre compte** passe au compte connecté (même téléphone, autre personne).
+3. L'appareil est lié à la **connexion** du jeton d'accès (`RefreshToken.familyId`).
+4. 10 appareils actifs au plus par compte : au-delà, les plus anciens sont révoqués (`TROP_APPAREILS`).
+
+### 10.2 Révocation
+
+```mermaid
+flowchart LR
+  L[App : Se déconnecter] --> D["DELETE /appareils/:id<br/>(RETIRE)"] --> O[POST /auth/logout]
+  E[Envoi d'un push] --> C{"Connexion de l'appareil<br/>encore ouverte ?"}
+  C -->|"Non : déconnexion, partout, réutilisation, 30 j"| R1["Révoqué DECONNEXION<br/>rien n'est envoyé"]
+  C -->|Oui| X[Expo Push]
+  X -->|DeviceNotRegistered| R2[Révoqué NON_ENREGISTRE]
+```
+
+L'app retire l'appareil avant la déconnexion. Si elle ne peut pas (réseau coupé), le serveur révoque l'appareil au prochain envoi. Un appareil dont la connexion est fermée ne reçoit **jamais** de push.
+
+### 10.3 Push envoyés (R9 : texte générique)
+
+| Événement | Destinataire | Titre | Écran (`data.ecran`) |
+|---|---|---|---|
+| La famille choisit un profil (`PROPOSITION_MISSION`) | Accompagnant | « Nouvelle proposition » | `propositions` |
+| Kayé publié (`KAYE_PUBLIE`) | Cercle Lakou | « Nouveau Kayé pour {prénom de l'aîné} » | `kaye` + `visiteId` |
+| Kayé « à surveiller » (`ALERTE_A_SURVEILLER`) | Cercle Lakou | « À lire : visite chez {prénom de l'aîné} » | `visite` + `visiteId` |
+
+- Jamais : humeur, appétit, note, motif, nom de l'accompagnant, commune.
+- Le push s'ajoute au canal par défaut (WhatsApp ou e-mail). Il ne le remplace pas.
+- `data` suit `donneesPushSchema` (`{ ecran, visiteId?, lien }`). L'app ignore des données hors contrat.
+
+### 10.4 RGPD et journal
+
+- `PushDevice` : jeton, plateforme, compte, connexion, dates. Effacé avec le compte (cascade). `purgePushDevices()` efface les appareils révoqués depuis 30 jours. **À brancher** sur la purge nocturne.
+- Journal d'audit : `push.device.registered` (nouvel appareil, ou changement de compte ou de connexion). Jamais le jeton.
+- Journal du serveur : jeton masqué (4 derniers caractères).
+
+### 10.5 Limites de débit
+
+| Route | Règle | Sujet |
+|---|---|---|
+| `/appareils`, `/appareils/:id` | `evenement:ip` | `api-v1-appareils:<IP>` |
+
+### 10.6 Tester
+
+```bash
+cd plateforme
+pnpm vitest run src/server/notifications src/app/api/v1/appareils                     # unitaires + contrat des adaptateurs
+KOUDMEN_DB_TESTS=1 pnpm vitest run src/server/notifications/push/service.db.test.ts      # base réelle
+pnpm build:local && E2E_PORT=3714 pnpm e2e e2e/api-v1-push.spec.ts                       # e2e API (seed de démo)
+```
+
+Le journal du serveur montre alors :
+
+```
+[push:console] ANDROID …5e70 | Nouveau Kayé pour Ginette | Ouvrez Koudmen pour le lire. | ecran=kaye:cm…
+```
