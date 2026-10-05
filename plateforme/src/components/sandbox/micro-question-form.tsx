@@ -12,22 +12,22 @@ export function MicroQuestionForm({ question, path }: { question: MicroQuestion;
   const [state, action] = useActionState(microAnswerAction, initialActionState);
   if (state.ok) {
     return (
-      <p role="status" className="rounded-xl border border-feuille bg-feuille-soft p-3 text-sm font-semibold">
+      <p role="status" className="rounded-md bg-feuille-soft p-4 text-[15px] font-semibold text-feuille">
         {state.message}
       </p>
     );
   }
   return (
-    <form action={action} aria-label="Question rapide" className="flex flex-col gap-2 rounded-xl border border-soleil bg-soleil-soft p-4">
+    <form action={action} aria-label="Question rapide" className="flex flex-col gap-3 rounded-card bg-soleil-soft p-5">
       <input type="hidden" name="questionKey" value={question.key} />
       <input type="hidden" name="path" value={path} />
-      <p className="flex items-center gap-2 font-bold">
-        <MessageCircleQuestion aria-hidden="true" className="size-5" />
+      <p className="flex items-center gap-2 font-semibold">
+        <MessageCircleQuestion aria-hidden="true" className="size-5 text-soleil-ink" strokeWidth={1.7} />
         Question rapide : {question.question}
       </p>
       <div className="flex flex-wrap gap-2">
         {question.choices.map((c) => (
-          <SubmitButton key={c.value} name="answer" value={c.value} variant="secondary" size="md" pendingLabel="…">
+          <SubmitButton key={c.value} name="answer" value={c.value} variant="quiet" size="md" pendingLabel="…">
             {c.label}
           </SubmitButton>
         ))}

@@ -8,8 +8,8 @@ import { FEEDBACK_SENT_EVENT, openFeedback } from "@/components/feedback/open-fe
 /** Bouton court « Mon avis » du panneau du test : toujours en haut de l'écran, sans rien masquer (A9). */
 export function FeedbackShortcut() {
   return (
-    <Button variant="soleil" onClick={() => openFeedback()} aria-haspopup="dialog">
-      <MessageSquareHeart aria-hidden="true" className="size-4" />
+    <Button variant="quiet" onClick={() => openFeedback()} aria-haspopup="dialog">
+      <MessageSquareHeart aria-hidden="true" className="text-soleil-ink" strokeWidth={1.7} />
       Mon avis
     </Button>
   );
@@ -87,8 +87,8 @@ export function ScenarioEndPrompt({ sandboxId, scenarios }: { sandboxId: string;
   };
 
   return (
-    <div role="status" className="mt-2 flex flex-col gap-2 rounded-xl border-2 border-feuille bg-surface p-3">
-      <p className="flex items-start gap-2 font-bold">
+    <div role="status" className="mt-3 flex flex-col gap-2 rounded-md bg-surface p-4 shadow-card">
+      <p className="flex items-start gap-2 font-display text-[20px] leading-tight">
         <PartyPopper aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-feuille" />
         {prompt.title}
       </p>
@@ -101,7 +101,7 @@ export function ScenarioEndPrompt({ sandboxId, scenarios }: { sandboxId: string;
         >
           Répondre (1 minute)
         </Button>
-        <Button variant="secondary" onClick={dismiss}>
+        <Button variant="quiet" onClick={dismiss}>
           Plus tard
         </Button>
       </div>

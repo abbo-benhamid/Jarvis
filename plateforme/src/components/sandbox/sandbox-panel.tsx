@@ -20,13 +20,13 @@ export async function SandboxPanel({ user }: { user: CurrentUser }) {
   return (
     <section
       aria-label={`Votre test : ${done} étapes faites sur ${total}`}
-      className="mb-5 rounded-xl border-2 border-dashed border-mer bg-mer-soft px-3 py-2"
+      className="mb-6 rounded-card bg-mer-soft px-4 py-3 text-fg"
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <p className="flex min-w-0 flex-1 basis-56 items-start gap-2 text-sm">
+        <p className="flex min-w-0 flex-1 basis-56 items-start gap-2 text-[15px]">
           <FlaskConical aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-mer" />
           <span>
-            <strong>
+            <strong className="num">
               Test {done}/{total}
             </strong>
             {next ? (
@@ -34,7 +34,7 @@ export async function SandboxPanel({ user }: { user: CurrentUser }) {
                 {" "}
                 · Maintenant :{" "}
                 {next.href ? (
-                  <Link href={next.href} className="font-semibold text-mer underline">
+                  <Link href={next.href} className="font-semibold text-mer underline underline-offset-4">
                     {next.label}
                   </Link>
                 ) : (
@@ -66,15 +66,15 @@ export async function SandboxPanel({ user }: { user: CurrentUser }) {
         </p>
         <ol className="mt-2 grid gap-3 md:grid-cols-3">
           {panel.scenarios.map((sc) => (
-            <li key={sc.id} className="rounded-lg bg-surface p-3">
-              <p className="font-bold">{sc.title}</p>
+            <li key={sc.id} className="rounded-md bg-surface p-4 shadow-card">
+              <p className="font-semibold">{sc.title}</p>
               <ul className="mt-1 flex flex-col text-sm">
                 {sc.steps.map((st) => (
                   <li key={st.id} className="flex min-h-11 items-center gap-2 py-1">
                     {st.done ? (
-                      <CheckCircle2 aria-hidden="true" className="size-4 shrink-0 text-feuille" />
+                      <CheckCircle2 aria-hidden="true" className="size-[18px] shrink-0 text-feuille" strokeWidth={1.7} />
                     ) : (
-                      <Circle aria-hidden="true" className="size-4 shrink-0 text-muted" />
+                      <Circle aria-hidden="true" className="size-[18px] shrink-0 text-muted" strokeWidth={1.7} />
                     )}
                     <span>
                       <span className="sr-only">{st.done ? "Fait : " : "À faire : "}</span>

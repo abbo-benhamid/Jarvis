@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Users } from "lucide-react";
 import { PublicShell } from "@/components/layout/public-shell";
 import { getCurrentUser } from "@/server/auth/guards";
 import { sameScope } from "@/server/scope";
@@ -9,7 +8,8 @@ import { getInvitationByToken, isLakouMember } from "@/server/famille/queries";
 import { tokenSchema } from "@/server/famille/schemas";
 import { formatDate } from "@/lib/format";
 import { Alert } from "@/components/ui/alert";
-import { Card } from "@/components/ui/card";
+import { Card, Kreyol } from "@/components/ui/card";
+import { Avatar } from "@/components/ui/avatar";
 import { LinkButton } from "@/components/ui/button";
 import { JoinCircleForm } from "@/components/famille/join-circle-form";
 
@@ -30,7 +30,7 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
 
   return (
     <PublicShell>
-      <div className="mx-auto flex max-w-xl flex-col gap-6">
+      <div className="mx-auto flex max-w-xl flex-col gap-6 lg:pt-6">
         {otherWorld ? (
           <Problem title="Ce lien appartient à un bac à sable de test.">
             En test, un lien d&apos;invitation s&apos;ouvre seulement dans le bac à sable qui l&apos;a créé. Aucune vraie personne n&apos;est
@@ -51,21 +51,21 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
         ) : (
           <>
             <div className="flex flex-col items-center gap-3 text-center">
-              <span aria-hidden="true" className="inline-flex size-16 items-center justify-center rounded-full bg-mer-soft text-mer">
-                <Users className="size-8" />
-              </span>
-              <p className="font-mono text-xs font-semibold uppercase tracking-widest text-mer">Invitation</p>
-              <h1 className="text-3xl font-bold">
+              <Avatar name={inv.aine.firstName} role="aine" size={72} />
+              <p className="text-[13px] font-semibold tracking-[.12em] text-muted uppercase">
+                Invitation · <Kreyol>Lakou</Kreyol>
+              </p>
+              <h1 className="font-display text-[36px] leading-[1.05] font-normal tracking-[-.02em] lg:text-[44px]">
                 Rejoindre le cercle de {inv.aine.firstName} {inv.aine.lastInitial ?? ""}
               </h1>
-              <p className="max-w-prose text-muted">
+              <p className="max-w-prose text-[17px] text-muted">
                 {inv.createdBy.firstName} vous invite dans le cercle Lakou de {inv.aine.firstName}, en tant que <strong>{inv.relation}</strong>. Dans le
                 cercle, vous lisez les visites et le Kayé, le cahier des visites.
               </p>
               <p className="text-sm text-muted">Lien valable jusqu&apos;au {formatDate(inv.expiresAt)}.</p>
             </div>
 
-            <Card className="flex flex-col gap-4">
+            <Card className="flex flex-col gap-4 lg:p-7">
               {!user ? (
                 <>
                   <p className="font-semibold">Pour rejoindre le cercle, connectez-vous ou créez un compte Famille.</p>
@@ -75,7 +75,7 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
                   {/* A10 / M1 : l'inscription libre existe seulement en mode démo. */}
                   {registrationOpen() ? (
                     <>
-                      <LinkButton href={`/inscription?role=FAMILLE&next=${next}`} variant="secondary" size="lg">
+                      <LinkButton href={`/inscription?role=FAMILLE&next=${next}`} variant="quiet" size="lg">
                         Créer un compte Famille
                       </LinkButton>
                       <p className="text-sm text-muted">Après la création du compte, vous revenez sur cette page pour rejoindre le cercle.</p>
@@ -110,12 +110,12 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
 function Problem({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <>
-      <h1 className="text-3xl font-bold">Invitation au cercle Lakou</h1>
+      <h1 className="font-display text-[36px] leading-[1.05] font-normal tracking-[-.02em] lg:text-[44px]">Invitation au cercle Lakou</h1>
       <Alert tone="attention" title={title}>
         {children}
       </Alert>
       <p>
-        <Link href="/" className="inline-flex min-h-11 items-center font-semibold text-mer underline">
+        <Link href="/" className="inline-flex min-h-11 items-center font-semibold text-mer underline underline-offset-4">
           Découvrir Koudmen
         </Link>
       </p>
