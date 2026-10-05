@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 import { FilterForm, pickEnum } from "@/components/operateur/filter-form";
+import { KpiTile } from "@/components/operateur/display";
 import { FeedbackStatusForm } from "@/components/operateur/forms";
 import { ROLE_LABELS } from "@/lib/labels";
 import { formatDateTime } from "@/lib/format";
@@ -36,19 +37,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
           </a>
         }
       />
-      <dl className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <dl className="m-0 mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {STATUSES.map((s) => (
-          <div key={s} className="rounded-xl border border-line bg-surface p-3">
-            <dt className="text-sm font-semibold text-muted">{FEEDBACK_STATUS_LABELS[s]}</dt>
-            <dd className="font-display text-3xl font-extrabold tabular-nums">{stats.counts[s]}</dd>
-          </div>
+          <KpiTile key={s} label={FEEDBACK_STATUS_LABELS[s]} value={stats.counts[s]} />
         ))}
-        <div className="rounded-xl border border-line bg-surface p-3">
-          <dt className="text-sm font-semibold text-muted">Note moyenne</dt>
-          <dd className="font-display text-3xl font-extrabold tabular-nums">
-            {stats.average != null ? `${stats.average.toFixed(1).replace(".", ",")}/5` : "—"}
-          </dd>
-        </div>
+        <KpiTile label="Note moyenne" value={stats.average != null ? `${stats.average.toFixed(1).replace(".", ",")}/5` : "—"} />
       </dl>
       <FilterForm
         action="/operateur/retours"
@@ -65,9 +58,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
             const titleId = `retour-${f.id}`;
             return (
               <li key={f.id}>
-                <article aria-labelledby={titleId} className="rounded-xl border border-line bg-surface p-4">
+                <article aria-labelledby={titleId} className="rounded-card bg-surface p-5 shadow-card">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h2 id={titleId} className="text-lg font-bold">
+                    <h2 id={titleId} className="font-sans text-[17px] leading-snug font-semibold tracking-normal">
                       Note {f.rating}/5 — {RATING_LABELS[f.rating]}
                     </h2>
                     <Badge tone={TONE[f.status]}>{FEEDBACK_STATUS_LABELS[f.status]}</Badge>

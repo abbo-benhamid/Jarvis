@@ -43,7 +43,7 @@ function RequestList({ title, rows, empty }: { title: string; rows: Awaited<Retu
   const id = `t-${title.slice(0, 8).replace(/\W/g, "")}`;
   return (
     <section aria-labelledby={id} className="mb-8">
-      <h2 id={id} className="mb-3 text-2xl font-bold">
+      <h2 id={id} className="mb-3 font-display text-[24px] leading-tight font-normal tracking-[-.015em]">
         {title} ({rows.length})
       </h2>
       {rows.length === 0 ? (
@@ -54,9 +54,9 @@ function RequestList({ title, rows, empty }: { title: string; rows: Awaited<Retu
             const waiting = r.proposals.filter((p) => p.status === "EN_ATTENTE").length;
             const stale = r.status === "OUVERTE" && ageInDays(r.createdAt) >= STALE_REQUEST_DAYS;
             return (
-              <li key={r.id} className="rounded-xl border border-line bg-surface p-4">
+              <li key={r.id} className="rounded-card bg-surface p-5 shadow-card">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Link href={`/operateur/demandes/${r.id}`} className="inline-flex min-h-11 items-center text-lg font-bold text-mer underline">
+                  <Link href={`/operateur/demandes/${r.id}`} className="inline-flex min-h-11 items-center text-lg font-semibold text-mer no-underline hover:underline">
                     {r.aine.firstName} {r.aine.lastInitial ?? ""} · {communeLabel(r.aine.commune)}
                   </Link>
                   <span className="flex flex-wrap gap-1">

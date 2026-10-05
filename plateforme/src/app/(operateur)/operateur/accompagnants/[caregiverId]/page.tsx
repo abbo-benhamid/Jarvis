@@ -125,7 +125,7 @@ export default async function Page({ params }: { params: Promise<{ caregiverId: 
       </div>
 
       <section aria-labelledby="t-verif" className="mt-8">
-        <h2 id="t-verif" className="mb-1 text-2xl font-bold">
+        <h2 id="t-verif" className="mb-1 font-display text-[24px] leading-tight font-normal tracking-[-.015em]">
           Vérifications
         </h2>
         <p className="mb-4 text-muted">
@@ -139,7 +139,7 @@ export default async function Page({ params }: { params: Promise<{ caregiverId: 
             {cg.verifications.map((v) => (
               <Card key={v.id} aria-labelledby={`verif-${v.id}`} className="flex flex-col gap-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 id={`verif-${v.id}`} className="text-lg font-bold">
+                  <h3 id={`verif-${v.id}`} className="font-sans text-[17px] leading-snug font-semibold tracking-normal">
                     {VERIFICATION_TYPE_LABELS[v.type]}
                   </h3>
                   <Badge tone={v.status === "VALIDE" ? "feuille" : v.status === "REFUSE" ? "hibiscus" : v.status === "DECLARE" ? "soleil" : "neutre"}>
@@ -197,7 +197,7 @@ export default async function Page({ params }: { params: Promise<{ caregiverId: 
       </section>
 
       <section aria-labelledby="t-hist" className="mt-8">
-        <h2 id="t-hist" className="mb-3 text-2xl font-bold">
+        <h2 id="t-hist" className="mb-3 font-display text-[24px] leading-tight font-normal tracking-[-.015em]">
           Historique des décisions
         </h2>
         {history.length === 0 && !cg.reviewedAt ? (
@@ -205,7 +205,7 @@ export default async function Page({ params }: { params: Promise<{ caregiverId: 
         ) : (
           <ol className="flex flex-col gap-2">
             {history.map((h) => (
-              <li key={h.id} className="rounded-lg border border-line bg-surface px-4 py-2">
+              <li key={h.id} className="rounded-md bg-surface px-4 py-3 shadow-card">
                 <span className="font-semibold">{ACTION_LABELS[h.action] ?? h.action}</span> — {formatDateTime(h.createdAt)}
                 {h.actor ? ` par ${h.actor.firstName} ${h.actor.lastName}` : ""}
               </li>

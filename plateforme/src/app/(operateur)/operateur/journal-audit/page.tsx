@@ -39,44 +39,44 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
       {rows.length === 0 ? (
         <EmptyState title="Aucune entrée pour ces filtres." />
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-line bg-surface">
-          <table className="w-full min-w-[40rem] text-left text-sm">
+        <div className="overflow-x-auto rounded-card bg-surface shadow-card">
+          <table className="w-full min-w-[48rem] border-collapse text-left text-[15px]">
             <caption className="sr-only">Entrées du journal d&apos;audit, de la plus récente à la plus ancienne</caption>
-            <thead className="border-b border-line bg-bg">
+            <thead className="border-b border-line">
               <tr>
-                <th scope="col" className="px-3 py-2">
+                <th scope="col" className="px-4 py-3 text-[12.5px] font-semibold tracking-[.08em] text-muted uppercase">
                   Date
                 </th>
-                <th scope="col" className="px-3 py-2">
+                <th scope="col" className="px-4 py-3 text-[12.5px] font-semibold tracking-[.08em] text-muted uppercase">
                   Acteur
                 </th>
-                <th scope="col" className="px-3 py-2">
+                <th scope="col" className="px-4 py-3 text-[12.5px] font-semibold tracking-[.08em] text-muted uppercase">
                   Action
                 </th>
-                <th scope="col" className="px-3 py-2">
+                <th scope="col" className="px-4 py-3 text-[12.5px] font-semibold tracking-[.08em] text-muted uppercase">
                   Entité
                 </th>
-                <th scope="col" className="px-3 py-2">
+                <th scope="col" className="px-4 py-3 text-[12.5px] font-semibold tracking-[.08em] text-muted uppercase">
                   Détails
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
               {rows.map((a) => (
-                <tr key={a.id} className="align-top">
-                  <td className="px-3 py-2 whitespace-nowrap">{formatDateTime(a.createdAt)}</td>
-                  <td className="px-3 py-2">
+                <tr key={a.id} className="align-top hover:bg-surface-2/40">
+                  <td className="num px-4 py-3 whitespace-nowrap">{formatDateTime(a.createdAt)}</td>
+                  <td className="px-4 py-3">
                     {a.actor ? `${a.actor.firstName} ${a.actor.lastName}` : "Système"}
                     {a.actorRole ? <span className="block text-muted">{ROLE_LABELS[a.actorRole]}</span> : null}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-4 py-3">
                     <code className="font-mono">{a.action}</code>
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-4 py-3">
                     {a.entityType}
                     {a.entityId ? <span className="block font-mono text-xs break-all text-muted">{a.entityId}</span> : null}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-4 py-3">
                     {a.metadata ? <code className="font-mono text-xs break-all">{JSON.stringify(a.metadata)}</code> : <span className="text-muted">—</span>}
                   </td>
                 </tr>

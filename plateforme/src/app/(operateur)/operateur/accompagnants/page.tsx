@@ -55,9 +55,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
             const declared = c.verifications.filter((v) => v.status !== "A_FOURNIR").length;
             const valid = c.verifications.filter((v) => v.status === "VALIDE").length;
             return (
-              <li key={c.id} className="rounded-xl border border-line bg-surface p-4">
+              <li key={c.id} className="rounded-card bg-surface p-5 shadow-card">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Link href={`/operateur/accompagnants/${c.id}`} className="inline-flex min-h-11 items-center text-lg font-bold text-mer underline">
+                  <Link href={`/operateur/accompagnants/${c.id}`} className="inline-flex min-h-11 items-center text-lg font-semibold text-mer no-underline hover:underline">
                     {c.user.firstName} {c.user.lastName}
                   </Link>
                   <ValidationBadge status={c.validation} />
