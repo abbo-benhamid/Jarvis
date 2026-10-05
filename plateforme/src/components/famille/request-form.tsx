@@ -33,6 +33,7 @@ export function RequestForm({ aines, defaultAineId, today }: { aines: RequestAin
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
+      <FormMessage state={state} />
       <Card className="flex flex-col gap-4">
         <h2 className="font-display text-[22px] leading-[1.2] font-normal tracking-[-.015em] text-balance">1. Pour qui{"\u202f"}?</h2>
         {aines.length === 1 ? (
@@ -193,7 +194,6 @@ export function RequestForm({ aines, defaultAineId, today }: { aines: RequestAin
         </Alert>
       </Card>
 
-      <FormMessage state={state} />
       <PendingButton pending={pending} size="lg" pendingLabel="Envoi de la demande…" className="w-full">
         Envoyer la demande
       </PendingButton>

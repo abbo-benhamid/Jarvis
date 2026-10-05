@@ -14,6 +14,7 @@ export function DiscoveryForm() {
   const fe = !state.ok ? state.fieldErrors : undefined;
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+      <FormMessage state={state} />
       <p className="text-sm text-muted">
         Ici, écrivez VOTRE vrai contact (pas celui de votre parent). N&apos;écrivez aucune information sur votre parent.
       </p>
@@ -25,7 +26,6 @@ export function DiscoveryForm() {
       </FormField>
       <Checkbox id="consent" name="consent" label={DISCOVERY_CONSENT_TEXT} required />
       {fe?.consent ? <p className="text-sm font-semibold text-hibiscus">{fe.consent.join(" ")}</p> : null}
-      <FormMessage state={state} />
       <PendingButton pending={pending} pendingLabel="Envoi…" className="sm:self-start">
         Être recontacté(e)
       </PendingButton>

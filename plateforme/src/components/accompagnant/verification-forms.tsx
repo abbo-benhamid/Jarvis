@@ -62,6 +62,7 @@ export function VerificationRow({ item }: { item: VerificationRowData }) {
       ) : (
         <form onSubmit={onSubmit} className="flex flex-col gap-3">
           <input type="hidden" name="itemId" value={item.id} />
+          <FormMessage state={state} />
           {/* M11 : un libellé unique par champ. */}
           <FormField label={`Votre déclaration — ${VERIFICATION_TYPE_LABELS[item.type]}`} htmlFor={id} hint={EXAMPLES[item.type]} errors={fe?.declaration}>
             <Textarea
@@ -73,7 +74,6 @@ export function VerificationRow({ item }: { item: VerificationRowData }) {
               onChange={(e) => setText(e.target.value)}
             />
           </FormField>
-          <FormMessage state={state} />
           <PendingButton pending={pending} variant={item.status === "DECLARE" ? "quiet" : "primary"} size="lg" pendingLabel="Enregistrement…" className="w-full">
             {item.status === "DECLARE" ? "Modifier ma déclaration" : "J'ai fourni"}
           </PendingButton>

@@ -17,6 +17,7 @@ export function StartSandboxForm({ defaultCode }: { defaultCode: string }) {
   const fe = !state.ok ? state.fieldErrors : undefined;
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
+      <FormMessage state={state} />
       <FormField label="Code testeur" htmlFor="testerCode" hint="Le code reçu avec votre invitation." errors={fe?.testerCode} required>
         <Input
           {...fieldA11y("testerCode", fe?.testerCode, true)}
@@ -87,7 +88,6 @@ export function StartSandboxForm({ defaultCode }: { defaultCode: string }) {
         />
         {fe?.acceptTest ? <p className="text-sm font-semibold text-hibiscus">{fe.acceptTest.join(" ")}</p> : null}
       </div>
-      <FormMessage state={state} />
       <PendingButton pending={pending} size="lg" className="w-full" pendingLabel="Création de votre test…">
         Commencer le test
       </PendingButton>

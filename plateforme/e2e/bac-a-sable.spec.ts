@@ -31,6 +31,8 @@ async function startSandbox(page: import("@playwright/test").Page, role: "Famill
 test("un code inconnu est refusé", async ({ page }) => {
   await startSandbox(page, "Famille", "PAS-UN-CODE");
   await expect(page.getByText("Ce code testeur n'est pas valide.")).toBeVisible();
+  // UX V1 M7 : le message est au-dessus des champs et prend le focus.
+  await expect(page.locator(":focus")).toContainText("Ce code testeur n'est pas valide.");
   await expect(page).toHaveURL(/\/tester$/);
 });
 

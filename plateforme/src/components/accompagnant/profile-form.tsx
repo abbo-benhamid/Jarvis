@@ -58,6 +58,7 @@ export function ProfileForm({
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <FormMessage state={state} />
       {paid ? (
         <Card className="flex flex-col gap-3">
           <CardTitle className="mb-0">Mon tarif</CardTitle>
@@ -206,7 +207,6 @@ export function ProfileForm({
         ) : null}
       </Card>
 
-      <FormMessage state={state} />
       <PendingButton pending={pending} size="xl" pendingLabel="Enregistrement…" className="w-full">
         Enregistrer mon profil
       </PendingButton>

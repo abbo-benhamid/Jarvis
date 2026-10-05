@@ -46,6 +46,7 @@ export function KayeForm({ visitId, aineFirstName }: { visitId: string; aineFirs
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <input type="hidden" name="visitId" value={visitId} />
+      <FormMessage state={state} />
       <p className="mx-0.5 text-[15px] leading-[1.45] text-muted">
         Le Kayé raconte la visite à la famille. Des faits simples : pas de diagnostic, pas de médicament.
       </p>
@@ -154,7 +155,6 @@ export function KayeForm({ visitId, aineFirstName }: { visitId: string; aineFirs
         ) : null}
       </Card>
 
-      <FormMessage state={state} />
 
       <ActionDock label="Action principale" hint="La famille le lit tout de suite. Il ne se modifie plus après l'envoi.">
         <PendingButton pending={pending} size="xl" pendingLabel="Envoi…" className="w-full">

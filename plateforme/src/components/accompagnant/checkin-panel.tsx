@@ -229,6 +229,7 @@ export function CheckInPanel({
           </h2>
           <form id={codeFormId} onSubmit={onCode} className="flex flex-col gap-3">
             <input type="hidden" name="visitId" value={visitId} />
+            <FormMessage state={codeState} />
             <FormField
               label="Code à 6 caractères"
               htmlFor="code"
@@ -248,7 +249,6 @@ export function CheckInPanel({
                 className="num max-w-60 font-mono text-[28px] font-semibold tracking-[0.3em]"
               />
             </FormField>
-            <FormMessage state={codeState} />
           </form>
           {gpsOpen ? (
             <Button variant="link" onClick={() => setChoice("gps")} className="self-start px-0">
