@@ -233,6 +233,8 @@ model User {
   feedbacks           Feedback[]
   auditLogs           AuditLog[]
   proposalsChosen     MissionProposal[]  @relation("ProposalChooser")
+  /// Jetons de renouvellement de l'API v1 (app mobile, ADR 0008).
+  refreshTokens       RefreshToken[]
 
   @@index([sandboxId])
 }
@@ -743,5 +745,38 @@ model RateLimit {
   windowStart DateTime
   expiresAt   DateTime
 
+  @@index([expiresAt])
+}
+
+/// Jeton de renouvellement de l'API v1 (app mobile, ADR 0008, lot A1).
+/// - Stocké en EMPREINTE (SHA-256), jamais en clair.
+/// - Rotation : chaque usage crée un nouveau jeton de la même famille et marque l'ancien `usedAt`.
+/// - Réutilisation d'un jeton déjà utilisé → toute la famille est révoquée.
+/// - Lié à User.sessionVersion : un jeton d'une autre version est refusé.
+/// - Effacé avec le compte (purge des bacs à sable comprise).
+model RefreshToken {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Famille = une connexion d'un appareil. Toutes les rotations gardent le même familyId.
+  familyId       String
+  /// Empreinte SHA-256 (hex) du jeton.
+  tokenHash      String    @unique
+  /// Identifiant du code de connexion échangé (premier jeton de la famille). Unique : un code sert une fois.
+  authCodeId     String?   @unique
+  /// Jeton précédent dans la famille (null pour le premier).
+  parentId       String?
+  /// User.sessionVersion au moment de l'émission.
+  sessionVersion Int
+  expiresAt      DateTime
+  /// Date de rotation (le jeton a servi une fois).
+  usedAt         DateTime?
+  revokedAt      DateTime?
+  /// DECONNEXION, REUTILISATION, VERSION_SESSION, CODE_REUTILISE…
+  revokedReason  String?
+  createdAt      DateTime  @default(now())
+
+  @@index([userId])
+  @@index([familyId])
   @@index([expiresAt])
 }
