@@ -122,9 +122,15 @@ export async function processAppEvents(user: AppUser, events: Evenement[], recei
     try {
       const outcome = await handleEvent(actor, user, e, active, effectiveEventTime(occurredAt, receivedAt), skew);
       const visite = visitId ? await visitState(user.id, visitId) : undefined;
-      if (skew && visite) skewedVisits.add(visite.id);
+      // Code m3 : seule une PREUVE acceptée (check-in, check-out) à l'horloge suspecte marque la visite.
+      // Un SOS, un brouillon ou un refus garde l'écart dans AppEvent sans bloquer la visite.
+      if (skew && visite && outcome.statut === "ACCEPTE" && (e.type === "CHECK_IN" || e.type === "CHECK_OUT")) skewedVisits.add(visite.id);
       result = { clientEventId: e.clientEventId, type: e.type, horlogeSuspecte: skew, ...outcome, ...(visite ? { visite } : {}) };
-      await db.appEvent.update({ where: { id: claimId }, data: { outcome: result as unknown as Prisma.InputJsonValue } });
+      // Sécurité m1 : on garde l'id de visite seulement s'il appartient à ce compte (sinon null).
+      await db.appEvent.update({
+        where: { id: claimId },
+        data: { outcome: result as unknown as Prisma.InputJsonValue, visitId: visite?.id ?? null },
+      });
     } catch (err) {
       await db.appEvent.delete({ where: { id: claimId } }).catch(() => undefined);
       throw err;

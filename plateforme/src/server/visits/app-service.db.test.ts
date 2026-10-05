@@ -266,6 +266,16 @@ describe.runIf(enabled)("Lot A2 (API v1 : visites, événements, propositions) s
     expect((await app.getAppVisit(alice.user.id, v.id))?.preuve.horlogeSuspecte).toBe(true);
   });
 
+  it("m3 : SOS à l'horloge suspecte avant le check-in → visite NON marquée ; le check-in avec le bon code passe", async () => {
+    const v = await visitFor(alice);
+    const wrongClock = new Date(Date.now() - 13 * H);
+    const [s] = await app.processAppEvents(alice.user, [ev("SOS", { visiteId: v.id }, wrongClock)]);
+    expect(s).toMatchObject({ statut: "ACCEPTE", horlogeSuspecte: true });
+    expect((await db.visit.findUniqueOrThrow({ where: { id: v.id } })).clockSkewAt).toBeNull();
+    const [ci] = await app.processAppEvents(alice.user, [ev("CHECK_IN", { visiteId: v.id, codeDomicile: homeCode })]);
+    expect(ci).toMatchObject({ statut: "ACCEPTE", visite: { statut: "EN_COURS", score: 1 } });
+  });
+
   it("IDOR : un événement sur la visite d'un autre accompagnant est refusé INTROUVABLE, sans effet", async () => {
     const v = await visitFor(alice);
     const results = await app.processAppEvents(bruno.user, [
@@ -279,6 +289,8 @@ describe.runIf(enabled)("Lot A2 (API v1 : visites, événements, propositions) s
     }
     expect(await db.visitProof.count({ where: { visitId: v.id } })).toBe(0);
     expect(await db.kayeDraft.count({ where: { visitId: v.id } })).toBe(0);
+    // Sécurité m1 : l'id de la visite d'autrui n'est pas gardé dans le journal des événements.
+    expect(await db.appEvent.count({ where: { userId: bruno.user.id, visitId: v.id } })).toBe(0);
   });
 
   it("accompagnant suspendu : événements refusés (COMPTE_INACTIF), mais le SOS passe et prévient l'opérateur", async () => {
