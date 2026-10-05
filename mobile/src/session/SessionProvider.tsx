@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { api, messageErreur, type Moi } from '@/api';
+import { api, ApiError, messageErreur, type Moi } from '@/api';
 import { retirerAppareilPush } from '@/push';
 
 type Etat =
@@ -37,7 +37,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const moi = await api.restaurer();
       setEtat(moi ? { statut: 'connecte', moi } : { statut: 'deconnecte', message: null, reprisePossible: false });
     } catch (e) {
-      setEtat({ statut: 'deconnecte', message: messageErreur(e), reprisePossible: true });
+      // Connexion fermée (expirée, rejeu détecté, compte refusé) : on garde l'explication, sans « Réessayer » (revue m7).
+      const finSession = e instanceof ApiError && ['JETON_INVALIDE', 'JETON_REUTILISE', 'ACCES_REFUSE'].includes(e.code);
+      setEtat({ statut: 'deconnecte', message: messageErreur(e), reprisePossible: !finSession });
     }
   }, []);
 

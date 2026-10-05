@@ -31,9 +31,10 @@ import { ApiError, type Moi, type ResultatEvenement } from './types';
  * - jeton d'accès (15 min) en MÉMOIRE ;
  * - jeton de renouvellement (30 j) dans le stockage sûr (`stockage.ts`).
  *
- * Renouvellement UN PAR UN : le serveur n'a pas de délai de grâce (api-v1 § 8). Deux /auth/refresh
- * simultanés avec le même jeton révoqueraient la connexion. Tous les appels partagent donc UNE promesse
- * de renouvellement (`enCours`) : le premier la crée, les autres l'attendent.
+ * Renouvellement UN PAR UN : tous les appels partagent UNE promesse de renouvellement (`enCours`).
+ * Le serveur a un délai de grâce de 30 s (arbitrage V1 X1) : le même jeton présenté de nouveau dans les 30 s
+ * par le même appareil renvoie la même nouvelle paire. L'app en profite UNE fois : si la réponse de /auth/refresh
+ * se perd (coupure, délai dépassé), elle rejoue tout de suite le même jeton, une seule fois. Au-delà : rejeu = révocation.
  *
  * Toutes les réponses sont validées par les schémas Zod des contrats. Une réponse hors contrat donne
  * `REPONSE_INVALIDE` (jamais une donnée non vérifiée à l'écran).
@@ -44,6 +45,11 @@ const DELAI_RESEAU_MS = 20_000;
 const MARGE_EXPIRATION_MS = 30_000;
 /** Codes qui ferment la connexion locale. */
 const CODES_FIN_SESSION = new Set(['JETON_INVALIDE', 'JETON_REUTILISE', 'ACCES_REFUSE']);
+/**
+ * Codes qui effacent AUSSI les données de l'appareil (cache, file, clé) : rejeu détecté ou compte refusé
+ * (api-v1 § 1, revue sécurité PM5). `JETON_INVALIDE` (connexion expirée) garde la file : le Kayé non envoyé reste.
+ */
+const CODES_PURGE = new Set(['JETON_REUTILISE', 'ACCES_REFUSE']);
 
 type Methode = 'GET' | 'POST' | 'DELETE';
 type Options = { methode?: Methode; corps?: unknown; jeton?: string | null };
@@ -73,9 +79,11 @@ export function creerApiHttp(
     if (opts.corps !== undefined) entetes['Content-Type'] = 'application/json';
     if (opts.jeton) entetes.Authorization = `Bearer ${opts.jeton}`;
 
+    // Le délai couvre la requête ET la lecture du corps (revue m6) : un corps qui cale ne gèle plus la file.
     const ctrl = new AbortController();
     const minuteur = setTimeout(() => ctrl.abort(), DELAI_RESEAU_MS);
     let res: Response;
+    let texte: string;
     try {
       res = await fetch(`${api}${chemin}`, {
         method: opts.methode ?? 'GET',
@@ -83,14 +91,21 @@ export function creerApiHttp(
         body: opts.corps === undefined ? undefined : JSON.stringify(opts.corps),
         signal: ctrl.signal,
       });
+      texte = res.status === 204 ? '' : await res.text();
     } catch {
+      // Coupure pendant la requête ou pendant la lecture du corps : erreur réseau (nouvel essai), jamais « hors contrat ».
       throw new ApiError('RESEAU', MESSAGES.RESEAU);
     } finally {
       clearTimeout(minuteur);
     }
 
     if (res.status === 204) return undefined as z.infer<S>;
-    const json: unknown = await res.json().catch(() => null);
+    let json: unknown = null;
+    try {
+      json = texte ? JSON.parse(texte) : null;
+    } catch {
+      json = null;
+    }
 
     if (!res.ok) {
       const err = reponseErreurSchema.safeParse(json);
@@ -124,6 +139,20 @@ export function creerApiHttp(
     for (const cb of ecouteurs) cb(message);
   }
 
+  /**
+   * Un /auth/refresh. Réponse perdue (RESEAU) : UN rejeu immédiat du même jeton, couvert par le délai de grâce
+   * de 30 s du serveur (X1). Jamais plus d'un rejeu : un second échec garde le jeton pour plus tard.
+   */
+  async function demanderJetons(jeton: string): Promise<ReponseJetons> {
+    const corps = { jetonRenouvellement: jeton };
+    try {
+      return await appeler('/auth/refresh', reponseJetonsSchema, { methode: 'POST', corps });
+    } catch (e) {
+      if (!(e instanceof ApiError) || e.code !== 'RESEAU') throw e;
+      return appeler('/auth/refresh', reponseJetonsSchema, { methode: 'POST', corps });
+    }
+  }
+
   /** Renouvellement sérialisé : un seul /auth/refresh à la fois, partagé par tous les appels. */
   function renouveler(): Promise<void> {
     if (!enCours) {
@@ -134,11 +163,13 @@ export function creerApiHttp(
           throw new ApiError('JETON_INVALIDE', MESSAGES.JETON_INVALIDE, 401);
         }
         try {
-          await garder(await appeler('/auth/refresh', reponseJetonsSchema, { methode: 'POST', corps: { jetonRenouvellement: jeton } }));
+          await garder(await demanderJetons(jeton));
         } catch (e) {
           // Erreur réseau : on garde le jeton, on réessaiera. Jeton refusé : connexion terminée.
           if (e instanceof ApiError && CODES_FIN_SESSION.has(e.code)) {
             await effacer();
+            // Rejeu détecté ou compte refusé : les données de l'appareil sont effacées aussi (PM5).
+            if (CODES_PURGE.has(e.code)) await horsLigne.purger().catch(() => undefined);
             signalerPerte(e.message);
           }
           throw e;
@@ -276,7 +307,12 @@ export function creerApiHttp(
         await sessionOuverte(moi);
         return moi;
       } catch (e) {
-        if (e instanceof ApiError && (CODES_FIN_SESSION.has(e.code) || e.code === 'NON_AUTHENTIFIE')) {
+        if (e instanceof ApiError && CODES_FIN_SESSION.has(e.code)) {
+          // L'écran de connexion garde l'explication (« fermée par sécurité ») : on la renvoie (revue m7).
+          await effacer();
+          throw e;
+        }
+        if (e instanceof ApiError && e.code === 'NON_AUTHENTIFIE') {
           await effacer();
           return null;
         }
