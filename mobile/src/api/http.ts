@@ -2,6 +2,7 @@ import type { z } from 'zod';
 import {
   demandeEvenementsSchema,
   reponseAcceptationSchema,
+  reponseAppareilSchema,
   reponseCodeSchema,
   reponseErreurSchema,
   reponseEvenementsSchema,
@@ -41,7 +42,7 @@ const MARGE_EXPIRATION_MS = 30_000;
 /** Codes qui ferment la connexion locale. */
 const CODES_FIN_SESSION = new Set(['JETON_INVALIDE', 'JETON_REUTILISE', 'ACCES_REFUSE']);
 
-type Methode = 'GET' | 'POST';
+type Methode = 'GET' | 'POST' | 'DELETE';
 type Options = { methode?: Methode; corps?: unknown; jeton?: string | null };
 
 export function creerApiHttp(baseUrl: string, stockage: StockageJeton = creerStockageJeton()): KoudmenApi {
@@ -282,5 +283,13 @@ export function creerApiHttp(baseUrl: string, stockage: StockageJeton = creerSto
         methode: 'POST',
         corps: note?.trim() ? { note: note.trim() } : {},
       }),
+
+    async enregistrerAppareil(jeton, plateforme) {
+      const r = await appelerAuth('/appareils', reponseAppareilSchema, { methode: 'POST', corps: { jeton, plateforme } });
+      return { id: r.id };
+    },
+    async retirerAppareil(id) {
+      await appelerAuth(`/appareils/${encodeURIComponent(id)}`, null, { methode: 'DELETE' });
+    },
   };
 }

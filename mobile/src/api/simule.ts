@@ -255,5 +255,14 @@ export function creerApiSimulee(): KoudmenApi {
       propositions = propositions.filter((x) => x.id !== id);
       return { statut: 'REFUSEE', sansPenalite: true };
     },
+
+    // Lot N1 : aucun serveur ; l'appareil est « enregistré » en mémoire.
+    async enregistrerAppareil() {
+      exigerSession();
+      return { id: 'appareil-simule' };
+    },
+    async retirerAppareil() {
+      return undefined;
+    },
   };
 }

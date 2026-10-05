@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { api, messageErreur, type BrouillonKaye, type KayePublie } from '@/api';
 import { useAsync } from '@/lib/useAsync';
+import { proposerNotifications } from '@/push';
 import { retourAuxVisites } from '@/session/navigation';
 import { fonts, useTheme } from '@/theme';
 import { Avatar, Button, Card, Choice, Em, Field, Icon, IconButton, Kreyol, Screen, SwitchRow, Text, type ChoiceOption } from '@/ui';
@@ -165,6 +166,8 @@ export default function KayeFormulaire() {
         await api.enregistrerBrouillonKaye(id, versBrouillon(k));
       }
       setFini(envoyer ? 'envoye' : 'brouillon');
+      // Lot N1 : après une action réussie, proposer les notifications (une fois par appareil).
+      if (envoyer) proposerNotifications();
     } catch (e) {
       setErreur(`${messageErreur(e)} Votre texte reste ici.`);
     } finally {

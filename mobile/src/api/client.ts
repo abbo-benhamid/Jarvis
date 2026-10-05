@@ -30,6 +30,8 @@ import type {
  * | checkIn … sos        | POST /evenements (un `clientEventId` unique)   |
  * | listerPropositions   | GET  /propositions                             |
  * | accepter / refuser   | POST /propositions/{id}/accepter / refuser     |
+ * | enregistrerAppareil  | POST /appareils (lot N1, push)                 |
+ * | retirerAppareil      | DELETE /appareils/{id}                         |
  */
 export interface KoudmenApi {
   readonly mode: 'http' | 'simule';
@@ -68,4 +70,9 @@ export interface KoudmenApi {
   accepterProposition(id: string): Promise<ReponseAcceptation>;
   /** Refus SANS PÉNALITÉ. La note n'est jamais transmise à la famille. */
   refuserProposition(id: string, note?: string): Promise<ReponseRefus>;
+
+  /** Lot N1 : enregistre le jeton Expo Push de l'appareil (POST /appareils). Renvoie l'id à garder. */
+  enregistrerAppareil(jeton: string, plateforme: 'IOS' | 'ANDROID'): Promise<{ id: string }>;
+  /** Lot N1 : retire l'appareil (DELETE /appareils/{id}), avant la déconnexion. */
+  retirerAppareil(id: string): Promise<void>;
 }
