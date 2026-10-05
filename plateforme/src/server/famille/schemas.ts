@@ -5,6 +5,9 @@
 import { z } from "zod";
 import { COMMUNE_CODES } from "@/lib/communes";
 
+/** A6 : lien de rattachement d'un proche aidant à un aîné. */
+export const caregiverLinkSchema = z.object({ aineId: z.string().cuid() });
+
 export const NEED_VALUES = [
   "COMPAGNIE",
   "APPEL_REGULIER",

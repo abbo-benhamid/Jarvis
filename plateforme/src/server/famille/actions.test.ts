@@ -180,7 +180,7 @@ describe("joinCircleAction", () => {
   const future = () => new Date(Date.now() + 86_400_000);
 
   it("refuse un lien expiré", async () => {
-    db.invitation.findUnique.mockResolvedValue({ id: "i", aineId: AINE, relation: "nièce", expiresAt: new Date(Date.now() - 1000), acceptedAt: null, aine: { sandboxId: null } });
+    db.invitation.findUnique.mockResolvedValue({ id: "i", kind: "LAKOU", aineId: AINE, relation: "nièce", expiresAt: new Date(Date.now() - 1000), acceptedAt: null, aine: { sandboxId: null } });
     const r = await actions.joinCircleAction(empty, fd({ token }));
     expect(r.ok).toBe(false);
     expect(!r.ok && r.error).toContain("expiré");
@@ -188,13 +188,13 @@ describe("joinCircleAction", () => {
   });
 
   it("refuse un lien déjà utilisé", async () => {
-    db.invitation.findUnique.mockResolvedValue({ id: "i", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: new Date(), aine: { sandboxId: null } });
+    db.invitation.findUnique.mockResolvedValue({ id: "i", kind: "LAKOU", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: new Date(), aine: { sandboxId: null } });
     const r = await actions.joinCircleAction(empty, fd({ token }));
     expect(!r.ok && r.error).toContain("déjà été utilisé");
   });
 
   it("refuse si un autre compte a utilisé le lien entre-temps (course)", async () => {
-    db.invitation.findUnique.mockResolvedValue({ id: "i", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: null, aine: { sandboxId: null } });
+    db.invitation.findUnique.mockResolvedValue({ id: "i", kind: "LAKOU", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: null, aine: { sandboxId: null } });
     db.lakouMember.findUnique.mockResolvedValue(null);
     db.invitation.updateMany.mockResolvedValue({ count: 0 });
     const r = await actions.joinCircleAction(empty, fd({ token }));
@@ -203,7 +203,7 @@ describe("joinCircleAction", () => {
   });
 
   it("ajoute le membre au cercle, journalise et redirige", async () => {
-    db.invitation.findUnique.mockResolvedValue({ id: "i", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: null, aine: { sandboxId: null } });
+    db.invitation.findUnique.mockResolvedValue({ id: "i", kind: "LAKOU", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: null, aine: { sandboxId: null } });
     db.lakouMember.findUnique.mockResolvedValue(null);
     db.invitation.updateMany.mockResolvedValue({ count: 1 });
     await expect(actions.joinCircleAction(empty, fd({ token }))).rejects.toThrow(`REDIRECT:/famille/aines/${AINE}?bienvenue=1`);
@@ -212,10 +212,30 @@ describe("joinCircleAction", () => {
   });
 
   it("D2 : refuse un lien qui vient d'un autre monde (bac à sable)", async () => {
-    db.invitation.findUnique.mockResolvedValue({ id: "i", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: null, aine: { sandboxId: "sbx-autre" } });
+    db.invitation.findUnique.mockResolvedValue({ id: "i", kind: "LAKOU", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: null, aine: { sandboxId: "sbx-autre" } });
     const r = await actions.joinCircleAction(empty, fd({ token }));
     expect(!r.ok && r.error).toContain("pas valide");
     expect(db.lakouMember.create).not.toHaveBeenCalled();
+  });
+
+  it("A6 : un lien « proche aidant » n'ouvre jamais le cercle Lakou", async () => {
+    db.invitation.findUnique.mockResolvedValue({ id: "i", kind: "PROCHE_AIDANT", aineId: AINE, relation: "proche aidant", expiresAt: future(), acceptedAt: null, aine: { sandboxId: null } });
+    const r = await actions.joinCircleAction(empty, fd({ token }));
+    expect(!r.ok && r.error).toContain("pas valide");
+    expect(db.lakouMember.create).not.toHaveBeenCalled();
+  });
+
+  it("A6 : seul le payeur crée un lien proche aidant ; le jeton n'est pas dans l'audit", async () => {
+    db.lakouMember.findUnique.mockResolvedValue({ isPayer: false });
+    const refused = await actions.inviteCaregiverRelativeAction(empty, fd({ aineId: AINE }));
+    expect(!refused.ok && refused.error).toMatch(/gestionnaire principal/);
+    db.lakouMember.findUnique.mockResolvedValue({ isPayer: true });
+    db.invitation.create.mockResolvedValue({ id: "inv-pa" });
+    const r = await actions.inviteCaregiverRelativeAction(empty, fd({ aineId: AINE }));
+    expect(r.ok && r.data?.link).toMatch(/^https:\/\/koudmen\.test\/proche-aidant\/[A-Za-z0-9_-]{32}$/);
+    expect(db.invitation.create.mock.calls[0]![0].data).toMatchObject({ kind: "PROCHE_AIDANT", aineId: AINE });
+    const linkToken = (r.ok && r.data?.link.split("/").pop()) || "";
+    expect(JSON.stringify(logAudit.mock.calls)).not.toContain(linkToken);
   });
 
   it("refuse un jeton mal formé sans requête", async () => {

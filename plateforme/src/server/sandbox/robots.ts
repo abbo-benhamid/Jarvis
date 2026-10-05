@@ -1,4 +1,5 @@
 import "server-only";
+import { randomBytes } from "node:crypto";
 import type { CaregiverStatus, TimeSlot } from "@prisma/client";
 import { db } from "@/server/db";
 import { logAudit } from "@/server/audit";
@@ -219,6 +220,8 @@ async function compatibleCaregivers(sandboxId: string, r: RequestForRobots): Pro
 async function recruitTailoredCaregiver(sandboxId: string, operatorId: string, r: RequestForRobots, now: Date) {
   const status: CaregiverStatus = r.level === 4 ? "SAAD" : "SALARIE_FAMILLE_CESU";
   const n = await db.user.count({ where: { sandboxId, role: "ACCOMPAGNANT" } });
+  // m2 : identifiant unique (deux simulations ne créent jamais le même e-mail).
+  const slug = `recrue-${randomBytes(6).toString("hex")}`;
   const names = [
     ["Rosette", "Bellay"],
     ["Firmin", "Lagier"],
@@ -229,7 +232,7 @@ async function recruitTailoredCaregiver(sandboxId: string, operatorId: string, r
   const avail: [number, TimeSlot][] = r.slots.length > 0 ? r.slots.map((s) => [s.dayOfWeek, s.slot]) : [[5, "MATIN"]];
   await db.$transaction((tx) =>
     createRobotCaregiver(tx, sandboxId, operatorId, now, {
-      slug: `recrue-${n}`,
+      slug,
       firstName: firstName!,
       lastName: lastName!,
       status,
@@ -271,7 +274,9 @@ async function simulateCaregiver(tester: Tester, now: Date): Promise<SimulationR
       saadName: profile.saadName,
       siret: profile.siret,
     });
-    const rate = statusIsPaid(status) && profile.hourlyRateCents == null ? Math.max(1500, statusIsSalaried(status) ? PLANCHER_SALARIE_CENTS : 0) : profile.hourlyRateCents;
+    // D10 (M1) : un tarif existant sous le plancher salarié est relevé au plancher.
+    const base = profile.hourlyRateCents ?? 1500;
+    const rate = statusIsPaid(status) ? (statusIsSalaried(status) ? Math.max(base, PLANCHER_SALARIE_CENTS) : base) : null;
     await db.$transaction(async (tx) => {
       await tx.caregiverProfile.update({
         where: { id: profile.id },
@@ -411,52 +416,77 @@ async function familyRobotChoosesTester(
   const commune = profile.communes[0] ?? "FORT_DE_FRANCE";
   const level = [1, 2, 3, 4].find((l) => profile.allowedLevels.includes(l)) ?? 1;
   const slot = profile.availabilities[0];
-  let aine = await db.aine.findFirst({ where: { sandboxId: sid, ownerId: patrick.id, commune }, select: { id: true, firstName: true } });
-  if (!aine) {
-    const c = getCommune(commune)!;
-    aine = await db.aine.create({
+  const procheAidant = profile.status === "PROCHE_AIDANT_APA";
+  const homeCode = await generateUniqueHomeCode();
+  // UNE transaction pour l'étape (m2, A6) : aîné, rattachement du proche aidant, demande, proposition, choix.
+  // Si une règle bloque, RIEN n'est écrit : plus de demande orpheline.
+  const aine = await db.$transaction(async (tx) => {
+    // Proche aidant (D7) : dans la fiction, Ernest est SON parent. On réutilise l'aîné déjà rattaché.
+    let a = procheAidant && profile.linkedAineId
+      ? await tx.aine.findFirst({ where: { id: profile.linkedAineId, sandboxId: sid }, select: { id: true, firstName: true } })
+      : await tx.aine.findFirst({ where: { sandboxId: sid, ownerId: patrick.id, commune }, select: { id: true, firstName: true } });
+    if (!a) {
+      const c = getCommune(commune)!;
+      a = await tx.aine.create({
+        data: {
+          firstName: "Ernest",
+          lastInitial: "B.",
+          commune,
+          addressHint: "Quartier fictif",
+          latitude: c.lat,
+          longitude: c.lng,
+          phone: "+596 596 00 00 12 (fictif)",
+          needs: ["COMPAGNIE", "COURSES"],
+          activityLevel: level,
+          consentGiven: true,
+          consentByType: "REPRESENTANT",
+          consentByName: "Patrick B. (personnage fictif)",
+          consentAt: now,
+          homeCode,
+          sandboxId: sid,
+          ownerId: patrick.id,
+          members: { create: { userId: patrick.id, relation: "fils", isPayer: true } },
+          subscription: { create: { payerId: patrick.id, plan: "KOZE", priceCents: 3900 } },
+        },
+        select: { id: true, firstName: true },
+      });
+    }
+    if (procheAidant && profile.linkedAineId !== a.id) {
+      // A6 : même effet que le lien « proche aidant » créé par la famille (robot Patrick).
+      await tx.caregiverProfile.update({ where: { id: profile.id }, data: { linkedAineId: a.id } });
+      await logAudit(
+        { actor: patrick, action: "caregiver.linked_aine", entityType: "CaregiverProfile", entityId: profile.id, metadata: { aineId: a.id, robot: true } },
+        tx,
+      );
+    }
+    const request = await tx.careRequest.create({
       data: {
-        firstName: "Ernest",
-        lastInitial: "B.",
-        commune,
-        addressHint: "Quartier fictif",
-        latitude: c.lat,
-        longitude: c.lng,
-        phone: "+596 596 00 00 12 (fictif)",
-        needs: ["COMPAGNIE", "COURSES"],
-        activityLevel: level,
-        consentGiven: true,
-        consentByType: "REPRESENTANT",
-        consentByName: "Patrick B. (personnage fictif)",
-        consentAt: now,
-        homeCode: await generateUniqueHomeCode(),
-        sandboxId: sid,
-        ownerId: patrick.id,
-        members: { create: { userId: patrick.id, relation: "fils", isPayer: true } },
-        subscription: { create: { payerId: patrick.id, plan: "KOZE", priceCents: 3900 } },
+        aineId: a.id,
+        createdById: patrick.id,
+        level,
+        frequency: "HEBDOMADAIRE",
+        durationMinutes: 60,
+        notes: "Mon père aime parler du marché et des combats de coqs d'autrefois.",
+        employerType: "REPRESENTANT",
+        employerName: "Patrick B. (fictif)",
+        slots: slot ? { create: [{ dayOfWeek: slot.dayOfWeek, slot: slot.slot }] } : undefined,
       },
-      select: { id: true, firstName: true },
     });
-  }
-  const request = await db.careRequest.create({
-    data: {
-      aineId: aine.id,
-      createdById: patrick.id,
-      level,
-      frequency: "HEBDOMADAIRE",
-      durationMinutes: 60,
-      notes: "Mon père aime parler du marché et des combats de coqs d'autrefois.",
-      employerType: "REPRESENTANT",
-      employerName: "Patrick B. (fictif)",
-      slots: slot ? { create: [{ dayOfWeek: slot.dayOfWeek, slot: slot.slot }] } : undefined,
-    },
+    const { proposalId } = await proposeProfile(
+      operator,
+      { requestId: request.id, caregiverId: profile.id, message: "Proposition du robot Koudmen (bac à sable)." },
+      sid,
+      tx,
+    );
+    await chooseProfile(patrick, proposalId, now, tx);
+    return a;
   });
-  const { proposalId } = await proposeProfile(operator, { requestId: request.id, caregiverId: profile.id, message: "Proposition du robot Koudmen (bac à sable)." }, sid);
-  await chooseProfile(patrick, proposalId, now);
   return {
     step: "FAMILLE_CHOISIT",
     acted: true,
-    message: `Patrick cherche quelqu'un pour son père ${aine.firstName}, à ${communeLabel(commune)}. Koudmen lui a montré votre profil. Il vous a choisi(e). Répondez dans « Propositions ».`,
+    message: procheAidant
+      ? `Dans ce test, ${aine.firstName} est votre parent. Patrick, votre frère, vous a rattaché(e) à ${aine.firstName} comme proche aidant, puis il vous a choisi(e). Répondez dans « Propositions ».`
+      : `Patrick cherche quelqu'un pour son père ${aine.firstName}, à ${communeLabel(commune)}. Koudmen lui a montré votre profil. Il vous a choisi(e). Répondez dans « Propositions ».`,
     href: "/accompagnant/propositions",
     hrefLabel: "Voir la proposition",
   };

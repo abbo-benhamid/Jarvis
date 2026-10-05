@@ -3,6 +3,7 @@ import { Prisma, type Role } from "@prisma/client";
 import { db } from "@/server/db";
 import { logAudit } from "@/server/audit";
 import { notifyLakou } from "@/server/outbox";
+import { sameScope } from "@/server/scope";
 import { isDemoMode } from "@/server/env";
 import { orientCaregiver, type OrientationAnswers, type OrientationResult } from "@/server/rules/orientation";
 import { allowedLevelsFor, canStatusDoLevel, statusIsPaid } from "@/server/rules/status-levels";
@@ -628,4 +629,57 @@ export async function createKaye(actor: Actor, input: KayeInput) {
     }
     throw e;
   }
+}
+
+// ─────────────────────────────── A6 — Proche aidant rattaché à son aîné (D7) ───────────────────────────────
+
+/**
+ * Le proche aidant ouvre le lien créé par le payeur. Contrôles serveur :
+ * - lien de type PROCHE_AIDANT, valide, pas encore utilisé, du MÊME monde (D2) ;
+ * - le compte est un accompagnant au statut PROCHE_AIDANT_APA (D7 : statut réservé à son propre parent).
+ * Effet : linkedAineId = cet aîné. Le lien sert une seule fois. Le cercle Lakou est prévenu.
+ */
+export async function linkCaregiverToAine(
+  actor: Actor & { sandboxId: string | null },
+  token: string,
+  now: Date = new Date(),
+  client?: Prisma.TransactionClient,
+): Promise<{ aineId: string; aineFirstName: string }> {
+  const run = async (tx: Prisma.TransactionClient) => {
+    const inv = await tx.invitation.findUnique({
+      where: { token },
+      select: { id: true, kind: true, aineId: true, acceptedAt: true, expiresAt: true, aine: { select: { firstName: true, sandboxId: true } } },
+    });
+    if (!inv || inv.kind !== "PROCHE_AIDANT" || !sameScope(inv.aine.sandboxId, actor.sandboxId)) {
+      throw new AccompagnantError("Ce lien n'est pas valable.", "INTROUVABLE");
+    }
+    if (inv.acceptedAt) throw new AccompagnantError("Ce lien a déjà été utilisé. Demandez un nouveau lien à la famille.", "CONFLIT");
+    if (inv.expiresAt.getTime() <= now.getTime()) throw new AccompagnantError("Ce lien a expiré. Demandez un nouveau lien à la famille.", "INVALIDE");
+    const profile = await tx.caregiverProfile.findUnique({ where: { userId: actor.id }, select: { id: true, status: true, linkedAineId: true } });
+    if (!profile || profile.status !== "PROCHE_AIDANT_APA") {
+      throw new AccompagnantError(
+        "Ce lien sert seulement à un proche aidant. Faites d'abord l'orientation : à la question sur le lien familial, répondez « Enfant ou parent ».",
+        "INTERDIT",
+      );
+    }
+    const claimed = await tx.invitation.updateMany({
+      where: { id: inv.id, acceptedAt: null, expiresAt: { gt: now } },
+      data: { acceptedAt: now, acceptedById: actor.id },
+    });
+    if (claimed.count !== 1) throw new AccompagnantError("Ce lien a déjà été utilisé. Demandez un nouveau lien à la famille.", "CONFLIT");
+    await tx.caregiverProfile.update({ where: { id: profile.id }, data: { linkedAineId: inv.aineId } });
+    await logAudit(
+      {
+        actor,
+        action: "caregiver.linked_aine",
+        entityType: "CaregiverProfile",
+        entityId: profile.id,
+        metadata: { aineId: inv.aineId, invitationId: inv.id, replaced: profile.linkedAineId !== null && profile.linkedAineId !== inv.aineId },
+      },
+      tx,
+    );
+    await notifyLakou(inv.aineId, "PROCHE_AIDANT_RATTACHE", { accompagnant: actor.firstName, aine: inv.aine.firstName }, { type: "CaregiverProfile", id: profile.id }, tx);
+    return { aineId: inv.aineId, aineFirstName: inv.aine.firstName };
+  };
+  return client ? run(client) : db.$transaction(run);
 }

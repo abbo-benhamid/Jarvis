@@ -14,6 +14,7 @@ import { LinkButton } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { LevelBadge } from "@/components/status-badges";
 import { HomeCode } from "@/components/famille/home-code";
+import { CaregiverLinkForm } from "@/components/famille/caregiver-link-form";
 
 export const metadata: Metadata = { title: "Fiche de l'aîné" };
 
@@ -105,6 +106,14 @@ export default async function Page({ params, searchParams }: Props) {
             </Link>
           </Card>
         </div>
+
+        {/* A6 (D7) : rattacher un proche aidant à cet aîné (payeur seulement). */}
+        {isPayer ? (
+          <Card className="flex flex-col gap-2">
+            <CardTitle>Proche aidant</CardTitle>
+            <CaregiverLinkForm aineId={aine.id} aineFirstName={aine.firstName} />
+          </Card>
+        ) : null}
 
         <nav aria-label={`Raccourcis pour ${aine.firstName}`}>
           <ul className="grid gap-3 sm:grid-cols-2">

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const tx = { discoveryRequest: { delete: vi.fn(), deleteMany: vi.fn() } };
 const db = {
   discoveryRequest: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn() },
-  sandbox: { findUnique: vi.fn() },
+  sandbox: { findUnique: vi.fn(), updateMany: vi.fn(), update: vi.fn() },
   $transaction: vi.fn(async (fn: (t: typeof tx) => unknown) => fn(tx)),
 };
 vi.mock("@/server/db", () => ({ db }));
@@ -24,7 +24,8 @@ vi.mock("@/server/auth/guards", () => ({ requireRole: async () => family, getCur
 const createSandbox = vi.fn();
 class SandboxError extends Error {}
 vi.mock("./service", () => ({ createSandbox: (...a: unknown[]) => createSandbox(...a), SandboxError }));
-vi.mock("./robots", () => ({ simulateNext: vi.fn() }));
+const simulateNext = vi.fn();
+vi.mock("./robots", () => ({ simulateNext: (...a: unknown[]) => simulateNext(...a) }));
 vi.mock("./events", () => ({ trackEvent: vi.fn(async () => undefined) }));
 vi.mock("next/cache", () => ({ revalidatePath: () => undefined }));
 vi.mock("next/navigation", () => ({
@@ -117,5 +118,23 @@ describe("offre « visite découverte » (M4, M6)", () => {
     await expect(actions.withdrawMyDiscoveryAction()).rejects.toThrow("REDIRECT:/famille/visite-decouverte?retire=1");
     expect(tx.discoveryRequest.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ["d1", "d2"] } } });
     expect(logAudit).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("« Simuler la suite » (m2)", () => {
+  it("refuse une deuxième simulation pendant la première (double clic), sans appeler les robots", async () => {
+    db.sandbox.updateMany.mockResolvedValue({ count: 0 });
+    const r = await actions.simulateAction(initialActionState as never);
+    expect(r).toMatchObject({ ok: false, error: "Une simulation est déjà en cours. Attendez quelques secondes." });
+    expect(simulateNext).not.toHaveBeenCalled();
+  });
+
+  it("prend le verrou, joue l'étape, puis libère le verrou même en cas d'erreur", async () => {
+    db.sandbox.updateMany.mockResolvedValue({ count: 1 });
+    simulateNext.mockRejectedValueOnce(new Error("panne"));
+    await expect(actions.simulateAction(initialActionState as never)).rejects.toThrow("panne");
+    expect(db.sandbox.update).toHaveBeenCalledWith({ where: { id: "sbx1" }, data: { simulationLockedUntil: null } });
+    const where = db.sandbox.updateMany.mock.calls[0]![0].where;
+    expect(where.id).toBe("sbx1");
   });
 });

@@ -33,6 +33,9 @@ const startSchema = z.object({
   acceptTest: z.literal("on", { message: "Confirmez que vous utilisez uniquement des données fictives." }),
 });
 
+/** Durée maximale du verrou de « Simuler la suite » (libéré dès la fin de l'étape). */
+const SIMULATION_LEASE_MS = 60_000;
+
 function hashWithdrawToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -79,7 +82,19 @@ async function sandboxTester() {
 export async function simulateAction(_prev: ActionResult<SimulationResult>): Promise<ActionResult<SimulationResult>> {
   const tester = await sandboxTester();
   if (!tester) return fail("La simulation existe seulement dans un bac à sable de test.");
-  const result = await simulateNext(tester);
+  // m2 : une seule simulation à la fois par bac à sable (double clic, deux onglets). Bail atomique de 60 s.
+  const now = new Date();
+  const lease = await db.sandbox.updateMany({
+    where: { id: tester.sandboxId, OR: [{ simulationLockedUntil: null }, { simulationLockedUntil: { lt: now } }] },
+    data: { simulationLockedUntil: new Date(now.getTime() + SIMULATION_LEASE_MS) },
+  });
+  if (lease.count !== 1) return fail("Une simulation est déjà en cours. Attendez quelques secondes.");
+  let result: SimulationResult;
+  try {
+    result = await simulateNext(tester);
+  } finally {
+    await db.sandbox.update({ where: { id: tester.sandboxId }, data: { simulationLockedUntil: null } });
+  }
   await db.sandbox.update({ where: { id: tester.sandboxId }, data: { simulationCount: { increment: 1 }, lastSeenAt: new Date() } });
   await trackEvent(tester, "simulate.step", { metadata: { step: result.step, acted: result.acted } });
   revalidatePath("/", "layout");

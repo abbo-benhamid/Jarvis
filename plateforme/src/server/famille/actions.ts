@@ -18,6 +18,7 @@ import { getPlan } from "@/lib/plans";
 import { formatEuros } from "@/lib/format";
 import type { ActionResult } from "@/lib/action-result";
 import {
+  caregiverLinkSchema,
   aineCreateSchema,
   aineUpdateSchema,
   cancelRequestSchema,
@@ -183,7 +184,8 @@ export async function joinCircleAction(_prev: ActionResult, formData: FormData):
   if (!parsed.success) return { ok: false, error: "Ce lien d'invitation n'est pas valide." };
   const inv = await db.invitation.findUnique({ where: { token: parsed.data.token }, include: { aine: { select: { sandboxId: true } } } });
   // Cloisonnement (D2) : un lien d'un bac à sable ne s'ouvre pas depuis un autre monde.
-  if (!inv || !sameScope(inv.aine.sandboxId, user.sandboxId)) return { ok: false, error: "Ce lien d'invitation n'est pas valide." };
+  // A6 : un lien « proche aidant » ne fait jamais entrer dans le cercle Lakou.
+  if (!inv || inv.kind !== "LAKOU" || !sameScope(inv.aine.sandboxId, user.sandboxId)) return { ok: false, error: "Ce lien d'invitation n'est pas valide." };
   const now = new Date();
   const state = invitationState(inv, now);
   if (state === "EXPIREE") return { ok: false, error: "Ce lien a expiré. Demandez un nouveau lien à la personne qui vous a invité(e)." };
@@ -206,6 +208,41 @@ export async function joinCircleAction(_prev: ActionResult, formData: FormData):
   if (!joined) return { ok: false, error: "Ce lien a déjà été utilisé. Demandez un nouveau lien à la personne qui vous a invité(e)." };
   revalidatePath("/famille");
   redirect(`/famille/aines/${inv.aineId}?bienvenue=1`);
+}
+
+// ─────────────────────────────── A6 : rattacher un proche aidant (D7) ───────────────────────────────
+
+/**
+ * A6 : le payeur crée un lien pour rattacher un PROCHE AIDANT (compte Accompagnant, statut PROCHE_AIDANT_APA)
+ * à cet aîné. Après acceptation, Koudmen peut proposer ce proche aidant pour CET aîné seulement (D7).
+ */
+export async function inviteCaregiverRelativeAction(
+  _prev: ActionResult<{ link: string; expiresAt: string }>,
+  formData: FormData,
+): Promise<ActionResult<{ link: string; expiresAt: string }>> {
+  const user = await requireRole("FAMILLE");
+  const parsed = caregiverLinkSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success) return { ok: false, error: NOT_FOUND };
+  const member = await db.lakouMember.findUnique({ where: { aineId_userId: { aineId: parsed.data.aineId, userId: user.id } }, select: { isPayer: true } });
+  if (!member) return { ok: false, error: NOT_FOUND };
+  if (!member.isPayer) return { ok: false, error: "Seul le gestionnaire principal du profil peut rattacher un proche aidant." };
+
+  const token = randomBytes(24).toString("base64url");
+  const expiresAt = invitationExpiry();
+  const link = `${appUrl()}/proche-aidant/${token}`;
+  await db.$transaction(async (tx) => {
+    const inv = await tx.invitation.create({
+      data: { aineId: parsed.data.aineId, token, kind: "PROCHE_AIDANT", relation: "proche aidant", createdById: user.id, expiresAt },
+      select: { id: true },
+    });
+    // Jamais le jeton dans l'audit.
+    await logAudit({ actor: user, action: "caregiver_link.invited", entityType: "Invitation", entityId: inv.id, metadata: { aineId: parsed.data.aineId } }, tx);
+  });
+  return {
+    ok: true,
+    message: "Lien créé. Envoyez-le à votre proche : il l'ouvre avec son compte Accompagnant (statut proche aidant).",
+    data: { link, expiresAt: expiresAt.toISOString() },
+  };
 }
 
 // ─────────────────────────────── F5 / F6 : demandes ───────────────────────────────

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireRole } from "@/server/auth/guards";
 import { orientationSchema, type OrientationResult } from "@/server/rules/orientation";
 import { fail, type ActionResult } from "@/lib/action-result";
+import { isConcurrencyError } from "@/server/matching/locks";
 import {
   acceptSchema,
   codeCheckInSchema,
@@ -25,6 +26,7 @@ import {
   createKaye,
   declareVerification,
   declineProposal,
+  linkCaregiverToAine,
   saveOrientation,
   saveProfile,
   submitForReview,
@@ -36,6 +38,20 @@ import {
  * 1. requireRole("ACCOMPAGNANT") ; 2. validation Zod ; 3. service (contrôle de propriété + écriture).
  */
 
+/** A6 : le proche aidant accepte le lien de rattachement à son aîné (D7). */
+export async function linkToAineAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const u = await requireRole("ACCOMPAGNANT");
+  const token = formData.get("token");
+  if (typeof token !== "string" || !/^[A-Za-z0-9_-]{20,100}$/.test(token)) return fail("Ce lien n'est pas valable.");
+  try {
+    const r = await linkCaregiverToAine({ id: u.id, role: u.role, firstName: u.firstName, sandboxId: u.sandboxId }, token);
+    revalidatePath("/accompagnant", "layout");
+    return { ok: true, message: `C'est fait : vous êtes rattaché(e) à ${r.aineFirstName} comme proche aidant. Koudmen peut vous proposer pour ${r.aineFirstName} seulement.` };
+  } catch (e) {
+    return toFailure(e);
+  }
+}
+
 async function actor(): Promise<Actor> {
   const u = await requireRole("ACCOMPAGNANT");
   return { id: u.id, role: u.role, firstName: u.firstName };
@@ -43,6 +59,8 @@ async function actor(): Promise<Actor> {
 
 function toFailure(e: unknown): ActionResult<never> {
   if (e instanceof AccompagnantError) return fail(e.message);
+  // m1 : un conflit de concurrence devient un message clair, jamais une page d'erreur.
+  if (isConcurrencyError(e)) return fail("Cet élément a changé entre-temps. Rechargez la page, puis réessayez.");
   throw e;
 }
 

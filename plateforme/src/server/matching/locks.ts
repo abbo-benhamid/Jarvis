@@ -14,11 +14,6 @@ export async function lockCareRequests(tx: Prisma.TransactionClient, ids: string
   }
 }
 
-/** Verrou par bac à sable pour « Simuler la suite » (m2) : un seul appel à la fois. */
-export async function lockSandbox(tx: Prisma.TransactionClient, sandboxId: string): Promise<void> {
-  await tx.$queryRaw`SELECT "id" FROM "Sandbox" WHERE "id" = ${sandboxId} FOR UPDATE`;
-}
-
 /** Erreur de concurrence PostgreSQL ou Prisma : conflit d'écriture, deadlock, sérialisation. */
 export function isConcurrencyError(e: unknown): boolean {
   if (e instanceof Prisma.PrismaClientKnownRequestError) {
