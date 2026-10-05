@@ -9,6 +9,8 @@ import { allowedLevelsFor, canStatusDoLevel, statusIsPaid } from "@/server/rules
 import { evaluateGps, verifyHomeCode } from "@/server/visits/proof";
 import { recordProof, refreshVisitStatus } from "@/server/visits/service";
 import { formatTime } from "@/lib/format";
+import { lockCareRequests } from "@/server/matching/locks";
+import { inTransaction } from "@/server/matching/service";
 import { MOOD_LABELS } from "@/lib/labels";
 import { planVisits } from "./schedule";
 import {
@@ -86,10 +88,24 @@ async function loadOwnedVisit(userId: string, visitId: string) {
       aine: { select: { id: true, firstName: true, latitude: true, longitude: true, homeCode: true } },
       proofs: true,
       journal: { select: { id: true } },
+      caregiver: { select: { validation: true } },
+      mission: { select: { status: true } },
     },
   });
   if (!visit) throw new AccompagnantError("Visite introuvable.", "INTROUVABLE");
   return visit;
+}
+
+/**
+ * A1 (M4) : un accompagnant suspendu ou refusé, ou une mission suspendue, n'a plus de check-in ni de Kayé.
+ */
+function assertActiveCaregiver(visit: { caregiver: { validation: string }; mission: { status: string } }) {
+  if (visit.caregiver.validation !== "VALIDE") {
+    throw new AccompagnantError("Votre profil n'est pas actif. Vous ne pouvez plus faire de check-in ni écrire de Kayé.", "INTERDIT");
+  }
+  if (visit.mission.status !== "ACTIVE") {
+    throw new AccompagnantError("Cette mission est suspendue ou terminée. Vous ne pouvez plus faire de check-in ni écrire de Kayé.", "INTERDIT");
+  }
 }
 
 // ─────────────────────────────── A2 — Orientation ───────────────────────────────
@@ -107,6 +123,11 @@ export async function saveOrientation(actor: Actor, answers: OrientationAnswers)
   // RM-03 : niveaux TOUJOURS recalculés côté serveur.
   const allowedLevels = status ? allowedLevelsFor(status, { hasDiploma: profile.hasDiploma }) : [];
   const required = result.requiredVerifications;
+  // D10 (M1) : un nouveau statut salarié n'hérite jamais d'un tarif sous le plancher. Le tarif est effacé :
+  // le profil redevient incomplet, l'accompagnant fixe un nouveau tarif.
+  const keepRate =
+    status !== "BENEVOLE_ASSO" &&
+    !(statusIsSalaried(status) && profile.hourlyRateCents != null && profile.hourlyRateCents < PLANCHER_SALARIE_CENTS);
 
   await db.$transaction(async (tx) => {
     await tx.caregiverProfile.update({
@@ -115,7 +136,7 @@ export async function saveOrientation(actor: Actor, answers: OrientationAnswers)
         status,
         orientationAnswers: answers as Prisma.InputJsonValue,
         allowedLevels,
-        hourlyRateCents: status === "BENEVOLE_ASSO" ? null : profile.hourlyRateCents,
+        hourlyRateCents: keepRate ? profile.hourlyRateCents : null,
         // Un nouveau statut demande une nouvelle demande de vérification.
         validation: profile.validation === "EN_ATTENTE" ? "BROUILLON" : profile.validation,
       },
@@ -255,8 +276,17 @@ export type AcceptResult = { missionId: string; visitCount: number; cancelledCou
  * → autres propositions ANNULEE → audit → notification du cercle Lakou.
  * Toute erreur annule l'ensemble.
  */
-export async function acceptProposal(actor: Actor, proposalId: string, now: Date = new Date()): Promise<AcceptResult> {
-  return db.$transaction(async (tx) => {
+export async function acceptProposal(
+  actor: Actor,
+  proposalId: string,
+  now: Date = new Date(),
+  client?: Prisma.TransactionClient,
+): Promise<AcceptResult> {
+  return inAccompagnantTransaction(client, async (tx) => {
+    // m1 : verrou de la DEMANDE d'abord (même ordre que choisir, annuler, suspendre).
+    const ref = await tx.missionProposal.findFirst({ where: ownedProposalWhere(actor.id, proposalId), select: { requestId: true } });
+    if (!ref) throw new AccompagnantError("Proposition introuvable.", "INTROUVABLE");
+    await lockCareRequests(tx, [ref.requestId]);
     const proposal = await tx.missionProposal.findFirst({
       where: ownedProposalWhere(actor.id, proposalId),
       include: {
@@ -280,18 +310,25 @@ export async function acceptProposal(actor: Actor, proposalId: string, now: Date
     if (paid && cg.hourlyRateCents == null) {
       throw new AccompagnantError("Fixez d'abord votre tarif horaire dans votre profil.", "INVALIDE");
     }
+    // D10 (M1) : la mission copie le tarif. Un salarié n'est jamais payé sous le plancher légal.
+    if (statusIsSalaried(cg.status) && cg.hourlyRateCents != null && cg.hourlyRateCents < PLANCHER_SALARIE_CENTS) {
+      throw new AccompagnantError(
+        `Votre tarif est sous le minimum légal d'un salarié (${(PLANCHER_SALARIE_CENTS / 100).toFixed(2).replace(".", ",")} € brut de l'heure). Augmentez votre tarif dans votre profil.`,
+        "TARIF",
+      );
+    }
 
-    // Verrous optimistes : une seule acceptation possible, même en cas de clics simultanés.
-    const p = await tx.missionProposal.updateMany({
-      where: { id: proposal.id, status: "EN_ATTENTE" },
-      data: { status: "ACCEPTEE", respondedAt: now },
-    });
-    if (p.count !== 1) throw new AccompagnantError("Cette proposition n'est plus en attente.", "CONFLIT");
+    // La demande d'abord (déjà verrouillée), puis la proposition : une seule acceptation possible.
     const r = await tx.careRequest.updateMany({
       where: { id: request.id, status: { in: ["PROPOSEE", "OUVERTE"] } },
       data: { status: "POURVUE" },
     });
     if (r.count !== 1) throw new AccompagnantError("Cette demande n'est plus disponible.", "CONFLIT");
+    const p = await tx.missionProposal.updateMany({
+      where: { id: proposal.id, status: "EN_ATTENTE" },
+      data: { status: "ACCEPTEE", respondedAt: now },
+    });
+    if (p.count !== 1) throw new AccompagnantError("Cette proposition n'est plus en attente.", "CONFLIT");
 
     const mission = await tx.mission.create({
       data: {
@@ -354,12 +391,25 @@ export async function acceptProposal(actor: Actor, proposalId: string, now: Date
   });
 }
 
+/** Transaction du Lot B : conflits de concurrence (deadlock, sérialisation) traduits en CONFLIT (m1). */
+async function inAccompagnantTransaction<T>(client: Prisma.TransactionClient | undefined, fn: (tx: Prisma.TransactionClient) => Promise<T>) {
+  try {
+    return await inTransaction(client, fn, "Cette proposition a changé entre-temps. Rechargez la page.");
+  } catch (e) {
+    if (e instanceof Error && e.name === "MatchingError") throw new AccompagnantError(e.message, "CONFLIT");
+    throw e;
+  }
+}
+
 /**
  * Refuse une proposition. RM-05 : AUCUN effet sur le profil (pas de compteur, pas de baisse de visibilité).
  * La note est facultative et n'est jamais transmise à la famille.
  */
 export async function declineProposal(actor: Actor, proposalId: string, declineNote: string | null, now: Date = new Date()) {
-  return db.$transaction(async (tx) => {
+  return inAccompagnantTransaction(undefined, async (tx) => {
+    const ref = await tx.missionProposal.findFirst({ where: ownedProposalWhere(actor.id, proposalId), select: { requestId: true } });
+    if (!ref) throw new AccompagnantError("Proposition introuvable.", "INTROUVABLE");
+    await lockCareRequests(tx, [ref.requestId]);
     const proposal = await tx.missionProposal.findFirst({
       where: ownedProposalWhere(actor.id, proposalId),
       include: { request: { include: { aine: { select: { id: true, firstName: true } } } } },
@@ -448,6 +498,7 @@ export type GpsCheckInInput = {
  */
 export async function checkInWithGps(actor: Actor, input: GpsCheckInInput, now: Date = new Date()) {
   const visit = await loadOwnedVisit(actor.id, input.visitId);
+  assertActiveCaregiver(visit);
   assertCanAddProof(visit, now);
   if (visit.proofs.some((p) => p.factor === "GPS" && p.valid)) {
     throw new AccompagnantError("Votre position est déjà enregistrée pour cette visite.", "CONFLIT");
@@ -490,6 +541,7 @@ export async function checkInWithGps(actor: Actor, input: GpsCheckInInput, now: 
 /** Facteur (b) code domicile. Le code saisi n'est jamais enregistré ni journalisé. */
 export async function checkInWithCode(actor: Actor, visitId: string, code: string, now: Date = new Date()) {
   const visit = await loadOwnedVisit(actor.id, visitId);
+  assertActiveCaregiver(visit);
   assertCanAddProof(visit, now);
   if (visit.proofs.some((p) => p.factor === "CODE_DOMICILE" && p.valid)) {
     return { valid: true as const, alreadyDone: true };
@@ -538,6 +590,7 @@ export async function checkOut(actor: Actor, visitId: string, now: Date = new Da
 /** Un Kayé par visite, après le check-in. Notifie le cercle Lakou (sans donnée de santé). */
 export async function createKaye(actor: Actor, input: KayeInput) {
   const visit = await loadOwnedVisit(actor.id, input.visitId);
+  assertActiveCaregiver(visit);
   if (visit.journal) throw new AccompagnantError("Le Kayé de cette visite existe déjà.", "CONFLIT");
   if (!canWriteKaye({ checkInAt: visit.checkInAt, hasJournal: false })) {
     throw new AccompagnantError("Faites d'abord le check-in de la visite.", "INVALIDE");

@@ -34,8 +34,13 @@ vi.mock("@/server/outbox", () => ({ notifyUser: (...a: unknown[]) => notifyUser(
 vi.mock("@/server/visits/service", () => ({ confirmElderSimulated: (...a: unknown[]) => confirmElderSimulated(...a) }));
 vi.mock("@/server/access", () => ({ assertAineAccess: async () => undefined }));
 const proposeProfile = vi.fn();
+const releaseCaregiver = vi.fn(async (..._a: unknown[]) => ({ cancelledProposals: 2, suspendedMissions: 1, cancelledVisits: 6, reopenedRequests: 2 }));
 class MatchingError extends Error {}
-vi.mock("@/server/matching/service", () => ({ proposeProfile: (...a: unknown[]) => proposeProfile(...a), MatchingError }));
+vi.mock("@/server/matching/service", () => ({
+  proposeProfile: (...a: unknown[]) => proposeProfile(...a),
+  releaseCaregiver: (...a: unknown[]) => releaseCaregiver(...a),
+  MatchingError,
+}));
 vi.mock("next/cache", () => ({ revalidatePath: () => undefined }));
 vi.mock("next/navigation", () => ({
   redirect: (url: string) => {
@@ -141,19 +146,28 @@ describe("decideCaregiverAction", () => {
     expect(logAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "caregiver.validate" }), tx);
   });
 
-  it("suspend avec motif : annule les propositions en attente et rouvre la demande", async () => {
+  it("A1 : suspend avec motif → libère l'accompagnant (propositions, missions, visites) DANS la transaction", async () => {
     db.caregiverProfile.findUnique = vi.fn().mockResolvedValue({ ...pending, validation: "VALIDE" });
     tx.caregiverProfile.updateMany.mockResolvedValue({ count: 1 });
-    tx.missionProposal.findMany.mockResolvedValue([{ id: "p1", requestId: REQ }]);
-    tx.missionProposal.count.mockResolvedValue(0);
     const res = await decideCaregiverAction(
       initialActionState,
       form({ caregiverId: CG, decision: "SUSPENDRE", reason: "Plainte d'une famille, vérification en cours." }),
     );
     expect(res.ok).toBe(true);
-    expect(tx.missionProposal.updateMany).toHaveBeenCalledWith({ where: { id: { in: ["p1"] } }, data: expect.objectContaining({ status: "ANNULEE" }) });
-    expect(tx.careRequest.updateMany).toHaveBeenCalledWith({ where: { id: REQ, status: "PROPOSEE" }, data: { status: "OUVERTE" } });
+    expect(releaseCaregiver).toHaveBeenCalledWith(tx, CG, operator);
+    expect(logAudit).toHaveBeenCalledWith(
+      expect.objectContaining({ action: "caregiver.suspend", metadata: expect.objectContaining({ suspendedMissions: 1, cancelledVisits: 6 }) }),
+      tx,
+    );
     expect(notifyUser).toHaveBeenCalledWith("u-cg", "ACCOMPAGNANT_SUSPENDU", expect.objectContaining({ motif: expect.stringMatching(/Plainte/) }), expect.anything(), tx);
+  });
+
+  it("une validation ne libère rien", async () => {
+    db.caregiverProfile.findUnique = vi.fn().mockResolvedValue(pending);
+    tx.caregiverProfile.updateMany.mockResolvedValue({ count: 1 });
+    const res = await decideCaregiverAction(initialActionState, form({ caregiverId: CG, decision: "VALIDER" }));
+    expect(res.ok).toBe(true);
+    expect(releaseCaregiver).not.toHaveBeenCalled();
   });
 
   it("D2 : refuse d'agir sur un accompagnant d'un bac à sable", async () => {

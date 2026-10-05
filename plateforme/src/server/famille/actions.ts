@@ -11,7 +11,8 @@ import { enqueueNotification, notifyUser } from "@/server/outbox";
 import { appUrl } from "@/server/env";
 import { sameScope } from "@/server/scope";
 import { confirmElderSimulated, generateUniqueHomeCode } from "@/server/visits/service";
-import { chooseProfile, MatchingError } from "@/server/matching/service";
+import { cancelCareRequest, chooseProfile, MatchingError } from "@/server/matching/service";
+import { trackEvent } from "@/server/sandbox/events";
 import { getCommune } from "@/lib/communes";
 import { getPlan } from "@/lib/plans";
 import { formatEuros } from "@/lib/format";
@@ -243,7 +244,10 @@ export async function createRequestAction(_prev: ActionResult, formData: FormDat
   redirect("/famille/demandes?envoyee=1");
 }
 
-/** F5 : annule une demande OUVERTE ou PROPOSEE. Les propositions en attente sont annulées. */
+/**
+ * F5 : annule une demande OUVERTE ou PROPOSEE (M5). Tout se passe dans UNE transaction (cancelCareRequest) :
+ * statut relu sous verrou, profils proposés ET choisi annulés, accompagnant choisi prévenu.
+ */
 export async function cancelRequestAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireRole("FAMILLE");
   const parsed = cancelRequestSchema.safeParse(formDataToObject(formData));
@@ -252,11 +256,12 @@ export async function cancelRequestAction(_prev: ActionResult, formData: FormDat
   if (!req || !(await canAccessAine(user, req.aineId))) return { ok: false, error: NOT_FOUND };
   if (!canCancelRequest(req.status)) return { ok: false, error: "Cette demande ne peut plus être annulée." };
 
-  await db.$transaction(async (tx) => {
-    await tx.careRequest.update({ where: { id: req.id }, data: { status: "ANNULEE" } });
-    await tx.missionProposal.updateMany({ where: { requestId: req.id, status: "EN_ATTENTE" }, data: { status: "ANNULEE" } });
-    await logAudit({ actor: user, action: "request.cancelled", entityType: "CareRequest", entityId: req.id, metadata: { previousStatus: req.status } }, tx);
-  });
+  try {
+    await cancelCareRequest(user, req.id);
+  } catch (e) {
+    if (e instanceof MatchingError) return { ok: false, error: e.message };
+    throw e;
+  }
   revalidatePath("/famille/demandes");
   revalidatePath("/famille");
   redirect("/famille/demandes?annulee=1");
@@ -283,6 +288,8 @@ export async function chooseProfileAction(_prev: ActionResult, formData: FormDat
     if (e instanceof MatchingError) return { ok: false, error: e.message };
     throw e;
   }
+  // m7 : étape clé D6 dans la mesure D15 (bac à sable seulement).
+  if (user.sandboxId) await trackEvent(user, "profile.chosen");
   revalidatePath("/famille/demandes");
   revalidatePath("/famille");
   redirect(`/famille/demandes?choisi=${encodeURIComponent(chosen.caregiverFirstName)}`);

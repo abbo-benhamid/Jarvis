@@ -12,6 +12,7 @@ import type {
 } from "@prisma/client";
 import { z } from "zod";
 import { COMMUNE_CODES } from "@/lib/communes";
+import { PLANCHER_SALARIE_CENTS } from "@/lib/legal";
 
 // ─────────────────────────────── Tarif ───────────────────────────────
 
@@ -26,6 +27,11 @@ export const RATE_MAX_CENTS = 15_000;
 /** Statuts salariés : le SMIC s'applique. */
 export function statusIsSalaried(status: CaregiverStatus | null | undefined): boolean {
   return status === "SALARIE_FAMILLE_CESU" || status === "PROCHE_AIDANT_APA";
+}
+
+/** D10 : true si un salarié a un tarif fixé sous le plancher légal (SMIC, minimum IDCC 3239). */
+export function rateBelowSalariedFloor(status: CaregiverStatus | null | undefined, hourlyRateCents: number | null | undefined): boolean {
+  return statusIsSalaried(status) && hourlyRateCents != null && hourlyRateCents < PLANCHER_SALARIE_CENTS;
 }
 
 /** « 15 », « 15,50 », « 15.5 € » → centimes. Null si vide. NaN si invalide. */
@@ -143,6 +149,9 @@ export function missingProfileItems(p: ProfileSnapshot): MissingItem[] {
     out.push({ key: "availabilities", label: "Indiquer au moins une disponibilité", href: "/accompagnant/profil" });
   if (p.status !== "BENEVOLE_ASSO" && p.hourlyRateCents == null)
     out.push({ key: "hourlyRate", label: "Fixer votre tarif horaire", href: "/accompagnant/profil" });
+  // D10 (M1) : recontrôlé à chaque étape (demande de vérification, robots), pas seulement à l'enregistrement.
+  else if (rateBelowSalariedFloor(p.status, p.hourlyRateCents))
+    out.push({ key: "hourlyRate", label: "Fixer un tarif au moins égal au minimum légal d'un salarié", href: "/accompagnant/profil" });
   if (p.status === "BENEVOLE_ASSO" && !p.associationName)
     out.push({ key: "associationName", label: "Indiquer votre association", href: "/accompagnant/profil" });
   if (p.status === "SAAD" && !p.saadName)

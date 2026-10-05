@@ -17,7 +17,12 @@ export type TemplateKey =
   | "APPEL_CONFIRMATION_AINE"
   | "KAYE_PUBLIE"
   | "ALERTE_A_SURVEILLER"
-  | "PAIEMENT_SIMULE";
+  | "PAIEMENT_SIMULE"
+  | "PROFIL_INDISPONIBLE"
+  | "MISSION_SUSPENDUE"
+  | "DEMANDE_ANNULEE"
+  | "PROCHE_AIDANT_INVITATION"
+  | "PROCHE_AIDANT_RATTACHE";
 
 type Vars = Record<string, string | number>;
 
@@ -53,7 +58,8 @@ const TEMPLATES: Record<TemplateKey, { subject: string; body: string }> = {
   },
   ACCOMPAGNANT_SUSPENDU: {
     subject: "Votre profil est suspendu",
-    body: "Bonjour {prenom}, votre profil est suspendu. Motif : {motif}. Effet : vous ne recevez plus de nouvelles propositions. Vos accords en cours restent décidés avec les familles. Vous pouvez demander un réexamen par une personne de l'équipe : répondez à ce message.",
+    // A1 : les missions passent en SUSPENDUE et les visites à venir sont annulées.
+    body: "Bonjour {prenom}, votre profil est suspendu. Motif : {motif}. Effet : vous ne recevez plus de propositions. Vos missions sont suspendues et vos visites à venir sont annulées. Vous pouvez demander un réexamen par une personne de l'équipe : répondez à ce message.",
   },
   VISITE_COMMENCEE: {
     subject: "Visite commencée",
@@ -78,6 +84,27 @@ const TEMPLATES: Record<TemplateKey, { subject: string; body: string }> = {
   ALERTE_A_SURVEILLER: {
     subject: "À surveiller : {aine}",
     body: "{accompagnant} signale un point à surveiller chez {aine}. Ce n'est pas une alerte médicale. Ouvrez Koudmen.",
+  },
+  PROFIL_INDISPONIBLE: {
+    // Anonyme : la famille ne connaît pas le motif (suspension, refus de validation).
+    subject: "Un profil n'est plus disponible pour {aine}",
+    body: "Un profil proposé pour {aine} n'est plus disponible. Vous pouvez choisir un autre profil dans votre espace, ou Koudmen vous en propose de nouveaux.",
+  },
+  MISSION_SUSPENDUE: {
+    subject: "Accompagnement de {aine} suspendu",
+    body: "L'accompagnement de {aine} par {accompagnant} est suspendu par Koudmen. Les visites à venir sont annulées. Votre demande est rouverte : Koudmen vous propose d'autres profils. Vous choisissez la personne.",
+  },
+  DEMANDE_ANNULEE: {
+    subject: "Demande annulée",
+    body: "Bonjour {prenom}, la famille a annulé sa demande à {commune}. Vous n'avez rien à faire.",
+  },
+  PROCHE_AIDANT_INVITATION: {
+    subject: "Rattachement à {aine}",
+    body: "{from} vous invite à vous rattacher à {aine} comme proche aidant. Ouvrez ce lien avec votre compte Accompagnant : {link}",
+  },
+  PROCHE_AIDANT_RATTACHE: {
+    subject: "Proche aidant rattaché à {aine}",
+    body: "{accompagnant} est rattaché(e) à {aine} comme proche aidant. Koudmen peut maintenant vous proposer son profil pour {aine} seulement.",
   },
   PAIEMENT_SIMULE: {
     subject: "Formule {formule} activée",

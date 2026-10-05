@@ -48,6 +48,16 @@ vi.mock("@/server/visits/service", () => ({
   generateUniqueHomeCode: () => generateUniqueHomeCode(),
 }));
 vi.mock("@/server/env", () => ({ appUrl: () => "https://koudmen.test" }));
+const cancelCareRequest = vi.fn(async (..._a: unknown[]) => ({ cancelledProposals: 2 }));
+const chooseProfile = vi.fn(async (..._a: unknown[]) => ({ caregiverFirstName: "Josiane" }));
+class MatchingError extends Error {}
+vi.mock("@/server/matching/service", () => ({
+  cancelCareRequest: (...a: unknown[]) => cancelCareRequest(...a),
+  chooseProfile: (...a: unknown[]) => chooseProfile(...a),
+  MatchingError,
+}));
+const trackEvent = vi.fn(async (..._a: unknown[]) => undefined);
+vi.mock("@/server/sandbox/events", () => ({ trackEvent: (...a: unknown[]) => trackEvent(...a) }));
 vi.mock("next/cache", () => ({ revalidatePath: (p: string) => revalidatePath(p) }));
 vi.mock("next/headers", () => ({ cookies: async () => cookieStore }));
 vi.mock("next/navigation", () => ({
@@ -260,11 +270,29 @@ describe("cancelRequestAction", () => {
     await expect(actions.cancelRequestAction(empty, fd({ requestId: "cmreq0000000000000000001" }))).rejects.toThrow(
       "REDIRECT:/famille/demandes?annulee=1",
     );
-    expect(db.careRequest.update).toHaveBeenCalledWith({ where: { id: "cmreq0000000000000000001" }, data: { status: "ANNULEE" } });
-    expect(db.missionProposal.updateMany).toHaveBeenCalledWith({
-      where: { requestId: "cmreq0000000000000000001", status: "EN_ATTENTE" },
-      data: { status: "ANNULEE" },
-    });
+    // M5 : toute l'annulation passe par la transaction du service (verrou, statut relu, propositions, message).
+    expect(cancelCareRequest).toHaveBeenCalledWith(user, "cmreq0000000000000000001");
+    expect(db.careRequest.update).not.toHaveBeenCalled();
+  });
+
+  it("M5 : une acceptation simultanée gagne → message clair, pas de redirection", async () => {
+    db.careRequest.findUnique.mockResolvedValue({ id: "cmreq0000000000000000001", aineId: AINE, status: "PROPOSEE" });
+    cancelCareRequest.mockRejectedValueOnce(new MatchingError("Cette demande ne peut plus être annulée."));
+    const r = await actions.cancelRequestAction(empty, fd({ requestId: "cmreq0000000000000000001" }));
+    expect(r).toEqual({ ok: false, error: "Cette demande ne peut plus être annulée." });
+  });
+});
+
+describe("chooseProfileAction", () => {
+  const PROP = "cmprop000000000000000001";
+  it("m7 : émet profile.chosen dans un bac à sable seulement", async () => {
+    db.missionProposal.findUnique.mockResolvedValue({ id: PROP, request: { aineId: AINE } });
+    requireRole.mockResolvedValueOnce({ ...user, sandboxId: "sbx1" } as never);
+    await expect(actions.chooseProfileAction(empty, fd({ proposalId: PROP }))).rejects.toThrow("REDIRECT:/famille/demandes?choisi=Josiane");
+    expect(trackEvent).toHaveBeenCalledWith(expect.objectContaining({ sandboxId: "sbx1" }), "profile.chosen");
+    trackEvent.mockClear();
+    await expect(actions.chooseProfileAction(empty, fd({ proposalId: PROP }))).rejects.toThrow("REDIRECT:");
+    expect(trackEvent).not.toHaveBeenCalled();
   });
 });
 
