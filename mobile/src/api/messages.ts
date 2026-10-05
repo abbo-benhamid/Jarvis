@@ -25,4 +25,5 @@ export const MESSAGES: Record<CodeErreurApp, string> = {
   RESEAU: 'Pas de connexion au service. Vérifiez votre réseau, puis réessayez.',
   REPONSE_INVALIDE: 'L’app doit être mise à jour. Réessayez plus tard.',
   POSITION_INDISPONIBLE: 'La position n’est pas disponible. Utilisez le code du domicile.',
+  EN_ATTENTE: 'Pas de réseau. L’envoi est gardé sur ce téléphone. Il part tout seul au retour du réseau.',
 };

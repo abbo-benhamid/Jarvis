@@ -18,6 +18,7 @@ import { Figtree_700Bold } from '@expo-google-fonts/figtree/700Bold';
 import { ThemeProvider, useTheme } from '@/theme';
 import { SessionProvider, useSession } from '@/session/SessionProvider';
 import { usePush } from '@/push';
+import { BandeauHorsLigne } from '@/offline/BandeauHorsLigne';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -73,17 +74,20 @@ function Navigation() {
   return (
     <>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg }, animation: 'fade' }}>
-        <Stack.Protected guard={!session}>
-          <Stack.Screen name="connexion" />
-        </Stack.Protected>
-        <Stack.Protected guard={!!session}>
-          <Stack.Screen name="(onglets)" />
-          <Stack.Screen name="visite/[id]" options={{ animation: 'slide_from_right' }} />
-          <Stack.Screen name="kaye/[id]" options={{ animation: 'slide_from_bottom' }} />
-          <Stack.Screen name="propositions" options={{ animation: 'slide_from_right' }} />
-        </Stack.Protected>
-      </Stack>
+      {/* Lot M3 : « Hors ligne · 2 envois en attente », caché quand tout va bien. */}
+      <BandeauHorsLigne>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg }, animation: 'fade' }}>
+          <Stack.Protected guard={!session}>
+            <Stack.Screen name="connexion" />
+          </Stack.Protected>
+          <Stack.Protected guard={!!session}>
+            <Stack.Screen name="(onglets)" />
+            <Stack.Screen name="visite/[id]" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="kaye/[id]" options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="propositions" options={{ animation: 'slide_from_right' }} />
+          </Stack.Protected>
+        </Stack>
+      </BandeauHorsLigne>
     </>
   );
 }

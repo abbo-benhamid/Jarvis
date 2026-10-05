@@ -39,7 +39,9 @@ export type CodeErreurApp =
   /** La réponse ne respecte pas le contrat (versions différentes). */
   | 'REPONSE_INVALIDE'
   /** La position ne peut pas être lue (refus, appareil sans GPS). */
-  | 'POSITION_INDISPONIBLE';
+  | 'POSITION_INDISPONIBLE'
+  /** Lot M3 : pas de réseau, l'événement est gardé dans la file hors ligne. Il part tout seul au retour du réseau. */
+  | 'EN_ATTENTE';
 
 /** Erreur unique de l'app. Le `message` est en français simple : il s'affiche tel quel. */
 export class ApiError extends Error {
