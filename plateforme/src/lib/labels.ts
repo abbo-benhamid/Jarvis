@@ -183,6 +183,7 @@ export const CHANNEL_LABELS: Record<Channel, string> = {
   SMS: "SMS",
   EMAIL: "Email",
   VOIX: "Appel vocal",
+  PUSH: "Push",
 };
 
 export const PLAN_LABELS: Record<Plan, string> = {

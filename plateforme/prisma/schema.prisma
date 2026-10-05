@@ -180,6 +180,14 @@ enum Channel {
   SMS
   EMAIL
   VOIX
+  /// Lot N1 : notification push sur l'appareil (jeton Expo). Texte générique (R9).
+  PUSH
+}
+
+/// Lot N1 : système de l'appareil qui reçoit le push.
+enum PushPlatform {
+  IOS
+  ANDROID
 }
 
 enum OutboxStatus {
@@ -237,6 +245,8 @@ model User {
   refreshTokens       RefreshToken[]
   appEvents           AppEvent[]
   kayeDrafts          KayeDraft[]
+  /// Appareils qui reçoivent les notifications push (lot N1).
+  pushDevices         PushDevice[]
 
   @@index([sandboxId])
 }
@@ -826,4 +836,27 @@ model KayeDraft {
   /// Heure de l'appareil du dernier brouillon retenu (le plus récent gagne).
   occurredAt DateTime
   updatedAt  DateTime @updatedAt
+}
+
+/// Lot N1 : appareil qui reçoit les notifications push (jeton Expo Push).
+/// Lié à UNE connexion de l'app (famille de jetons) : la déconnexion de l'appareil coupe le push.
+/// RGPD : aucun texte de notification ici ; effacé avec le compte (cascade).
+model PushDevice {
+  id            String       @id @default(cuid())
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Jeton Expo (`ExponentPushToken[…]`). Unique : un appareil sert un seul compte à la fois.
+  token         String       @unique
+  platform      PushPlatform
+  /// RefreshToken.familyId de la connexion qui a enregistré l'appareil.
+  familyId      String
+  createdAt     DateTime     @default(now())
+  /// Dernier enregistrement (l'app renvoie son jeton à chaque ouverture).
+  lastSeenAt    DateTime
+  revokedAt     DateTime?
+  /// DECONNEXION, NON_ENREGISTRE (réponse Expo DeviceNotRegistered), RETIRE (l'app le demande).
+  revokedReason String?
+
+  @@index([userId])
+  @@index([familyId])
 }
