@@ -1,3 +1,4 @@
+import type { HorsLigneVue } from '@/offline';
 import type {
   BrouillonKaye,
   KayePublie,
@@ -35,6 +36,11 @@ export interface KoudmenApi {
   readonly mode: 'http' | 'simule';
   /** URL de l'API (mode http), pour l'affichage dans Profil. */
   readonly url: string | null;
+  /**
+   * Lot M3 : file d'événements et cache hors ligne (mode http seulement).
+   * Absent en mode simulé (pas de réseau à attendre).
+   */
+  readonly horsLigne?: HorsLigneVue;
 
   /** E-mail et mot de passe. Les jetons vont dans le stockage sûr de l'appareil. */
   connecter(email: string, motDePasse: string): Promise<Moi>;
@@ -55,6 +61,9 @@ export interface KoudmenApi {
   /**
    * Check-in : code du domicile et/ou position PONCTUELLE (une lecture, avec accord).
    * Lève une `ApiError` si le serveur refuse l'événement.
+   *
+   * Lot M3 (les 5 actions ci-dessous) : l'événement passe par la file hors ligne.
+   * Sans réseau : `ApiError('EN_ATTENTE')`, l'événement reste gardé et part au retour du réseau.
    */
   checkIn(visiteId: string, preuve: { codeDomicile?: string; position?: PositionPonctuelle }): Promise<ResultatEvenement>;
   /** Check-out : aucune position. */

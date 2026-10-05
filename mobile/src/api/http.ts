@@ -13,7 +13,10 @@ import {
   reponseVisitesSchema,
   type Evenement,
   type ReponseJetons,
+  type ReponseVisite,
+  type ResultatEvenement as Resultat,
 } from '@/contracts';
+import { creerHorsLigne, type HorsLigne } from '@/offline';
 import type { KoudmenApi } from './client';
 import { MESSAGES } from './messages';
 import { calculerDefi, creerVerificateur, nouvelIdEvenement } from './pkce';
@@ -44,11 +47,23 @@ const CODES_FIN_SESSION = new Set(['JETON_INVALIDE', 'JETON_REUTILISE', 'ACCES_R
 type Methode = 'GET' | 'POST';
 type Options = { methode?: Methode; corps?: unknown; jeton?: string | null };
 
-export function creerApiHttp(baseUrl: string, stockage: StockageJeton = creerStockageJeton()): KoudmenApi {
+/** Erreurs qui donnent la copie locale (lot M3) au lieu d'un message d'erreur. */
+const CODES_REPLI_CACHE = new Set(['RESEAU', 'ERREUR_INTERNE', 'TROP_DE_REQUETES']);
+/** Fiches préchargées pour la lecture hors ligne (visites du jour). */
+const MAX_FICHES_PRECHARGEES = 6;
+
+export function creerApiHttp(
+  baseUrl: string,
+  stockage: StockageJeton = creerStockageJeton(),
+  fabriqueHorsLigne: (transport: (e: Evenement) => Promise<Resultat>) => HorsLigne = (transport) => creerHorsLigne({ transport }),
+): KoudmenApi {
   const api = `${baseUrl}/api/v1`;
   let acces: { jeton: string; expireA: number } | null = null;
   let enCours: Promise<void> | null = null;
   const ecouteurs = new Set<(message: string) => void>();
+  // Lot M3 : file d'événements + cache. Le transport envoie UN événement (même clientEventId à chaque renvoi).
+  const horsLigne = fabriqueHorsLigne(transporter);
+  const repliCache = (e: unknown) => e instanceof ApiError && CODES_REPLI_CACHE.has(e.code);
 
   // ─────────────── Transport ───────────────
 
@@ -171,7 +186,14 @@ export function creerApiHttp(baseUrl: string, stockage: StockageJeton = creerSto
       await deconnecter();
       throw new ApiError('ACCES_REFUSE', 'Cette app est réservée aux accompagnants. Les familles utilisent le site Koudmen.', 403);
     }
+    await sessionOuverte(moi);
     return moi;
+  }
+
+  /** Lot M3 : garde le compte (réouverture sans réseau), puis lance l'envoi de la file. */
+  async function sessionOuverte(moi: Moi) {
+    await horsLigne.cache.garderMoi(moi);
+    await horsLigne.ouvrir(moi.id);
   }
 
   async function deconnecter() {
@@ -185,6 +207,8 @@ export function creerApiHttp(baseUrl: string, stockage: StockageJeton = creerSto
       // Déconnexion locale quoi qu'il arrive (réseau coupé) : le jeton expirera côté serveur.
     } finally {
       await effacer();
+      // Lot M3 : purge complète (cache, file, clé de chiffrement), même hors réseau.
+      await horsLigne.purger();
     }
   }
 
@@ -192,33 +216,44 @@ export function creerApiHttp(baseUrl: string, stockage: StockageJeton = creerSto
 
   type SansEnveloppe<E> = E extends Evenement ? Omit<E, 'clientEventId' | 'survenuA'> : never;
 
+  /** Transport de la file (lot M3) : POST /evenements avec UN événement. */
+  async function transporter(evenement: Evenement): Promise<Resultat> {
+    const reponse = await appelerAuth('/evenements', reponseEvenementsSchema, { methode: 'POST', corps: { evenements: [evenement] } });
+    const r = reponse.resultats[0];
+    if (!r || r.clientEventId !== evenement.clientEventId) throw new ApiError('REPONSE_INVALIDE', MESSAGES.REPONSE_INVALIDE);
+    return r;
+  }
+
   /**
-   * Envoie UN événement avec un `clientEventId` neuf. Une coupure réseau donne un nouvel essai
-   * avec le MÊME identifiant : le serveur répond DOUBLON avec le résultat d'origine (idempotence).
-   * Un refus métier (REFUSE) lève une `ApiError` avec le motif et le message du serveur.
+   * Crée l'événement (`clientEventId` neuf, heure de l'appareil), le vérifie, puis le confie à la file (lot M3).
+   * - Envoyé : résultat du serveur.
+   * - Refus métier : `ApiError` avec le motif et le message du serveur.
+   * - Pas de réseau : `ApiError('EN_ATTENTE')`. La file le renvoie plus tard avec le MÊME identifiant.
    */
   async function envoyer(e: SansEnveloppe<Evenement>): Promise<ResultatEvenement> {
     const evenement = { ...e, clientEventId: nouvelIdEvenement(), survenuA: new Date().toISOString() };
     const corps = demandeEvenementsSchema.safeParse({ evenements: [evenement] });
-    if (!corps.success) {
-      throw new ApiError('REQUETE_INVALIDE', corps.error.issues[0]?.message ?? MESSAGES.REQUETE_INVALIDE, 400);
+    const valide = corps.success ? corps.data.evenements[0] : undefined;
+    if (!corps.success || !valide) {
+      throw new ApiError('REQUETE_INVALIDE', (corps.success ? null : corps.error.issues[0]?.message) ?? MESSAGES.REQUETE_INVALIDE, 400);
     }
-    let reponse;
-    try {
-      reponse = await appelerAuth('/evenements', reponseEvenementsSchema, { methode: 'POST', corps: corps.data });
-    } catch (err) {
-      if (!(err instanceof ApiError) || err.code !== 'RESEAU') throw err;
-      await new Promise((r) => setTimeout(r, 800));
-      reponse = await appelerAuth('/evenements', reponseEvenementsSchema, { methode: 'POST', corps: corps.data });
+    return horsLigne.file.soumettre(valide);
+  }
+
+  /** Remet dans la fiche le Kayé encore dans la file (le texte écrit hors ligne n'est pas perdu à l'écran). */
+  async function avecKayeEnAttente(v: ReponseVisite): Promise<ReponseVisite> {
+    if (v.kayePublie) return v;
+    const k = await horsLigne.file.kayeEnAttente(v.id).catch(() => null);
+    return k ? { ...v, brouillonKaye: k } : v;
+  }
+
+  /** Précharge les fiches du jour (lecture hors ligne). Sans attendre, sans erreur visible. */
+  function prechargerFiches(visites: { id: string }[]) {
+    for (const v of visites.slice(0, MAX_FICHES_PRECHARGEES)) {
+      void appelerAuth(`/visites/${encodeURIComponent(v.id)}`, reponseVisiteSchema)
+        .then((f) => horsLigne.cache.garderVisite(f))
+        .catch(() => undefined);
     }
-    const r = reponse.resultats[0];
-    if (!r) throw new ApiError('REPONSE_INVALIDE', MESSAGES.REPONSE_INVALIDE);
-    const refuse = r.statut === 'REFUSE' || (r.statut === 'DOUBLON' && r.statutOrigine === 'REFUSE');
-    if (refuse) {
-      const motif = r.motif ?? 'INVALIDE';
-      throw new ApiError(motif, r.message ?? MESSAGES[motif], 200);
-    }
-    return r;
   }
 
   // ─────────────── Interface ───────────────
@@ -226,6 +261,7 @@ export function creerApiHttp(baseUrl: string, stockage: StockageJeton = creerSto
   return {
     mode: 'http',
     url: baseUrl,
+    horsLigne,
 
     connecter: (email, motDePasse) => ouvrirSession({ methode: 'mot_de_passe', email: email.trim(), motDePasse }),
     connecterDemo: () => ouvrirSession({ methode: 'demo', role: 'ACCOMPAGNANT' }),
@@ -235,17 +271,32 @@ export function creerApiHttp(baseUrl: string, stockage: StockageJeton = creerSto
       if (!jeton) return null;
       try {
         await renouveler();
-        return await appelerAuth('/me', reponseMoiSchema);
+        const moi = await appelerAuth('/me', reponseMoiSchema);
+        await sessionOuverte(moi);
+        return moi;
       } catch (e) {
         if (e instanceof ApiError && (CODES_FIN_SESSION.has(e.code) || e.code === 'NON_AUTHENTIFIE')) {
           await effacer();
           return null;
         }
+        // Lot M3 : réouverture SANS réseau. Le jeton est gardé ; le compte vient du cache chiffré.
+        // Les écrans lisent le cache ; la file repart au retour du réseau (le jeton est renouvelé à ce moment).
+        if (repliCache(e)) {
+          const moi = await horsLigne.cache.lireMoi();
+          if (moi) {
+            await horsLigne.ouvrir(moi.id);
+            return moi;
+          }
+        }
         throw e;
       }
     },
 
-    moi: () => appelerAuth('/me', reponseMoiSchema),
+    async moi() {
+      const moi = await appelerAuth('/me', reponseMoiSchema);
+      await horsLigne.cache.garderMoi(moi);
+      return moi;
+    },
     deconnecter,
 
     surSessionPerdue(cb) {
@@ -256,10 +307,29 @@ export function creerApiHttp(baseUrl: string, stockage: StockageJeton = creerSto
     },
 
     async listerVisites() {
-      const r = await appelerAuth('/visites?jours=7', reponseVisitesSchema);
-      return [...r.visites].sort((a, b) => a.debut.localeCompare(b.debut));
+      try {
+        const r = await appelerAuth('/visites?jours=7', reponseVisitesSchema);
+        const duJour = await horsLigne.cache.garderVisites(r.visites);
+        prechargerFiches(duJour);
+        return [...r.visites].sort((a, b) => a.debut.localeCompare(b.debut));
+      } catch (e) {
+        // Lot M3 : sans réseau, les visites du jour gardées sur l'appareil.
+        const copie = repliCache(e) ? await horsLigne.cache.lireVisites() : null;
+        if (!copie) throw e;
+        return [...copie].sort((a, b) => a.debut.localeCompare(b.debut));
+      }
     },
-    lireVisite: (id) => appelerAuth(`/visites/${encodeURIComponent(id)}`, reponseVisiteSchema),
+    async lireVisite(id) {
+      try {
+        const v = await appelerAuth(`/visites/${encodeURIComponent(id)}`, reponseVisiteSchema);
+        await horsLigne.cache.garderVisite(v);
+        return await avecKayeEnAttente(v);
+      } catch (e) {
+        const copie = repliCache(e) ? await horsLigne.cache.lireVisite(id) : null;
+        if (!copie) throw e;
+        return avecKayeEnAttente(copie);
+      }
+    },
 
     checkIn: (visiteId, { codeDomicile, position }) =>
       envoyer({
