@@ -1,52 +1,14 @@
-import Link from "next/link";
-import type { ProofFactor, VisitStatus } from "@prisma/client";
-import { CircleCheck, CircleDashed, CircleX } from "lucide-react";
+import type { VisitStatus } from "@prisma/client";
+import { NotebookPen } from "lucide-react";
+import { Badge, ProofBadge } from "@/components/ui/badge";
+import { CardLink, DateBox } from "@/components/ui/card";
 import { VisitStatusBadge } from "@/components/status-badges";
+import { capitalize, dayLong, dayNumber, hourLabel, weekdayShort } from "@/components/famille/format";
 import { communeLabel } from "@/lib/communes";
-import { PROOF_FACTOR_LABELS } from "@/lib/labels";
-import { formatDate, formatTime, initialWithDot } from "@/lib/format";
+import { initialWithDot } from "@/lib/format";
 
-const FACTORS: ProofFactor[] = ["GPS", "CODE_DOMICILE", "CONFIRMATION_AINE"];
-
-/** Score de preuve 0-3 + état de chaque facteur (icône + texte, jamais la couleur seule). */
-export function ProofSummary({
-  score,
-  proofs,
-}: {
-  score: number;
-  proofs: { factor: ProofFactor; valid: boolean; simulated: boolean; details?: string | null }[];
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <p className="text-lg font-bold">
-        Preuves : {score} sur 3 <span className="font-normal text-muted">(2 suffisent)</span>
-      </p>
-      <ul className="flex flex-col gap-1">
-        {FACTORS.map((f) => {
-          const p = proofs.find((x) => x.factor === f);
-          const state = !p ? "absent" : p.valid ? "valide" : "invalide";
-          return (
-            <li key={f} className="flex items-start gap-2">
-              {state === "valide" ? (
-                <CircleCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-feuille" />
-              ) : state === "invalide" ? (
-                <CircleX aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-hibiscus" />
-              ) : (
-                <CircleDashed aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-muted" />
-              )}
-              <span>
-                <span className="font-semibold">{PROOF_FACTOR_LABELS[f]}</span> :{" "}
-                {state === "valide" ? "valide" : state === "invalide" ? "non valide" : "pas encore"}
-                {p?.simulated ? " (simulé)" : ""}
-                {p?.details && state === "invalide" ? <span className="text-muted"> — {p.details}</span> : null}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
+/** Deux preuves sur trois suffisent (RM-07). */
+export const PROOFS_NEEDED = 2;
 
 export type VisitRowData = {
   id: string;
@@ -59,40 +21,59 @@ export type VisitRowData = {
   journal: { id: string } | null;
 };
 
-export function VisitRow({ visit }: { visit: VisitRowData }) {
-  const kayeToWrite = visit.checkInAt !== null && visit.journal === null;
+/** « Léonie B. » */
+export function aineShortName(aine: { firstName: string; lastInitial: string | null }): string {
+  return `${aine.firstName}${aine.lastInitial ? ` ${initialWithDot(aine.lastInitial)}` : ""}`;
+}
+
+/** « 10 h – 12 h » */
+export function hourRange(start: Date, end: Date): string {
+  return `${hourLabel(start)} – ${hourLabel(end)}`;
+}
+
+/** Vrai si l'arrivée est enregistrée et le Kayé pas encore écrit. */
+export function kayeIsDue(v: Pick<VisitRowData, "checkInAt" | "journal">): boolean {
+  return v.checkInAt !== null && v.journal === null;
+}
+
+/** Badge de preuve d'une visite : « Prouvée » dès 2 preuves, sinon « Preuves 1 sur 2 ». Le mot porte le sens. */
+export function VisitProofBadge({ score }: { score: number }) {
+  if (score >= PROOFS_NEEDED) return <ProofBadge status="preuve" />;
+  return <ProofBadge status={score > 0 ? "a-faire" : "neutre"}>{`Preuves ${score} sur ${PROOFS_NEEDED}`}</ProofBadge>;
+}
+
+/**
+ * Ligne de visite (listes) : toute la carte est le lien (§ 10).
+ * Kayé à écrire : la carte mène au Kayé et le dit.
+ */
+export function VisitRow({ visit, showDate = true }: { visit: VisitRowData; showDate?: boolean }) {
+  const due = kayeIsDue(visit);
+  const href = due ? `/accompagnant/visites/${visit.id}/kaye` : `/accompagnant/visites/${visit.id}`;
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex flex-col gap-1">
-        <Link href={`/accompagnant/visites/${visit.id}`} className="text-lg font-bold text-mer underline-offset-2 hover:underline">
-          {formatDate(visit.scheduledStart)}, {formatTime(visit.scheduledStart)} – {formatTime(visit.scheduledEnd)}
-        </Link>
-        <p>
-          {visit.aine.firstName}
-          {visit.aine.lastInitial ? ` ${initialWithDot(visit.aine.lastInitial)}` : ""} · {communeLabel(visit.aine.commune)}
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <VisitStatusBadge status={visit.status} />
-          <span className="text-sm text-muted">Preuves : {visit.proofScore} sur 3</span>
-          {visit.journal ? <span className="text-sm text-muted">· Kayé envoyé</span> : null}
-        </div>
-      </div>
-      {kayeToWrite ? (
-        <Link
-          href={`/accompagnant/visites/${visit.id}/kaye`}
-          className="inline-flex min-h-11 items-center justify-center rounded-lg bg-soleil px-4 font-semibold text-on-soleil"
-        >
-          Écrire le Kayé
-        </Link>
-      ) : (
-        <Link
-          href={`/accompagnant/visites/${visit.id}`}
-          className="inline-flex min-h-11 items-center justify-center rounded-lg border border-line px-4 font-semibold"
-        >
-          Ouvrir
-          <span className="sr-only"> la visite du {formatDate(visit.scheduledStart)}</span>
-        </Link>
-      )}
-    </div>
+    <CardLink href={href} padding="dense">
+      <span className="flex items-center gap-4">
+        {showDate ? (
+          <DateBox day={weekdayShort(visit.scheduledStart)} date={dayNumber(visit.scheduledStart)} label={dayLong(visit.scheduledStart)} />
+        ) : null}
+        <span className="flex min-w-0 flex-col gap-1">
+          <b className="num block font-semibold">{hourRange(visit.scheduledStart, visit.scheduledEnd)}</b>
+          <span className="block text-[15px] leading-[1.4] text-muted">
+            {aineShortName(visit.aine)} · {communeLabel(visit.aine.commune)}
+          </span>
+          {showDate ? null : <span className="sr-only">{capitalize(dayLong(visit.scheduledStart))}</span>}
+          <span className="mt-1 flex flex-wrap items-center gap-1.5">
+            <VisitStatusBadge status={visit.status} />
+            {visit.checkInAt ? <VisitProofBadge score={visit.proofScore} /> : null}
+            {due ? (
+              <Badge tone="soleil" icon={<NotebookPen strokeWidth={1.8} />}>
+                Kayé à écrire
+              </Badge>
+            ) : visit.journal ? (
+              <Badge tone="neutre">Kayé envoyé</Badge>
+            ) : null}
+          </span>
+        </span>
+      </span>
+    </CardLink>
   );
 }
