@@ -12,7 +12,39 @@ import { Button, buttonClasses } from "./button";
 import { PlanRadio, PLAN_NOTICE } from "./plan-radio";
 import { StatusCard } from "./status-card";
 import { Switch } from "./switch";
+import { FormMessage } from "./form-message";
 import { receiptVerdict, VisitReceipt } from "./visit-receipt";
+
+describe("FormMessage (UX V1 M7)", () => {
+  it("une erreur prend le focus (lue tout de suite) ; un nouvel envoi avec la même erreur le reprend", () => {
+    const err = { ok: false as const, error: "Vérifiez les champs en rouge.", fieldErrors: { code: ["x"], role: ["y"] } };
+    const { rerender } = render(
+      <form>
+        <FormMessage state={err} />
+        <input aria-label="Champ" />
+      </form>,
+    );
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("Corrigez les 2 champs signalés ci-dessous.");
+    expect(document.activeElement).toBe(alert.parentElement);
+    // Le message est AU-DESSUS du champ.
+    expect(alert.compareDocumentPosition(screen.getByLabelText("Champ")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    screen.getByLabelText("Champ").focus();
+    rerender(
+      <form>
+        <FormMessage state={{ ...err }} />
+        <input aria-label="Champ" />
+      </form>,
+    );
+    expect(document.activeElement).toBe(screen.getByRole("alert").parentElement);
+  });
+
+  it("un succès ne vole pas le focus", () => {
+    render(<FormMessage state={{ ok: true, message: "Enregistré." }} />);
+    expect(screen.getByRole("status")).toHaveTextContent("Enregistré.");
+    expect(document.activeElement).toBe(document.body);
+  });
+});
 
 describe("Button", () => {
   it("garde les variantes historiques et la cible de 44 px", () => {

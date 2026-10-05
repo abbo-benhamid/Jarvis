@@ -13,6 +13,7 @@ import {
   createKaye,
   getOrCreateProfile,
   isTestMode,
+  ownedProposalWhere,
   ownedVisitWhere,
   type Actor,
 } from "@/server/accompagnant/service";
@@ -36,7 +37,7 @@ import type { Proposition } from "@/contracts/v1/visits-propositions";
  */
 
 /** L'accompagnant connecté (jeton d'accès déjà vérifié). */
-export type AppUser = { id: string; role: Role; firstName: string; sandboxId: string | null };
+export type AppUser = { id: string; role: Role; firstName: string; sandboxId: string | null; isDemo?: boolean };
 
 const H = 3_600_000;
 
@@ -107,20 +108,29 @@ export async function processAppEvents(user: AppUser, events: Evenement[], recei
       });
       claimId = claim.id;
     } catch (err) {
-      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      if (!(err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002")) throw err;
+      // M1 : une réservation sans résultat depuis plus de 60 s est orpheline (processus arrêté) : on la reprend.
+      const resumed = await resumeStaleClaim(user.id, e.clientEventId, receivedAt);
+      if (!resumed) {
         results.push(await duplicateResult(user.id, e));
         continue;
       }
-      throw err;
+      claimId = resumed;
     }
 
     let result: ResultatEvenement;
     try {
       const outcome = await handleEvent(actor, user, e, active, effectiveEventTime(occurredAt, receivedAt), skew);
       const visite = visitId ? await visitState(user.id, visitId) : undefined;
-      if (skew && visite) skewedVisits.add(visite.id);
+      // Code m3 : seule une PREUVE acceptée (check-in, check-out) à l'horloge suspecte marque la visite.
+      // Un SOS, un brouillon ou un refus garde l'écart dans AppEvent sans bloquer la visite.
+      if (skew && visite && outcome.statut === "ACCEPTE" && (e.type === "CHECK_IN" || e.type === "CHECK_OUT")) skewedVisits.add(visite.id);
       result = { clientEventId: e.clientEventId, type: e.type, horlogeSuspecte: skew, ...outcome, ...(visite ? { visite } : {}) };
-      await db.appEvent.update({ where: { id: claimId }, data: { outcome: result as unknown as Prisma.InputJsonValue } });
+      // Sécurité m1 : on garde l'id de visite seulement s'il appartient à ce compte (sinon null).
+      await db.appEvent.update({
+        where: { id: claimId },
+        data: { outcome: result as unknown as Prisma.InputJsonValue, visitId: visite?.id ?? null },
+      });
     } catch (err) {
       await db.appEvent.delete({ where: { id: claimId } }).catch(() => undefined);
       throw err;
@@ -137,6 +147,27 @@ export async function processAppEvents(user: AppUser, events: Evenement[], recei
     }
   }
   return results;
+}
+
+/** M1 : durée après laquelle une réservation sans résultat (`outcome` null) peut être reprise. */
+export const CLAIM_TIMEOUT_MS = 60_000;
+
+/**
+ * Reprend une réservation orpheline : `outcome` null et réservée depuis plus de CLAIM_TIMEOUT_MS.
+ * Mise à jour conditionnelle : un seul renvoi gagne la reprise. Les services métier refusent déjà
+ * les vrais doublons (Kayé unique, check-out unique, preuve déjà validée).
+ */
+async function resumeStaleClaim(userId: string, clientEventId: string, now: Date): Promise<string | null> {
+  const prev = await db.appEvent.findUnique({
+    where: { userId_clientEventId: { userId, clientEventId } },
+    select: { id: true, outcome: true, receivedAt: true },
+  });
+  if (!prev || prev.outcome !== null || now.getTime() - prev.receivedAt.getTime() <= CLAIM_TIMEOUT_MS) return null;
+  const r = await db.appEvent.updateMany({
+    where: { id: prev.id, outcome: { equals: Prisma.DbNull }, receivedAt: prev.receivedAt },
+    data: { receivedAt: now },
+  });
+  return r.count === 1 ? prev.id : null;
 }
 
 async function duplicateResult(userId: string, e: Evenement): Promise<ResultatEvenement> {
@@ -178,22 +209,48 @@ async function handleEvent(actor: Actor, user: AppUser, e: Evenement, active: bo
       case "KAYE_BROUILLON":
         return await saveDraft(actor, e, new Date(e.survenuA));
       case "KAYE_PUBLICATION": {
-        await createKaye(actor, {
-          visitId: e.visiteId,
-          mood: e.kaye.humeur,
-          appetite: e.kaye.appetit,
-          activities: [...new Set(e.kaye.activites)].slice(0, 10),
-          note: e.kaye.note || null,
-          alertFlag: e.kaye.aSurveiller,
-          alertNote: e.kaye.aSurveiller ? (e.kaye.noteSurveillance ?? null) : null,
-        });
-        // RGPD : le brouillon ne sert plus.
-        await db.kayeDraft.deleteMany({ where: { visitId: e.visiteId } });
+        try {
+          // M8 : createKaye efface aussi le brouillon serveur, dans sa transaction.
+          await createKaye(actor, {
+            visitId: e.visiteId,
+            mood: e.kaye.humeur,
+            appetite: e.kaye.appetit,
+            activities: [...new Set(e.kaye.activites)].slice(0, 10),
+            note: e.kaye.note || null,
+            alertFlag: e.kaye.aSurveiller,
+            alertNote: e.kaye.aSurveiller ? (e.kaye.noteSurveillance ?? null) : null,
+          });
+        } catch (err) {
+          if (!(err instanceof AccompagnantError) || (err.code !== "INVALIDE" && err.code !== "INTERDIT")) throw err;
+          // M9 : refus récupérable (ex. check-in refusé juste avant) : le texte n'est pas perdu.
+          // Il reste côté serveur en brouillon (relu par GET /visites/:id → brouillonKaye).
+          const out = refused(err);
+          if (await keepRefusedKayeAsDraft(actor, e)) {
+            out.message = `${err.message} Votre Kayé est gardé en brouillon : vous pourrez l'envoyer ensuite.`.slice(0, 300);
+          }
+          return out;
+        }
         return { statut: "ACCEPTE" };
       }
     }
   } catch (err) {
     if (err instanceof AccompagnantError) return refused(err);
+    throw err;
+  }
+}
+
+/**
+ * M9 : garde le texte d'un Kayé refusé en brouillon serveur. Seulement si la visite est à cet accompagnant,
+ * sans Kayé publié, mission active. Un brouillon plus récent n'est pas écrasé. Renvoie true si le texte est gardé.
+ */
+async function keepRefusedKayeAsDraft(actor: Actor, e: Extract<Evenement, { type: "KAYE_PUBLICATION" }>): Promise<boolean> {
+  const parsed = brouillonKayeSchema.safeParse(e.kaye);
+  if (!parsed.success) return false;
+  try {
+    const r = await saveDraft(actor, { ...e, type: "KAYE_BROUILLON", kaye: parsed.data }, new Date(e.survenuA));
+    return r.statut === "ACCEPTE" && !r.message;
+  } catch (err) {
+    if (err instanceof AccompagnantError) return false;
     throw err;
   }
 }
@@ -256,17 +313,33 @@ async function saveDraft(actor: Actor, e: Extract<Evenement, { type: "KAYE_BROUI
   return { statut: "ACCEPTE" };
 }
 
-/** SOS : journal + alerte des opérateurs du même monde (bac à sable ou réel). Aucune position, aucune donnée de santé. */
+/** X6 (sécurité D2) : alertes SOS au plus par compte et par heure. Au-delà : ACCEPTE (consigne 15/112), sans nouvelle alerte. */
+export const MAX_SOS_PAR_HEURE = 3;
+
+const CONSIGNE_SOS_DEMO =
+  "Compte de démonstration : aucune alerte n'est envoyée à l'équipe. Si une personne est en danger, appelez le 15 (SAMU) ou le 112 maintenant.";
+
+/**
+ * SOS : journal + alerte des opérateurs du même monde (bac à sable ou réel). Aucune position, aucune donnée de santé.
+ * X6 : compte démo partagé → SOS simulé (journal de démo, jamais d'alerte aux opérateurs réels).
+ * X6 : au plus MAX_SOS_PAR_HEURE alertes par compte et par heure ; les suivantes sont journalisées (`sos.suppressed`).
+ */
 async function sos(actor: Actor, user: AppUser, visitId: string | null, at: Date, skew: boolean): Promise<Outcome> {
   const visit = visitId ? await db.visit.findFirst({ where: ownedVisitWhere(user.id, visitId), select: { id: true } }) : null;
   const related = visit ? { type: "Visit", id: visit.id } : { type: "User", id: user.id };
-  await logAudit({
-    actor,
-    action: "sos.triggered",
-    entityType: related.type,
-    entityId: related.id,
-    metadata: { source: "app", linkedVisit: visit !== null, clockSkew: skew },
+  const metadata = { source: "app", linkedVisit: visit !== null, clockSkew: skew };
+  if (user.isDemo) {
+    await logAudit({ actor, action: "sos.demo", entityType: related.type, entityId: related.id, metadata });
+    return { statut: "ACCEPTE", consigne: CONSIGNE_SOS_DEMO };
+  }
+  const recent = await db.auditLog.count({
+    where: { actorId: user.id, action: "sos.triggered", createdAt: { gt: new Date(Date.now() - 3_600_000) } },
   });
+  if (recent >= MAX_SOS_PAR_HEURE) {
+    await logAudit({ actor, action: "sos.suppressed", entityType: related.type, entityId: related.id, metadata });
+    return { statut: "ACCEPTE", consigne: CONSIGNE_SOS };
+  }
+  await logAudit({ actor, action: "sos.triggered", entityType: related.type, entityId: related.id, metadata });
   const operators = await db.user.findMany({ where: { role: "OPERATEUR", sandboxId: user.sandboxId }, select: { id: true }, take: 20 });
   for (const op of operators) {
     await notifyUser(op.id, "SOS_ACCOMPAGNANT", { accompagnant: user.firstName, heure: formatTime(at) }, related);
@@ -284,6 +357,18 @@ async function flagClockSkew(actor: Actor, visitId: string, now: Date) {
 }
 
 // ─────────────── Propositions ───────────────
+
+/**
+ * Code m9 : « Accepter » idempotent. Si la proposition est déjà ACCEPTÉE par CET accompagnant (réponse perdue,
+ * second appui), on renvoie la mission créée au lieu d'un CONFLIT. Null sinon.
+ */
+export async function acceptedProposal(userId: string, proposalId: string): Promise<{ missionId: string; visitCount: number } | null> {
+  const p = await db.missionProposal.findFirst({
+    where: { ...ownedProposalWhere(userId, proposalId), status: "ACCEPTEE" },
+    select: { mission: { select: { id: true, _count: { select: { visits: true } } } } },
+  });
+  return p?.mission ? { missionId: p.mission.id, visitCount: p.mission._count.visits } : null;
+}
 
 export async function listAppProposals(userId: string, now: Date = new Date()): Promise<Proposition[]> {
   const { proposals } = await getPendingProposals(userId, now);
@@ -304,7 +389,7 @@ export async function listAppProposals(userId: string, now: Date = new Date()): 
   }));
 }
 
-/** Purge : événements reçus depuis plus de 30 jours (l'app a déjà vidé sa file). [À BRANCHER] sur la purge nocturne. */
+/** Purge : événements reçus depuis plus de 30 jours (l'app a déjà vidé sa file). Appelée par la purge nocturne (X9). */
 export async function purgeAppEvents(now: Date = new Date()): Promise<number> {
   const r = await db.appEvent.deleteMany({ where: { receivedAt: { lt: new Date(now.getTime() - 30 * 24 * H) } } });
   return r.count;

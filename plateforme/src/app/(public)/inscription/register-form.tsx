@@ -21,6 +21,7 @@ export function RegisterForm({ defaultRole, next }: { defaultRole: RoleChoice; n
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
       {next ? <input type="hidden" name="next" value={next} /> : null}
+      <FormMessage state={state} />
       <FormField label="Code testeur" htmlFor="testerCode" hint="Koudmen est en test sur invitation. Saisissez le code reçu." errors={fe?.testerCode} required>
         <Input {...fieldA11y("testerCode", fe?.testerCode, true)} autoComplete="off" autoCapitalize="characters" required />
       </FormField>
@@ -113,7 +114,6 @@ export function RegisterForm({ defaultRole, next }: { defaultRole: RoleChoice; n
           {fe.adult.join(" ")}
         </p>
       ) : null}
-      <FormMessage state={state} />
       <PendingButton pending={pending} size="lg" className="w-full" pendingLabel="Création…">
         Créer mon compte
       </PendingButton>

@@ -25,6 +25,11 @@ export const GLOSSARY = {
     term: "CESU",
     definition: "Le chèque emploi service. La famille déclare l'accompagnant comme salarié, en ligne, sur le site de l'Urssaf.",
   },
+  niveau: {
+    term: "Niveau d'accompagnement",
+    definition:
+      "Ce que l'accompagnant fait chez l'aîné. Niveau 1 : de la compagnie. Niveau 2 : des petits coups de main. Niveaux 3 et 4 : plus de présence, avec un statut adapté.",
+  },
   saad: {
     term: "SAAD",
     definition: "Un service d'aide à domicile autorisé par le Département. Il emploie ses propres intervenants.",

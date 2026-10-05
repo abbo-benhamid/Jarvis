@@ -126,6 +126,7 @@ export async function getFamilyRequests(userId: string) {
       status: true,
       createdAt: true,
       aine: { select: { id: true, firstName: true, lastInitial: true } },
+      createdById: true,
       createdBy: { select: { firstName: true } },
       slots: { select: { dayOfWeek: true, slot: true }, orderBy: [{ dayOfWeek: "asc" }, { slot: "asc" }] },
       employerType: true,

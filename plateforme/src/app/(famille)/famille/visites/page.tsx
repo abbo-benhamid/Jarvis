@@ -136,7 +136,7 @@ function VisitItem({ v, showAine }: { v: VisitRow; showAine: boolean }) {
           <p className="text-[15px] text-muted">Les preuves arrivent pendant la visite.</p>
         ) : (
           <div className="border-t border-line pt-3">
-            <ProofFactors proofs={v.proofs} />
+            <ProofFactors proofs={v.proofs} finished={v.status !== "EN_COURS"} />
           </div>
         )}
         {v.status === "A_VERIFIER" ? (
@@ -158,9 +158,9 @@ function VisitItem({ v, showAine }: { v: VisitRow; showAine: boolean }) {
 /** Schéma de la preuve « 2 sur 3 ». Le testeur l'ouvre avant la question. */
 function ProofExplainer({ children }: { children?: React.ReactNode }) {
   const items = [
-    { icon: MapPin, title: "Position", text: "L'accompagnant partage sa position une seule fois, à l'arrivée." },
-    { icon: KeyRound, title: "Code du domicile", text: "Il saisit le code affiché chez l'aîné." },
-    { icon: PhoneCall, title: "Appel de l'aîné", text: "Koudmen appelle l'aîné. Il tape 1 pour confirmer la visite (simulé en test)." },
+    { icon: MapPin, title: "Position à l'arrivée", text: "L'accompagnant partage sa position une seule fois, à l'arrivée." },
+    { icon: KeyRound, title: "Code du domicile", text: "Il scanne le QR code ou saisit le code affiché chez l'aîné." },
+    { icon: PhoneCall, title: "Confirmation de l'aîné", text: "Koudmen appelle l'aîné. Il tape 1 pour confirmer la visite (simulé en test)." },
   ];
   return (
     <details className="group rounded-card bg-surface px-5 shadow-card">

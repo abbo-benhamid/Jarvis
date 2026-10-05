@@ -39,6 +39,7 @@ export default async function Page({ params }: { params: Promise<{ visiteId: str
     ? (await db.visit.findFirst({ where: { id: visit.id, aine: { sandboxId: user.sandboxId } }, select: { aine: { select: { homeCode: true } } } }))
         ?.aine.homeCode
     : null;
+  const earlyTestCheckIn = testMode && win === "OUVERT" && now < visit.scheduledStart && !visit.checkInAt;
   const day = relativeDay(visit.scheduledStart, now) === "aujourd'hui" ? "Aujourd'hui" : capitalize(dayLong(visit.scheduledStart));
 
   return (
@@ -71,25 +72,31 @@ export default async function Page({ params }: { params: Promise<{ visiteId: str
           </div>
         </section>
 
-        {testHomeCode ? (
-          <div className="flex flex-col gap-1 rounded-md border-2 border-dashed border-mer bg-mer-soft p-4">
-            <p className="flex items-center gap-2 font-semibold">
-              <KeyRound aria-hidden="true" className="size-5 text-mer" strokeWidth={1.6} />
-              Code affiché chez {visit.aine.firstName} (test)
-            </p>
-            <p className="font-mono text-3xl font-bold tracking-[0.3em]">
-              <span className="sr-only">Lettre par lettre : {testHomeCode.split("").join(" ")}</span>
-              <span aria-hidden="true">{testHomeCode}</span>
-            </p>
-            <p className="text-sm">En vrai, vous lisez ce code sur la feuille près de la porte. Saisissez-le à l&apos;étape « Code du domicile ».</p>
-          </div>
-        ) : null}
-
         {win === "TROP_TOT" && !visit.checkInAt ? (
           <Alert tone="info">Vous pouvez enregistrer votre arrivée 2 heures avant le début de la visite.</Alert>
         ) : null}
-        {testMode && win === "OUVERT" && now < visit.scheduledStart && !visit.checkInAt ? (
-          <Alert tone="attention">Mode test : vous pouvez enregistrer votre arrivée avant l&apos;heure prévue.</Alert>
+
+        {/* V1c (UX M2, X8) : UN seul bloc repliable pour l'aide du test, sans répéter « Mode test ». */}
+        {testHomeCode || earlyTestCheckIn ? (
+          <details className="rounded-md border-2 border-dashed border-mer bg-mer-soft px-4 py-1">
+            <summary className="flex min-h-11 cursor-pointer items-center gap-2 font-semibold text-mer">
+              <KeyRound aria-hidden="true" className="size-5" strokeWidth={1.6} />
+              Aide pour le test
+            </summary>
+            <div className="flex flex-col gap-2 pb-3">
+              {testHomeCode ? (
+                <>
+                  <p>Code du domicile affiché chez {visit.aine.firstName} :</p>
+                  <p className="font-mono text-3xl font-bold tracking-[0.3em]">
+                    <span className="sr-only">Lettre par lettre : {testHomeCode.split("").join(" ")}</span>
+                    <span aria-hidden="true">{testHomeCode}</span>
+                  </p>
+                  <p className="text-sm">En vrai, vous lisez ce code sur la feuille près de la porte. Saisissez-le à l&apos;étape « Code du domicile ».</p>
+                </>
+              ) : null}
+              {earlyTestCheckIn ? <p className="text-sm">Vous pouvez enregistrer votre arrivée avant l&apos;heure prévue.</p> : null}
+            </div>
+          </details>
         ) : null}
       </div>
 

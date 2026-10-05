@@ -150,13 +150,30 @@ export const PROOF_FACTOR_LABELS: Record<ProofFactor, string> = {
   CONFIRMATION_AINE: "Confirmation de l'aîné",
 };
 
+/**
+ * V1c (arbitrage X4, UX M4) : UN seul vocabulaire des preuves, web et app.
+ * Compteur unique : « 1 preuve sur 3 », « 2 preuves sur 3 ». Il en faut 2.
+ */
+export function proofCountLabel(n: number): string {
+  return `${n} ${n > 1 ? "preuves" : "preuve"} sur 3`;
+}
+
+/** États d'une preuve (X4) : obtenue, à faire (visite pas finie), non obtenue (visite finie ou refus). */
+export const PROOF_STATE_LABELS = { OBTENUE: "Obtenue", A_FAIRE: "À faire", NON_OBTENUE: "Non obtenue" } as const;
+
+/**
+ * Échelle d'humeur (X4, UX M5) : la même sur le web et dans l'app, du mieux au moins bien
+ * (ordre d'affichage : 5 → 1). Valeurs stockées inchangées (1 à 5).
+ */
 export const MOOD_LABELS: Record<number, string> = {
-  1: "Très bas",
-  2: "Bas",
-  3: "Correct",
-  4: "Bien",
   5: "Très bien",
+  4: "Bien",
+  3: "Correct",
+  2: "Pas très bien",
+  1: "Pas bien",
 };
+/** Ordre d'affichage de l'humeur : du mieux au moins bien. */
+export const MOOD_ORDER = [5, 4, 3, 2, 1] as const;
 
 export const APPETITE_LABELS: Record<Appetite, string> = {
   BON: "Bon",

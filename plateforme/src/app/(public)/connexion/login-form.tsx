@@ -14,13 +14,13 @@ export function LoginForm({ next }: { next?: string }) {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
       {next ? <input type="hidden" name="next" value={next} /> : null}
+      <FormMessage state={state} />
       <FormField label="Email" htmlFor="email" errors={fe?.email} required>
         <Input {...fieldA11y("email", fe?.email)} type="email" autoComplete="email" required />
       </FormField>
       <FormField label="Mot de passe" htmlFor="password" errors={fe?.password} required>
         <Input {...fieldA11y("password", fe?.password)} type="password" autoComplete="current-password" required />
       </FormField>
-      <FormMessage state={state} />
       <PendingButton pending={pending} size="lg" className="w-full" pendingLabel="Connexion…">
         Se connecter
       </PendingButton>

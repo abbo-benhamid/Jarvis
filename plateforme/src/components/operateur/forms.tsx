@@ -31,6 +31,7 @@ export function DecisionForm({ caregiverId, decisions }: { caregiverId: string; 
     // noValidate : le serveur valide et affiche un message accessible sous le champ (comme la connexion).
     <form action={action} className="flex flex-col gap-4" noValidate>
       <input type="hidden" name="caregiverId" value={caregiverId} />
+      <FormMessage state={state} />
       <Fieldset legend="Votre décision" errors={fe?.decision}>
         {decisions.map((d) => (
           <Radio
@@ -53,7 +54,6 @@ export function DecisionForm({ caregiverId, decisions }: { caregiverId: string; 
       >
         <Textarea {...fieldA11y("reason", fe?.reason, true)} maxLength={1000} required={needsReason} />
       </FormField>
-      <FormMessage state={state} />
       <div>
         <SubmitButton variant={needsReason ? "danger" : "primary"} pendingLabel="Enregistrement…">
           Enregistrer la décision

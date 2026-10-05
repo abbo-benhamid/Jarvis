@@ -110,6 +110,7 @@ function FeedbackForm({ context, onDone }: { context: FeedbackContext; onDone: (
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4 px-5 py-4">
       <input type="hidden" name="pagePath" value={pagePath} />
+      <FormMessage state={state} />
       <Fieldset legend={context.title ? "Votre note pour ce scénario" : "Votre note pour cette page"} errors={!state.ok ? state.fieldErrors?.rating : undefined}>
         <div className="flex flex-wrap gap-2">
           {RATINGS.map((r) => (
@@ -134,7 +135,6 @@ function FeedbackForm({ context, onDone }: { context: FeedbackContext; onDone: (
         <Textarea id="feedback-message" name="message" required minLength={3} maxLength={2000} />
       </FormField>
       <p className="text-sm text-muted">Page : {pageName(pagePath)}</p>
-      <FormMessage state={state} />
       <div className="flex justify-end">
         <PendingButton pending={pending} size="lg" className="max-sm:w-full" pendingLabel="Envoi…">
           Envoyer mon avis

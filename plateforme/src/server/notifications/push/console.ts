@@ -11,7 +11,8 @@ export function creerPushConsole(log: (ligne: string) => void = (l) => console.i
     async envoyer(messages: MessagePush[]): Promise<ResultatPush[]> {
       return messages.map((m) => {
         const cible = m.donnees.visiteId ? `${m.donnees.ecran}:${m.donnees.visiteId}` : m.donnees.ecran;
-        log(`[push:console] ${m.plateforme} ${masquerJeton(m.jeton)} | ${m.titre} | ${m.corps} | ecran=${cible}`);
+        // X2 / PB1 : ni titre ni texte dans le journal (aucun prénom) : plateforme, jeton masqué, écran visé.
+        log(`[push:console] ${m.plateforme} ${masquerJeton(m.jeton)} | ecran=${cible}`);
         return { ok: true };
       });
     },

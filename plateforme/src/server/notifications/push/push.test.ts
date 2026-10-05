@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { TEMPLATE_KEYS, renderTemplate } from "@/server/notification-templates";
+import { productionConfigProblems } from "@/server/config-check";
 import { nomAdaptateurPush, pushPort } from "./adaptateur";
 import { creerPushConsole } from "./console";
 import { EXPO_PUSH_URL, creerPushExpo } from "./expo";
@@ -54,12 +55,13 @@ contrat("expo (réseau coupé)", () =>
 );
 
 describe("adaptateur console", () => {
-  it("écrit une ligne par message, jeton masqué", async () => {
+  it("écrit une ligne par message, jeton masqué, SANS titre ni texte (X2 : aucun prénom au journal)", async () => {
     const lignes: string[] = [];
     await creerPushConsole((l) => lignes.push(l)).envoyer([message(7)]);
     expect(lignes).toHaveLength(1);
-    expect(lignes[0]).toContain("[push:console] ANDROID …0007 | Nouveau Kayé pour Léonie | Ouvrez Koudmen pour le lire. | ecran=kaye:v1");
+    expect(lignes[0]).toBe("[push:console] ANDROID …0007 | ecran=kaye:v1");
     expect(lignes[0]).not.toContain("appareil-0007");
+    expect(lignes[0]).not.toContain("Léonie");
   });
 });
 
@@ -128,6 +130,19 @@ describe("choix de l'adaptateur (ADAPTER_PUSH)", () => {
     expect(pushPort({}).nom).toBe("console");
     expect(pushPort({ ADAPTER_PUSH: "expo" }).nom).toBe("expo");
   });
+
+  it("X2 : en production stricte, expo refusé sans PUSH_DPO_VALIDE=true (repli console) ; config refusée", () => {
+    const prod = { VERCEL_ENV: "production", ADAPTER_PUSH: "expo" };
+    expect(nomAdaptateurPush(prod)).toBe("console");
+    expect(pushPort(prod).nom).toBe("console");
+    expect(nomAdaptateurPush({ ...prod, PUSH_DPO_VALIDE: "true" })).toBe("expo");
+    const problems = productionConfigProblems(prod).join(" ");
+    expect(problems).toContain("PUSH_DPO_VALIDE");
+    expect(problems).toContain("EXPO_ACCESS_TOKEN");
+    const ok = productionConfigProblems({ ...prod, PUSH_DPO_VALIDE: "true", EXPO_ACCESS_TOKEN: "jeton-expo" }).join(" ");
+    expect(ok).not.toContain("PUSH_DPO_VALIDE");
+    expect(ok).not.toContain("EXPO_ACCESS_TOKEN");
+  });
 });
 
 describe("jeton Expo", () => {
@@ -142,19 +157,27 @@ describe("jeton Expo", () => {
 describe("textes push (R9 : générique, aucune donnée de santé)", () => {
   const vars = { aine: "Léonie", accompagnant: "Marius", humeur: "Triste", prenom: "Marius", niveau: "N2", commune: "Le Lamentin", motif: "x" };
 
-  it("Kayé : « Nouveau Kayé pour Léonie », sans contenu", () => {
+  it("Kayé : titre générique « Koudmen · Nouvelles de votre proche » (X2), sans prénom ni contenu", () => {
     expect(rendrePush("KAYE_PUBLIE", vars, "v1")).toEqual({
-      titre: "Nouveau Kayé pour Léonie",
-      corps: "Ouvrez Koudmen pour le lire.",
+      titre: "Koudmen · Nouvelles de votre proche",
+      corps: "Un nouveau Kayé est arrivé. Ouvrez Koudmen pour le lire.",
       donnees: { ecran: "kaye", visiteId: "v1", lien: "/famille/kaye" },
     });
   });
 
-  it("aucun push ne recopie humeur, nom d'accompagnant, commune ou niveau", () => {
+  it("X2 : « à surveiller » a le MÊME titre que le Kayé ; aucun push ne dit « surveiller »", () => {
+    expect(rendrePush("ALERTE_A_SURVEILLER", vars, "v1")!.titre).toBe(rendrePush("KAYE_PUBLIE", vars, "v1")!.titre);
+    for (const key of Object.keys(MODELES_PUSH) as (keyof typeof MODELES_PUSH)[]) {
+      const r = rendrePush(key, vars, "v1")!;
+      expect(`${r.titre} ${r.corps}`.toLowerCase()).not.toContain("surveiller");
+    }
+  });
+
+  it("aucun push ne recopie prénom de l'aîné, humeur, nom d'accompagnant, commune ou niveau", () => {
     for (const key of Object.keys(MODELES_PUSH) as (keyof typeof MODELES_PUSH)[]) {
       const r = rendrePush(key, vars, "v1")!;
       const texte = `${r.titre} ${r.corps} ${JSON.stringify(r.donnees)}`;
-      for (const interdit of ["Triste", "Marius", "Lamentin", "N2"]) expect(texte).not.toContain(interdit);
+      for (const interdit of ["Léonie", "Triste", "Marius", "Lamentin", "N2"]) expect(texte).not.toContain(interdit);
       expect(texte).not.toMatch(/\{\w+\}/);
     }
   });
@@ -170,6 +193,6 @@ describe("textes push (R9 : générique, aucune donnée de santé)", () => {
   });
 
   it("proposition : écran des propositions, aucun lieu", () => {
-    expect(rendrePush("PROPOSITION_MISSION", vars)).toMatchObject({ titre: "Nouvelle proposition", donnees: { ecran: "propositions" } });
+    expect(rendrePush("PROPOSITION_MISSION", vars)).toMatchObject({ titre: "Koudmen · Nouvelle proposition", donnees: { ecran: "propositions" } });
   });
 });

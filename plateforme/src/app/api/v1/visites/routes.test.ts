@@ -14,6 +14,7 @@ const svc = vi.hoisted(() => ({
   getAppVisit: vi.fn(async () => null as unknown),
   processAppEvents: vi.fn(async () => [] as unknown[]),
   listAppProposals: vi.fn(async () => [] as unknown[]),
+  acceptedProposal: vi.fn(async () => null as unknown),
 }));
 const lotB = vi.hoisted(() => {
   class AccompagnantError extends Error {
@@ -151,6 +152,13 @@ describe("propositions", () => {
 
     lotB.acceptProposal.mockRejectedValueOnce(new lotB.AccompagnantError("Cette proposition n'est plus en attente.", "CONFLIT"));
     expect((await errorOf(await accepter.POST(post(`/api/v1/propositions/${ID}/accepter`)), 409)).code).toBe("CONFLIT");
+    // m9 : déjà acceptée par CE compte (réponse perdue) → 200 avec la même mission.
+    lotB.acceptProposal.mockRejectedValueOnce(new lotB.AccompagnantError("Cette proposition n'est plus en attente.", "CONFLIT"));
+    svc.acceptedProposal.mockResolvedValueOnce({ missionId: "cmmission00000000000000001", visitCount: 4 });
+    const again = await accepter.POST(post(`/api/v1/propositions/${ID}/accepter`));
+    expect(again.status).toBe(200);
+    expect(reponseAcceptationSchema.parse(await again.json())).toMatchObject({ statut: "ACCEPTEE", missionId: "cmmission00000000000000001" });
+    expect(svc.acceptedProposal).toHaveBeenLastCalledWith("u1", ID);
     lotB.acceptProposal.mockRejectedValueOnce(new lotB.AccompagnantError("Votre profil doit être validé pour accepter une mission.", "INTERDIT"));
     expect((await errorOf(await accepter.POST(post(`/api/v1/propositions/${ID}/accepter`)), 422)).code).toBe("ACTION_IMPOSSIBLE");
     lotB.acceptProposal.mockRejectedValueOnce(new lotB.AccompagnantError("Proposition introuvable.", "INTROUVABLE"));

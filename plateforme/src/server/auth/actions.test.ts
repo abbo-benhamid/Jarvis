@@ -56,6 +56,17 @@ describe("déconnexion (M3, M7)", () => {
   });
 });
 
+describe("déconnexion d'un compte démo partagé (X6, sécurité D1)", () => {
+  it("ne change PAS la version de session : les autres visiteurs restent connectés ; ce navigateur est déconnecté", async () => {
+    const token = await signSessionToken({ sub: "demo1", role: "FAMILLE", name: "Sandrine", demo: true, sv: 0 }, new TextEncoder().encode(process.env.SESSION_SECRET!));
+    cookieStore.get.mockImplementation((name: string) => (name === SESSION_COOKIE ? { value: token } : undefined));
+    await expect(logoutAction()).rejects.toThrow("REDIRECT:/");
+    expect(db.user.updateMany).not.toHaveBeenCalled();
+    expect(cookieStore.delete).toHaveBeenCalledWith(SESSION_COOKIE);
+    expect(logAudit.mock.calls[0]![0]).toMatchObject({ action: "auth.logout", metadata: { demoPartagee: true } });
+  });
+});
+
 describe("inscription libre (A10, M1)", () => {
   it("est fermée si DEMO_MODE n'est pas true : renvoi vers /tester, aucun compte créé", async () => {
     process.env.DEMO_MODE = "false";

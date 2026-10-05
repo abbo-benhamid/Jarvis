@@ -176,6 +176,80 @@ describe.runIf(enabled)("Lot A2 (API v1 : visites, événements, propositions) s
     expect(again).toMatchObject({ statut: "REFUSE", motif: "CONFLIT" });
   });
 
+  it("M1 : réservation orpheline (> 60 s sans résultat) reprise au renvoi ; réservation récente → DOUBLON EN_COURS", async () => {
+    const v = await visitFor(alice);
+    const orphan = ev("CHECK_IN", { visiteId: v.id, codeDomicile: homeCode });
+    // Processus arrêté entre la réservation et le résultat, il y a 2 minutes.
+    await db.appEvent.create({
+      data: { userId: alice.user.id, clientEventId: orphan.clientEventId, type: "CHECK_IN", visitId: v.id, occurredAt: new Date(), receivedAt: new Date(Date.now() - 120_000) },
+    });
+    const [r] = await app.processAppEvents(alice.user, [orphan]);
+    expect(r).toMatchObject({ statut: "ACCEPTE", visite: { id: v.id, score: 1 } });
+    const row = await db.appEvent.findUniqueOrThrow({ where: { userId_clientEventId: { userId: alice.user.id, clientEventId: orphan.clientEventId } } });
+    expect(row.outcome).not.toBeNull();
+    const [again] = await app.processAppEvents(alice.user, [orphan]);
+    expect(again).toMatchObject({ statut: "DOUBLON", statutOrigine: "ACCEPTE" });
+
+    // Réservation de 10 s : un autre envoi la traite peut-être encore.
+    const fresh = ev("CHECK_OUT", { visiteId: v.id });
+    await db.appEvent.create({
+      data: { userId: alice.user.id, clientEventId: fresh.clientEventId, type: "CHECK_OUT", visitId: v.id, occurredAt: new Date(), receivedAt: new Date(Date.now() - 10_000) },
+    });
+    const [busy] = await app.processAppEvents(alice.user, [fresh]);
+    expect(busy).toMatchObject({ statut: "DOUBLON", statutOrigine: "EN_COURS" });
+    expect((await db.visit.findUniqueOrThrow({ where: { id: v.id } })).checkOutAt).toBeNull();
+  });
+
+  it("M9 : check-in refusé puis Kayé refusé → le texte du Kayé est gardé en brouillon serveur ; publiable ensuite", async () => {
+    const v = await visitFor(alice);
+    const kaye = { humeur: 4, appetit: "BON", activites: ["Dominos"], note: "Texte écrit hors ligne", aSurveiller: false };
+    const [ci, pub] = await app.processAppEvents(alice.user, [
+      ev("CHECK_IN", { visiteId: v.id, codeDomicile: "XXXXXX" }),
+      ev("KAYE_PUBLICATION", { visiteId: v.id, kaye }),
+    ]);
+    expect(ci).toMatchObject({ statut: "REFUSE", motif: "INVALIDE" });
+    expect(pub).toMatchObject({ statut: "REFUSE", motif: "INVALIDE" });
+    expect(pub!.message).toContain("gardé en brouillon");
+    expect((await app.getAppVisit(alice.user.id, v.id))?.brouillonKaye).toMatchObject({ humeur: 4, note: "Texte écrit hors ligne" });
+    // Le bon code, puis le Kayé : publié, brouillon effacé.
+    const [ci2, pub2] = await app.processAppEvents(alice.user, [
+      ev("CHECK_IN", { visiteId: v.id, codeDomicile: homeCode }),
+      ev("KAYE_PUBLICATION", { visiteId: v.id, kaye }),
+    ]);
+    expect(ci2).toMatchObject({ statut: "ACCEPTE" });
+    expect(pub2).toMatchObject({ statut: "ACCEPTE" });
+    expect(await db.kayeDraft.count({ where: { visitId: v.id } })).toBe(0);
+  });
+
+  it("M8 : un Kayé publié depuis le WEB efface aussi le brouillon synchronisé par l'app", async () => {
+    const v = await visitFor(alice);
+    await app.processAppEvents(alice.user, [
+      ev("CHECK_IN", { visiteId: v.id, codeDomicile: homeCode }),
+      ev("KAYE_BROUILLON", { visiteId: v.id, kaye: { humeur: 3, note: "Brouillon app" } }),
+    ]);
+    expect(await db.kayeDraft.count({ where: { visitId: v.id } })).toBe(1);
+    const { createKaye } = await import("@/server/accompagnant/service");
+    await createKaye(
+      { id: alice.user.id, role: "ACCOMPAGNANT", firstName: "Alice" },
+      { visitId: v.id, mood: 3, appetite: "BON", activities: [], note: null, alertFlag: false, alertNote: null },
+    );
+    expect(await db.kayeDraft.count({ where: { visitId: v.id } })).toBe(0);
+  });
+
+  it("X9 : purge des brouillons de Kayé (publié, inchangé depuis 7 j, visite finie depuis 7 j) ; récents gardés", async () => {
+    const { purgeKayeDrafts } = await import("@/server/app-retention");
+    const recent = await visitFor(alice);
+    const old = await visitFor(alice, -24 * 9);
+    await db.kayeDraft.create({ data: { visitId: recent.id, authorId: alice.user.id, content: { humeur: 2 }, occurredAt: new Date() } });
+    await db.kayeDraft.create({ data: { visitId: old.id, authorId: alice.user.id, content: { humeur: 2 }, occurredAt: new Date() } });
+    await purgeKayeDrafts();
+    expect(await db.kayeDraft.count({ where: { visitId: recent.id } })).toBe(1);
+    expect(await db.kayeDraft.count({ where: { visitId: old.id } })).toBe(0);
+    // Inchangé depuis 8 jours (heure simulée).
+    expect(await purgeKayeDrafts(new Date(Date.now() + 8 * 24 * H))).toBeGreaterThanOrEqual(1);
+    expect(await db.kayeDraft.count({ where: { visitId: recent.id } })).toBe(0);
+  });
+
   it("écart d'horloge > 12 h : visite « À vérifier », même avec 2 facteurs ; signalé dans la réponse", async () => {
     const v = await visitFor(alice);
     const wrongClock = new Date(Date.now() - 13 * H);
@@ -192,6 +266,16 @@ describe.runIf(enabled)("Lot A2 (API v1 : visites, événements, propositions) s
     expect((await app.getAppVisit(alice.user.id, v.id))?.preuve.horlogeSuspecte).toBe(true);
   });
 
+  it("m3 : SOS à l'horloge suspecte avant le check-in → visite NON marquée ; le check-in avec le bon code passe", async () => {
+    const v = await visitFor(alice);
+    const wrongClock = new Date(Date.now() - 13 * H);
+    const [s] = await app.processAppEvents(alice.user, [ev("SOS", { visiteId: v.id }, wrongClock)]);
+    expect(s).toMatchObject({ statut: "ACCEPTE", horlogeSuspecte: true });
+    expect((await db.visit.findUniqueOrThrow({ where: { id: v.id } })).clockSkewAt).toBeNull();
+    const [ci] = await app.processAppEvents(alice.user, [ev("CHECK_IN", { visiteId: v.id, codeDomicile: homeCode })]);
+    expect(ci).toMatchObject({ statut: "ACCEPTE", visite: { statut: "EN_COURS", score: 1 } });
+  });
+
   it("IDOR : un événement sur la visite d'un autre accompagnant est refusé INTROUVABLE, sans effet", async () => {
     const v = await visitFor(alice);
     const results = await app.processAppEvents(bruno.user, [
@@ -205,6 +289,8 @@ describe.runIf(enabled)("Lot A2 (API v1 : visites, événements, propositions) s
     }
     expect(await db.visitProof.count({ where: { visitId: v.id } })).toBe(0);
     expect(await db.kayeDraft.count({ where: { visitId: v.id } })).toBe(0);
+    // Sécurité m1 : l'id de la visite d'autrui n'est pas gardé dans le journal des événements.
+    expect(await db.appEvent.count({ where: { userId: bruno.user.id, visitId: v.id } })).toBe(0);
   });
 
   it("accompagnant suspendu : événements refusés (COMPTE_INACTIF), mais le SOS passe et prévient l'opérateur", async () => {
@@ -218,6 +304,37 @@ describe.runIf(enabled)("Lot A2 (API v1 : visites, événements, propositions) s
     const msg = await db.outboxMessage.findFirst({ where: { recipientUserId: operateur.id, template: "SOS_ACCOMPAGNANT", relatedId: v.id } });
     expect(msg?.body).toContain("Carla");
     expect(msg?.body).not.toContain("Aîné");
+  });
+
+  it("X6 : 6 SOS dans un lot → 3 alertes au plus par heure ; les suivants ACCEPTE avec consigne, journalisés sos.suppressed", async () => {
+    const dora = await caregiver("Dora");
+    const lot = Array.from({ length: 6 }, () => ev("SOS", {}));
+    const results = await app.processAppEvents(dora.user, lot);
+    for (const r of results) {
+      expect(r).toMatchObject({ statut: "ACCEPTE" });
+      expect(r.consigne).toContain("112");
+    }
+    expect(await db.auditLog.count({ where: { actorId: dora.user.id, action: "sos.triggered" } })).toBe(app.MAX_SOS_PAR_HEURE);
+    expect(await db.auditLog.count({ where: { actorId: dora.user.id, action: "sos.suppressed" } })).toBe(3);
+    expect(await db.outboxMessage.count({ where: { recipientUserId: operateur.id, template: "SOS_ACCOMPAGNANT", relatedId: dora.user.id } })).toBe(app.MAX_SOS_PAR_HEURE);
+  });
+
+  it("X6 : SOS d'un compte démo partagé → jamais envoyé aux opérateurs réels (journal de démo), consigne 15/112", async () => {
+    const eva = await caregiver("Eva");
+    const [r] = await app.processAppEvents({ ...eva.user, isDemo: true }, [ev("SOS", {})]);
+    expect(r).toMatchObject({ statut: "ACCEPTE" });
+    expect(r!.consigne).toContain("démonstration");
+    expect(r!.consigne).toContain("112");
+    expect(await db.outboxMessage.count({ where: { template: "SOS_ACCOMPAGNANT", relatedId: eva.user.id } })).toBe(0);
+    expect(await db.auditLog.count({ where: { actorId: eva.user.id, action: "sos.demo" } })).toBe(1);
+    expect(await db.auditLog.count({ where: { actorId: eva.user.id, action: "sos.triggered" } })).toBe(0);
+  });
+
+  it("m9 : proposition déjà acceptée → même mission pour CET accompagnant, rien pour un autre", async () => {
+    const v = await visitFor(alice);
+    const mission = await db.mission.findUniqueOrThrow({ where: { id: v.missionId } });
+    expect(await app.acceptedProposal(alice.user.id, mission.proposalId)).toEqual({ missionId: mission.id, visitCount: 1 });
+    expect(await app.acceptedProposal(bruno.user.id, mission.proposalId)).toBeNull();
   });
 
   it("propositions : liste, refus SANS pénalité (profil inchangé, propositions suivantes toujours visibles)", async () => {

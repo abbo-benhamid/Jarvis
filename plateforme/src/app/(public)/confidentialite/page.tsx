@@ -10,7 +10,7 @@ export default function ConfidentialitePage() {
   const e = editorInfo();
   const end = testEndLabel();
   return (
-    <LegalPage title="Politique de confidentialité" updated="5 octobre 2026">
+    <LegalPage title="Politique de confidentialité" updated="6 octobre 2026">
       <LegalSection title="En bref">
         <LegalList
           items={[
@@ -98,6 +98,7 @@ export default function ConfidentialitePage() {
           items={[
             "L'équipe Koudmen (opérateurs). Les autres testeurs ne voient jamais votre bac à sable.",
             "Nos sous-traitants techniques : Vercel Inc. (hébergement de l'application, région de Francfort, UE) et Neon Inc. (base de données PostgreSQL, région de Francfort, UE). Adresses : page Mentions légales.",
+            "Pour les notifications de l'application mobile (envois réels seulement, pas pendant le test) : Expo (650 Industries Inc., États-Unis), Apple et Google. Voir « Application mobile Koudmen ».",
             "L'application et la base tournent dans l'Union européenne. Vercel et Neon restent des sociétés américaines : le transfert possible repose sur le cadre UE–États-Unis (DPF) ou sur des clauses types. [À VÉRIFIER AVEC UN AVOCAT]",
           ]}
         />
@@ -118,6 +119,66 @@ export default function ConfidentialitePage() {
           Dans le rôle « Accompagnant », le check-in peut lire UNE position, avec votre accord, au début de la visite. Il n&apos;y a jamais de
           suivi continu. En test, utilisez plutôt le bouton « Simuler ma position ».
         </p>
+      </LegalSection>
+
+      {/* V1c (arbitrage X7, sécurité D3) : l'app accompagnant, le push, Expo, le stockage chiffré du téléphone. */}
+      <LegalSection id="application" title="Application mobile Koudmen">
+        <p>L&apos;application sert aux accompagnants (visites, check-in, Kayé). Elle utilise les mêmes comptes que le site.</p>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-left text-sm">
+            <thead>
+              <tr className="border-b border-line">
+                <th scope="col" className="py-2 pr-3">Données</th>
+                <th scope="col" className="py-2 pr-3">Où</th>
+                <th scope="col" className="py-2">Durée</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-line align-top">
+                <td className="py-2 pr-3">
+                  Connexion de l&apos;app : un jeton d&apos;accès (en mémoire, 15 minutes) et un jeton de renouvellement
+                </td>
+                <td className="py-2 pr-3">
+                  Téléphone : stockage sécurisé du système (trousseau iOS, Keystore Android). Serveur : empreinte du jeton seulement
+                </td>
+                <td className="py-2">30 jours sans usage, ou jusqu&apos;à la déconnexion. Empreinte effacée 7 jours après</td>
+              </tr>
+              <tr className="border-b border-line align-top">
+                <td className="py-2 pr-3">
+                  Visites du jour et envois en attente sans réseau (check-in, Kayé, SOS)
+                </td>
+                <td className="py-2 pr-3">
+                  Téléphone, <strong>chiffrés</strong> (AES-256). La clé reste dans le stockage sécurisé du téléphone
+                </td>
+                <td className="py-2">Jusqu&apos;à l&apos;envoi, ou effacés à la déconnexion</td>
+              </tr>
+              <tr className="border-b border-line align-top">
+                <td className="py-2 pr-3">Journal des envois de l&apos;app (type, heure, résultat ; jamais le texte du Kayé)</td>
+                <td className="py-2 pr-3">Serveur (UE)</td>
+                <td className="py-2">30 jours</td>
+              </tr>
+              <tr className="border-b border-line align-top">
+                <td className="py-2 pr-3">Brouillon de Kayé (humeur, appétit, note)</td>
+                <td className="py-2 pr-3">Serveur (UE)</td>
+                <td className="py-2">Effacé à l&apos;envoi du Kayé, et au plus 7 jours</td>
+              </tr>
+              <tr className="align-top">
+                <td className="py-2 pr-3">Notifications (push) : identifiant de notification du téléphone</td>
+                <td className="py-2 pr-3">Serveur (UE). Envoi par Expo, puis Apple ou Google (voir plus bas)</td>
+                <td className="py-2">Jusqu&apos;à la déconnexion ; effacé 30 jours après</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <LegalList
+          items={[
+            "Notifications : le titre est toujours générique (« Koudmen · Nouvelles de votre proche », « Koudmen · Nouvelle proposition »). Jamais le prénom de l'aîné, jamais l'humeur, jamais un point à surveiller. Le détail se lit dans l'app, après connexion.",
+            "Les notifications passent par Expo (650 Industries, États-Unis), puis par Apple (APNs) ou Google (Firebase Cloud Messaging). Pendant le test, aucune notification réelle n'est envoyée : elles sont simulées. Le passage aux envois réels attend l'accord de notre délégué à la protection des données (contrat avec Expo, transfert hors UE encadré). [À VÉRIFIER AVEC UN AVOCAT]",
+            "Caméra : seulement pour lire le QR code du domicile. Aucune photo n'est prise ni gardée.",
+            "Position : une seule lecture, au check-in, avec votre accord. Jamais en arrière-plan, jamais au départ.",
+            "Vous pouvez couper les notifications dans les réglages du téléphone. La déconnexion efface les données de l'app sur le téléphone.",
+          ]}
+        />
       </LegalSection>
 
       <LegalSection title="Vos droits">

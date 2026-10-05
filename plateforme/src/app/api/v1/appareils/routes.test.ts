@@ -7,6 +7,7 @@ import { MODELES_PUSH, rendrePush } from "@/server/notifications/push/templates"
 /** Routes du lot N1 avec un service simulé : auth, validation du jeton, format d'erreur, idempotence du retrait. */
 const auth = vi.hoisted(() => ({ role: "FAMILLE" as string }));
 const svc = vi.hoisted(() => ({
+  PushDeviceConflictError: class PushDeviceConflictError extends Error {},
   registerDevice: vi.fn(async () => ({ id: "cmappareil0000000000000001", createdAt: new Date(), lastSeenAt: new Date("2026-10-05T12:00:00Z") })),
   unregisterDevice: vi.fn(async () => true),
 }));
@@ -70,6 +71,15 @@ describe("POST /api/v1/appareils", () => {
       expect(text).not.toContain("fcm-brut-123");
     }
     expect(svc.registerDevice).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/v1/appareils : jeton d'un autre compte (PM2)", () => {
+  it("409 CONFLIT si le jeton est lié à un autre compte encore connecté", async () => {
+    svc.registerDevice.mockRejectedValueOnce(new svc.PushDeviceConflictError("Ce téléphone reçoit déjà les notifications d'un autre compte."));
+    const res = await appareils.POST(req("POST", "/api/v1/appareils", { jeton: JETON, plateforme: "IOS" }));
+    expect(res.status).toBe(409);
+    expect(reponseErreurSchema.parse(await res.json()).erreur.code).toBe("CONFLIT");
   });
 });
 

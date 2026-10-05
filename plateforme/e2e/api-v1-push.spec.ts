@@ -83,13 +83,15 @@ test.describe("API v1 — push (lot N1)", () => {
     const res = reponseEvenementsSchema.parse(await (await request.post("/api/v1/evenements", { headers: cgAuth, data: { evenements: evs } })).json());
     expect(res.resultats.map((r) => r.statut)).toEqual(["ACCEPTE", "ACCEPTE"]);
 
-    // 3. Deux push dans l'Outbox, envoyés (console = ENVOYE_SIMULE), texte générique.
-    const push = await prisma.outboxMessage.findMany({ where: { recipientUserId: family.id, channel: "PUSH" }, orderBy: { createdAt: "asc" } });
-    expect(push.map((p) => [p.template, p.status, p.to, p.subject])).toEqual([
-      ["KAYE_PUBLIE", "ENVOYE_SIMULE", "1/1 appareil(s)", "Nouveau Kayé pour Ginette"],
-      ["ALERTE_A_SURVEILLER", "ENVOYE_SIMULE", "1/1 appareil(s)", "À lire : visite chez Ginette"],
-    ]);
-    for (const p of push) expect(`${p.subject} ${p.body}`).not.toMatch(/privé|Dominos|FAIBLE/);
+    // 3. Deux push dans l'Outbox, envoyés APRÈS la réponse (M2 : console = ENVOYE_SIMULE), titre générique (X2).
+    const pushRows = () => prisma.outboxMessage.findMany({ where: { recipientUserId: family.id, channel: "PUSH" }, orderBy: { createdAt: "asc" } });
+    await expect
+      .poll(async () => (await pushRows()).map((p) => [p.template, p.status, p.to, p.subject]))
+      .toEqual([
+        ["KAYE_PUBLIE", "ENVOYE_SIMULE", "1/1 appareil(s)", "Koudmen · Nouvelles de votre proche"],
+        ["ALERTE_A_SURVEILLER", "ENVOYE_SIMULE", "1/1 appareil(s)", "Koudmen · Nouvelles de votre proche"],
+      ]);
+    for (const p of await pushRows()) expect(`${p.subject} ${p.body}`).not.toMatch(/privé|Dominos|FAIBLE|Ginette|surveiller/);
     // Le canal par défaut (e-mail : pas de téléphone) part toujours.
     expect(await prisma.outboxMessage.count({ where: { recipientUserId: family.id, channel: "EMAIL", template: "KAYE_PUBLIE" } })).toBe(1);
 

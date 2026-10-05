@@ -240,9 +240,9 @@ export default function DesignPage() {
               { label: "Durée", value: "1 h 57" },
             ]}
             proofs={[
-              { label: "Position au domicile", detail: "À 12 m de la maison", time: "10:04", obtained: true },
+              { label: "Position à l'arrivée", detail: "À 12 m de la maison", time: "10:04", obtained: true },
               { label: "Tag scanné chez Léonie", detail: "Sur la porte de la cuisine", time: "10:05", obtained: true },
-              { label: "Appel de confirmation", detail: "Léonie n'a pas décroché", time: "11:58", obtained: false },
+              { label: "Confirmation de l'aîné", detail: "Léonie n'a pas décroché", time: "11:58", obtained: false },
             ]}
             verdictText="Deux preuves suffisent. Le paiement de Josiane part."
           />
@@ -282,9 +282,9 @@ export default function DesignPage() {
         <Card padding="none" className="px-[18px] py-1">
           <ProofSteps
             steps={[
-              { label: "Position au domicile", detail: "Arrivée à 9 h 58", state: "done", aside: <b className="num font-semibold text-feuille">OK</b> },
+              { label: "Position à l'arrivée", detail: "Arrivée à 9 h 58", state: "done", aside: <b className="num font-semibold text-feuille">OK</b> },
               { label: "Scanner le tag", detail: "Sur la porte de la cuisine", state: "current", icon: <ScanLine />, aside: <ProofBadge status="a-faire" /> },
-              { label: "Appel à Léonie", detail: "Elle tape 1 en fin de visite", state: "todo", icon: <Phone /> },
+              { label: "Confirmation de l'aîné", detail: "Léonie tape 1 en fin de visite", state: "todo", icon: <Phone /> },
             ]}
           />
         </Card>

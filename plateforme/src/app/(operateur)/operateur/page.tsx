@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { MoreLink, OPS_CARD, Panel, StatTile } from "@/components/operateur/display";
-import { CAREGIVER_STATUS_LABELS, LEVEL_LABELS } from "@/lib/labels";
+import { CAREGIVER_STATUS_LABELS, LEVEL_LABELS, proofCountLabel } from "@/lib/labels";
 import { communeLabel } from "@/lib/communes";
 import { formatDate, formatDateTime } from "@/lib/format";
 
@@ -133,7 +133,7 @@ export default async function Page() {
                     {v.aine.firstName} avec {v.caregiver.user.firstName} — {formatDate(v.scheduledStart)}
                   </p>
                   <p className="text-sm text-muted">
-                    <span className="num">{v.proofScore}</span> preuve(s) sur 3. Appelez l&apos;aîné ou la famille.
+                    <span className="num">{proofCountLabel(v.proofScore)}</span>. Appelez l&apos;aîné ou la famille.
                   </p>
                 </li>
               ))}

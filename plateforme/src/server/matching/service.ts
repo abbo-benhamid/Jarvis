@@ -3,7 +3,7 @@ import { Prisma, type Role } from "@prisma/client";
 import { db } from "@/server/db";
 import { logAudit } from "@/server/audit";
 import { notifyLakou, notifyUser } from "@/server/outbox";
-import { flushPendingPushSafe } from "@/server/notifications/push/service";
+import { schedulePushFlush } from "@/server/notifications/push/service";
 import { checkCompatibility, MAX_PROFILES_PER_REQUEST } from "@/server/rules/matching";
 import { proposalBlockReason } from "@/server/operateur/rules";
 import { sameScope, type Scope } from "@/server/scope";
@@ -193,9 +193,9 @@ export async function chooseProfile(actor: MatchingActor, proposalId: string, no
     },
     "La demande a changé entre-temps. Rechargez la page.",
   );
-  // Lot N1 : push à l'accompagnant choisi, après la validation. Dans une transaction externe (`client`),
-  // le message reste EN_ATTENTE et part au prochain envoi.
-  if (!client) await flushPendingPushSafe();
+  // Lot N1 : push à l'accompagnant choisi, après la validation. M2 : envoi APRÈS la réponse, jamais attendu.
+  // Dans une transaction externe (`client`), le message reste EN_ATTENTE : envoi par la route cron.
+  if (!client) schedulePushFlush();
   return chosen;
 }
 

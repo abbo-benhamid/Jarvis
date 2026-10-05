@@ -29,6 +29,7 @@ const m = vi.hoisted(() => {
     caregiverAvailability: model(),
     verificationItem: model(),
     journalEntry: model(),
+    kayeDraft: model(),
     auditLog: model(),
   });
   const tx = client();
@@ -419,6 +420,8 @@ describe("createKaye — un seul Kayé par visite", () => {
     const templates = m.notifyLakou.mock.calls.map((c) => c[1]);
     expect(templates).toEqual(["KAYE_PUBLIE", "ALERTE_A_SURVEILLER"]);
     expect(m.notifyLakou.mock.calls[0]![2]).toEqual({ aine: "Léonie", accompagnant: "Josiane", humeur: "Bien" });
+    // M8 : le brouillon de l'app est effacé dans la même transaction.
+    expect(m.tx.kayeDraft.deleteMany).toHaveBeenCalledWith({ where: { visitId: "visit-1" } });
     // Aucune donnée du Kayé (note, précision) dans les messages.
     expect(JSON.stringify(m.notifyLakou.mock.calls)).not.toMatch(/Savane|Fatigue/);
   });

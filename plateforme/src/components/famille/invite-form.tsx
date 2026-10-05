@@ -20,6 +20,7 @@ export function InviteForm({ aineId, aineFirstName }: { aineId: string; aineFirs
     <div className="flex flex-col gap-4">
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         <input type="hidden" name="aineId" value={aineId} />
+        <FormMessage state={state.ok ? { ok: true } : state} />
         <FormField
           label={`Lien de cette personne avec ${aineFirstName}`}
           htmlFor="relation"
@@ -37,7 +38,6 @@ export function InviteForm({ aineId, aineFirstName }: { aineId: string; aineFirs
         >
           <Input {...fieldA11y("email", fe?.email, true)} type="email" autoComplete="off" inputMode="email" />
         </FormField>
-        <FormMessage state={state.ok ? { ok: true } : state} />
         <PendingButton pending={pending} pendingLabel="Création du lien…" size="lg" className="w-full">
           Créer le lien d&apos;invitation
         </PendingButton>
