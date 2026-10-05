@@ -47,6 +47,8 @@ export const REVOCATION = {
   CODE_REUTILISE: "CODE_REUTILISE",
   VERSION_SESSION: "VERSION_SESSION",
   ACCES_REFUSE: "ACCES_REFUSE",
+  /** X1 : successeur remplacé pendant le délai de grâce (réponse de /auth/refresh perdue). */
+  GRACE_REMPLACE: "GRACE_REMPLACE",
 } as const;
 
 /** Champs du compte lus par l'API (jamais le hash du mot de passe, sauf à la connexion). */
@@ -201,12 +203,18 @@ const REUSED_REFRESH = "Votre connexion a été fermée par sécurité. Connecte
 export async function rotateRefreshToken(raw: string, now: Date = new Date()): Promise<Result<ReponseJetons>> {
   const row = await db.refreshToken.findUnique({
     where: { tokenHash: hashRefreshToken(raw) },
-    select: { id: true, familyId: true, usedAt: true, revokedAt: true, expiresAt: true, sessionVersion: true, user: { select: userSelect } },
+    select: { id: true, familyId: true, usedAt: true, revokedAt: true, revokedReason: true, expiresAt: true, sessionVersion: true, user: { select: userSelect } },
   });
   if (!row) return fail("JETON_INVALIDE", BAD_REFRESH);
   const user = row.user;
 
-  if (row.usedAt) return reuseDetected(row.familyId, user, now);
+  if (row.usedAt) {
+    // X1 : réponse de /auth/refresh perdue (réseau faible) → l'app rejoue l'ancien jeton peu après.
+    const grace = await graceRotation(row, user, now);
+    return grace ?? reuseDetected(row.familyId, user, now);
+  }
+  // X1 : un jeton remplacé pendant le délai de grâce qui revient quand même = deux détenteurs : rejeu.
+  if (row.revokedReason === REVOCATION.GRACE_REMPLACE) return reuseDetected(row.familyId, user, now);
   if (row.revokedAt || row.expiresAt <= now) return fail("JETON_INVALIDE", BAD_REFRESH);
   if (user.sessionVersion !== row.sessionVersion) {
     await revokeFamily(row.familyId, REVOCATION.VERSION_SESSION, now);
@@ -225,6 +233,40 @@ export async function rotateRefreshToken(raw: string, now: Date = new Date()): P
     return issueTokens(user, row.familyId, { parentId: row.id }, tx, now);
   });
   if (!tokens) return reuseDetected(row.familyId, user, now);
+  return { ok: true, value: tokens };
+}
+
+/** X1 : délai de grâce après une rotation. */
+export const DELAI_GRACE_ROTATION_MS = 30_000;
+
+/**
+ * X1 (arbitrage V1) : délai de grâce de 30 s à la rotation.
+ * Cas visé : la réponse de /auth/refresh est perdue ; l'app rejoue le jeton qu'elle a encore.
+ * Conditions (toutes) : le jeton présenté a servi il y a moins de 30 s, il n'est pas révoqué, la famille
+ * est ouverte, et son SUCCESSEUR n'a jamais servi (l'app ne l'a donc jamais reçu ou jamais utilisé).
+ * Effet : le successeur est révoqué (GRACE_REMPLACE) et un nouveau couple est émis dans la même famille.
+ * Le jeton présenté prouve la possession (même appareil) ; tout autre rejeu révoque la famille.
+ * [À VÉRIFIER] risque résiduel : un voleur du jeton dans les 30 s obtient un couple ; l'app légitime
+ * est alors déconnectée au renouvellement suivant (rejeu détecté), comme sans délai de grâce.
+ */
+async function graceRotation(
+  row: { id: string; familyId: string; usedAt: Date | null; revokedAt: Date | null; expiresAt: Date; sessionVersion: number },
+  user: ApiUser,
+  now: Date,
+): Promise<Result<ReponseJetons> | null> {
+  if (!row.usedAt || row.revokedAt || now.getTime() - row.usedAt.getTime() > DELAI_GRACE_ROTATION_MS) return null;
+  if (user.sessionVersion !== row.sessionVersion || apiAccessProblem(user)) return null;
+  const tokens = await db.$transaction(async (tx) => {
+    // Le successeur doit être intact (ni utilisé, ni révoqué). Marquage atomique : une seule requête gagne.
+    const child = await tx.refreshToken.updateMany({
+      where: { parentId: row.id, familyId: row.familyId, usedAt: null, revokedAt: null, expiresAt: { gt: now } },
+      data: { revokedAt: now, revokedReason: REVOCATION.GRACE_REMPLACE },
+    });
+    if (child.count !== 1) return null;
+    return issueTokens(user, row.familyId, { parentId: row.id }, tx, now);
+  });
+  if (!tokens) return null;
+  await logAudit({ actor: { id: user.id, role: user.role }, action: "auth.api.refresh_grace", entityType: "User", entityId: user.id, metadata: { famille: row.familyId } });
   return { ok: true, value: tokens };
 }
 
@@ -258,25 +300,36 @@ export async function authenticateAccessToken(token: string | null, now: Date = 
 /**
  * Déconnexion de l'appareil : révoque la famille du jeton de renouvellement et/ou du jeton d'accès.
  * `partout` : incrémente aussi User.sessionVersion (toutes les connexions, web comprises).
+ * X6 : `partout` est ignoré pour un compte démo partagé.
  * Retourne false si aucun jeton n'identifie un compte (la route répond quand même 204).
  */
 export async function logout(input: { accessToken: string | null; refreshToken?: string; partout?: boolean }, now: Date = new Date()): Promise<boolean> {
-  const families = new Map<string, { id: string; role: Role }>();
+  const families = new Map<string, { id: string; role: Role; isDemo: boolean }>();
   const principal = input.accessToken ? await authenticateAccessToken(input.accessToken, now) : null;
-  if (principal) families.set(principal.familyId, { id: principal.user.id, role: principal.user.role });
+  if (principal) families.set(principal.familyId, { id: principal.user.id, role: principal.user.role, isDemo: principal.user.isDemo });
   if (input.refreshToken) {
     const row = await db.refreshToken.findUnique({
       where: { tokenHash: hashRefreshToken(input.refreshToken) },
-      select: { familyId: true, user: { select: { id: true, role: true } } },
+      select: { familyId: true, user: { select: { id: true, role: true, isDemo: true } } },
     });
     if (row) families.set(row.familyId, row.user);
   }
   if (families.size === 0) return false;
+  // X6 (sécurité D1) : compte démo PARTAGÉ → « partout » refusé (un visiteur ne coupe pas les autres).
+  // Seule la connexion de cet appareil est fermée.
+  const demo = [...families.values()].some((u) => u.isDemo);
+  const partout = Boolean(input.partout) && !demo;
   for (const [familyId, user] of families) {
-    await revokeFamily(familyId, input.partout ? REVOCATION.DECONNEXION_PARTOUT : REVOCATION.DECONNEXION, now);
-    await logAudit({ actor: user, action: "auth.api.logout", entityType: "User", entityId: user.id, metadata: { famille: familyId, partout: Boolean(input.partout) } });
+    await revokeFamily(familyId, partout ? REVOCATION.DECONNEXION_PARTOUT : REVOCATION.DECONNEXION, now);
+    await logAudit({
+      actor: { id: user.id, role: user.role },
+      action: "auth.api.logout",
+      entityType: "User",
+      entityId: user.id,
+      metadata: { famille: familyId, partout, ...(input.partout && demo ? { partoutRefuseDemo: true } : {}) },
+    });
   }
-  if (input.partout) {
+  if (partout) {
     const userIds = [...new Set([...families.values()].map((u) => u.id))];
     await db.user.updateMany({ where: { id: { in: userIds } }, data: { sessionVersion: { increment: 1 } } });
     await db.refreshToken.updateMany({ where: { userId: { in: userIds }, revokedAt: null }, data: { revokedAt: now, revokedReason: REVOCATION.DECONNEXION_PARTOUT } });

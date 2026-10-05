@@ -116,13 +116,20 @@ export async function demoLoginAction(formData: FormData): Promise<void> {
 /**
  * Déconnexion RÉELLE (M7) : la version de session du compte est incrémentée, donc tout jeton
  * déjà émis (copié, volé, autre appareil) est refusé. M3 : le cookie de reprise est aussi effacé.
- * Note : pour un compte démo partagé, la déconnexion ferme aussi les autres sessions de ce compte.
+ * X6 (sécurité D1) : compte démo PARTAGÉ → seul ce navigateur est déconnecté (la version de session ne change
+ * pas : un visiteur ne coupe pas les autres visiteurs de la démo, web et app).
  */
 export async function logoutAction(): Promise<void> {
   const session = await readSession();
   if (session) {
-    await db.user.updateMany({ where: { id: session.sub }, data: { sessionVersion: { increment: 1 } } });
-    await logAudit({ actor: { id: session.sub, role: session.role }, action: "auth.logout", entityType: "User", entityId: session.sub });
+    if (!session.demo) await db.user.updateMany({ where: { id: session.sub }, data: { sessionVersion: { increment: 1 } } });
+    await logAudit({
+      actor: { id: session.sub, role: session.role },
+      action: "auth.logout",
+      entityType: "User",
+      entityId: session.sub,
+      ...(session.demo ? { metadata: { demoPartagee: true } } : {}),
+    });
   }
   await destroySession();
   redirect("/");
