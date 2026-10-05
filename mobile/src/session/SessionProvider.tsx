@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { api, messageErreur, type Moi } from '@/api';
+import { retirerAppareilPush } from '@/push';
 
 type Etat =
   /** Au démarrage : reprise de la connexion gardée sur l'appareil. */
@@ -56,6 +57,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const deconnecter = useCallback(async () => {
+    // Lot N1 : retirer l'appareil AVANT de fermer la connexion (le jeton d'accès sert encore).
+    await retirerAppareilPush();
     await api.deconnecter();
     setEtat({ statut: 'deconnecte', message: null, reprisePossible: false });
   }, []);

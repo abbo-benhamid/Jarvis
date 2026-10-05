@@ -17,6 +17,7 @@ import { Figtree_600SemiBold } from '@expo-google-fonts/figtree/600SemiBold';
 import { Figtree_700Bold } from '@expo-google-fonts/figtree/700Bold';
 import { ThemeProvider, useTheme } from '@/theme';
 import { SessionProvider, useSession } from '@/session/SessionProvider';
+import { usePush } from '@/push';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -52,6 +53,8 @@ export default function RootLayout() {
 function Navigation() {
   const { c, scheme } = useTheme();
   const { etat, session } = useSession();
+  // Lot N1 : jeton renvoyé à chaque ouverture, écran visé ouvert au toucher d'une notification.
+  usePush(!!session);
 
   useEffect(() => {
     void SystemUI.setBackgroundColorAsync(c.bg).catch(() => undefined);

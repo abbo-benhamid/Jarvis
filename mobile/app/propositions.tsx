@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { api, ApiError, messageErreur, type Proposition } from '@/api';
 import { dateLongue, NBSP, NNBSP, pluriel } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
+import { proposerNotifications } from '@/push';
 import { retourAuxVisites } from '@/session/navigation';
 import { useTheme } from '@/theme';
 import { Avatar, Badge, Button, Card, CaseIllustration, Em, Field, Icon, IconButton, Screen, Text } from '@/ui';
@@ -129,6 +130,8 @@ function CarteProposition({ p, onFini, onConflit }: { p: Proposition; onFini: (t
     try {
       if (action === 'accepter') {
         const r = await api.accepterProposition(p.id);
+        // Lot N1 : après une action réussie, proposer les notifications (une fois par appareil).
+        proposerNotifications();
         onFini(`Mission acceptée avec ${p.aine.prenom}. ${pluriel(r.visitesCreees, 'visite')} ajoutée${r.visitesCreees > 1 ? 's' : ''} à votre planning.`);
       } else {
         const r = await api.refuserProposition(p.id, note);
