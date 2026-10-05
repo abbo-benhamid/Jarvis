@@ -43,6 +43,12 @@ test("D4 : mentions légales, confidentialité et CGU de test", async ({ page })
   await expect(page.getByText(/Vercel Inc\./)).toBeVisible();
   await page.goto("/confidentialite");
   await expect(page.getByRole("heading", { level: 1, name: "Politique de confidentialité" })).toBeVisible();
+  // X7 : l'app mobile, le push (Expo), le stockage chiffré du téléphone. Ancre stable pour l'app.
+  const app = page.locator("#application");
+  await expect(app.getByRole("heading", { level: 2, name: "Application mobile Koudmen" })).toBeVisible();
+  await expect(app).toContainText("Expo (650 Industries");
+  await expect(app).toContainText("chiffrés");
+  await expect(app).toContainText("Jamais le prénom de l'aîné");
   await page.goto("/cgu-test");
   await expect(page.getByRole("heading", { level: 1, name: "Conditions d'utilisation du test" })).toBeVisible();
   await page.goto("/mentions");

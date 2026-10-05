@@ -17,9 +17,10 @@ export function LegalPage({ title, updated, children }: { title: string; updated
   );
 }
 
-export function LegalSection({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
+export function LegalSection({ title, children, className, id }: { title: string; children: React.ReactNode; className?: string; id?: string }) {
   return (
     <section
+      id={id}
       className={cn(
         "flex flex-col gap-3 rounded-card bg-surface p-5 shadow-card lg:p-7",
         // Tableaux des pages légales : en-tête discret, lignes aérées.
