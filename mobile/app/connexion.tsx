@@ -18,6 +18,8 @@ export default function Connexion() {
   const [email, setEmail] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
   const [erreur, setErreur] = useState<string | null>(null);
+  // V1c (UX M8) : le bouton reste actif ; au toucher, on dit ce qui manque, près du champ.
+  const [manque, setManque] = useState<{ email: string | null; motDePasse: string | null }>({ email: null, motDePasse: null });
   const [envoi, setEnvoi] = useState<'compte' | 'demo' | null>(null);
 
   const avis = etat.statut === 'deconnecte' ? etat.message : null;
@@ -25,7 +27,15 @@ export default function Connexion() {
   const pret = email.includes('@') && motDePasse.length > 0;
 
   const valider = async (demo: boolean) => {
-    if (!demo && !pret) return;
+    if (envoi) return;
+    if (!demo && !pret) {
+      setManque({
+        email: email.includes('@') ? null : email.trim() ? 'Vérifiez l’e-mail : il manque « @ ».' : 'Entrez votre e-mail.',
+        motDePasse: motDePasse.length > 0 ? null : 'Entrez votre mot de passe.',
+      });
+      return;
+    }
+    setManque({ email: null, motDePasse: null });
     setErreur(null);
     setEnvoi(demo ? 'demo' : 'compte');
     try {
@@ -86,8 +96,12 @@ export default function Connexion() {
           autoComplete="email"
           textContentType="username"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(t) => {
+            setEmail(t);
+            if (manque.email) setManque((m) => ({ ...m, email: null }));
+          }}
           returnKeyType="next"
+          erreur={manque.email}
         />
         <Field
           testID="champ-mot-de-passe"
@@ -97,13 +111,23 @@ export default function Connexion() {
           autoComplete="current-password"
           textContentType="password"
           value={motDePasse}
-          onChangeText={setMotDePasse}
+          onChangeText={(t) => {
+            setMotDePasse(t);
+            if (manque.motDePasse) setManque((m) => ({ ...m, motDePasse: null }));
+          }}
           onSubmitEditing={() => void valider(false)}
           returnKeyType="go"
-          erreur={erreur}
+          erreur={manque.motDePasse ?? erreur}
           aide={api.mode === 'simule' ? `Démo hors ligne : ${EMAIL_DEMO}, mot de passe « ${MOT_DE_PASSE_DEMO} ».` : undefined}
         />
-        <Button testID="bouton-connexion" label="Me connecter" icon="lock" onPress={() => void valider(false)} loading={envoi === 'compte'} disabled={!pret || envoi !== null} />
+        <Button
+          testID="bouton-connexion"
+          label="Me connecter"
+          icon="lock"
+          onPress={() => void valider(false)}
+          loading={envoi === 'compte'}
+          accessibilityHint={pret ? undefined : 'Entrez d’abord votre e-mail et votre mot de passe.'}
+        />
         <Button
           testID="bouton-demo"
           variant="link"
@@ -112,6 +136,13 @@ export default function Connexion() {
           loading={envoi === 'demo'}
           disabled={envoi !== null}
         />
+      </View>
+
+      <View style={{ alignItems: 'center', marginTop: 16 }}>
+        <Button testID="lien-a-propos-connexion" variant="link" label="À propos et confidentialité" onPress={() => router.push('/a-propos')} />
+        <Text variant="caption" tone="muted" center>
+          Version de test · pas un service d’aide à domicile autorisé.
+        </Text>
       </View>
 
       <View style={[styles.note, { borderColor: c.line }]}>

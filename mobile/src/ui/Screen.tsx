@@ -24,7 +24,8 @@ export function Screen({ children, dock, header, bottomInset = 0, testID }: Prop
   // Hauteur RÉELLE du pied d'action (mesurée) : le contenu défile entièrement au-dessus.
   // Avant (M1) : réserve fixe de 170 px, trop courte pour un pied à deux boutons (Kayé).
   const [hauteurDock, setHauteurDock] = useState(190);
-  const reserve = dock ? hauteurDock + 16 : 32 + bottomInset;
+  // V1c (UX M3) : le pied est OPAQUE ; la réserve couvre sa hauteur + le fondu de 32 px au-dessus + une marge.
+  const reserve = dock ? hauteurDock + FONDU + 16 : 32 + bottomInset;
 
   return (
     <KeyboardAvoidingView
@@ -51,26 +52,34 @@ export function Screen({ children, dock, header, bottomInset = 0, testID }: Prop
   );
 }
 
-/** Pied d'action : dégradé vers le fond sur 32 px, puis l'action principale (§ 10). */
+/** Hauteur du fondu au-dessus du pied d'action (DA § 10). */
+const FONDU = 32;
+
+/**
+ * Pied d'action (§ 10) : fond `bg` PLEIN derrière les boutons, et un fondu de 32 px AU-DESSUS.
+ * V1c (UX M3) : avant, le fond était un dégradé transparent sur 36 px DANS le pied : « Garder en brouillon »
+ * se superposait au champ « Une note pour la famille ». Désormais, rien ne transparaît derrière les boutons.
+ */
 function ActionDock({ children, bottom, onHauteur }: { children: ReactNode; bottom: number; onHauteur: (h: number) => void }) {
   const { c } = useTheme();
   return (
     <View
-      style={[styles.dock, { paddingBottom: Math.max(bottom, 16) + 8 }]}
+      style={[styles.dock, { backgroundColor: c.bg, paddingBottom: Math.max(bottom, 16) + 8 }]}
       pointerEvents="box-none"
       testID="pied-action"
       onLayout={(e) => onHauteur(Math.ceil(e.nativeEvent.layout.height))}
     >
-      <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" preserveAspectRatio="none" aria-hidden>
-        <Defs>
-          <LinearGradient id="dock" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={c.bg} stopOpacity={0} />
-            <Stop offset="0.22" stopColor={c.bg} stopOpacity={1} />
-            <Stop offset="1" stopColor={c.bg} stopOpacity={1} />
-          </LinearGradient>
-        </Defs>
-        <Rect width="100%" height="100%" fill="url(#dock)" />
-      </Svg>
+      <View style={styles.fondu} pointerEvents="none" aria-hidden>
+        <Svg width="100%" height={FONDU} preserveAspectRatio="none">
+          <Defs>
+            <LinearGradient id="dock" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={c.bg} stopOpacity={0} />
+              <Stop offset="1" stopColor={c.bg} stopOpacity={1} />
+            </LinearGradient>
+          </Defs>
+          <Rect width="100%" height={FONDU} fill="url(#dock)" />
+        </Svg>
+      </View>
       <View style={styles.dockInner}>{children}</View>
     </View>
   );
@@ -81,6 +90,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   column: { width: '100%', maxWidth: 440, alignSelf: 'center', paddingHorizontal: space.gutter },
   content: { paddingTop: 4 },
-  dock: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: 36 },
+  dock: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingTop: 12 },
+  fondu: { position: 'absolute', left: 0, right: 0, top: -FONDU, height: FONDU },
   dockInner: { width: '100%', maxWidth: 440, alignSelf: 'center', paddingHorizontal: space.gutter },
 });

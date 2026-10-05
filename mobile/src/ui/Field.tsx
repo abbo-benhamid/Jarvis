@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type Ref } from 'react';
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 import { fonts, radius, useTheme } from '@/theme';
 import { Text } from './Text';
@@ -9,10 +9,12 @@ type Props = Omit<TextInputProps, 'style'> & {
   erreur?: string | null;
   multiline?: boolean;
   grand?: boolean;
+  /** Pour donner le focus au champ (ex. bouton « Saisir le code »). */
+  inputRef?: Ref<TextInput>;
 };
 
 /** Champ (§ 10) : 56 px, rayon 16, bord 1,5 px `line-strong`, focus = bord mer 2 px. */
-export function Field({ label, aide, erreur, multiline, grand, testID, ...rest }: Props) {
+export function Field({ label, aide, erreur, multiline, grand, testID, inputRef, ...rest }: Props) {
   const { c } = useTheme();
   const [focus, setFocus] = useState(false);
   const bord = erreur ? c.hibiscus : focus ? c.mer : c.lineStrong;
@@ -22,6 +24,7 @@ export function Field({ label, aide, erreur, multiline, grand, testID, ...rest }
       <Text variant="smallStrong">{label}</Text>
       <TextInput
         {...rest}
+        ref={inputRef}
         testID={testID}
         accessibilityLabel={label}
         accessibilityHint={aide}

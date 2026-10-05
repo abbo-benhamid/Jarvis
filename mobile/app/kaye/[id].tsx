@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { api, messageErreur, type BrouillonKaye, type KayePublie } from '@/api';
+import { api, ApiError, messageErreur, type BrouillonKaye, type KayePublie } from '@/api';
 import { useAsync } from '@/lib/useAsync';
 import { proposerNotifications } from '@/push';
 import { retourAuxVisites } from '@/session/navigation';
@@ -13,6 +13,18 @@ type Humeur = '1' | '2' | '3' | '4' | '5';
 
 /** Mêmes libellés que le web (plateforme/src/lib/labels.ts). */
 const ACTIVITES = ['Discussion', 'Promenade', 'Lecture', 'Jeux de société', 'Courses', 'Repas partagé', 'Musique', 'Jardin'] as const;
+
+/**
+ * Échelle d'humeur UNIQUE web / app (arbitrage V1 X4) : du mieux au moins bien, de « Très bien » à « Pas bien ».
+ * [À VÉRIFIER] après fusion : mêmes 5 libellés que `MOOD_LABELS` de plateforme/src/lib/labels.ts.
+ */
+const LIBELLES_HUMEUR: Record<'1' | '2' | '3' | '4' | '5', string> = {
+  '5': 'Très bien',
+  '4': 'Bien',
+  '3': 'Correct',
+  '2': 'Bas',
+  '1': 'Pas bien',
+};
 
 type Formulaire = {
   humeur: Humeur | null;
@@ -58,6 +70,10 @@ export default function KayeFormulaire() {
   const [envoi, setEnvoi] = useState<'brouillon' | 'envoi' | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [fini, setFini] = useState<'brouillon' | 'envoye' | null>(null);
+  // V1c (UX M8) : bouton toujours actif ; au toucher, chaque manque s'affiche près de son champ.
+  const [verifie, setVerifie] = useState(false);
+  // V1c (UX m13) : « gardé sur ce téléphone » s'affiche DANS le pied d'action, près du bouton.
+  const [gardeIci, setGardeIci] = useState<string | null>(null);
 
   useEffect(() => {
     if (visite.donnees && !k) setK(depuisBrouillon(visite.donnees.brouillonKaye));
@@ -133,23 +149,36 @@ export default function KayeFormulaire() {
   }
 
   const humeurs: ChoiceOption<Humeur>[] = [
-    { value: '5', label: 'Très bien', dot: c.feuille },
-    { value: '4', label: 'Bien', dot: c.feuille },
-    { value: '3', label: 'Correct', dot: c.mer },
-    { value: '2', label: 'Bas', dot: c.soleil },
-    { value: '1', label: 'Très bas', dot: c.hibiscus },
+    { value: '5', label: LIBELLES_HUMEUR['5'], dot: c.feuille },
+    { value: '4', label: LIBELLES_HUMEUR['4'], dot: c.feuille },
+    { value: '3', label: LIBELLES_HUMEUR['3'], dot: c.mer },
+    { value: '2', label: LIBELLES_HUMEUR['2'], dot: c.soleil },
+    { value: '1', label: LIBELLES_HUMEUR['1'], dot: c.hibiscus },
   ];
+  // Mêmes libellés que le web (APPETITE_LABELS).
   const appetits: ChoiceOption<Appetit>[] = [
     { value: 'BON', label: 'Bon' },
     { value: 'MOYEN', label: 'Moyen' },
     { value: 'FAIBLE', label: 'Faible' },
-    { value: 'NON_OBSERVE', label: 'Pas vu' },
+    { value: 'NON_OBSERVE', label: 'Non observé' },
   ];
 
-  const pret = !!k.humeur && !!k.appetit && (!k.aSurveiller || k.noteSurveillance.trim().length >= 3);
+  const manques = {
+    humeur: k.humeur ? null : 'Choisissez l’humeur.',
+    appetit: k.appetit ? null : 'Choisissez l’appétit.',
+    surveillance: k.aSurveiller && k.noteSurveillance.trim().length < 3 ? 'Décrivez ce qu’il faut surveiller (3 lettres au moins).' : null,
+  };
+  const pret = !manques.humeur && !manques.appetit && !manques.surveillance;
+  const nbManques = [manques.humeur, manques.appetit, manques.surveillance].filter(Boolean).length;
 
   const enregistrer = async (envoyer: boolean) => {
+    if (envoi) return;
+    if (envoyer && !pret) {
+      setVerifie(true);
+      return;
+    }
     setErreur(null);
+    setGardeIci(null);
     setEnvoi(envoyer ? 'envoi' : 'brouillon');
     try {
       if (envoyer) {
@@ -169,7 +198,8 @@ export default function KayeFormulaire() {
       // Lot N1 : après une action réussie, proposer les notifications (une fois par appareil).
       if (envoyer) proposerNotifications();
     } catch (e) {
-      setErreur(`${messageErreur(e)} Votre texte reste ici.`);
+      if (e instanceof ApiError && e.code === 'EN_ATTENTE') setGardeIci(`${e.message} Votre texte reste ici.`);
+      else setErreur(`${messageErreur(e)} Votre texte reste ici.`);
     } finally {
       setEnvoi(null);
     }
@@ -184,9 +214,29 @@ export default function KayeFormulaire() {
       testID="ecran-kaye-formulaire"
       dock={
         <>
-          <Button testID="bouton-envoyer-kaye" large label="Envoyer à la famille" icon="arrow" onPress={() => void enregistrer(true)} loading={envoi === 'envoi'} disabled={!pret || envoi !== null} />
+          {gardeIci ? (
+            <View style={[styles.garde, { backgroundColor: c.soleilSoft }]} testID="kaye-garde" accessibilityLiveRegion="polite">
+              <Icon name="clock" size={16} color={c.soleilInk} />
+              <Text variant="small" tone="soleilInk" style={{ flex: 1 }}>
+                {gardeIci}
+              </Text>
+            </View>
+          ) : verifie && !pret ? (
+            <Text variant="small" tone="hibiscus" center style={{ marginBottom: 8 }} testID="manques-kaye" accessibilityLiveRegion="polite">
+              {nbManques > 1 ? `Il manque ${nbManques} réponses, plus haut.` : 'Il manque une réponse, plus haut.'}
+            </Text>
+          ) : null}
+          <Button
+            testID="bouton-envoyer-kaye"
+            large
+            label="Envoyer le Kayé"
+            icon="arrow"
+            onPress={() => void enregistrer(true)}
+            loading={envoi === 'envoi'}
+            accessibilityHint={pret ? 'La famille le reçoit tout de suite.' : 'Choisissez d’abord l’humeur et l’appétit.'}
+          />
           <View style={{ alignItems: 'center', marginTop: 4 }}>
-            <Button testID="bouton-brouillon-kaye" variant="link" label="Garder en brouillon" loading={envoi === 'brouillon'} disabled={envoi !== null} onPress={() => void enregistrer(false)} />
+            <Button testID="bouton-brouillon-kaye" variant="link" label="Garder en brouillon" loading={envoi === 'brouillon'} onPress={() => void enregistrer(false)} />
           </View>
         </>
       }
@@ -194,13 +244,30 @@ export default function KayeFormulaire() {
       <View style={styles.intro}>
         <Avatar initiale={prenom.charAt(0)} teinte="soleil" aine size={48} />
         <Text variant="h2" style={{ flex: 1 }} accessibilityRole="header">
-          Comment va {prenom} <Em>aujourd’hui ?</Em>
+          {/* Espace fine insécable avant « ? » (DA § 4) : jamais de « ? » seul en fin de ligne. */}
+          Comment va {prenom} <Em>{'aujourd’hui ?'}</Em>
         </Text>
       </View>
 
       <Card style={{ marginTop: 20, gap: 22 }}>
-        <Choice testID="humeur" label="Humeur" options={humeurs} value={k.humeur} columns={3} onChange={(humeur) => setK({ ...k, humeur })} />
-        <Choice testID="appetit" label="Appétit" options={appetits} value={k.appetit} columns={2} onChange={(appetit) => setK({ ...k, appetit })} />
+        <Choice
+          testID="humeur"
+          label="Humeur"
+          options={humeurs}
+          value={k.humeur}
+          columns={3}
+          onChange={(humeur) => setK({ ...k, humeur })}
+          erreur={verifie ? manques.humeur : null}
+        />
+        <Choice
+          testID="appetit"
+          label="Appétit"
+          options={appetits}
+          value={k.appetit}
+          columns={2}
+          onChange={(appetit) => setK({ ...k, appetit })}
+          erreur={verifie ? manques.appetit : null}
+        />
         <View style={{ gap: 10 }}>
           <Text variant="smallStrong">Activités (facultatif)</Text>
           <View style={styles.activites}>
@@ -254,6 +321,7 @@ export default function KayeFormulaire() {
               value={k.noteSurveillance}
               onChangeText={(noteSurveillance) => setK({ ...k, noteSurveillance })}
               maxLength={300}
+              erreur={verifie ? manques.surveillance : null}
             />
             <View style={[styles.urgence, { backgroundColor: c.hibiscusSoft }]}>
               <Icon name="info" size={18} color={c.hibiscus} />
@@ -269,9 +337,9 @@ export default function KayeFormulaire() {
         <Text variant="small" tone="hibiscus" role="alert" style={{ marginTop: 12 }} testID="erreur-kaye">
           {erreur}
         </Text>
-      ) : !pret ? (
+      ) : !pret && !verifie ? (
         <Text variant="small" tone="muted" style={{ marginTop: 12 }} testID="aide-kaye">
-          {!k.humeur || !k.appetit ? 'Choisissez l’humeur et l’appétit pour envoyer.' : 'Décrivez ce qu’il faut surveiller pour envoyer.'}
+          {!k.humeur || !k.appetit ? 'Pour envoyer : choisissez l’humeur et l’appétit.' : 'Pour envoyer : décrivez ce qu’il faut surveiller.'}
         </Text>
       ) : null}
     </Screen>
@@ -285,4 +353,5 @@ const styles = StyleSheet.create({
   activites: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   activite: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 14, borderRadius: 999 },
   urgence: { flexDirection: 'row', gap: 10, padding: 14, borderRadius: 16, alignItems: 'flex-start' },
+  garde: { flexDirection: 'row', gap: 8, padding: 12, borderRadius: 14, alignItems: 'flex-start', marginBottom: 10 },
 });

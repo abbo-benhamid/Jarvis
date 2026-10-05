@@ -17,10 +17,12 @@ type Props<V extends string> = {
   onChange: (v: V) => void;
   columns?: 2 | 3 | 4;
   testID?: string;
+  /** Ce qui manque (V1c, UX M8) : affiché sous le groupe, annoncé au lecteur d'écran. */
+  erreur?: string | null;
 };
 
 /** Groupe de choix unique (rôle radiogroup, § 12). Cibles de 52 px. */
-export function Choice<V extends string>({ label, options, value, onChange, columns = 2, testID }: Props<V>) {
+export function Choice<V extends string>({ label, options, value, onChange, columns = 2, testID, erreur }: Props<V>) {
   const { c } = useTheme();
   return (
     <View style={{ gap: 10 }} testID={testID}>
@@ -63,6 +65,11 @@ export function Choice<V extends string>({ label, options, value, onChange, colu
           );
         })}
       </View>
+      {erreur ? (
+        <Text variant="small" tone="hibiscus" accessibilityLiveRegion="polite" role="alert" testID={testID ? `${testID}-erreur` : undefined}>
+          {erreur}
+        </Text>
+      ) : null}
     </View>
   );
 }

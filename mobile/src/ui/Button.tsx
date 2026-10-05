@@ -12,7 +12,13 @@ type Props = {
   icon?: IconName;
   /** Flèche à droite (navigation vers l'étape suivante). */
   trailing?: IconName;
+  /**
+   * Bouton indisponible (V1c, UX M8) : il reste ATTEIGNABLE au clavier et au lecteur d'écran (`aria-disabled`,
+   * pas de `tabIndex = -1`), avec un fond opaque. Un toucher appelle `onPressInactif` (expliquer ce qui manque).
+   * Préférez un bouton actif qui affiche l'erreur près du champ.
+   */
   disabled?: boolean;
+  onPressInactif?: () => void;
   loading?: boolean;
   /** 60 px côté accompagnant pour l'action principale (§ 10). */
   large?: boolean;
@@ -30,6 +36,7 @@ export function Button({
   icon,
   trailing,
   disabled,
+  onPressInactif,
   loading,
   large,
   accessibilityLabel,
@@ -47,27 +54,32 @@ export function Button({
     link: { bg: 'transparent', bgPressed: c.merSoft, fg: c.mer },
     danger: { bg: c.hibiscusSoft, bgPressed: c.hibiscusSoft, fg: c.hibiscus },
   };
-  const p = palette[variant];
+  // Inactif : fond OPAQUE et texte atténué (pas d'opacité globale : rien ne transparaît derrière, § 10).
+  const p = disabled
+    ? { bg: variant === 'link' ? 'transparent' : c.surface2, bgPressed: variant === 'link' ? 'transparent' : c.surface2, fg: c.muted }
+    : palette[variant];
   const height = variant === 'link' ? touch.min : variant === 'quiet' || variant === 'danger' ? 52 : large ? touch.buttonAccompagnant : touch.button;
 
   return (
     <Pressable
       testID={testID}
-      onPress={onPress}
-      disabled={inactive}
+      // `disabled` n'est PAS passé à Pressable : il retirerait le bouton du clavier (tabIndex = -1 sur le web).
+      onPress={inactive ? (disabled && !loading ? onPressInactif : undefined) : onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: !!inactive, busy: !!loading }}
+      aria-disabled={!!inactive}
       style={({ pressed }) => [
         styles.base,
         {
           minHeight: height,
-          backgroundColor: pressed ? p.bgPressed : p.bg,
-          opacity: disabled ? 0.45 : 1,
+          backgroundColor: pressed && !inactive ? p.bgPressed : p.bg,
+          borderWidth: disabled && variant !== 'link' ? 1.5 : 0,
+          borderColor: c.lineStrong,
           paddingHorizontal: variant === 'link' ? 8 : 20,
           alignSelf: variant === 'link' ? 'flex-start' : 'stretch',
-          transform: [{ scale: pressed && variant !== 'link' ? 0.985 : 1 }],
+          transform: [{ scale: pressed && !inactive && variant !== 'link' ? 0.985 : 1 }],
         },
         style,
       ]}

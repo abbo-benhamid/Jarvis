@@ -48,13 +48,13 @@ test('Kayé écrit hors ligne : gardé, puis envoyé au retour du réseau (une s
   await page.getByTestId('champ-note').fill(NOTE);
   await page.getByTestId('bouton-envoyer-kaye').click();
 
-  await expect(page.getByTestId('erreur-kaye')).toContainText('Pas de réseau. Le Kayé est gardé sur ce téléphone.');
+  await expect(page.getByTestId('kaye-garde')).toContainText('Pas de réseau. Le Kayé est gardé sur ce téléphone.');
   await expect(page.getByTestId('indicateur-hors-ligne')).toHaveText('Hors ligne · 1 envoi en attente');
   await capture(page, 'kaye-hors-ligne');
 
   // Double appui : toujours UN seul envoi en attente.
   await page.getByTestId('bouton-envoyer-kaye').click();
-  await expect(page.getByTestId('erreur-kaye')).toBeVisible();
+  await expect(page.getByTestId('kaye-garde')).toBeVisible();
   await expect(page.getByTestId('indicateur-hors-ligne')).toHaveText('Hors ligne · 1 envoi en attente');
   expect((await journal(request)).recus).toHaveLength(0);
 
