@@ -26,7 +26,7 @@ Les variables `EXPO_PUBLIC_*` sont figées au build : ajoutez `--clear` si vous 
 3. Scannez le QR code. Connexion : `accompagnant@demo.koudmen.test` et `DEMO_PASSWORD` de `plateforme/.env`,
    ou le lien « Essayer avec le compte de démonstration ».
 
-Sans serveur : `EXPO_PUBLIC_API_MODE=simule npx expo start` (mot de passe `koudmen`, code du domicile `KDM482`).
+Sans serveur : `EXPO_PUBLIC_API_MODE=simule npx expo start` (mot de passe `koudmen`, code du domicile `LKW7Q3`).
 
 ### Essayer la caméra et la position réelles (lot M4)
 
@@ -37,8 +37,8 @@ Sans serveur : `EXPO_PUBLIC_API_MODE=simule npx expo start` (mot de passe `koudm
    EXPO_PUBLIC_API_MODE=simule EXPO_PUBLIC_NATIF=reel npx expo start --clear
    ```
 2. Ouvrez une visite du jour → **Scanner le QR code** → « Autoriser la caméra ».
-3. Visez un QR qui contient `koudmen:domicile:KDM482` (ou `KDM482`). Pour en créer un :
-   `npx qrcode-terminal "koudmen:domicile:KDM482"` [À VÉRIFIER : outil non installé], ou tout générateur de QR.
+3. Visez un QR qui contient `koudmen:domicile:LKW7Q3` (ou `LKW7Q3`). Pour en créer un :
+   `npx qrcode-terminal "koudmen:domicile:LKW7Q3"` [À VÉRIFIER : outil non installé], ou tout générateur de QR.
 4. Activez « Partager ma position, une fois », puis **Valider mon arrivée** : le téléphone demande l'accès
    « pendant l'utilisation de l'app ». Une seule lecture a lieu, à ce moment.
 5. SOS → « Appeler le 15 / 112 » ouvre le composeur du téléphone. **N'appelez pas** pendant un essai.
@@ -89,8 +89,8 @@ flowchart TD
 
 | Format du QR | Effet |
 |---|---|
-| `KDM482` | Code lisible (QR actuels) |
-| `koudmen:domicile:KDM482` | Code lisible (format v1 à imprimer) |
+| `LKW7Q3` | Code lisible (QR actuels) |
+| `koudmen:domicile:LKW7Q3` | Code lisible (format v1 à imprimer) |
 | `koudmen:domicile:s1:<jeton>` | Jeton signé futur : reconnu, message « pas encore accepté » |
 
 ## Hors ligne (lot M3)
@@ -174,7 +174,7 @@ EXPO_OFFLINE=1 npm run export:web:simule && SHOTS_DIR=/chemin npm run e2e:natif
 Les tests M4 pilotent les adaptateurs simulés avant le chargement de la page :
 
 ```ts
-await page.addInitScript(() => { (globalThis as any).__KOUDMEN_NATIF__ = { position: 'bloquee', camera: 'accordee', qr: 'KDM482' }; });
+await page.addInitScript(() => { (globalThis as any).__KOUDMEN_NATIF__ = { position: 'bloquee', camera: 'accordee', qr: 'LKW7Q3' }; });
 // puis : globalThis.__KOUDMEN_NATIF_JOURNAL__ → { lecturesPosition, appels }
 ```
 

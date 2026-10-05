@@ -49,8 +49,8 @@ test('QR : explication, permission, lecture, le champ est rempli, puis arrivée'
 
   await page.getByTestId('lire-qr-simule').click();
   await expect(page.getByTestId('vue-scanner')).toBeHidden();
-  await expect(page.getByTestId('avis-qr')).toContainText('QR lu : code KDM482');
-  await expect(page.getByTestId('champ-code-domicile')).toHaveValue('KDM482');
+  await expect(page.getByTestId('avis-qr')).toContainText('QR lu : code LKW7Q3');
+  await expect(page.getByTestId('champ-code-domicile')).toHaveValue('LKW7Q3');
   await centrer(page.getByTestId('avis-qr'));
   await capture(page, '03-qr-lu');
   await sansDefilementHorizontal(page);
@@ -111,7 +111,7 @@ test('position : aucune lecture avant la validation, UNE lecture au check-in', a
 
 test('position refusée : le code suffit, le refus est expliqué', async ({ page }) => {
   await ouvrirFiche(page, { position: 'bloquee' });
-  await page.getByTestId('champ-code-domicile').fill('KDM482');
+  await page.getByTestId('champ-code-domicile').fill('LKW7Q3');
   await page.getByTestId('accord-position').click();
   await page.getByTestId('bouton-arrivee').click();
   const retour = page.getByTestId('retour-arrivee');

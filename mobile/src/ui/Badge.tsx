@@ -38,10 +38,14 @@ export function Badge({ label, kind = 'neutre', icon, testID }: Props) {
   );
 }
 
-/** Badge de preuve d'une visite : « Prouvée » ou « 1 preuve sur 2 ». */
+/**
+ * Compteur UNIQUE des preuves (arbitrage V1 X4) : « 0 preuve sur 3 », « 2 preuves sur 3 ».
+ * Vert (bouclier) quand le seuil est atteint (`requises`, 2), sinon soleil.
+ */
 export function ProofBadge({ obtenues, requises }: { obtenues: number; requises: number }) {
-  if (obtenues >= requises) return <Badge kind="preuve" icon="shield" label="Prouvée" testID="badge-preuve" />;
-  return <Badge kind="soleil" icon="clock" label={`Preuve ${obtenues}/${requises}`} testID="badge-preuve" />;
+  const label = `${obtenues} preuve${obtenues > 1 ? 's' : ''} sur 3`;
+  if (obtenues >= requises) return <Badge kind="preuve" icon="shield" label={label} testID="badge-preuve" />;
+  return <Badge kind="soleil" icon="clock" label={label} testID="badge-preuve" />;
 }
 
 /** Puce neutre (centres d'intérêt). */

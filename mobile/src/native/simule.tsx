@@ -20,7 +20,7 @@ export type ScenarioNatif = {
   position?: 'accordee' | 'refusee' | 'bloquee' | 'indisponible';
   /** État de la permission caméra au premier affichage. Défaut : `a-demander`. */
   camera?: 'a-demander' | 'accordee' | 'bloquee';
-  /** Texte du QR lu par « Simuler la lecture ». Défaut : `koudmen:domicile:KDM482`. */
+  /** Texte du QR lu par « Simuler la lecture ». Défaut : `koudmen:domicile:LKW7Q3`. */
   qr?: string;
 };
 
@@ -39,7 +39,7 @@ function journal(): JournalNatif {
 }
 
 /** Code de démo de `src/api/simule.ts` (CODE_DOMICILE_DEMO). */
-const QR_DEMO = contenuQrDomicile('KDM482');
+const QR_DEMO = contenuQrDomicile('LKW7Q3');
 
 /** Fort-de-France, à titre d'exemple. */
 const POSITION_DEMO: PositionPonctuelle = { latitude: 14.6037, longitude: -61.0731, precisionMetres: 18 };

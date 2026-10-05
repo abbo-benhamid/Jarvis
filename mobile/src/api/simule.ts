@@ -20,7 +20,12 @@ import {
 
 export const EMAIL_DEMO = 'accompagnant@demo.koudmen.test';
 export const MOT_DE_PASSE_DEMO = 'koudmen';
-export const CODE_DOMICILE_DEMO = 'KDM482';
+/**
+ * Code du domicile de Léonie (fictif), le MÊME que dans les données de démo du site
+ * (plateforme/prisma/seed.ts, `homeCode: "LKW7Q3"`). Arbitrage V1 X3 : un seul code par domicile,
+ * écrit en clair et en QR sur la même feuille ; l'app le scanne OU le saisit.
+ */
+export const CODE_DOMICILE_DEMO = 'LKW7Q3';
 
 const attendre = (ms = 280) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -50,12 +55,13 @@ function visite(id: string, debut: string, finMin: number, aine: Partial<Visite[
     debut,
     fin: new Date(new Date(debut).getTime() + finMin * 60_000).toISOString(),
     statut: 'PREVUE',
+    // Même personne fictive que la démo du site : Léonie J., Terres-Sainville, Fort-de-France.
     aine: {
       prenom: 'Léonie',
-      initialeNom: 'B.',
-      commune: 'SAINTE_LUCE',
-      communeLibelle: 'Sainte-Luce',
-      adresseApproximative: 'Quartier Désert',
+      initialeNom: 'J.',
+      commune: 'FORT_DE_FRANCE',
+      communeLibelle: 'Fort-de-France',
+      adresseApproximative: 'Quartier Terres-Sainville',
       interets: [],
       ...aine,
     },
@@ -82,7 +88,7 @@ function donneesInitiales(): Visite[] {
       'vis_marceline_j3',
       a(3, 14),
       120,
-      { prenom: 'Marceline', initialeNom: 'J.', adresseApproximative: 'Trois-Rivières' },
+      { prenom: 'Marceline', initialeNom: 'L.', commune: 'SAINTE_LUCE', communeLibelle: 'Sainte-Luce', adresseApproximative: 'Trois-Rivières' },
       'Courses au marché, puis un café ensemble.',
       false,
     ),

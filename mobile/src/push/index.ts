@@ -26,7 +26,7 @@ export type { EtatPermission, MemoirePush, PushNatif } from './types';
 function confirmer(): Promise<boolean> {
   return new Promise((resolve) => {
     Alert.alert(
-      'Être prévenu(e) ?',
+      'Recevoir les notifications ?',
       'Koudmen vous envoie une notification quand une famille vous propose un accompagnement. La notification ne montre aucun détail sur la personne.',
       [
         { text: 'Plus tard', style: 'cancel', onPress: () => resolve(false) },

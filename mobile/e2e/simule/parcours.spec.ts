@@ -17,12 +17,12 @@ async function seConnecter(page: Page) {
 test('connexion simulée, visites, fiche, arrivée, Kayé', async ({ page }) => {
   await seConnecter(page);
   await expect(page.getByRole('heading', { name: /Bonjou, Josiane/ })).toBeVisible();
-  await expect(page.getByTestId('visite-vedette')).toContainText('Léonie B.');
+  await expect(page.getByTestId('visite-vedette')).toContainText('Léonie J.');
 
   await page.getByTestId('ouvrir-visite-vedette').click();
   const fiche = page.getByTestId('ecran-fiche-visite');
   await expect(fiche.getByTestId('etape-GPS')).toContainText('Position à l’arrivée');
-  await page.getByTestId('champ-code-domicile').fill('KDM482');
+  await page.getByTestId('champ-code-domicile').fill('LKW7Q3');
   await page.getByTestId('bouton-arrivee').click();
   await expect(page.getByTestId('retour-arrivee')).toContainText('Code du domicile');
 

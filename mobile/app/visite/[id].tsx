@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { useRef, useState, type ReactNode } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, View, type TextInput } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   api,
@@ -101,6 +101,9 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
   const [retour, setRetour] = useState<ResultatEvenement | null>(null);
   const [scanOuvert, setScanOuvert] = useState(false);
   const [avisQr, setAvisQr] = useState<{ ok: boolean; texte: string } | null>(null);
+  // V1c (UX M8) : « Valider mon arrivée » reste actif ; au toucher sans preuve, on dit ce qui manque.
+  const [verifie, setVerifie] = useState(false);
+  const champCode = useRef<TextInput>(null);
 
   const n = nbPreuves(v);
   const prouvee = estProuvee(v);
@@ -123,6 +126,12 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
   const pretArrivee = code.trim().length >= 4 || accordPosition;
 
   const arriver = async () => {
+    if (envoi) return;
+    if (!pretArrivee) {
+      setVerifie(true);
+      champCode.current?.focus();
+      return;
+    }
     setErreur(null);
     setEnvoi('arrivee');
     try {
@@ -180,11 +189,11 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
           label="Valider mon arrivée"
           icon="check"
           loading={envoi === 'arrivee'}
-          disabled={!pretArrivee}
           onPress={() => void arriver()}
+          accessibilityHint={pretArrivee ? undefined : 'Entrez d’abord le code du domicile, ou acceptez la lecture de la position.'}
         />
-        <Text variant="small" tone="muted" center style={styles.hint}>
-          {pretArrivee ? 'Une seule action. Rien n’est suivi ensuite.' : 'Entrez le code du domicile ou acceptez la lecture de position.'}
+        <Text variant="small" tone={verifie && !pretArrivee ? 'hibiscus' : 'muted'} center style={styles.hint} testID="aide-arrivee">
+          {pretArrivee ? 'Une seule action. Rien n’est suivi ensuite.' : 'Pour valider : entrez le code du domicile, ou acceptez la lecture de la position.'}
         </Text>
       </>
     );
@@ -211,7 +220,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
   } else if (!v.preuve.checkInA && new Date(v.fin) > new Date()) {
     dock = (
       <>
-        <Button large label="Arrivée possible à l’heure de la visite" icon="clock" disabled />
+        <Button large label="Arrivée possible à l’heure de la visite" icon="clock" disabled accessibilityHint="Ce bouton s’active à l’heure de la visite." />
         <Text variant="small" tone="muted" center style={styles.hint}>
           Visite prévue {libelleJour(v.debut).toLowerCase()}, {plageHoraire(v.debut, v.fin)}.
         </Text>
@@ -257,7 +266,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
         </Text>
       </Card>
 
-      <SectionHeader title={`Preuve d’arrivée · ${v.preuve.seuil} sur 3`} aside={<ProofBadge obtenues={n} requises={v.preuve.seuil} />} />
+      <SectionHeader title="Preuves d’arrivée" aside={<ProofBadge obtenues={n} requises={v.preuve.seuil} />} />
       <Card padding={0} style={{ paddingHorizontal: 18, paddingVertical: 4 }} testID="carte-preuves">
         {ORDRE_PREUVES.map((f, i) => {
           const fait = aLaPreuve(v, f);
@@ -277,7 +286,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
               style={[styles.stepRow, i > 0 && { borderTopWidth: 1, borderTopColor: c.line }]}
               testID={`etape-${f}`}
               accessible
-              accessibilityLabel={`${titre}. ${fait ? 'Fait' : 'Pas encore'}. ${detail}`}
+              accessibilityLabel={`${titre}. ${fait ? 'Obtenue' : 'À faire'}. ${detail}`}
             >
               <View style={[styles.st, fait ? { backgroundColor: c.feuille } : { borderWidth: 1.5, borderColor: c.lineStrong }]}>
                 <Icon name={fait ? 'check' : icone} size={16} color={fait ? c.surface : c.muted} />
@@ -293,26 +302,50 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
           );
         })}
       </Card>
+      {!prouvee ? (
+        <Text variant="small" tone="muted" style={{ marginTop: 8 }} testID="regle-preuves">
+          Il faut 2 preuves sur 3 pour prouver la visite.
+        </Text>
+      ) : null}
 
       {v.actions.checkIn ? (
         <>
-          <SectionHeader title="Je suis arrivé·e" />
+          <SectionHeader title="Mon arrivée" />
           <Card style={{ gap: 16 }} testID="carte-arrivee">
+            {/* Arbitrage X3 : UN seul code par domicile, écrit en clair ET en QR sur la même feuille. */}
+            <Text variant="small" tone="muted" testID="explication-code">
+              Chez {v.aine.prenom}, la feuille du domicile montre un code, en clair et en QR. Scannez le QR ou saisissez le code : c’est le même.
+            </Text>
             {scanOuvert ? (
               <Scanner onLecture={lireQr} onAnnuler={() => setScanOuvert(false)} />
-            ) : scanPossible ? (
-              <Button
-                testID="bouton-scanner"
-                variant="quiet"
-                icon="scan"
-                label="Scanner le QR code"
-                accessibilityHint="Ouvre la caméra pour lire le QR code affiché au domicile"
-                onPress={() => {
-                  setAvisQr(null);
-                  setScanOuvert(true);
-                }}
-              />
-            ) : null}
+            ) : (
+              <View style={styles.choixCode}>
+                {scanPossible ? (
+                  <Button
+                    testID="bouton-scanner"
+                    variant="quiet"
+                    icon="scan"
+                    label="Scanner"
+                    accessibilityLabel="Scanner le QR de la feuille du domicile"
+                    accessibilityHint="Ouvre la caméra pour lire le QR"
+                    style={{ flex: 1 }}
+                    onPress={() => {
+                      setAvisQr(null);
+                      setScanOuvert(true);
+                    }}
+                  />
+                ) : null}
+                <Button
+                  testID="bouton-saisir"
+                  variant="quiet"
+                  icon="key"
+                  label="Saisir"
+                  accessibilityLabel="Saisir le code du domicile"
+                  style={{ flex: 1 }}
+                  onPress={() => champCode.current?.focus()}
+                />
+              </View>
+            )}
             {avisQr ? (
               <View
                 testID="avis-qr"
@@ -327,6 +360,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
             ) : null}
             <Field
               testID="champ-code-domicile"
+              inputRef={champCode}
               label="Code du domicile"
               placeholder="Ex. : AB12CD"
               autoCapitalize="characters"
@@ -335,12 +369,11 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
               grand
               value={code}
               onChangeText={(t) => setCode(normaliserCode(t))}
+              erreur={verifie && !pretArrivee ? 'Entrez le code du domicile, ou acceptez la lecture de la position plus bas.' : null}
               aide={
                 API_MODE === 'simule'
-                  ? `Démo hors ligne : le code est ${CODE_DOMICILE_DEMO}.`
-                  : scanPossible
-                    ? 'Scannez le QR, ou entrez le code écrit dessous. Il n’est pas gardé sur ce téléphone.'
-                    : 'Il est affiché chez la personne. Il n’est pas gardé sur ce téléphone.'
+                  ? `Démo : le code de ${v.aine.prenom} est ${CODE_DOMICILE_DEMO} (le même que sur le site).`
+                  : 'Il n’est pas gardé sur ce téléphone.'
               }
             />
             {gpsPossible ? (
@@ -377,7 +410,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
               <View key={k} style={[styles.bandeau, { marginTop: 0, backgroundColor: p.valide ? c.feuilleSoft : c.soleilSoft }]}>
                 <Icon name={p.valide ? 'check' : 'info'} size={18} color={p.valide ? c.feuille : c.soleilInk} />
                 <Text variant="small" style={{ flex: 1, color: p.valide ? c.feuille : c.soleilInk }}>
-                  {k === 'code' ? 'Code du domicile' : 'Position'} : {p.message ?? (p.valide ? 'validé.' : 'non validé.')}
+                  {k === 'code' ? 'Code du domicile' : 'Position à l’arrivée'} : {p.message ?? (p.valide ? 'obtenue.' : 'non obtenue.')}
                 </Text>
               </View>
             );
@@ -406,7 +439,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
         </View>
       ) : v.preuve.checkInA && duJour ? (
         <Text variant="small" tone="muted" style={{ marginTop: 12 }}>
-          Arrivée à {heureTexte(v.preuve.checkInA)}. {v.aine.prenom} peut confirmer par téléphone : c’est la deuxième preuve.
+          Arrivée à {heureTexte(v.preuve.checkInA)}. La confirmation de l’aîné ({v.aine.prenom} tape 1 au téléphone) peut donner une autre preuve.
         </Text>
       ) : null}
     </Screen>
@@ -514,7 +547,8 @@ const styles = StyleSheet.create({
   topbar: { flexDirection: 'row', alignItems: 'center', minHeight: 56, gap: 8 },
   sos: { minWidth: 52, minHeight: 44, paddingHorizontal: 10, borderRadius: 999, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   sosPanneau: { gap: 10, padding: 16, borderRadius: radius.field, borderWidth: 1.5, marginTop: 8, marginBottom: 4 },
-  hint: { marginTop: 10, fontSize: 14 },
+  hint: { marginTop: 10, fontSize: 15 },
+  choixCode: { flexDirection: 'row', gap: 10 },
   bandeau: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginTop: 12, padding: 14, borderRadius: 16 },
   stepRow: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 64, paddingVertical: 8 },
   st: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },

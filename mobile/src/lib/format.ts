@@ -63,7 +63,7 @@ export function euros(centimes: number): string {
   return `${(centimes / 100).toFixed(2).replace('.', ',')}${NBSP}€`;
 }
 
-/** « 2 visites », « 1 visite ». */
-export function pluriel(n: number, mot: string): string {
-  return `${n}${NBSP}${mot}${n > 1 ? 's' : ''}`;
+/** « 2 visites », « 1 visite », « 2 nouvelles propositions » (chaque mot s'accorde ; revue UX m2). */
+export function pluriel(n: number, mots: string): string {
+  return `${n}${NBSP}${n > 1 ? mots.split(' ').map((m) => `${m}s`).join(' ') : mots}`;
 }

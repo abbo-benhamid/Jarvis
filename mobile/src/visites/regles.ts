@@ -36,14 +36,15 @@ export function lieuAine(v: Pick<Visite, 'aine'>): string {
   return v.aine.adresseApproximative ? `${v.aine.adresseApproximative}, ${v.aine.communeLibelle}` : v.aine.communeLibelle;
 }
 
-export function libellePreuve(f: FacteurPreuve, prenomAine: string): { titre: string; icone: IconName } {
+export function libellePreuve(f: FacteurPreuve, _prenomAine?: string): { titre: string; icone: IconName } {
   switch (f) {
     case 'GPS':
       return { titre: 'Position à l’arrivée', icone: 'pin' };
     case 'CODE_DOMICILE':
       return { titre: 'Code du domicile', icone: 'key' };
     case 'CONFIRMATION_AINE':
-      return { titre: `Confirmation de ${prenomAine}`, icone: 'phone' };
+      // Arbitrage V1 X4 : même mot partout (web et app).
+      return { titre: 'Confirmation de l’aîné', icone: 'phone' };
   }
 }
 
