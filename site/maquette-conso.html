@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Koudmen — Maquette</title>
+<meta name="description" content="Maquette haute fidélité de Koudmen : cinq écrans mobiles, thème clair et sombre.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&display=swap">
+<style>
+/* =========================================================
+   TOKENS — voir docs/design/direction-artistique.md
+   Neutres chauds « sable » + 4 accents rares (mer, soleil, hibiscus, feuille).
+   ========================================================= */
+:root{
+  --page:#EAE3D6;          /* fond de la planche (hors téléphone) */
+  --bg:#F6F2EA;            /* sable */
+  --surface:#FFFDF8;       /* coton */
+  --surface-2:#EFE9DE;     /* sable creusé : puces, champs */
+  --ink:#1A2321;           /* encre */
+  --muted:#5A645F;         /* 5.6:1 sur --bg */
+  --line:#E3DBCD;          /* filet décoratif */
+  --line-strong:#8A877D;   /* bord des contrôles, >= 3:1 */
+  --mer:#0D5F58;           /* accent principal, 7.3:1 sur --surface */
+  --mer-press:#0A4C46;
+  --mer-soft:#E2EEEA;
+  --on-mer:#FFFFFF;
+  --soleil:#E0A21B;        /* décoratif uniquement */
+  --soleil-ink:#7E5300;    /* texte soleil, 6.4:1 */
+  --soleil-soft:#F8EDD3;
+  --hibiscus:#A8283F;      /* alerte, 6.6:1 */
+  --hibiscus-soft:#F6E1E3;
+  --feuille:#2B6A30;       /* succès, preuve, 6.3:1 */
+  --feuille-soft:#E4EFE1;
+  --focus:#1A2321;
+  --focus-halo:#E0A21B;
+  --shadow:0 1px 2px rgba(40,32,20,.05), 0 10px 30px -14px rgba(40,32,20,.18);
+  --shadow-lg:0 2px 4px rgba(40,32,20,.04), 0 30px 60px -30px rgba(40,32,20,.35);
+  --sky-1:#F3DDB9; --sky-2:#F8EEDF; --sea-1:#9CC7BE; --sea-2:#5E9F95; --hill:#B9C9A6; --pump:#D99A3A; --leaf:#6F9265; --stroke:#1A2321;
+  --photo-filter:none;
+  --madras:linear-gradient(90deg,var(--hibiscus) 0 28%,var(--soleil) 28% 52%,var(--mer) 52% 82%,var(--feuille) 82% 100%);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --page:#070A0A; --bg:#0F1413; --surface:#171D1C; --surface-2:#212927; --ink:#EEE9E0; --muted:#A3ABA6;
+    --line:#262F2D; --line-strong:#6E7975; --mer:#6CC9BB; --mer-press:#8AD6CA; --mer-soft:#18302C; --on-mer:#0B1110;
+    --soleil:#F0BD4F; --soleil-ink:#F0BD4F; --soleil-soft:#2E2614; --hibiscus:#F2879A; --hibiscus-soft:#33191F;
+    --feuille:#8BCB8E; --feuille-soft:#1A2A1C; --focus:#F0BD4F; --focus-halo:#0F1413;
+    --shadow:0 0 0 1px rgba(255,255,255,.04); --shadow-lg:0 30px 60px -30px rgba(0,0,0,.8);
+    --sky-1:#2A2F33; --sky-2:#1A2124; --sea-1:#24504B; --sea-2:#1A3B37; --hill:#2C3A2E; --pump:#B9802F; --leaf:#4E6B48; --stroke:#EEE9E0;
+    --photo-filter:brightness(.92) saturate(.9);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --page:#070A0A; --bg:#0F1413; --surface:#171D1C; --surface-2:#212927; --ink:#EEE9E0; --muted:#A3ABA6;
+  --line:#262F2D; --line-strong:#6E7975; --mer:#6CC9BB; --mer-press:#8AD6CA; --mer-soft:#18302C; --on-mer:#0B1110;
+  --soleil:#F0BD4F; --soleil-ink:#F0BD4F; --soleil-soft:#2E2614; --hibiscus:#F2879A; --hibiscus-soft:#33191F;
+  --feuille:#8BCB8E; --feuille-soft:#1A2A1C; --focus:#F0BD4F; --focus-halo:#0F1413;
+  --shadow:0 0 0 1px rgba(255,255,255,.04); --shadow-lg:0 30px 60px -30px rgba(0,0,0,.8);
+  --sky-1:#2A2F33; --sky-2:#1A2124; --sea-1:#24504B; --sea-2:#1A3B37; --hill:#2C3A2E; --pump:#B9802F; --leaf:#4E6B48; --stroke:#EEE9E0;
+  --photo-filter:brightness(.92) saturate(.9);
+  color-scheme:dark;
+}
+
+/* ===== Base ===== */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--page);color:var(--ink);font:400 17px/1.55 "Figtree",system-ui,sans-serif;-webkit-font-smoothing:antialiased;transition:background .3s ease}
+.serif{font-family:"Fraunces",Georgia,serif;font-optical-sizing:auto}
+button{font:inherit;color:inherit}
+:where(a,button,[tabindex]):focus-visible{outline:3px solid var(--focus);outline-offset:2px;box-shadow:0 0 0 5px var(--focus-halo);border-radius:12px}
+svg.i{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+svg.i.sm{width:18px;height:18px}
+svg.i.xs{width:16px;height:16px;stroke-width:1.8}
+.num{font-variant-numeric:tabular-nums lining-nums}
+
+/* ===== Planche ===== */
+.board-head{max-width:1360px;margin:0 auto;padding:40px 24px 8px;display:flex;flex-wrap:wrap;gap:24px;align-items:flex-end;justify-content:space-between}
+.board-head .eyebrow{font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.board-head h1{font-family:"Fraunces",serif;font-weight:500;font-size:clamp(34px,5vw,56px);line-height:1.04;letter-spacing:-.02em;margin:0;max-width:16ch}
+.board-head h1 em{font-style:italic;color:var(--mer)}
+.board-head p.lead{color:var(--muted);max-width:52ch;margin:14px 0 0;font-size:18px}
+.madras-line{height:2px;border-radius:2px;background:var(--madras);opacity:.9}
+.theme-switch{display:inline-flex;padding:4px;border-radius:999px;background:var(--surface);box-shadow:var(--shadow);gap:2px}
+.theme-switch button{min-height:44px;min-width:44px;padding:0 16px;border:0;border-radius:999px;background:transparent;display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:15px;color:var(--muted);cursor:pointer}
+.theme-switch button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.board-rule{max-width:1312px;margin:24px auto 0}
+.screens{display:flex;flex-wrap:wrap;justify-content:center;gap:56px 44px;padding:48px 24px 40px;max-width:2400px;margin:0 auto}
+figure.shot{margin:0;display:flex;flex-direction:column;align-items:center;gap:22px}
+figure.shot figcaption{width:390px;max-width:100%;display:flex;gap:14px;align-items:baseline}
+figure.shot figcaption b{font-family:"Fraunces",serif;font-weight:500;font-style:italic;font-size:22px;color:var(--mer);min-width:20px}
+figure.shot figcaption span{display:block;font-weight:600}
+figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;line-height:1.45}
+
+/* ===== Cadre de téléphone ===== */
+.phone{width:414px;height:868px;padding:12px;border-radius:60px;background:#151918;box-shadow:var(--shadow-lg),inset 0 0 0 1.5px #2C3230,0 0 0 1px rgba(0,0,0,.25);position:relative;flex:none}
+.screen{position:relative;width:390px;height:844px;border-radius:48px;overflow:hidden;background:var(--bg);color:var(--ink);display:flex;flex-direction:column;isolation:isolate}
+.island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:122px;height:35px;border-radius:20px;background:#000;z-index:30}
+.status{height:54px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:6px 30px 0 36px;font-weight:600;font-size:16px;position:relative;z-index:20}
+.status .sig{display:flex;gap:6px;align-items:center}
+.home-ind{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:var(--ink);opacity:.85;z-index:40}
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 20px 140px;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+
+/* ===== Composants ===== */
+.topbar{display:flex;align-items:center;justify-content:space-between;min-height:56px;gap:8px}
+.topbar .title{font-weight:600;font-size:17px}
+.icon-btn{width:44px;height:44px;border-radius:14px;border:0;background:transparent;display:grid;place-items:center;cursor:pointer;color:var(--ink)}
+.icon-btn.filled{background:var(--surface);box-shadow:var(--shadow)}
+.logo{display:flex;align-items:center;gap:10px;font-family:"Fraunces",serif;font-weight:500;font-size:22px;letter-spacing:-.01em}
+.logo svg{width:30px;height:30px}
+.eyebrow{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.kreyol{font-family:"Fraunces",serif;font-style:italic;color:var(--soleil-ink)}
+
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;border:0;border-radius:18px;font-weight:600;font-size:17px;cursor:pointer;letter-spacing:.005em}
+.btn-primary{background:var(--mer);color:var(--on-mer)}
+.btn-primary:hover{background:var(--mer-press)}
+.btn-ink{background:var(--ink);color:var(--bg)}
+.btn-quiet{background:var(--surface-2);color:var(--ink);min-height:52px}
+.link{color:var(--mer);font-weight:600;text-decoration:none;min-height:44px;display:inline-flex;align-items:center;gap:4px}
+
+.card{background:var(--surface);border-radius:24px;box-shadow:var(--shadow);padding:20px}
+.card + .card,.stack > * + *{margin-top:12px}
+.section-h{display:flex;align-items:baseline;justify-content:space-between;margin:28px 2px 12px}
+.section-h h2{font-size:15px;font-weight:600;margin:0;color:var(--muted);letter-spacing:.01em}
+
+.badge{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px 0 8px;border-radius:999px;font-size:14px;font-weight:600;white-space:nowrap}
+.badge.proof{background:var(--feuille-soft);color:var(--feuille)}
+.badge.neutral{background:var(--surface-2);color:var(--ink)}
+.badge.sun{background:var(--soleil-soft);color:var(--soleil-ink)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--feuille);flex:none;box-shadow:0 0 0 4px var(--feuille-soft)}
+
+/* Avatar ; .elder = anneau madras (la personne au centre du lakou) */
+.av{--s:44px;width:var(--s);height:var(--s);border-radius:50%;display:grid;place-items:center;font-family:"Fraunces",serif;font-weight:500;font-size:calc(var(--s)*.42);flex:none;position:relative}
+.av.t-sun{background:var(--soleil-soft);color:var(--soleil-ink)}
+.av.t-mer{background:var(--mer-soft);color:var(--mer)}
+.av.t-hib{background:var(--hibiscus-soft);color:var(--hibiscus)}
+.av.t-leaf{background:var(--feuille-soft);color:var(--feuille)}
+.av.elder::before{content:"";position:absolute;inset:-5px;border-radius:50%;padding:2px;background:conic-gradient(var(--hibiscus) 0 25%,var(--soleil) 0 50%,var(--mer) 0 75%,var(--feuille) 0);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.av-stack{display:flex}
+.av-stack .av{--s:36px;box-shadow:0 0 0 3px var(--surface);font-size:15px}
+.av-stack .av + .av{margin-left:-8px}
+
+/* Barre de navigation basse */
+.tabbar{position:absolute;left:0;right:0;bottom:0;z-index:25;padding:8px 10px 26px;display:grid;grid-template-columns:repeat(5,1fr);background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid var(--line)}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;min-height:52px;justify-content:center;font-size:12.5px;font-weight:500;color:var(--muted);text-decoration:none;border-radius:14px}
+.tab .pill{width:56px;height:30px;border-radius:999px;display:grid;place-items:center}
+.tab[aria-current="page"]{color:var(--ink);font-weight:600}
+.tab[aria-current="page"] .pill{background:var(--mer-soft);color:var(--mer)}
+
+/* Pied collant (CTA) */
+.dock{position:absolute;left:0;right:0;bottom:0;z-index:25;padding:28px 20px 30px;background:linear-gradient(to bottom,transparent,var(--bg) 26%)}
+.dock .meta{display:flex;justify-content:space-between;align-items:baseline;margin:0 4px 12px;font-size:15px;color:var(--muted)}
+.dock .meta strong{color:var(--ink);font-size:17px}
+
+/* Illustrations « photo » */
+.photo{border-radius:20px;overflow:hidden;position:relative;filter:var(--photo-filter)}
+.photo svg{display:block;width:100%;height:auto}
+
+/* ===== (a) Accueil public ===== */
+.hero-title{font-family:"Fraunces",serif;font-weight:400;font-size:42px;line-height:1.02;letter-spacing:-.025em;margin:18px 0 0}
+.hero-title em{font-style:italic;color:var(--mer)}
+.hero-lead{color:var(--muted);margin:14px 0 0;font-size:17px;line-height:1.5}
+.notif{position:absolute;left:14px;right:14px;bottom:14px;display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:18px;background:color-mix(in srgb,var(--surface) 86%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 8px 24px -10px rgba(0,0,0,.25)}
+.notif p{margin:0;font-size:14.5px;line-height:1.35}
+.notif p b{display:block;font-size:13px;color:var(--muted);font-weight:600;margin-bottom:2px}
+.promise{list-style:none;margin:24px 0 0;padding:0}
+.promise li{display:flex;gap:14px;padding:14px 0;border-top:1px solid var(--line)}
+.promise li:first-child{border-top:0;padding-top:4px}
+.promise .ic{width:40px;height:40px;border-radius:12px;background:var(--surface);box-shadow:var(--shadow);display:grid;place-items:center;color:var(--mer);flex:none}
+.promise b{display:block;font-weight:600;font-size:16.5px}
+.promise span{color:var(--muted);font-size:15px;line-height:1.4;display:block}
+
+/* ===== (b) Famille ===== */
+.greet{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
+.greet h1{font-family:"Fraunces",serif;font-weight:400;font-size:30px;letter-spacing:-.02em;margin:0;line-height:1.1}
+.greet p{margin:4px 0 0;color:var(--muted);font-size:15px}
+.status-card{margin-top:20px;padding:22px;border-radius:28px;background:var(--surface);box-shadow:var(--shadow);position:relative;overflow:hidden}
+.status-card .who{display:flex;gap:16px;align-items:center}
+.status-card .who b{font-weight:600;font-size:17px;display:block}
+.status-card .who span{color:var(--muted);font-size:15px}
+.status-card .state{font-family:"Fraunces",serif;font-weight:400;font-size:34px;letter-spacing:-.02em;line-height:1.05;margin:22px 0 6px}
+.status-card .state em{font-style:italic;color:var(--feuille)}
+.status-card .sub{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:15px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);margin-top:20px;border-top:1px solid var(--line);padding-top:16px}
+.stats div + div{border-left:1px solid var(--line);padding-left:14px}
+.stats b{display:block;font-size:24px;font-weight:600;letter-spacing:-.01em;line-height:1.1}
+.stats span{font-size:13.5px;color:var(--muted)}
+.visit{display:flex;gap:16px;align-items:center}
+.datebox{width:56px;height:62px;border-radius:16px;background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none}
+.datebox small{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--hibiscus)}
+.datebox b{font-size:24px;font-weight:600;line-height:1}
+.visit .txt{flex:1;min-width:0}
+.visit .txt b{display:block;font-weight:600}
+.visit .txt span{color:var(--muted);font-size:15px;display:block;line-height:1.4}
+.kaye-card{padding:0;overflow:hidden}
+.kaye-card .photo{border-radius:0}
+.kaye-card .body{padding:18px 20px 20px}
+.kaye-meta{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.kaye-meta .by{display:flex;align-items:center;gap:10px;font-size:15px}
+.kaye-meta .by b{font-weight:600}
+.kaye-meta .by span{color:var(--muted)}
+.quote{font-family:"Fraunces",serif;font-style:italic;font-weight:400;font-size:21px;line-height:1.3;margin:14px 0 4px;letter-spacing:-.005em}
+.quote-tr{color:var(--muted);font-size:15px;margin:0}
+.voice{display:flex;align-items:center;gap:12px;margin-top:16px;padding:8px 14px 8px 8px;border-radius:999px;background:var(--surface-2)}
+.voice .play{width:44px;height:44px;border-radius:50%;background:var(--ink);color:var(--bg);display:grid;place-items:center;border:0;flex:none}
+.voice .play svg{fill:currentColor;stroke:none;width:16px;height:16px;margin-left:2px}
+.wave{flex:1;display:flex;align-items:center;gap:3px;height:28px}
+.wave i{display:block;width:3px;border-radius:2px;background:var(--muted);opacity:.55}
+.wave i.on{background:var(--mer);opacity:1}
+.voice small{font-size:14px;color:var(--muted);font-weight:600}
+
+/* ===== (c) Détail Kayé ===== */
+.k-photo{position:relative;margin-top:4px}
+.k-photo .badge{position:absolute;left:12px;top:12px;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(8px);color:var(--ink)}
+.k-title{font-family:"Fraunces",serif;font-weight:400;font-size:28px;line-height:1.1;letter-spacing:-.02em;margin:20px 0 8px}
+.k-text{margin:0;font-size:17px;line-height:1.55}
+.receipt{margin-top:24px;background:var(--surface);border-radius:22px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.receipt .madras-line{border-radius:0;height:3px}
+.receipt .r-head{display:flex;justify-content:space-between;align-items:center;padding:18px 20px 14px}
+.receipt .r-head b{font-weight:600;font-size:17px}
+.receipt .r-head code{font:500 12.5px/1 ui-monospace,Menlo,monospace;color:var(--muted);letter-spacing:.04em}
+.r-times{display:grid;grid-template-columns:repeat(3,1fr);padding:0 20px 16px}
+.r-times span{display:block;font-size:13px;color:var(--muted)}
+.r-times b{font-size:20px;font-weight:600}
+.perf{position:relative;height:1px;margin:0 20px;border-top:1.5px dashed var(--line)}
+.perf::before,.perf::after{content:"";position:absolute;top:-11px;width:20px;height:20px;border-radius:50%;background:var(--bg)}
+.perf::before{left:-31px}.perf::after{right:-31px}
+.proofs{list-style:none;margin:0;padding:8px 20px 4px}
+.proofs li{display:flex;align-items:center;gap:12px;min-height:52px;font-size:16px}
+.proofs li + li{border-top:1px solid var(--line)}
+.proofs .st{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;flex:none}
+.proofs .ok{background:var(--feuille-soft);color:var(--feuille)}
+.proofs .no{background:var(--surface-2);color:var(--muted)}
+.proofs .lbl{flex:1}
+.proofs .lbl small{display:block;color:var(--muted);font-size:13.5px;line-height:1.3}
+.proofs time{color:var(--muted);font-size:14px}
+.verdict{display:flex;align-items:center;gap:12px;margin:8px 12px 12px;padding:14px;border-radius:16px;background:var(--feuille-soft);color:var(--feuille)}
+.verdict b{display:block;font-weight:700;font-size:16px}
+.verdict span{font-size:14px;color:var(--ink);opacity:.8}
+.signal{display:flex;gap:12px;margin-top:12px;padding:16px;border-radius:20px;border:1px solid var(--line)}
+.signal p{margin:0;font-size:15.5px;line-height:1.45}
+.signal small{display:block;color:var(--muted);font-size:13.5px;margin-top:4px}
+
+/* ===== (d) Accompagnante ===== */
+.timeline{display:flex;gap:8px;margin-top:16px;overflow:hidden}
+.slot{flex:1;padding:12px 14px;border-radius:16px;background:var(--surface-2);font-size:14px;line-height:1.3;min-height:60px}
+.slot b{display:block;font-size:16px;font-weight:600}
+.slot.now{background:var(--ink);color:var(--bg)}
+.slot.now span{opacity:.75}
+.map{position:relative;height:150px;border-radius:20px;overflow:hidden;margin:-4px -4px 0}
+.map svg{display:block;width:100%;height:100%}
+.map .eta{position:absolute;right:12px;top:12px}
+.place{display:flex;gap:14px;align-items:center;margin-top:16px}
+.place b{display:block;font-weight:600;font-size:18px}
+.place span{display:block;color:var(--muted);font-size:15px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:999px;background:var(--surface-2);font-size:14.5px;font-weight:500}
+.steps{list-style:none;margin:0;padding:0}
+.steps li{display:flex;align-items:center;gap:14px;min-height:56px}
+.steps li + li{border-top:1px solid var(--line)}
+.steps .st{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;flex:none}
+.steps .done{background:var(--feuille);color:var(--surface)}
+.steps .cur{box-shadow:inset 0 0 0 2px var(--mer);color:var(--mer)}
+.steps .todo{box-shadow:inset 0 0 0 1.5px var(--line-strong);color:var(--muted)}
+.steps .lbl{flex:1;font-size:16px}
+.steps .lbl small{display:block;color:var(--muted);font-size:14px}
+.steps .act{font-size:15px}
+.hint{font-size:14px;color:var(--muted);text-align:center;margin:10px 0 0}
+
+/* ===== (e) Formules ===== */
+.progress{height:4px;border-radius:2px;background:var(--surface-2);overflow:hidden;margin:4px 0 0}
+.progress i{display:block;height:100%;width:100%;background:var(--mer);border-radius:2px}
+.step-l{font-size:14px;color:var(--muted);margin:10px 0 0}
+.plans{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+.plan{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border-radius:20px;background:var(--surface);box-shadow:var(--shadow);border:1.5px solid transparent;position:relative}
+.plan .radio{width:24px;height:24px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--line-strong);flex:none;margin-top:2px;display:grid;place-items:center}
+.plan.on{border-color:var(--mer)}
+.plan.on .radio{box-shadow:inset 0 0 0 7px var(--mer)}
+.plan .p-txt{flex:1;min-width:0}
+.plan .p-name{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.plan .p-name b{font-weight:600;font-size:17px}
+.plan .p-name .price{font-weight:600;font-size:17px;white-space:nowrap}
+.plan .p-name .price small{font-size:13.5px;color:var(--muted);font-weight:500}
+.plan .p-txt > span{display:block;color:var(--muted);font-size:14.5px;line-height:1.4;margin-top:2px}
+.plan .feat{list-style:none;margin:12px 0 0;padding:12px 0 0;border-top:1px solid var(--line);display:grid;gap:6px}
+.plan .feat li{display:flex;gap:8px;align-items:flex-start;font-size:14.5px;line-height:1.35}
+.plan .feat svg{color:var(--feuille);margin-top:1px}
+.plan .tag{position:absolute;top:-11px;right:16px}
+.split{display:flex;gap:14px;align-items:center}
+.split .txt{flex:1}
+.split .txt b{display:block;font-weight:600}
+.split .txt span{display:block;color:var(--muted);font-size:14.5px;line-height:1.4}
+.toggle{width:52px;height:32px;border-radius:999px;background:var(--mer);position:relative;flex:none;border:0}
+.toggle::after{content:"";position:absolute;top:3px;right:3px;width:26px;height:26px;border-radius:50%;background:var(--on-mer)}
+.summary{list-style:none;padding:0;margin:0}
+.summary li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;font-size:15.5px}
+.summary li span{color:var(--muted)}
+.summary li.total{border-top:1px solid var(--line);margin-top:6px;padding-top:14px;font-size:17px}
+.summary li.total span{color:var(--ink);font-weight:600}
+.summary li.total b{font-size:22px;font-weight:600}
+.cardfield{display:flex;align-items:center;gap:12px;min-height:56px;padding:0 16px;border-radius:16px;box-shadow:inset 0 0 0 1.5px var(--line-strong);background:var(--surface);margin-top:12px}
+.cardfield .brand{width:38px;height:26px;border-radius:6px;background:var(--ink);position:relative;flex:none}
+.cardfield .brand::after{content:"";position:absolute;left:6px;top:8px;width:9px;height:9px;border-radius:2px;background:var(--soleil);opacity:.9}
+.cardfield span{flex:1;font-weight:500}
+.cardfield small{color:var(--muted);font-size:14px}
+.notice{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;color:var(--muted);margin:14px 4px 0;line-height:1.4}
+
+/* ===== Spécimen ===== */
+.specimen{max-width:1312px;margin:8px auto 0;padding:0 24px;display:grid;grid-template-columns:1.2fr 1fr;gap:24px}
+.spec-card{background:var(--bg);border-radius:28px;padding:28px;box-shadow:var(--shadow)}
+.spec-card h2{font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 18px}
+.swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.sw{border-radius:16px;height:84px;padding:10px 12px;display:flex;flex-direction:column;justify-content:flex-end;font-size:13px;font-weight:600;line-height:1.25}
+.sw small{font-weight:500;opacity:.75}
+.sw.n{box-shadow:inset 0 0 0 1px var(--line)}
+.ratio{margin-top:14px;display:flex;height:10px;border-radius:5px;overflow:hidden}
+.ratio i{display:block}
+.ratio-l{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-top:8px}
+.type-a{font-family:"Fraunces",serif;font-weight:400;font-size:64px;line-height:1;letter-spacing:-.03em}
+.type-a em{color:var(--mer)}
+.type-row{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--line);padding:12px 0;gap:12px}
+.type-row:first-of-type{margin-top:18px}
+.type-row small{color:var(--muted);font-size:13px;white-space:nowrap}
+
+@media (max-width:900px){.specimen{grid-template-columns:1fr}}
+@media (max-width:460px){
+  .board-head{padding:28px 16px 4px}
+  .specimen{padding:0 16px}
+  .spec-card{padding:20px}
+  .swatches{grid-template-columns:repeat(2,1fr)}
+  .type-a{font-size:48px}
+  .screens{padding:32px 0;gap:40px}
+  .phone{width:100%;height:auto;padding:0;border-radius:0;background:none;box-shadow:none}
+  .island,.home-ind{display:none}
+  .screen{width:100%;height:844px;border-radius:0}
+  figure.shot{width:100%}
+  figure.shot figcaption{padding:0 16px}
+}
+@media (prefers-reduced-motion:no-preference){
+  .status-card .dot{animation:breathe 3.2s ease-in-out infinite}
+  @keyframes breathe{50%{box-shadow:0 0 0 7px var(--feuille-soft)}}
+}
+</style>
+</head>
+<body>
+
+<!-- Sprite d'icônes (style lucide, trait 1.6) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M15 21v-7a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v7"/><path d="M3 10a2 2 0 0 1 .7-1.5l7-6a2 2 0 0 1 2.6 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="4" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4.5"/><path d="M20 21a8 8 0 0 0-16 0"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 5-5.5 10.2-7.4 11.8a1 1 0 0 1-1.2 0C9.5 20.2 4 15 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-scan" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M6 3.5v17a1 1 0 0 0 1.5.86l14-8.5a1 1 0 0 0 0-1.72l-14-8.5A1 1 0 0 0 6 3.5z"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M20 13c0 5-3.5 7.5-7.7 9a1 1 0 0 1-.6 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.2-2.7a1.2 1.2 0 0 1 1.6 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7Z"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4M12 2v13"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect width="18" height="11" x="3" y="11" rx="2.5"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17v4M17 19h4"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
+  <symbol id="i-nav" viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8z"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 16v-4M12 8h.01"/></symbol>
+  <symbol id="i-msg" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+  <!-- Marque Koudmen : le soleil qui se lève sur la mer, tenu par deux mains-vagues -->
+  <symbol id="logo" viewBox="0 0 32 32"><rect width="32" height="32" rx="10" fill="var(--mer)"/><circle cx="16" cy="15" r="5.2" fill="var(--soleil)"/><path d="M5.5 20.5c3.5-2.6 7-2.6 10.5 0s7 2.6 10.5 0" fill="none" stroke="var(--on-mer)" stroke-width="2" stroke-linecap="round"/><path d="M8 25c2.7-1.8 5.3-1.8 8 0s5.3 1.8 8 0" fill="none" stroke="var(--on-mer)" stroke-opacity=".55" stroke-width="2" stroke-linecap="round"/></symbol>
+  <!-- Barre d'état -->
+  <symbol id="s-sig" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></symbol>
+  <symbol id="s-wifi" viewBox="0 0 16 12"><path d="M8 2.4c2.3 0 4.4.9 6 2.4l1.1-1.2A10.2 10.2 0 0 0 8 .8 10.2 10.2 0 0 0 .9 3.6L2 4.8a8.6 8.6 0 0 1 6-2.4Zm0 3.3c1.4 0 2.6.5 3.6 1.4l1.1-1.2A7 7 0 0 0 8 4.1a7 7 0 0 0-4.7 1.8l1.1 1.2c1-.9 2.2-1.4 3.6-1.4Zm0 3.3c.6 0 1.1.2 1.5.6L8 11.2 6.5 9.6c.4-.4.9-.6 1.5-.6Z"/></symbol>
+  <symbol id="s-bat" viewBox="0 0 28 13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" fill="none" stroke="currentColor" opacity=".4"/><rect x="2" y="2" width="17" height="9" rx="2"/><path d="M25.5 4.5v4c.8-.3 1.3-1.1 1.3-2s-.5-1.7-1.3-2z" opacity=".45"/></symbol>
+</svg>
+
+<header class="board-head">
+  <div>
+    <p class="eyebrow">Koudmen · Direction artistique · Maquette v1</p>
+    <h1>Le calme d'une bonne nouvelle, <em>chaque semaine.</em></h1>
+    <p class="lead">Cinq écrans, une seule voix : sobre, chaleureuse, précise. Des neutres « sable », un vert mer pour agir, et un fil madras réservé à ce qui compte : l'aîné et la preuve.</p>
+  </div>
+  <div class="theme-switch" role="group" aria-label="Thème de la maquette">
+    <button type="button" data-set="light" aria-pressed="false"><svg class="i sm"><use href="#i-sun"/></svg>Clair</button>
+    <button type="button" data-set="dark" aria-pressed="false"><svg class="i sm"><use href="#i-moon"/></svg>Sombre</button>
+  </div>
+</header>
+<div class="board-rule madras-line" aria-hidden="true"></div>
+
+<section class="specimen" aria-label="Palette et typographie" style="margin-top:32px">
+  <div class="spec-card">
+    <h2>Palette — 90 % neutres, 10 % accents</h2>
+    <div class="swatches">
+      <div class="sw n" style="background:var(--bg)">Sable<small>fond</small></div>
+      <div class="sw n" style="background:var(--surface)">Coton<small>cartes</small></div>
+      <div class="sw" style="background:var(--ink);color:var(--bg)">Encre<small>texte</small></div>
+      <div class="sw" style="background:var(--mer);color:var(--on-mer)">Mer<small>agir</small></div>
+      <div class="sw" style="background:var(--feuille-soft);color:var(--feuille)">Feuille<small>preuve, va bien</small></div>
+      <div class="sw" style="background:var(--soleil-soft);color:var(--soleil-ink)">Soleil<small>créole, chaleur</small></div>
+      <div class="sw" style="background:var(--hibiscus-soft);color:var(--hibiscus)">Hibiscus<small>alerte seulement</small></div>
+      <div class="sw n" style="background:var(--surface-2)">Sable creusé<small>puces, champs</small></div>
+    </div>
+    <div class="ratio" aria-hidden="true"><i style="flex:62;background:var(--bg);box-shadow:inset 0 0 0 1px var(--line)"></i><i style="flex:22;background:var(--surface)"></i><i style="flex:8;background:var(--ink)"></i><i style="flex:5;background:var(--mer)"></i><i style="flex:1.5;background:var(--feuille)"></i><i style="flex:1;background:var(--soleil)"></i><i style="flex:.5;background:var(--hibiscus)"></i></div>
+    <div class="ratio-l"><span>Proportion visée sur un écran</span><span>mer 5 % · autres &lt; 2 %</span></div>
+  </div>
+  <div class="spec-card">
+    <h2>Typographie — Fraunces + Figtree</h2>
+    <div class="type-a">Sa ka <em style="font-style:italic">maché.</em></div>
+    <div class="type-row"><span class="serif" style="font-size:30px;letter-spacing:-.02em">Elle va bien.</span><small>Fraunces 400 · 30/34</small></div>
+    <div class="type-row"><span style="font-weight:600;font-size:17px">Prochaine visite jeudi, 10 h</span><small>Figtree 600 · 17/24</small></div>
+    <div class="type-row"><span class="num" style="font-weight:600;font-size:24px">149,00 € · 2/3</span><small>Figtree chiffres tabulaires</small></div>
+  </div>
+</section>
+
+<main class="screens">
+
+<!-- ============ (a) ACCUEIL PUBLIC ============ -->
+<figure class="shot" id="ecran-a">
+  <div class="phone"><div class="screen">
+    <div class="island" aria-hidden="true"></div>
+    <div class="status num" aria-hidden="true"><span>9:41</span><span class="sig"><svg width="18" height="12" fill="currentColor"><use href="#s-sig"/></svg><svg width="16" height="12" fill="currentColor"><use href="#s-wifi"/></svg><svg width="28" height="13" fill="currentColor"><use href="#s-bat"/></svg></span></div>
+    <div class="scroll">
+      <div class="topbar">
+        <div class="logo"><svg aria-hidden="true"><use href="#logo"/></svg>Koudmen</div>
+        <a class="link" href="#">Se connecter</a>
+      </div>
+      <p class="eyebrow" style="margin:18px 0 0">Martinique · Guadeloupe</p>
+      <h2 class="hero-title">De loin, <em>sachez</em> qu'elle va bien.</h2>
+      <p class="hero-lead">Une accompagnante de confiance rend visite à votre parent. Après chaque visite, vous recevez son Kayé : un mot, une photo, une preuve.</p>
+
+      <div class="photo" style="margin-top:22px">
+        <svg viewBox="0 0 350 218" role="img" aria-label="Illustration : lever de soleil sur la mer, une case créole sur le morne">
+          <defs>
+            <linearGradient id="ha-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--sky-1)"/><stop offset="1" style="stop-color:var(--sky-2)"/></linearGradient>
+            <linearGradient id="ha-sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--sea-1)"/><stop offset="1" style="stop-color:var(--sea-2)"/></linearGradient>
+          </defs>
+          <rect width="350" height="218" fill="url(#ha-sky)"/>
+          <circle cx="112" cy="104" r="40" style="fill:var(--soleil)" opacity=".38"/>
+          <circle cx="112" cy="104" r="26" style="fill:var(--soleil)" opacity=".55"/>
+          <rect y="112" width="350" height="106" fill="url(#ha-sea)"/>
+          <g style="stroke:var(--surface)" stroke-width="1.4" stroke-linecap="round" opacity=".55" fill="none">
+            <path d="M70 126h84M84 136h56M24 150h40M180 146h70M110 160h40"/>
+          </g>
+          <!-- morne et case -->
+          <path d="M196 113c26-30 58-44 92-44 26 0 46 10 62 24v20z" style="fill:var(--hill)"/>
+          <g fill="none" style="stroke:var(--stroke)" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round" opacity=".8">
+            <path d="M262 92l17-14 17 14"/><path d="M265 90v20h28V90"/><path d="M276 110v-10h6v10"/><path d="M268 96h5v5h-5zM285 96h5v5h-5z"/>
+            <!-- cocotier -->
+            <path d="M232 112c1-14 4-26 10-36"/><path d="M242 76c-8-4-18-2-22 4M242 76c4-8 14-10 20-6M242 76c-2-8-10-12-16-10M242 76c8 0 14 6 14 12"/>
+          </g>
+          <!-- hibiscus au premier plan -->
+          <g transform="translate(36 166)">
+            <g style="fill:var(--hibiscus)" opacity=".85">
+              <ellipse cx="0" cy="-11" rx="7" ry="11"/><ellipse cx="0" cy="-11" rx="7" ry="11" transform="rotate(72)"/><ellipse cx="0" cy="-11" rx="7" ry="11" transform="rotate(144)"/><ellipse cx="0" cy="-11" rx="7" ry="11" transform="rotate(216)"/><ellipse cx="0" cy="-11" rx="7" ry="11" transform="rotate(288)"/>
+            </g>
+            <circle r="3" style="fill:var(--soleil)"/>
+            <path d="M2 2c10 8 16 20 16 40" fill="none" style="stroke:var(--leaf)" stroke-width="2" stroke-linecap="round"/>
+          </g>
+        </svg>
+        <div class="notif">
+          <span class="av t-sun elder" style="--s:36px;font-size:15px">L</span>
+          <p><b>Kayé de Léonie · il y a 2 h</b>Elle a bien mangé. Elle a ri en parlant du marché.</p>
+        </div>
+      </div>
+
+      <ul class="promise">
+        <li><span class="ic"><svg class="i sm"><use href="#i-shield"/></svg></span><div><b>Chaque visite est prouvée</b><span>2 preuves sur 3 : la position, le tag chez elle, son appel.</span></div></li>
+        <li><span class="ic"><svg class="i sm"><use href="#i-heart"/></svg></span><div><b>Toujours la même personne</b><span>Ou une remplaçante qu'elle connaît déjà.</span></div></li>
+        <li><span class="ic"><svg class="i sm"><use href="#i-users"/></svg></span><div><b>Tout le lakou est informé</b><span>Frères, sœurs et voisins lisent les mêmes nouvelles.</span></div></li>
+      </ul>
+    </div>
+    <div class="dock">
+      <div class="meta"><span>Dès <strong class="num">39 €</strong> par mois</span><span>Sans engagement</span></div>
+      <button class="btn btn-primary" type="button">Commencer <svg class="i sm"><use href="#i-arrow"/></svg></button>
+    </div>
+    <div class="home-ind" aria-hidden="true"></div>
+  </div></div>
+  <figcaption><b>a</b><div><span>Accueil public</span><small>Une promesse, une preuve, un prix. Le Kayé en aperçu dit le produit sans le décrire.</small></div></figcaption>
+</figure>
+
+<!-- ============ (b) ACCUEIL FAMILLE ============ -->
+<figure class="shot" id="ecran-b">
+  <div class="phone"><div class="screen">
+    <div class="island" aria-hidden="true"></div>
+    <div class="status num" aria-hidden="true"><span>9:41</span><span class="sig"><svg width="18" height="12" fill="currentColor"><use href="#s-sig"/></svg><svg width="16" height="12" fill="currentColor"><use href="#s-wifi"/></svg><svg width="28" height="13" fill="currentColor"><use href="#s-bat"/></svg></span></div>
+    <div class="scroll" style="padding-bottom:120px">
+      <div class="greet">
+        <div><h1>Bonjou, Sandrine</h1><p>Lundi 5 octobre</p></div>
+        <button class="icon-btn filled" type="button" aria-label="Notifications"><svg class="i"><use href="#i-bell"/></svg></button>
+      </div>
+
+      <section class="status-card" aria-label="État de Léonie">
+        <div class="who">
+          <span class="av t-sun elder" style="--s:56px">L</span>
+          <div><b>Léonie, votre maman</b><span>84 ans · Sainte-Luce</span></div>
+        </div>
+        <p class="state">Elle va <em>bien.</em></p>
+        <div class="sub"><span class="dot" aria-hidden="true"></span><span><span class="kreyol">Sa ka maché</span> · visite samedi, 12 h 01</span></div>
+        <div class="stats">
+          <div><b class="num">4</b><span>visites en sept.</span></div>
+          <div><b class="num">2/3</b><span>preuves samedi</span></div>
+          <div><b class="num">96 %</b><span>avec Josiane</span></div>
+        </div>
+      </section>
+
+      <div class="section-h"><h2>Prochaine visite</h2></div>
+      <a class="card visit" href="#" style="text-decoration:none;color:inherit">
+        <div class="datebox"><small>Jeu</small><b class="num">8</b></div>
+        <div class="txt"><b>10 h – 12 h · avec Josiane</b><span>Marché de Rivière-Pilote, puis le courrier de la CGSS.</span></div>
+        <svg class="i sm" style="color:var(--muted)"><use href="#i-right"/></svg>
+      </a>
+
+      <div class="section-h"><h2>Dernier Kayé</h2><a class="link" href="#" style="font-size:15px;min-height:auto">Tout voir</a></div>
+      <article class="card kaye-card">
+        <div class="photo" aria-hidden="true">
+          <svg viewBox="0 0 350 150">
+            <use href="#ph-garden"/>
+          </svg>
+        </div>
+        <div class="body">
+          <div class="kaye-meta">
+            <div class="by"><span class="av t-mer" style="--s:32px;font-size:14px">J</span><span><b>Josiane</b> <span>· samedi</span></span></div>
+            <span class="badge proof"><svg class="i xs"><use href="#i-shield"/></svg>Prouvée</span>
+          </div>
+          <p class="quote">« Di Sandrine pa enkyèt kò'y. »</p>
+          <p class="quote-tr">« Dites à Sandrine de ne pas s'inquiéter. »</p>
+        </div>
+      </article>
+    </div>
+    <nav class="tabbar" aria-label="Navigation principale">
+      <a class="tab" href="#" aria-current="page"><span class="pill"><svg class="i"><use href="#i-home"/></svg></span>Accueil</a>
+      <a class="tab" href="#"><span class="pill"><svg class="i"><use href="#i-book"/></svg></span>Kayé</a>
+      <a class="tab" href="#"><span class="pill"><svg class="i"><use href="#i-users"/></svg></span>Lakou</a>
+      <a class="tab" href="#"><span class="pill"><svg class="i"><use href="#i-cal"/></svg></span>Agenda</a>
+      <a class="tab" href="#"><span class="pill"><svg class="i"><use href="#i-user"/></svg></span>Compte</a>
+    </nav>
+    <div class="home-ind" aria-hidden="true"></div>
+  </div></div>
+  <figcaption><b>b</b><div><span>Accueil famille · Sandrine</span><small>Une seule réponse en grand : « Elle va bien. » Le reste se lit en trois secondes.</small></div></figcaption>
+</figure>
+
+<!-- ============ (c) DÉTAIL KAYÉ + REÇU ============ -->
+<figure class="shot" id="ecran-c">
+  <div class="phone"><div class="screen">
+    <div class="island" aria-hidden="true"></div>
+    <div class="status num" aria-hidden="true"><span>9:41</span><span class="sig"><svg width="18" height="12" fill="currentColor"><use href="#s-sig"/></svg><svg width="16" height="12" fill="currentColor"><use href="#s-wifi"/></svg><svg width="28" height="13" fill="currentColor"><use href="#s-bat"/></svg></span></div>
+    <div class="scroll" style="padding-bottom:48px">
+      <div class="topbar">
+        <button class="icon-btn" type="button" aria-label="Retour" style="margin-left:-10px"><svg class="i"><use href="#i-left"/></svg></button>
+        <span class="title">Kayé · samedi 3 oct.</span>
+        <button class="icon-btn" type="button" aria-label="Partager au lakou" style="margin-right:-10px"><svg class="i"><use href="#i-share"/></svg></button>
+      </div>
+      <div class="k-photo">
+        <div class="photo"><svg viewBox="0 0 350 210" role="img" aria-label="Photo du jardin de Léonie, avec ses giraumons"><use href="#ph-garden-tall"/></svg></div>
+        <span class="badge"><svg class="i xs" style="color:var(--soleil-ink)"><use href="#i-sun"/></svg>Humeur : joyeuse</span>
+      </div>
+      <h2 class="k-title">Le marché, puis le blaff de midi.</h2>
+      <div class="kaye-meta" style="margin-bottom:12px">
+        <div class="by"><span class="av t-mer" style="--s:32px;font-size:14px">J</span><span><b>Josiane Mathurin</b> <span>· 10 h 04 – 12 h 01</span></span></div>
+      </div>
+      <p class="k-text">Léonie était en forme. Nous sommes allées au marché. Elle a choisi ses christophines elle-même. Elle a bien mangé à midi.</p>
+
+      <div class="voice" style="margin-top:16px">
+        <button class="play" type="button" aria-label="Écouter le mot de Léonie, 24 secondes"><svg><use href="#i-play"/></svg></button>
+        <div class="wave" aria-hidden="true" id="wave-c"></div>
+        <small class="num">0:24</small>
+      </div>
+
+      <section class="receipt" aria-label="Reçu de visite">
+        <div class="madras-line" aria-hidden="true"></div>
+        <div class="r-head"><b>Reçu de visite</b><code>KDM-2610-0417</code></div>
+        <div class="r-times num">
+          <div><span>Arrivée</span><b>10:04</b></div>
+          <div><span>Départ</span><b>12:01</b></div>
+          <div><span>Durée</span><b>1 h 57</b></div>
+        </div>
+        <div class="perf" aria-hidden="true"></div>
+        <ul class="proofs">
+          <li><span class="st ok"><svg class="i xs"><use href="#i-check"/></svg></span><span class="lbl">Position au domicile<small>À 12 m de la maison</small></span><time class="num">10:04</time></li>
+          <li><span class="st ok"><svg class="i xs"><use href="#i-check"/></svg></span><span class="lbl">Tag scanné chez Léonie<small>Sur la porte de la cuisine</small></span><time class="num">10:05</time></li>
+          <li><span class="st no"><svg class="i xs"><use href="#i-minus"/></svg></span><span class="lbl">Appel de confirmation<small>Léonie n'a pas décroché</small></span><time class="num">11:58</time></li>
+        </ul>
+        <div class="verdict">
+          <svg class="i"><use href="#i-shield"/></svg>
+          <div><b>2 preuves sur 3 · visite validée</b><span>Deux preuves suffisent. Le paiement de Josiane part.</span></div>
+        </div>
+      </section>
+
+      <div class="signal">
+        <svg class="i sm" style="color:var(--mer);margin-top:2px"><use href="#i-spark"/></svg>
+        <p>Rien d'inhabituel. L'appétit et le sommeil restent stables depuis 3 semaines.<small>Résumé automatique. Ce n'est pas un avis médical.</small></p>
+      </div>
+      <button class="btn btn-quiet" type="button" style="margin-top:16px"><svg class="i sm" style="color:var(--hibiscus)"><use href="#i-heart"/></svg>Remercier Josiane</button>
+    </div>
+    <div class="home-ind" aria-hidden="true"></div>
+  </div></div>
+  <figcaption><b>c</b><div><span>Kayé et reçu de visite</span><small>L'émotion d'abord, la preuve ensuite. Le reçu a la forme d'un ticket : on le comprend sans lire.</small></div></figcaption>
+</figure>
+
+<!-- ============ (d) ACCOMPAGNANTE : VISITE DU JOUR ============ -->
+<figure class="shot" id="ecran-d">
+  <div class="phone"><div class="screen">
+    <div class="island" aria-hidden="true"></div>
+    <div class="status num" aria-hidden="true"><span>9:41</span><span class="sig"><svg width="18" height="12" fill="currentColor"><use href="#s-sig"/></svg><svg width="16" height="12" fill="currentColor"><use href="#s-wifi"/></svg><svg width="28" height="13" fill="currentColor"><use href="#s-bat"/></svg></span></div>
+    <div class="scroll" style="padding-bottom:230px">
+      <div class="greet">
+        <div><h1>Bonjou, Josiane</h1><p>Jeudi 8 octobre · 2 visites</p></div>
+        <span class="av t-mer" style="--s:44px">J</span>
+      </div>
+      <div class="timeline num">
+        <div class="slot now"><b>10:00</b><span>Léonie · maintenant</span></div>
+        <div class="slot"><b>15:00</b><span>M. Désiré</span></div>
+      </div>
+
+      <section class="card" style="margin-top:16px;padding:16px" aria-label="Visite chez Léonie">
+        <div class="map">
+          <svg viewBox="0 0 330 150" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+            <rect width="330" height="150" style="fill:var(--surface-2)"/>
+            <path d="M0 118c40-6 70 6 110 0s80-26 130-22 70 16 90 14v40H0z" style="fill:var(--mer-soft)"/>
+            <g fill="none" style="stroke:var(--surface)" stroke-linecap="round">
+              <path d="M-10 60c60 10 110-20 180-6s110 30 170 10" stroke-width="10"/>
+              <path d="M96 -10c10 40 20 70 6 120" stroke-width="7"/>
+              <path d="M210 -10c-8 30 4 60 30 76" stroke-width="7"/>
+            </g>
+            <path d="M40 42c60 10 80 20 128 16" fill="none" style="stroke:var(--mer)" stroke-width="3" stroke-dasharray="1 7" stroke-linecap="round"/>
+            <circle cx="40" cy="42" r="6" style="fill:var(--ink)"/><circle cx="40" cy="42" r="2.5" style="fill:var(--surface)"/>
+            <g transform="translate(176 26)"><path d="M0 34c-2-3-14-14-14-22a14 14 0 0 1 28 0c0 8-12 19-14 22z" style="fill:var(--mer)"/><circle cy="12" r="5" style="fill:var(--on-mer)"/></g>
+            <text x="300" y="138" text-anchor="end" style="fill:var(--mer);font:italic 500 12px Fraunces,serif" opacity=".8">Mer Caraïbe</text>
+          </svg>
+          <span class="badge neutral eta num"><svg class="i xs"><use href="#i-nav"/></svg>4 min</span>
+        </div>
+        <div class="place">
+          <span class="av t-sun elder" style="--s:48px">L</span>
+          <div><b>Léonie Bellance</b><span>Quartier Désert, Sainte-Luce</span></div>
+          <button class="icon-btn filled" type="button" aria-label="Appeler Léonie" style="margin-left:auto"><svg class="i sm"><use href="#i-phone"/></svg></button>
+        </div>
+        <div class="chips"><span class="chip">Dominos</span><span class="chip">Messe de 7 h</span><span class="chip">Son jardin</span><span class="chip">Parle créole</span></div>
+      </section>
+
+      <div class="section-h"><h2>Preuve de visite · 2 sur 3 suffisent</h2></div>
+      <section class="card" style="padding:4px 18px">
+        <ul class="steps">
+          <li><span class="st done"><svg class="i xs"><use href="#i-check"/></svg></span><span class="lbl">Position au domicile<small>Vous êtes arrivée</small></span></li>
+          <li><span class="st cur"><svg class="i xs"><use href="#i-scan"/></svg></span><span class="lbl">Scanner le tag<small>Sur la porte de la cuisine</small></span><a class="link act" href="#">Scanner</a></li>
+          <li><span class="st todo"><svg class="i xs"><use href="#i-phone"/></svg></span><span class="lbl">Appel à Léonie<small>Elle tape 1 en fin de visite</small></span></li>
+        </ul>
+      </section>
+    </div>
+    <div class="dock">
+      <button class="btn btn-primary" type="button" style="min-height:60px;font-size:18px"><svg class="i"><use href="#i-check"/></svg>Je suis arrivée</button>
+      <p class="hint">Heure d'arrivée enregistrée : 9 h 58</p>
+    </div>
+    <div class="home-ind" aria-hidden="true"></div>
+  </div></div>
+  <figcaption><b>d</b><div><span>Accompagnante · Josiane</span><small>Une seule action par moment. Le gros bouton est au pouce. La preuve avance pas à pas.</small></div></figcaption>
+</figure>
+
+<!-- ============ (e) FORMULE + PAIEMENT ============ -->
+<figure class="shot" id="ecran-e">
+  <div class="phone"><div class="screen">
+    <div class="island" aria-hidden="true"></div>
+    <div class="status num" aria-hidden="true"><span>9:41</span><span class="sig"><svg width="18" height="12" fill="currentColor"><use href="#s-sig"/></svg><svg width="16" height="12" fill="currentColor"><use href="#s-wifi"/></svg><svg width="28" height="13" fill="currentColor"><use href="#s-bat"/></svg></span></div>
+    <div class="scroll" style="padding-bottom:150px">
+      <div class="topbar">
+        <button class="icon-btn" type="button" aria-label="Retour" style="margin-left:-10px"><svg class="i"><use href="#i-left"/></svg></button>
+        <span class="title">Votre formule</span>
+        <span style="width:44px"></span>
+      </div>
+      <div class="progress" aria-hidden="true"><i></i></div>
+      <p class="step-l">Étape 3 sur 3</p>
+      <h2 class="k-title" style="margin-top:8px">Comment veiller sur Léonie ?</h2>
+
+      <div class="plans" role="radiogroup" aria-label="Formules">
+        <div class="plan" role="radio" aria-checked="false" tabindex="-1"><span class="radio"></span><div class="p-txt"><div class="p-name"><b>Libre</b><span class="price num">0 €</span></div><span>Le Kayé partagé avec le lakou.</span></div></div>
+        <div class="plan" role="radio" aria-checked="false" tabindex="-1"><span class="radio"></span><div class="p-txt"><div class="p-name"><b>Kozé</b><span class="price num">39 € <small>/ mois</small></span></div><span>Un appel chaque semaine à Léonie.</span></div></div>
+        <div class="plan on" role="radio" aria-checked="true" tabindex="0">
+          <span class="badge sun tag">Conseillé pour Léonie</span>
+          <span class="radio"></span>
+          <div class="p-txt">
+            <div class="p-name"><b>Sérénité</b><span class="price num">149 € <small>/ mois</small></span></div>
+            <span>Une visite chaque semaine, prouvée.</span>
+            <ul class="feat">
+              <li><svg class="i xs"><use href="#i-check"/></svg>Tout Kozé, plus une visite par semaine</li>
+              <li><svg class="i xs"><use href="#i-check"/></svg>Un reçu de visite à chaque passage</li>
+              <li><svg class="i xs"><use href="#i-check"/></svg>Aide pour trouver une remplaçante</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="card split" style="margin-top:12px">
+        <div class="av-stack" aria-hidden="true"><span class="av t-hib">M</span><span class="av t-leaf">N</span></div>
+        <div class="txt"><b>Partager avec le lakou</b><span>Marc et Nadia paient avec vous : <b class="num" style="display:inline">49,67 €</b> chacun.</span></div>
+        <button class="toggle" type="button" role="switch" aria-checked="true" aria-label="Partager le paiement"></button>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <ul class="summary num">
+          <li><span>Sérénité · octobre</span><b>149,00 €</b></li>
+          <li><span>Part de Marc et Nadia</span><b>− 99,33 €</b></li>
+          <li class="total"><span>Vous payez</span><b>49,67 €</b></li>
+        </ul>
+        <div class="cardfield"><span class="brand" aria-hidden="true"></span><span class="num">•••• 4821</span><small class="num">09/28</small></div>
+      </div>
+      <p class="notice"><svg class="i xs" style="margin-top:2px"><use href="#i-info"/></svg>Heures de visite payées à part à Josiane (CESU+), avec 50 % de crédit d'impôt.</p>
+    </div>
+    <div class="dock">
+      <button class="btn btn-primary" type="button"><svg class="i sm"><use href="#i-lock"/></svg>Payer <span class="num">49,67 €</span></button>
+      <p class="hint">Offre en test. Aucun prélèvement réel.</p>
+    </div>
+    <div class="home-ind" aria-hidden="true"></div>
+  </div></div>
+  <figcaption><b>e</b><div><span>Formule et paiement</span><small>Un choix guidé, un total clair, le lakou qui partage. Le prix réel payé est le plus visible.</small></div></figcaption>
+</figure>
+
+</main>
+
+<!-- Illustrations réutilisables « photo » : jardin créole au trait -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--sky-1)"/><stop offset="1" style="stop-color:var(--sky-2)"/></linearGradient>
+    <g id="garden-core">
+      <circle cx="268" cy="44" r="30" style="fill:var(--soleil)" opacity=".35"/>
+      <path d="M0 96c50-16 110-22 170-14s120 4 180-8v86H0z" style="fill:var(--hill)" opacity=".75"/>
+      <!-- clôture -->
+      <g style="stroke:var(--stroke)" stroke-width="1.2" opacity=".35" fill="none" stroke-linecap="round"><path d="M10 92v-26M34 90v-26M58 88v-26M82 87v-26M0 72h96M0 82h96"/></g>
+      <!-- feuilles de bananier -->
+      <g fill="none" style="stroke:var(--leaf)" stroke-width="1.6" stroke-linecap="round">
+        <path d="M312 150c-4-40-10-70-30-96"/><path d="M282 54c-20 6-30 24-28 44M282 54c18-4 34 6 40 24"/>
+        <path d="M300 104c-22-2-38 8-46 26M302 98c16-14 34-14 46-4"/>
+      </g>
+      <!-- giraumons -->
+      <g>
+        <ellipse cx="120" cy="128" rx="34" ry="22" style="fill:var(--pump)"/>
+        <path d="M100 128c0-12 6-20 20-22M140 128c0-12-6-20-20-22M120 106v44" fill="none" style="stroke:var(--stroke)" stroke-width="1.1" opacity=".35"/>
+        <path d="M120 106c0-6 3-10 8-12" fill="none" style="stroke:var(--leaf)" stroke-width="2" stroke-linecap="round"/>
+        <ellipse cx="176" cy="136" rx="24" ry="16" style="fill:var(--pump)" opacity=".85"/>
+        <path d="M162 136c0-9 5-14 14-16M190 136c0-9-5-14-14-16" fill="none" style="stroke:var(--stroke)" stroke-width="1.1" opacity=".35"/>
+      </g>
+      <!-- pot et hibiscus -->
+      <path d="M222 120h30l-4 30h-22z" style="fill:var(--surface)" opacity=".9"/>
+      <path d="M222 120h30l-4 30h-22z" fill="none" style="stroke:var(--stroke)" stroke-width="1.2" opacity=".5"/>
+      <path d="M237 120c0-14-4-24-10-30M237 120c2-12 8-20 16-24" fill="none" style="stroke:var(--leaf)" stroke-width="1.6" stroke-linecap="round"/>
+      <g transform="translate(226 88) scale(.6)" style="fill:var(--hibiscus)" opacity=".85"><ellipse cy="-11" rx="7" ry="11"/><ellipse cy="-11" rx="7" ry="11" transform="rotate(72)"/><ellipse cy="-11" rx="7" ry="11" transform="rotate(144)"/><ellipse cy="-11" rx="7" ry="11" transform="rotate(216)"/><ellipse cy="-11" rx="7" ry="11" transform="rotate(288)"/></g>
+      <g transform="translate(254 94) scale(.5)" style="fill:var(--hibiscus)" opacity=".7"><ellipse cy="-11" rx="7" ry="11"/><ellipse cy="-11" rx="7" ry="11" transform="rotate(72)"/><ellipse cy="-11" rx="7" ry="11" transform="rotate(144)"/><ellipse cy="-11" rx="7" ry="11" transform="rotate(216)"/><ellipse cy="-11" rx="7" ry="11" transform="rotate(288)"/></g>
+      <!-- chapeau bakoua posé -->
+      <g transform="translate(46 132)" fill="none" style="stroke:var(--stroke)" stroke-width="1.3" opacity=".7" stroke-linejoin="round"><path d="M-22 6c8 4 36 4 44 0"/><path d="M-12 4L0-14 12 4"/><path d="M0-14v-4"/></g>
+    </g>
+    <symbol id="ph-garden" viewBox="0 0 350 150" preserveAspectRatio="xMidYMid slice"><rect width="350" height="150" fill="url(#g-sky)"/><use href="#garden-core" transform="translate(0 -8)"/></symbol>
+    <symbol id="ph-garden-tall" viewBox="0 0 350 210" preserveAspectRatio="xMidYMid slice"><rect width="350" height="210" fill="url(#g-sky)"/><use href="#garden-core" transform="translate(-30 10) scale(1.18)"/></symbol>
+  </defs>
+</svg>
+
+<script>
+/* Onde du mémo vocal (décorative) */
+(function(){
+  var w=document.getElementById('wave-c'); if(!w) return;
+  var h=[8,14,22,12,26,18,10,20,28,16,9,18,24,12,20,26,14,8,16,22,12,18,10,14,20,8,12,16];
+  h.forEach(function(v,i){var b=document.createElement('i');b.style.height=v+'px';if(i<10)b.className='on';w.appendChild(b);});
+})();
+/* Bascule de thème : clair / sombre ; sans choix = préférence du système */
+(function(){
+  var root=document.documentElement, btns=document.querySelectorAll('.theme-switch button');
+  function current(){var t=root.getAttribute('data-theme');if(t)return t;return matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}
+  function paint(){var c=current();btns.forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.set===c));});}
+  try{var saved=localStorage.getItem('kd-theme');if(saved)root.setAttribute('data-theme',saved);}catch(e){}
+  btns.forEach(function(b){b.addEventListener('click',function(){root.setAttribute('data-theme',b.dataset.set);try{localStorage.setItem('kd-theme',b.dataset.set);}catch(e){}paint();});});
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change',paint);
+  paint();
+})();
+</script>
+</body>
+</html>
