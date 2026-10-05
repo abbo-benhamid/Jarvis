@@ -1,10 +1,14 @@
-import { assertProductionConfig } from "@/server/config-check";
+import { productionConfigProblems } from "@/server/config-check";
 
 /**
  * Exécuté une fois au démarrage du serveur (Node et edge).
- * B1, B3 : en production, l'application REFUSE de démarrer avec une valeur d'exemple,
- * une valeur de CI ou un secret trop court (SESSION_SECRET, CRON_SECRET, TESTER_INVITE_CODES).
+ * B1, B3 : en production, une configuration refusée (secret d'exemple, code testeur public…)
+ * est journalisée ici ; le middleware bloque alors TOUTES les pages avec une page 503 explicite
+ * (noms des variables seulement, jamais leurs valeurs). Voir aussi /api/sante.
  */
 export function register(): void {
-  assertProductionConfig();
+  const problems = productionConfigProblems();
+  if (problems.length > 0) {
+    console.error(`Configuration de production refusée :\n- ${problems.join("\n- ")}`);
+  }
 }
