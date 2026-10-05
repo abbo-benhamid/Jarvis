@@ -3,6 +3,7 @@ import { Prisma, type Role } from "@prisma/client";
 import { db } from "@/server/db";
 import { logAudit } from "@/server/audit";
 import { notifyLakou, notifyUser } from "@/server/outbox";
+import { flushPendingPushSafe } from "@/server/notifications/push/service";
 import { checkCompatibility, MAX_PROFILES_PER_REQUEST } from "@/server/rules/matching";
 import { proposalBlockReason } from "@/server/operateur/rules";
 import { sameScope, type Scope } from "@/server/scope";
@@ -149,7 +150,7 @@ export async function proposeProfile(
  * A1 : un profil qui n'est plus VALIDE (suspendu, refusé) ne peut pas être choisi.
  */
 export async function chooseProfile(actor: MatchingActor, proposalId: string, now: Date = new Date(), client?: Tx) {
-  return inTransaction(
+  const chosen = await inTransaction(
     client,
     async (tx) => {
       const ref = await tx.missionProposal.findUnique({ where: { id: proposalId }, select: { requestId: true } });
@@ -192,6 +193,10 @@ export async function chooseProfile(actor: MatchingActor, proposalId: string, no
     },
     "La demande a changé entre-temps. Rechargez la page.",
   );
+  // Lot N1 : push à l'accompagnant choisi, après la validation. Dans une transaction externe (`client`),
+  // le message reste EN_ATTENTE et part au prochain envoi.
+  if (!client) await flushPendingPushSafe();
+  return chosen;
 }
 
 /**

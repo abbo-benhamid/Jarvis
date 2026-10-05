@@ -2,6 +2,7 @@ import "server-only";
 import type { Channel } from "@prisma/client";
 import { db, type DbClient } from "@/server/db";
 import { renderTemplate, type TemplateKey } from "./notification-templates";
+import { enqueuePush } from "./notifications/push/service";
 
 export type NotificationInput = {
   channel: Channel;
@@ -49,6 +50,9 @@ export async function notifyUser(
 ) {
   const user = await client.user.findUnique({ where: { id: userId }, select: { email: true, phone: true, sandboxId: true } });
   if (!user) return null;
+  // Lot N1 : en plus du canal par défaut, un push générique (R9) si le modèle le permet et si
+  // l'utilisateur a un appareil actif. L'envoi a lieu APRÈS la transaction (flushPendingPushSafe).
+  await enqueuePush({ userId, template, vars, related, sandboxId: user.sandboxId }, client);
   return enqueueNotification(
     {
       channel: user.phone ? "WHATSAPP" : "EMAIL",

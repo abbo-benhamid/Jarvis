@@ -3,6 +3,7 @@ import { Prisma, type Role } from "@prisma/client";
 import { db } from "@/server/db";
 import { logAudit } from "@/server/audit";
 import { notifyLakou } from "@/server/outbox";
+import { flushPendingPushSafe } from "@/server/notifications/push/service";
 import { sameScope } from "@/server/scope";
 import { isDemoMode } from "@/server/env";
 import { orientCaregiver, type OrientationAnswers, type OrientationResult } from "@/server/rules/orientation";
@@ -606,7 +607,7 @@ export async function createKaye(actor: Actor, input: KayeInput) {
     throw new AccompagnantError("Faites d'abord le check-in de la visite.", "INVALIDE");
   }
   try {
-    return await db.$transaction(async (tx) => {
+    const created = await db.$transaction(async (tx) => {
       const entry = await tx.journalEntry.create({
         data: {
           visitId: visit.id,
@@ -632,6 +633,9 @@ export async function createKaye(actor: Actor, input: KayeInput) {
       }
       return entry;
     });
+    // Lot N1 : push générique au cercle Lakou, après la validation de la transaction.
+    await flushPendingPushSafe();
+    return created;
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       throw new AccompagnantError("Le Kayé de cette visite existe déjà.", "CONFLIT");

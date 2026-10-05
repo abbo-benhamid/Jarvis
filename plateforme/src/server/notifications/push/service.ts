@@ -173,12 +173,16 @@ export type BilanEnvoi = { traites: number; envoyes: number; echecs: number };
  * Envoie les push en attente (le plus ancien d'abord). Chaque message est « réservé » par une mise à jour
  * conditionnelle : deux envois simultanés n'envoient jamais deux fois le même message.
  */
-export async function flushPendingPush(port: PushPort = pushPort(), now: Date = new Date(), limit = 50): Promise<BilanEnvoi> {
+export async function flushPendingPush(
+  port: PushPort = pushPort(),
+  now: Date = new Date(),
+  opts: { limit?: number; userIds?: string[] } = {},
+): Promise<BilanEnvoi> {
   const bilan: BilanEnvoi = { traites: 0, envoyes: 0, echecs: 0 };
   const rows = await db.outboxMessage.findMany({
-    where: { channel: "PUSH", status: "EN_ATTENTE" },
+    where: { channel: "PUSH", status: "EN_ATTENTE", ...(opts.userIds ? { recipientUserId: { in: opts.userIds } } : {}) },
     orderBy: { createdAt: "asc" },
-    take: limit,
+    take: opts.limit ?? 50,
     select: { id: true, recipientUserId: true, template: true, subject: true, body: true, relatedId: true },
   });
   for (const row of rows) {
