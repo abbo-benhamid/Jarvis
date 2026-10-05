@@ -1,6 +1,6 @@
 # ADR 0006 — Web mobile installable (PWA) d'abord, puis app Expo / React Native
 
-- **Statut :** proposé (2026-10-05). À valider par le fondateur.
+- **Statut :** **remplacé par l'ADR 0008** (2026-10-05). L'app Expo accompagnant démarre maintenant ; la PWA devient légère (pas de file hors ligne web). Voir `0008-approche-web-et-mobile.md`.
 - **Décideurs :** fondateur (décision 5 : « web mobile installable puis app iOS/Android »), architecte.
 - **Précise :** `docs/05` § 3.5 (« app accompagnant obligatoire », « pas d'app famille au MVP »).
 - **Sources :** spécification V1 § 10 et § 11, ADR 0001.
