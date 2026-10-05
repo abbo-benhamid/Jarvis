@@ -11,6 +11,7 @@ Expo SDK 57 · React Native 0.86 · Expo Router · TypeScript strict · contrats
 | `EXPO_PUBLIC_API_URL` | `/` | même origine (export web + `scripts/proxy-dev.mjs`) |
 | `EXPO_PUBLIC_API_MODE` | `simule` | démo hors ligne, données en mémoire (capteurs simulés aussi) |
 | `EXPO_PUBLIC_NATIF` | `simule` / `reel` | force les capteurs simulés, ou les vrais capteurs avec l'API simulée |
+| `EXPO_PUBLIC_SITE_URL` | `https://koudmen.vercel.app` (défaut, [À VÉRIFIER]) | site des pages légales (écran « À propos et confidentialité ») |
 
 Repli : `expo.extra.apiUrl` / `expo.extra.apiMode` dans un `app.config`.
 Les variables `EXPO_PUBLIC_*` sont figées au build : ajoutez `--clear` si vous changez de valeur (cache Metro).
@@ -27,6 +28,7 @@ Les variables `EXPO_PUBLIC_*` sont figées au build : ajoutez `--clear` si vous 
    ou le lien « Essayer avec le compte de démonstration ».
 
 Sans serveur : `EXPO_PUBLIC_API_MODE=simule npx expo start` (mot de passe `koudmen`, code du domicile `LKW7Q3`).
+La démo simulée reprend la Léonie J. du site (`plateforme/prisma/seed.ts`) et **le même code** `LKW7Q3` (arbitrage V1 X3).
 
 ### Essayer la caméra et la position réelles (lot M4)
 
@@ -65,8 +67,12 @@ sequenceDiagram
   App->>API: nouvel essai de l'appel
 ```
 
-- Pas de délai de grâce côté serveur : deux renouvellements simultanés révoqueraient la connexion. `src/api/http.ts` les sérialise.
-- `JETON_INVALIDE` / `JETON_REUTILISE` : jetons effacés, retour à la connexion avec un message.
+- Renouvellement **sérialisé** (une seule promesse partagée). Le serveur a un délai de grâce de 30 s (arbitrage V1 X1) :
+  si la réponse de `/auth/refresh` se perd (`RESEAU`), l'app rejoue **une seule fois** le même jeton, tout de suite.
+- `JETON_INVALIDE` : jetons effacés, retour à la connexion avec un message ; la file est **gardée** (Kayé non envoyé).
+- `JETON_REUTILISE` / `ACCES_REFUSE` (rejeu détecté, compte refusé) : jetons **et** données de l'appareil effacés
+  (cache, file, clé ; revue sécurité PM5). L'écran de connexion garde l'explication.
+- Le délai réseau de 20 s couvre aussi la lecture du corps de la réponse (une coupure pendant la lecture = `RESEAU`).
 - Web : le jeton de renouvellement reste **en mémoire** (recharger la page demande de se reconnecter).
 - Événements (`POST /evenements`) : un `clientEventId` neuf par action. Ils passent par la file hors ligne (lot M3) : chaque renvoi garde le même identifiant (idempotent).
 - Position : une lecture au check-in, avec accord. Web : API du navigateur. iOS / Android : `expo-location` (lot M4).
@@ -106,15 +112,22 @@ flowchart TD
   T -->|Pas de réseau, 5xx, 429| W["Gardée · « Hors ligne · 1 envoi en attente »<br/>nouvel essai : 2 s, 4 s, 8 s… 5 min max"]
   W --> S{"Retour du réseau<br/>réouverture de l'app<br/>nouvelle action"}
   S --> T
-  D[Déconnexion] --> P["Purge : cache + file + clé"]
+  D[Déconnexion] --> X{"Envois en attente ?"}
+  X -->|Non| P["Purge : cache + file + clé"]
+  X -->|Oui| A["« 2 envois ne sont pas partis »<br/>Les envoyer d'abord / Se déconnecter quand même"]
+  A -->|Se déconnecter quand même| P
 ```
 
 | Règle | Détail |
 |---|---|
 | Ordre | Un événement à la fois, dans l'ordre d'arrivée. **Exception : le SOS passe devant.** |
-| Doublons | Renvoi avec le **même** `clientEventId` : le serveur répond `DOUBLON` (api-v1 § 9.2). Double appui sur « Départ » ou « SOS » : une seule ligne. Kayé corrigé : le dernier texte part. |
-| Erreur réseau | `RESEAU`, `5xx`, `429`, réponse illisible, `DOUBLON`/`EN_COURS` : arrêt de la file (l'ordre est gardé), attente progressive. |
-| Erreur définitive | `REFUSE` (motif du serveur), `400`, `404`, `413` : l'événement n'est plus envoyé. Le refus garde le motif et le message, **pas** le contenu du Kayé. |
+| Doublons | Renvoi avec le **même** `clientEventId` : le serveur répond `DOUBLON` (api-v1 § 9.2). Double appui sur « Départ » ou « SOS » : une seule ligne. Check-ins d'une visite regroupés (dernier code **et** dernière position). Kayé corrigé : le dernier texte part. |
+| Correction pendant l'envoi | Kayé ou check-in corrigé pendant que l'ancien est **en vol** : jamais de remplacement silencieux. La correction prend un nouvel identifiant ; si l'ancien est arrivé, le serveur refuse la correction (refus affiché). |
+| Erreur réseau | `RESEAU`, `5xx`, `429` : arrêt de la file (l'ordre est gardé), attente progressive. |
+| `DOUBLON` / `EN_COURS` | Attente progressive. Après **10** réponses d'affilée (≈ 18 min), la ligne sort de la file en refus « à vérifier » visible : la tête de file n'est jamais bloquée à vie. |
+| Erreur définitive | `REFUSE` (motif du serveur), `400`, `404`, `413`, `REPONSE_INVALIDE` (app à mettre à jour) : l'événement n'est plus envoyé. Le refus garde le motif et le message. Un Kayé refusé mais corrigeable (`INVALIDE`, `INTERDIT`, « à vérifier ») revient dans le formulaire ; sinon le contenu n'est pas gardé. |
+| Clé indisponible | Erreur passagère du Keychain / Keystore : **rien n'est effacé**, pas de clé neuve. Seul le SOS part ; le reste attend une nouvelle lecture. Bandeau « lecture impossible pour l'instant, rien n'est effacé ». |
+| Déconnexion | Avec des envois en attente : avertissement « Les envoyer d'abord / Se déconnecter quand même » (arbitrage V1 X5). |
 | Session perdue | La file s'arrête et garde tout. Elle repart à la reconnexion **du même compte**. Autre compte : tout est effacé d'abord. |
 | SOS sans réseau | Tentative immédiate. Échec : « l'alerte n'est pas partie », boutons **15** et **112** (écran SOS), envoi au retour du réseau. |
 | Écran | Sans réseau, l'action lève `EN_ATTENTE` : le message s'affiche, le texte reste à l'écran, le bandeau compte les envois. |
@@ -133,7 +146,9 @@ depuis le cache si un jeton de renouvellement est gardé ; le jeton est renouvel
 - Chiffré : le contenu de chaque événement (Kayé = donnée de santé, code du domicile, position) et chaque valeur du cache.
 - En clair : identifiants opaques, type, compteurs (nécessaires au tri).
 - Clé : 256 bits aléatoires, `AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`. Déconnexion : lignes effacées (`secure_delete`, `VACUUM`) **et** clé effacée.
-- Donnée illisible (clé perdue, réinstallation) : effacée, jamais envoyée.
+- Donnée illisible **avec une clé bien lue** (clé changée, donnée abîmée) : effacée, jamais envoyée.
+- Clé **indisponible** (erreur du stockage sûr) : rien n'est effacé. Une clé neuve est créée seulement s'il n'existe
+  aucune donnée chiffrée (repère `cle` dans `meta`), et jamais par-dessus une clé existante (revue de code M4).
 - Web (export) : **mémoire** seulement, derrière la même interface (`plateforme.ts`). Rien n'est écrit dans le navigateur ;
   recharger la page perd la file (et demande déjà de se reconnecter).
 - [À VÉRIFIER] au premier essai sur téléphone : AES de `expo-crypto` dans Expo Go SDK 57, et passage à SQLCipher au premier build EAS (lot E1).
@@ -206,7 +221,7 @@ flowchart LR
 
 | Dossier | Rôle |
 |---|---|
-| `app/` | Écrans (une route par fichier). Pas de logique métier. |
+| `app/` | Écrans (une route par fichier). Pas de logique métier. `a-propos.tsx` : « À propos et confidentialité » (Profil et connexion ; liens vers `/confidentialite` et `/mentions-legales` de `EXPO_PUBLIC_SITE_URL`). |
 | `src/api/` | `KoudmenApi` (interface), `http.ts` (API v1, jetons, PKCE), `simule.ts` (hors ligne), `position.ts`. |
 | `src/session/` | `SessionProvider` (reprise au démarrage, session perdue), navigation. |
 | `src/contracts/` | **Généré** par `scripts/sync-contracts.mjs`. |
