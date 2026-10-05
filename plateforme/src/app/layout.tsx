@@ -28,8 +28,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Aller au contenu
         </a>
         <TestBanner />
-        {/* pb-24 : le bouton flottant « Donner mon avis » ne cache jamais la fin du contenu (mobile). */}
-        <div className="flex flex-1 flex-col pb-24">{children}</div>
+        <div className="flex flex-1 flex-col">{children}</div>
+        {/* A9 : « Donner mon avis » est dans le flux, en bas de page : il ne masque plus le contenu. */}
         <FeedbackButton />
         <UsageTracker />
       </body>

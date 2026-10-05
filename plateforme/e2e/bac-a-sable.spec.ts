@@ -18,7 +18,7 @@ test.afterAll(async () => {
 
 async function startSandbox(page: import("@playwright/test").Page, role: "Famille" | "Accompagnant", code = E2E_TESTER_CODE) {
   await page.goto("/");
-  await page.getByRole("link", { name: "Tester Koudmen" }).click();
+  await page.getByRole("link", { name: "Tester Koudmen" }).first().click();
   await expect(page).toHaveURL(/\/tester$/);
   await page.getByLabel("Code testeur").fill(code);
   await page.getByLabel(new RegExp(`^${role} —`)).check();
@@ -39,8 +39,12 @@ test("famille : entrée avec code → Simuler la suite → choisir un profil →
   await expect(page).toHaveURL(/\/famille\?bienvenue=1$/);
   const panel = page.getByRole("region", { name: /Votre test/ });
   await expect(panel).toBeVisible();
+  // A8 : panneau compact (une ligne + prochaine étape) ; les scénarios sont repliés.
+  await expect(panel.getByText(/Test 0\/10/)).toBeVisible();
+  await expect(panel.getByText("1. Des nouvelles de Léonie")).toBeHidden();
+  await panel.getByText("Voir les 3 scénarios et mon lien de reprise").click();
   await expect(panel.getByText("1. Des nouvelles de Léonie")).toBeVisible();
-  await expect(page.getByText("Bac à sable", { exact: true })).toBeVisible();
+  await expect(page.getByText("Mode test", { exact: true })).toBeVisible();
 
   // Étape 1 : l'opérateur robot propose des profils (D6).
   await panel.getByRole("button", { name: "Simuler la suite" }).click();
@@ -110,6 +114,7 @@ test("famille : entrée avec code → Simuler la suite → choisir un profil →
 test("le lien de reprise rouvre le bac à sable sur un autre appareil", async ({ page, browser }) => {
   await startSandbox(page, "Accompagnant");
   await expect(page).toHaveURL(/\/accompagnant\?bienvenue=1$/);
+  await page.getByText("Voir les 3 scénarios et mon lien de reprise").click();
   const link = await page.getByLabel("Lien de reprise de votre test").inputValue();
   const path = new URL(link).pathname;
   expect(path).toMatch(/^\/tester\/reprendre\/[A-Za-z0-9_-]{40,}$/);

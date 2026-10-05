@@ -137,7 +137,7 @@ export function ProfileForm({
                       return (
                         <td key={s} className="text-center">
                           <label
-                            className="flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-lg border-2 border-line has-[:checked]:border-mer has-[:checked]:bg-mer-soft"
+                            className="flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-lg border-2 border-line-strong has-[:checked]:border-mer has-[:checked]:bg-mer-soft"
                             htmlFor={`dispo-${key}`}
                           >
                             <input

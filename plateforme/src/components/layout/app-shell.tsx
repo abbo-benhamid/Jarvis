@@ -21,7 +21,7 @@ export function AppShell({ user, nav, children }: { user: CurrentUser; nav: NavI
               {user.firstName} · {ROLE_LABELS[user.role]}
             </span>
             {user.isDemo ? <Badge tone="soleil">Démo partagée</Badge> : null}
-            {user.sandboxId ? <Badge tone="mer">Bac à sable</Badge> : null}
+            {user.sandboxId ? <Badge tone="mer">Mode test</Badge> : null}
             <form action={logoutAction}>
               <button type="submit" className="inline-flex min-h-11 items-center rounded-lg px-3 font-semibold text-mer hover:bg-mer-soft">
                 Se déconnecter
@@ -29,8 +29,9 @@ export function AppShell({ user, nav, children }: { user: CurrentUser; nav: NavI
             </form>
           </div>
         </div>
-        <nav aria-label="Navigation principale" className="mx-auto max-w-5xl overflow-x-auto px-4 pb-2">
-          <ul className="flex gap-1">
+        {/* M3 : la navigation passe à la ligne (aucun onglet caché à 360 px, ni à 200 % de texte). */}
+        <nav aria-label="Navigation principale" className="mx-auto max-w-5xl px-4 pb-2">
+          <ul className="flex flex-wrap gap-1">
             {nav.map((item) => (
               <li key={item.href}>
                 <NavLink href={item.href} exact={item.exact}>
@@ -42,7 +43,7 @@ export function AppShell({ user, nav, children }: { user: CurrentUser; nav: NavI
         </nav>
         <div className="madras" aria-hidden="true" />
       </header>
-      <main id="contenu" className="mx-auto w-full max-w-5xl px-4 py-8">
+      <main id="contenu" className="mx-auto w-full max-w-5xl px-4 py-6">
         {user.sandboxId ? <SandboxPanel user={user} /> : null}
         {children}
       </main>

@@ -13,7 +13,7 @@ export function CopyResumeLink({ url }: { url: string }) {
         value={url}
         aria-label="Lien de reprise de votre test"
         onFocus={(e) => e.currentTarget.select()}
-        className="min-h-11 min-w-0 flex-1 basis-48 rounded-lg border border-line bg-surface px-2 font-mono text-xs"
+        className="min-h-11 min-w-0 flex-1 basis-48 rounded-lg border border-line-strong bg-surface px-2 font-mono text-xs"
       />
       <button
         type="button"

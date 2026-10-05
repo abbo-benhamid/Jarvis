@@ -23,7 +23,7 @@ export function ChoiceCard({
     <label
       htmlFor={id}
       className={cn(
-        "flex min-h-14 cursor-pointer items-start gap-3 rounded-xl border-2 border-line bg-surface p-3",
+        "flex min-h-14 cursor-pointer items-start gap-3 rounded-xl border-2 border-line-strong bg-surface p-3",
         "has-[:checked]:border-mer has-[:checked]:bg-mer-soft has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--focus)]",
         className,
       )}

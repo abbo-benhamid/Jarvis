@@ -2,8 +2,8 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/cn";
 
 const FIELD =
-  "block w-full min-h-11 rounded-lg border border-line bg-surface px-3 py-2 text-base text-fg placeholder:text-muted " +
-  "aria-[invalid=true]:border-hibiscus";
+  "block w-full min-h-11 rounded-lg border border-line-strong bg-surface px-3 py-2 text-base text-fg placeholder:text-muted " +
+  "aria-[invalid=true]:border-2 aria-[invalid=true]:border-hibiscus";
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
   return <input className={cn(FIELD, className)} {...props} />;

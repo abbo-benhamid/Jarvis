@@ -16,7 +16,7 @@ import { PendingButton, useFormAction } from "@/components/ui/use-form-action";
 const APPETITES: Appetite[] = ["BON", "MOYEN", "FAIBLE", "NON_OBSERVE"];
 
 const TILE =
-  "flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-line bg-surface p-2 text-center font-semibold " +
+  "flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-line-strong bg-surface p-2 text-center font-semibold " +
   "has-[:checked]:border-mer has-[:checked]:bg-mer-soft has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--focus)]";
 
 /**
@@ -91,7 +91,7 @@ export function KayeForm({ visitId, aineFirstName }: { visitId: string; aineFirs
             <label
               key={a}
               htmlFor={`act-${a}`}
-              className="flex min-h-11 cursor-pointer items-center rounded-full border-2 border-line bg-surface px-4 font-semibold has-[:checked]:border-mer has-[:checked]:bg-mer-soft has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--focus)]"
+              className="flex min-h-11 cursor-pointer items-center rounded-full border-2 border-line-strong bg-surface px-4 font-semibold has-[:checked]:border-mer has-[:checked]:bg-mer-soft has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--focus)]"
             >
               <input
                 id={`act-${a}`}

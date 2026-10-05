@@ -32,7 +32,7 @@ export function CopyLink({ value, label = "Lien d'invitation" }: { value: string
           readOnly
           value={value}
           onFocus={(e) => e.currentTarget.select()}
-          className="block min-h-11 w-full rounded-lg border border-line bg-bg px-3 py-2 font-mono text-sm text-fg"
+          className="block min-h-11 w-full rounded-lg border border-line-strong bg-bg px-3 py-2 font-mono text-sm text-fg"
         />
         <Button variant="secondary" onClick={copy} className="shrink-0">
           {status === "copied" ? <Check aria-hidden="true" className="size-4" /> : <Copy aria-hidden="true" className="size-4" />}

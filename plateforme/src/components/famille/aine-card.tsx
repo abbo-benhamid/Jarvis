@@ -7,6 +7,7 @@ import { PLAN_LABELS } from "@/lib/labels";
 import { LevelBadge } from "@/components/status-badges";
 import { Badge } from "@/components/ui/badge";
 import { MoodIcon } from "./mood";
+import { Term } from "@/components/ui/term";
 import { moodSentence } from "@/server/famille/logic";
 
 export type AineCardData = {
@@ -42,45 +43,46 @@ export function AineCard({ aine }: { aine: AineCardData }) {
         </div>
       </header>
 
+      {/* dl valide (axe definition-list) : chaque div enfant contient seulement dt + dd ; l'icône est dans le dt. */}
       <dl className="grid gap-3 sm:grid-cols-2">
-        <div className="flex gap-3 rounded-xl bg-bg p-3">
-          <CalendarDays aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-mer" />
-          <div>
-            <dt className="text-sm font-semibold text-muted">Prochaine visite</dt>
-            <dd>
-              {aine.nextVisit ? (
-                <>
-                  {formatDate(aine.nextVisit.scheduledStart)} à {formatTime(aine.nextVisit.scheduledStart)}
-                  <span className="block text-sm text-muted">avec {aine.nextVisit.caregiverFirstName}</span>
-                </>
-              ) : aine.openRequests > 0 ? (
-                "Demande en cours : Koudmen cherche un accompagnant."
-              ) : (
-                "Aucune visite prévue."
-              )}
-            </dd>
-          </div>
+        <div className="rounded-xl bg-bg p-3">
+          <dt className="flex items-center gap-2 text-sm font-semibold text-muted">
+            <CalendarDays aria-hidden="true" className="size-5 shrink-0 text-mer" />
+            Prochaine visite
+          </dt>
+          <dd className="mt-1">
+            {aine.nextVisit ? (
+              <>
+                {formatDate(aine.nextVisit.scheduledStart)} à {formatTime(aine.nextVisit.scheduledStart)}
+                <span className="block text-sm text-muted">avec {aine.nextVisit.caregiverFirstName}</span>
+              </>
+            ) : aine.openRequests > 0 ? (
+              "Demande en cours : Koudmen cherche un accompagnant."
+            ) : (
+              "Aucune visite prévue."
+            )}
+          </dd>
         </div>
-        <div className="flex gap-3 rounded-xl bg-bg p-3">
-          {aine.lastKaye ? <MoodIcon mood={aine.lastKaye.mood} size="sm" /> : <Users aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-mer" />}
-          <div>
-            <dt className="text-sm font-semibold text-muted">Dernier Kayé</dt>
-            <dd>
-              {aine.lastKaye ? (
-                <>
-                  {moodSentence(aine.firstName, aine.lastKaye.mood)}
-                  <span className="block text-sm text-muted">{formatDate(aine.lastKaye.createdAt)}</span>
-                  {aine.lastKaye.alertFlag ? (
-                    <Badge tone="soleil" className="mt-1">
-                      <Eye aria-hidden="true" className="size-3.5" />À surveiller
-                    </Badge>
-                  ) : null}
-                </>
-              ) : (
-                "Pas encore de Kayé. Il arrive après la première visite."
-              )}
-            </dd>
-          </div>
+        <div className="rounded-xl bg-bg p-3">
+          <dt className="flex items-center gap-2 text-sm font-semibold text-muted">
+            {aine.lastKaye ? <MoodIcon mood={aine.lastKaye.mood} size="sm" /> : <Users aria-hidden="true" className="size-5 shrink-0 text-mer" />}
+            Dernier <Term id="kaye" />
+          </dt>
+          <dd className="mt-1">
+            {aine.lastKaye ? (
+              <>
+                {moodSentence(aine.firstName, aine.lastKaye.mood)}
+                <span className="block text-sm text-muted">{formatDate(aine.lastKaye.createdAt)}</span>
+                {aine.lastKaye.alertFlag ? (
+                  <Badge tone="soleil" className="mt-1">
+                    <Eye aria-hidden="true" className="size-3.5" />À surveiller
+                  </Badge>
+                ) : null}
+              </>
+            ) : (
+              "Pas encore de Kayé. Il arrive après la première visite."
+            )}
+          </dd>
         </div>
       </dl>
 
@@ -97,7 +99,7 @@ export function AineCard({ aine }: { aine: AineCardData }) {
         </li>
         <li>
           <Link href={`/famille/aines/${aine.id}/cercle`} className="inline-flex min-h-11 items-center gap-1 font-semibold text-mer underline-offset-4 hover:underline">
-            Cercle Lakou ({aine.membersCount}) <ChevronRight aria-hidden="true" className="size-4" />
+            Cercle Lakou ({aine.membersCount} {aine.membersCount > 1 ? "membres" : "membre"}) <ChevronRight aria-hidden="true" className="size-4" />
           </Link>
         </li>
       </ul>

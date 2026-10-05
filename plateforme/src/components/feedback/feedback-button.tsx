@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { MessageSquareHeart, X } from "lucide-react";
 import { submitFeedbackAction } from "@/server/feedback";
@@ -10,6 +10,7 @@ import { PendingButton, useFormAction } from "@/components/ui/use-form-action";
 import { Textarea } from "@/components/ui/input";
 import { FormField, Fieldset } from "@/components/ui/form-field";
 import { FormMessage } from "@/components/ui/form-message";
+import { FEEDBACK_SENT_EVENT, OPEN_FEEDBACK_EVENT, type FeedbackContext } from "./open-feedback";
 
 const RATINGS = [
   { value: 1, label: "Très mauvais" },
@@ -19,33 +20,61 @@ const RATINGS = [
   { value: 5, label: "Très bien" },
 ];
 
-/** Bouton flottant « Donner mon avis », présent sur toutes les pages (root layout). */
+/** Noms simples des pages (m15) : jamais de chemin technique devant le testeur. */
+function pageName(path: string): string {
+  if (path === "/") return "Accueil";
+  const names: [RegExp, string][] = [
+    [/^\/famille\/kaye/, "Kayé"],
+    [/^\/famille\/visites/, "Visites (famille)"],
+    [/^\/famille\/demandes/, "Demandes"],
+    [/^\/famille\/formule/, "Formules"],
+    [/^\/famille\/visite-decouverte/, "Visite découverte"],
+    [/^\/famille\/aines\/[^/]+\/cercle/, "Cercle Lakou"],
+    [/^\/famille\/aines/, "Fiche de l'aîné"],
+    [/^\/famille/, "Accueil famille"],
+    [/^\/accompagnant\/propositions/, "Propositions"],
+    [/^\/accompagnant\/visites\/[^/]+\/kaye/, "Écrire le Kayé"],
+    [/^\/accompagnant\/visites/, "Visites (accompagnant)"],
+    [/^\/accompagnant\/profil/, "Mon profil"],
+    [/^\/accompagnant\/verifications/, "Vérifications"],
+    [/^\/accompagnant\/orientation/, "Mon statut"],
+    [/^\/accompagnant/, "Accueil accompagnant"],
+    [/^\/tester/, "Tester Koudmen"],
+    [/^\/fin-de-scenario/, "Fin de scénario"],
+  ];
+  return names.find(([re]) => re.test(path))?.[1] ?? "Cette page";
+}
+
+/**
+ * « Donner mon avis » (A9, S1b-ux M4) : bouton DANS le flux, en bas de chaque page (il ne masque plus rien).
+ * La fenêtre s'ouvre aussi depuis le panneau du test et depuis l'écran de fin de scénario (événement « koudmen:avis »).
+ */
 export function FeedbackButton() {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [formKey, setFormKey] = useState(0);
+  const [context, setContext] = useState<FeedbackContext>({});
 
-  const open = () => {
+  const open = useCallback((ctx: FeedbackContext = {}) => {
+    setContext(ctx);
     setFormKey((k) => k + 1); // nouveau formulaire vierge à chaque ouverture
     dialogRef.current?.showModal();
-  };
-  const close = () => dialogRef.current?.close();
+  }, []);
+  const close = useCallback(() => dialogRef.current?.close(), []);
+
+  useEffect(() => {
+    const onOpen = (e: Event) => open((e as CustomEvent<FeedbackContext>).detail ?? {});
+    window.addEventListener(OPEN_FEEDBACK_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_FEEDBACK_EVENT, onOpen);
+  }, [open]);
 
   return (
     <>
-      {/*
-        Mobile : bouton rond (icône seule, nom accessible conservé) pour ne pas masquer le contenu.
-        Le contenu a une marge basse (pb-24 dans le layout racine) : la fin de page reste lisible.
-      */}
-      <Button
-        variant="soleil"
-        onClick={open}
-        className="fixed right-3 bottom-3 z-40 size-14 rounded-full p-0 shadow-lg sm:right-4 sm:bottom-4 sm:size-auto sm:px-4 sm:py-2 print:hidden"
-        aria-haspopup="dialog"
-        aria-label="Donner mon avis"
-      >
-        <MessageSquareHeart aria-hidden="true" size={22} />
-        <span className="max-sm:sr-only">Donner mon avis</span>
-      </Button>
+      <aside aria-label="Votre avis" className="mx-auto w-full max-w-5xl px-4 pb-6 print:hidden">
+        <Button variant="soleil" onClick={() => open()} aria-haspopup="dialog">
+          <MessageSquareHeart aria-hidden="true" size={22} />
+          Donner mon avis
+        </Button>
+      </aside>
       <dialog
         ref={dialogRef}
         aria-labelledby="feedback-title"
@@ -53,48 +82,50 @@ export function FeedbackButton() {
       >
         <div className="flex items-center justify-between border-b border-line px-5 py-3">
           <h2 id="feedback-title" className="text-xl font-bold">
-            Donner mon avis
+            {context.title ?? "Donner mon avis"}
           </h2>
           <Button variant="ghost" aria-label="Fermer" onClick={close}>
             <X aria-hidden="true" />
           </Button>
         </div>
-        <FeedbackForm key={formKey} onDone={close} />
+        <FeedbackForm key={formKey} context={context} onDone={close} />
       </dialog>
     </>
   );
 }
 
-function FeedbackForm({ onDone }: { onDone: () => void }) {
+function FeedbackForm({ context, onDone }: { context: FeedbackContext; onDone: () => void }) {
   const pathname = usePathname();
+  const pagePath = context.pagePath ?? pathname;
   // Hook du socle : le message reste en place après une erreur (pas de remise à zéro par React 19).
   const { state, onSubmit, pending } = useFormAction(submitFeedbackAction, initialActionState);
 
   useEffect(() => {
     if (!state.ok) return;
+    if (context.id) window.dispatchEvent(new CustomEvent(FEEDBACK_SENT_EVENT, { detail: context.id }));
     const t = setTimeout(onDone, 1800);
     return () => clearTimeout(t);
-  }, [state, onDone]);
+  }, [state, onDone, context.id]);
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4 px-5 py-4">
-      <input type="hidden" name="pagePath" value={pathname} />
-      <Fieldset legend="Votre note" errors={!state.ok ? state.fieldErrors?.rating : undefined}>
+      <input type="hidden" name="pagePath" value={pagePath} />
+      <Fieldset legend={context.title ? "Votre note pour ce scénario" : "Votre note pour cette page"} errors={!state.ok ? state.fieldErrors?.rating : undefined}>
         <div className="flex flex-wrap gap-2">
           {RATINGS.map((r) => (
             <label
               key={r.value}
-              className="flex min-h-11 min-w-11 cursor-pointer flex-col items-center justify-center rounded-lg border border-line px-3 has-[:checked]:border-mer has-[:checked]:bg-mer-soft has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-[var(--focus)]"
+              className="flex min-h-11 min-w-11 cursor-pointer flex-col items-center justify-center rounded-lg border border-line-strong px-3 has-[:checked]:border-mer has-[:checked]:bg-mer-soft has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-[var(--focus)]"
             >
               <input type="radio" name="rating" value={r.value} className="sr-only" required />
               <span className="text-lg font-bold">{r.value}</span>
-              <span className="text-xs text-muted">{r.label}</span>
+              <span className="text-xs">{r.label}</span>
             </label>
           ))}
         </div>
       </Fieldset>
       <FormField
-        label="Votre message"
+        label={context.question ?? "Votre message"}
         htmlFor="feedback-message"
         hint="Qu'est-ce qui marche ? Qu'est-ce qui bloque ? N'écrivez pas de donnée personnelle réelle."
         errors={!state.ok ? state.fieldErrors?.message : undefined}
@@ -102,7 +133,7 @@ function FeedbackForm({ onDone }: { onDone: () => void }) {
       >
         <Textarea id="feedback-message" name="message" required minLength={3} maxLength={2000} />
       </FormField>
-      <p className="text-sm text-muted">Page concernée : {pathname}</p>
+      <p className="text-sm text-muted">Page : {pageName(pagePath)}</p>
       <FormMessage state={state} />
       <div className="flex justify-end">
         <PendingButton pending={pending} pendingLabel="Envoi…">

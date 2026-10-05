@@ -11,11 +11,14 @@
   --fg: #13302e;
   --muted: #4f6865;
   --line: #cfdcd9;
+  /* Bordure des contrôles (champs) : contraste >= 3:1 sur surface et fond (WCAG 1.4.11). */
+  --line-strong: #768a87;
   --mer: #0e6b63;
   --mer-strong: #0a544e;
   --soleil: #e0a21b;
-  --hibiscus: #c2334d;
-  --feuille: #3a8a3f;
+  /* Hibiscus et feuille foncés : texte >= 4.5:1 sur leur fond doux (badges). */
+  --hibiscus: #b02a43;
+  --feuille: #2d6e31;
   --mer-soft: #dcefeb;
   --soleil-soft: #fbefd2;
   --hibiscus-soft: #f8dde2;
@@ -24,7 +27,9 @@
   --on-mer: #ffffff;
   --on-soleil: #13302e;
   --on-hibiscus: #ffffff;
-  --focus: #e0a21b;
+  /* Focus : anneau foncé (>= 3:1 sur tous les fonds) + liseré soleil (identité). */
+  --focus: #13302e;
+  --focus-halo: #e0a21b;
   color-scheme: light;
 }
 
@@ -35,6 +40,7 @@
     --fg: #e4efed;
     --muted: #9db5b1;
     --line: #24403d;
+    --line-strong: #6f8f8a;
     --mer: #4cc3b5;
     --mer-strong: #7dd8cc;
     --soleil: #f0bd4f;
@@ -48,6 +54,7 @@
     --on-soleil: #0c1a19;
     --on-hibiscus: #0c1a19;
     --focus: #f0bd4f;
+    --focus-halo: #0c1a19;
     color-scheme: dark;
   }
 }
@@ -58,6 +65,7 @@
   --color-fg: var(--fg);
   --color-muted: var(--muted);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-mer: var(--mer);
   --color-mer-strong: var(--mer-strong);
   --color-soleil: var(--soleil);
@@ -95,11 +103,20 @@ h3 {
   text-wrap: balance;
 }
 
-/* Focus visible sur TOUT élément interactif (WCAG 2.4.7 / 2.4.11). */
+/*
+ * Focus visible sur TOUT élément interactif (WCAG 2.4.7, 2.4.11, 1.4.11).
+ * Double anneau : liseré intérieur (halo) + anneau extérieur à fort contraste (>= 3:1 en clair et en sombre).
+ */
 :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--focus-halo);
   border-radius: 6px;
+}
+
+/* Les ancres ciblées (#prix…) ne passent pas sous le haut de l'écran. */
+html {
+  scroll-padding-top: 1rem;
 }
 
 /* Bande madras (identité visuelle). */
