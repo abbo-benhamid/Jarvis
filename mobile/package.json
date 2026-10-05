@@ -44,7 +44,9 @@
     "export:web:reel": "EXPO_PUBLIC_API_URL=/ expo export -p web --clear",
     "export:web:simule": "EXPO_PUBLIC_API_MODE=simule expo export -p web --output-dir dist-simule --clear",
     "proxy:dev": "node scripts/proxy-dev.mjs",
-    "e2e:simule": "playwright test -c e2e/playwright.simule.config.ts"
+    "e2e:simule": "playwright test -c e2e/playwright.simule.config.ts",
+    "test:natif": "playwright test -c src/native/__tests__/unitaires.config.ts",
+    "e2e:natif": "playwright test -c src/native/__tests__/playwright.config.ts"
   },
   "private": true
 }
