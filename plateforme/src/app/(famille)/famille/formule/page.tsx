@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/server/auth/guards";
 import { getFamilyAines, getPlanContext } from "@/server/famille/queries";
-import { formatDateTime, formatEuros, fullName } from "@/lib/format";
+import { deName, formatDateTime, formatEuros, fullName } from "@/lib/format";
 import { Alert } from "@/components/ui/alert";
 import { Card, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -41,7 +41,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
 
   return (
     <>
-      <PageHeader eyebrow="Formule" title={`La formule de ${aine.firstName}`} description="Choisissez le niveau de veille. Vous pouvez changer à tout moment." />
+      <PageHeader eyebrow="Formule" title={`La formule ${deName(aine.firstName)}`} description="Choisissez le niveau de veille. Vous pouvez changer à tout moment." />
       <div className="flex flex-col gap-6">
         <Alert tone="attention" title={OFFER_TEST_NOTICE}>
           Version de test : le paiement est simulé. Aucune carte n&apos;est demandée, aucun argent n&apos;est prélevé.

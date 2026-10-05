@@ -6,7 +6,7 @@ import { canCancelRequest, durationLabel } from "@/server/famille/logic";
 import { CAREGIVER_STATUS_LABELS, DAY_LABELS, EMPLOYER_TYPE_LABELS, FREQUENCY_LABELS, SLOT_LABELS } from "@/lib/labels";
 import { caregiverDisplayName, VERIFICATIONS_TEST_LABEL } from "@/lib/caregiver-display";
 import { communeLabel } from "@/lib/communes";
-import { formatEuros } from "@/lib/format";
+import { formatEuros, initialWithDot } from "@/lib/format";
 import { commonSlots } from "@/server/rules/matching";
 import { Badge } from "@/components/ui/badge";
 import { ChooseProfileForm } from "@/components/famille/choose-profile-form";
@@ -127,7 +127,10 @@ function RequestItem({ r }: { r: RequestRow }) {
     <li className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <h2 className="text-xl font-bold">
-          {r.aine.firstName} {r.aine.lastInitial ?? ""}
+          {r.aine.firstName} {initialWithDot(r.aine.lastInitial)}
+          <span className="block text-base font-normal text-muted">
+            Demande de {r.createdBy.firstName}, le {formatDate(r.createdAt)}
+          </span>
         </h2>
         <RequestStatusBadge status={r.status} />
       </div>

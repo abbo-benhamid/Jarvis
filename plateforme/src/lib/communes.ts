@@ -49,6 +49,49 @@ export const COMMUNES: readonly Commune[] = [
 
 export const COMMUNE_CODES = COMMUNES.map((c) => c.code) as [string, ...string[]];
 
+/** Regroupement simple pour l'affichage (S1b-ux m8) : 4 zones, 34 communes. */
+export const COMMUNE_ZONES: readonly { label: string; codes: readonly string[] }[] = [
+  { label: "Centre", codes: ["FORT_DE_FRANCE", "SCHOELCHER", "LAMENTIN", "SAINT_JOSEPH"] },
+  {
+    label: "Nord Atlantique",
+    codes: ["GROS_MORNE", "LORRAIN", "MARIGOT", "SAINTE_MARIE", "TRINITE", "ROBERT"],
+  },
+  {
+    label: "Nord Caraïbe",
+    codes: [
+      "AJOUPA_BOUILLON",
+      "BASSE_POINTE",
+      "BELLEFONTAINE",
+      "CARBET",
+      "CASE_PILOTE",
+      "FONDS_SAINT_DENIS",
+      "GRAND_RIVIERE",
+      "MACOUBA",
+      "MORNE_ROUGE",
+      "MORNE_VERT",
+      "PRECHEUR",
+      "SAINT_PIERRE",
+    ],
+  },
+  {
+    label: "Sud",
+    codes: [
+      "ANSES_D_ARLET",
+      "DIAMANT",
+      "DUCOS",
+      "FRANCOIS",
+      "MARIN",
+      "RIVIERE_PILOTE",
+      "RIVIERE_SALEE",
+      "SAINT_ESPRIT",
+      "SAINTE_ANNE",
+      "SAINTE_LUCE",
+      "TROIS_ILETS",
+      "VAUCLIN",
+    ],
+  },
+];
+
 export function getCommune(code: string): Commune | undefined {
   return COMMUNES.find((c) => c.code === code);
 }

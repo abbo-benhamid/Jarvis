@@ -2,9 +2,12 @@
 
 import { useId, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 
-/** Lien en lecture seule + bouton « Copier ». L'état est annoncé aux lecteurs d'écran. */
+/**
+ * Lien en lecture seule + bouton « Copier » + « Envoyer par WhatsApp » (S1b-ux m13 : le canal naturel de la diaspora).
+ * L'état est annoncé aux lecteurs d'écran.
+ */
 export function CopyLink({ value, label = "Lien d'invitation" }: { value: string; label?: string }) {
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -38,6 +41,15 @@ export function CopyLink({ value, label = "Lien d'invitation" }: { value: string
           {status === "copied" ? <Check aria-hidden="true" className="size-4" /> : <Copy aria-hidden="true" className="size-4" />}
           {status === "copied" ? "Lien copié" : "Copier le lien"}
         </Button>
+        <a
+          href={`https://wa.me/?text=${encodeURIComponent(`Rejoins le cercle Koudmen : ${value}`)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={buttonClasses("secondary", "md", "shrink-0")}
+        >
+          Envoyer par WhatsApp
+          <span className="sr-only"> (nouvelle fenêtre)</span>
+        </a>
       </div>
       <p aria-live="polite" className="text-sm text-muted">
         {status === "copied" ? "Le lien est copié. Collez-le dans WhatsApp, un SMS ou un email." : null}

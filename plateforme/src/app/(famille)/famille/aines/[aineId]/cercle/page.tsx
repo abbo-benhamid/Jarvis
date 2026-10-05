@@ -5,7 +5,7 @@ import { ChevronLeft } from "lucide-react";
 import { requireRole } from "@/server/auth/guards";
 import { getAineForFamily, getInvitations } from "@/server/famille/queries";
 import { invitationState, type InvitationState } from "@/server/famille/logic";
-import { formatDate, fullName } from "@/lib/format";
+import { deName, formatDate, fullName } from "@/lib/format";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
@@ -36,11 +36,11 @@ export default async function Page({ params }: { params: Promise<{ aineId: strin
     <>
       <Link href={`/famille/aines/${aine.id}`} className="mb-2 inline-flex min-h-11 items-center gap-1 font-semibold text-mer">
         <ChevronLeft aria-hidden="true" className="size-4" />
-        Fiche de {aine.firstName}
+        Fiche {deName(aine.firstName)}
       </Link>
       <PageHeader
         eyebrow="Cercle Lakou"
-        title={`Le cercle de ${aine.firstName}`}
+        title={`Le cercle ${deName(aine.firstName)}`}
         description={
           <>
             Le <Term id="lakou" /> : les membres lisent les visites et le Kayé. Seul l&apos;aîné confirme une visite, par téléphone.

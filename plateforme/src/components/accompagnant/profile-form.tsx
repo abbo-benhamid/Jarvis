@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { CaregiverStatus } from "@prisma/client";
 import { saveProfileAction } from "@/server/accompagnant/actions";
 import { initialActionState } from "@/lib/action-result";
-import { COMMUNES } from "@/lib/communes";
+import { COMMUNE_ZONES, communeLabel } from "@/lib/communes";
 import { DAY_LABELS, SLOT_LABELS } from "@/lib/labels";
 import { formatEuros } from "@/lib/format";
 import { EXAMPLE_HOURS_PER_VISIT, EXAMPLE_VISITS_PER_MONTH, formatEurosRounded, netIncomeEstimate } from "@/lib/estimates";
@@ -91,19 +91,32 @@ export function ProfileForm({
       <Card className="flex flex-col gap-3">
         <CardTitle>Mes communes</CardTitle>
         <Fieldset legend="Communes où vous pouvez aller" hint="Choisissez une ou plusieurs communes." errors={fe?.communes}>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {COMMUNES.map((c) => (
-              <ChoiceCard
-                key={c.code}
-                type="checkbox"
-                id={`commune-${c.code}`}
-                name="communes"
-                value={c.code}
-                label={c.label}
-                checked={v.communes.includes(c.code)}
-                onChange={(e) => toggle("communes", c.code, e.target.checked)}
-              />
-            ))}
+          {/* m8 : 4 zones repliables au lieu d'une liste plate de 34 communes. */}
+          <div className="flex flex-col gap-2">
+            {COMMUNE_ZONES.map((z, zi) => {
+              const count = z.codes.filter((c) => v.communes.includes(c)).length;
+              return (
+                <details key={z.label} open={zi === 0 || count > 0} className="rounded-xl border border-line bg-surface px-3">
+                  <summary className="flex min-h-11 cursor-pointer items-center font-semibold">
+                    {z.label} {count > 0 ? `(${count} choisie${count > 1 ? "s" : ""})` : `(${z.codes.length} communes)`}
+                  </summary>
+                  <div className="grid grid-cols-1 gap-2 pb-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {z.codes.map((code) => (
+                      <ChoiceCard
+                        key={code}
+                        type="checkbox"
+                        id={`commune-${code}`}
+                        name="communes"
+                        value={code}
+                        label={communeLabel(code)}
+                        checked={v.communes.includes(code)}
+                        onChange={(e) => toggle("communes", code, e.target.checked)}
+                      />
+                    ))}
+                  </div>
+                </details>
+              );
+            })}
           </div>
         </Fieldset>
       </Card>

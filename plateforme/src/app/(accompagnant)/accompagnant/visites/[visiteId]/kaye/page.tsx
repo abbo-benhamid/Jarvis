@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { deName } from "@/lib/format";
 import { notFound } from "next/navigation";
 import { requireRole } from "@/server/auth/guards";
 import { getOwnedVisit } from "@/server/accompagnant/queries";
@@ -37,7 +38,7 @@ export default async function Page({
           <>
             {envoye ? (
               <Alert tone="succes" title="Kayé envoyé">
-                Merci. Le cercle Lakou de {visit.aine.firstName} reçoit un message.
+                Merci. Le cercle Lakou {deName(visit.aine.firstName)} reçoit un message.
               </Alert>
             ) : (
               <Alert tone="info">Le Kayé de cette visite est déjà écrit. Il ne se modifie pas.</Alert>

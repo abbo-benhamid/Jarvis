@@ -1,7 +1,7 @@
 import { CircleAlert, CircleCheck, Eye, Utensils } from "lucide-react";
 import type { Appetite, ProofFactor, VisitStatus } from "@prisma/client";
 import { APPETITE_LABELS } from "@/lib/labels";
-import { formatTime } from "@/lib/format";
+import { deName, formatTime } from "@/lib/format";
 import { moodSentence } from "@/server/famille/logic";
 import { MoodIcon, MoodScale } from "./mood";
 
@@ -101,7 +101,7 @@ function VisitReceipt({ entry }: { entry: KayeEntry }) {
   if (!status || !proofs) return null;
   const valid = proofs.filter((p) => p.valid);
   const verified = status === "VALIDEE";
-  const arrival = checkInAt ? <> Arrivée de {entry.author.firstName} à {formatTime(checkInAt)}.</> : null;
+  const arrival = checkInAt ? <> Arrivée {deName(entry.author.firstName)} à {formatTime(checkInAt)}.</> : null;
   return (
     <p className={`flex items-start gap-2 rounded-lg p-3 text-sm ${verified ? "bg-feuille-soft" : "bg-soleil-soft"}`}>
       {verified ? (
@@ -129,7 +129,7 @@ function SignalBanner({ entry }: { entry: KayeEntry }) {
         <p className="font-bold">À surveiller</p>
         {entry.alertNote ? <p>{entry.alertNote}</p> : <p>{entry.author.firstName} a remarqué un changement.</p>}
         <p className="text-sm text-muted">
-          C&apos;est une observation de {entry.author.firstName}, pas une alerte médicale. Prenez des nouvelles de {entry.aine.firstName}. En cas
+          C&apos;est une observation {deName(entry.author.firstName)}, pas une alerte médicale. Prenez des nouvelles {deName(entry.aine.firstName)}. En cas
           d&apos;urgence, appelez le 15.
         </p>
       </div>

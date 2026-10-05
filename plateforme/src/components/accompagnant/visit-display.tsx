@@ -4,7 +4,7 @@ import { CircleCheck, CircleDashed, CircleX } from "lucide-react";
 import { VisitStatusBadge } from "@/components/status-badges";
 import { communeLabel } from "@/lib/communes";
 import { PROOF_FACTOR_LABELS } from "@/lib/labels";
-import { formatDate, formatTime } from "@/lib/format";
+import { formatDate, formatTime, initialWithDot } from "@/lib/format";
 
 const FACTORS: ProofFactor[] = ["GPS", "CODE_DOMICILE", "CONFIRMATION_AINE"];
 
@@ -69,7 +69,7 @@ export function VisitRow({ visit }: { visit: VisitRowData }) {
         </Link>
         <p>
           {visit.aine.firstName}
-          {visit.aine.lastInitial ? ` ${visit.aine.lastInitial}.` : ""} · {communeLabel(visit.aine.commune)}
+          {visit.aine.lastInitial ? ` ${initialWithDot(visit.aine.lastInitial)}` : ""} · {communeLabel(visit.aine.commune)}
         </p>
         <div className="flex flex-wrap items-center gap-2">
           <VisitStatusBadge status={visit.status} />

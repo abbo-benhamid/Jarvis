@@ -18,7 +18,17 @@ export function StartSandboxForm({ defaultCode }: { defaultCode: string }) {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
       <FormField label="Code testeur" htmlFor="testerCode" hint="Le code reçu avec votre invitation." errors={fe?.testerCode} required>
-        <Input {...fieldA11y("testerCode", fe?.testerCode, true)} defaultValue={defaultCode} autoComplete="off" autoCapitalize="characters" required />
+        <Input
+          {...fieldA11y("testerCode", fe?.testerCode, true)}
+          defaultValue={defaultCode}
+          autoComplete="off"
+          autoCapitalize="characters"
+          required
+          // m12 : « diaspora 01 » devient « DIASPORA-01 ».
+          onBlur={(e) => {
+            e.currentTarget.value = e.currentTarget.value.trim().toUpperCase().replace(/\s+/g, "-");
+          }}
+        />
       </FormField>
       <Fieldset legend="Quel rôle voulez-vous jouer ?" errors={fe?.role}>
         <Radio

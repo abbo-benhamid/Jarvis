@@ -9,7 +9,7 @@ import { Card, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LinkButton } from "@/components/ui/button";
 import { ValidationBadge } from "@/components/status-badges";
-import { SubmitReviewForm, VerificationRow } from "@/components/accompagnant/verification-forms";
+import { QuickDeclareForm, SubmitReviewForm, VerificationRow } from "@/components/accompagnant/verification-forms";
 
 export const metadata: Metadata = { title: "Mes vérifications" };
 
@@ -24,6 +24,9 @@ export default async function Page() {
   const missing = missingProfileItems(snapshot);
   const ready = verificationsReady(items);
   const canSubmit = canSubmitForReview(profile.validation, snapshot, items);
+  // M11 : dans un monde de test, des cases à cocher et un seul bouton (au lieu de 5 textes à écrire).
+  const quick = user.sandboxId !== null && (profile.validation === "BROUILLON" || profile.validation === "REFUSE");
+  const rows = items.map((i) => ({ id: i.id, type: i.type, status: i.status, declaration: i.declaration, reviewNote: i.reviewNote }));
 
   return (
     <>
@@ -45,6 +48,8 @@ export default async function Page() {
           >
             <p>La liste des vérifications dépend de votre statut. Faites d&apos;abord l&apos;orientation.</p>
           </EmptyState>
+        ) : quick ? (
+          <QuickDeclareForm items={rows} canRequestReview={missing.length === 0} />
         ) : (
           <>
             <Alert tone="info" title="Aucun document à envoyer">
@@ -87,11 +92,11 @@ export default async function Page() {
                         </Link>
                       </li>
                     ))}
-                    {!ready && items.length > 0 ? <li>Déclarer toutes les vérifications ci-dessus</li> : null}
+                    {!ready && items.length > 0 ? <li>{quick ? "Cocher tous vos documents ci-dessus" : "Déclarer toutes les vérifications ci-dessus"}</li> : null}
                   </ul>
                 </div>
               ) : null}
-              {canSubmit ? <SubmitReviewForm /> : null}
+              {canSubmit && !quick ? <SubmitReviewForm /> : null}
             </>
           )}
         </Card>

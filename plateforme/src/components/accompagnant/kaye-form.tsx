@@ -1,5 +1,7 @@
 "use client";
 
+import { deName } from "@/lib/format";
+
 import { useState } from "react";
 import type { Appetite } from "@prisma/client";
 import { createKayeAction } from "@/server/accompagnant/actions";
@@ -39,7 +41,7 @@ export function KayeForm({ visitId, aineFirstName }: { visitId: string; aineFirs
       <input type="hidden" name="visitId" value={visitId} />
       <Alert tone="info">Le Kayé raconte la visite. Pas de diagnostic, pas de médicament.</Alert>
 
-      <Fieldset legend={<span className="text-xl font-bold">Humeur de {aineFirstName}</span>} errors={fe?.mood}>
+      <Fieldset legend={<span className="text-xl font-bold">Humeur {deName(aineFirstName)}</span>} errors={fe?.mood}>
         <div className="grid grid-cols-5 gap-2">
           {[1, 2, 3, 4, 5].map((m) => {
             const Icon = MOOD_ICONS[m as keyof typeof MOOD_ICONS];
