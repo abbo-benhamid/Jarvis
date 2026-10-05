@@ -5,7 +5,7 @@ import type { Appetite } from "@prisma/client";
 import { Check, Send } from "lucide-react";
 import { createKayeAction } from "@/server/accompagnant/actions";
 import { initialActionState } from "@/lib/action-result";
-import { ACTIVITY_SUGGESTIONS, APPETITE_LABELS, MOOD_LABELS } from "@/lib/labels";
+import { ACTIVITY_SUGGESTIONS, APPETITE_LABELS, MOOD_LABELS, MOOD_ORDER } from "@/lib/labels";
 import { deName } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { ActionDock } from "@/components/ui/action-dock";
@@ -53,7 +53,7 @@ export function KayeForm({ visitId, aineFirstName }: { visitId: string; aineFirs
       <Card className="flex flex-col gap-5">
         <Fieldset legend={<span className={LEGEND}>Humeur {deName(aineFirstName)}</span>} errors={fe?.mood}>
           <div className="grid grid-cols-5 gap-1.5">
-            {[1, 2, 3, 4, 5].map((m) => {
+            {MOOD_ORDER.map((m) => {
               const Icon = MOOD_ICONS[m as keyof typeof MOOD_ICONS];
               return (
                 <label key={m} htmlFor={`mood-${m}`} className={cn(TILE, "min-h-[84px] flex-col gap-1 px-0.5 py-2")}>

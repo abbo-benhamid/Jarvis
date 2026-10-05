@@ -11,7 +11,7 @@ import { VisitStatusBadge } from "@/components/status-badges";
 import { ProofFactors } from "@/components/operateur/display";
 import { FilterForm, pickEnum } from "@/components/operateur/filter-form";
 import { ConfirmElderForm } from "@/components/operateur/forms";
-import { VISIT_STATUS_LABELS } from "@/lib/labels";
+import { VISIT_STATUS_LABELS, proofCountLabel } from "@/lib/labels";
 import { communeLabel } from "@/lib/communes";
 import { formatDate, formatTime } from "@/lib/format";
 
@@ -42,7 +42,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
       {confirmed ? (
         <Alert tone={confirmed.status === "VALIDEE" ? "succes" : "attention"} title="Appel simulé enregistré" className="mb-6">
           Visite chez {confirmed.aine.firstName} du {formatDate(confirmed.scheduledStart)} : statut « {VISIT_STATUS_LABELS[confirmed.status]} »,{" "}
-          {confirmed.proofScore} preuve(s) sur 3. Le message vocal simulé est dans la boîte d&apos;envoi.
+          {proofCountLabel(confirmed.proofScore)}. Le message vocal simulé est dans la boîte d&apos;envoi.
         </Alert>
       ) : null}
       <p className="mb-4 flex flex-wrap gap-2" aria-label="Nombre de visites par statut">
@@ -95,7 +95,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
                   </p>
                   <div className="mt-2 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
                     <div>
-                      <p className="font-semibold">Preuves : {v.proofScore} sur 3</p>
+                      <p className="font-semibold">{proofCountLabel(v.proofScore)}</p>
                       <ProofFactors proofs={v.proofs} />
                       {v.journal?.alertFlag && v.journal.alertNote ? (
                         <p className="mt-2">

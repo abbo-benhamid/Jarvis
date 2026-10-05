@@ -22,6 +22,7 @@ import { ProofSteps, type ProofStep } from "@/components/ui/proof-steps";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { useFormAction } from "@/components/ui/use-form-action";
 import { PROOFS_NEEDED } from "./visit-display";
+import { PROOF_FACTOR_LABELS, proofCountLabel } from "@/lib/labels";
 
 const initialGps: ActionResult<CheckInData> = { ok: false, error: "" };
 
@@ -120,21 +121,21 @@ export function CheckInPanel({
   const steps: ProofStep[] = [
     {
       icon: <MapPin />,
-      label: "Position au domicile",
+      label: PROOF_FACTOR_LABELS.GPS,
       detail: gpsValid ? "Position enregistrée. Vous êtes au domicile." : gpsOpen ? "Lue une seule fois, avec votre accord" : "Plus demandée pour cette visite",
       state: gpsValid ? "done" : active === "gps" ? "current" : "todo",
       aside: gpsValid ? ok : active === "gps" ? todo : undefined,
     },
     {
       icon: <KeyRound />,
-      label: "Code du domicile",
+      label: PROOF_FACTOR_LABELS.CODE_DOMICILE,
       detail: codeValid ? "Code correct. Preuve enregistrée." : codeOpen ? `Affiché chez ${aineFirstName}` : "Plus demandé pour cette visite",
       state: codeValid ? "done" : active === "code" ? "current" : "todo",
       aside: codeValid ? ok : active === "code" ? todo : undefined,
     },
     {
       icon: <Phone />,
-      label: `Appel à ${aineFirstName}`,
+      label: PROOF_FACTOR_LABELS.CONFIRMATION_AINE,
       detail: aineConfirmed ? `${aineFirstName} a confirmé la visite` : `${aineFirstName} confirme par téléphone en fin de visite`,
       state: aineConfirmed ? "done" : "todo",
       aside: aineConfirmed ? ok : undefined,
@@ -145,7 +146,7 @@ export function CheckInPanel({
   const hint = checkedIn
     ? `${checkInLabel ? `Arrivée à ${checkInLabel}. ` : ""}${missing === 0 ? "Visite prouvée." : `Encore ${missing} preuve${missing > 1 ? "s" : ""}.`}`
     : active
-      ? "Deux preuves sur trois suffisent."
+      ? "Il faut 2 preuves sur 3."
       : undefined;
 
   const dockAction =
@@ -169,7 +170,7 @@ export function CheckInPanel({
 
   return (
     <div className="flex flex-col">
-      <SectionHeader title={`Preuve d'arrivée · ${PROOFS_NEEDED} sur 3 suffisent`} action={<span className="num text-[15px] font-semibold text-fg">{score} sur 3</span>} />
+      <SectionHeader title={`Preuves de visite · il en faut ${PROOFS_NEEDED}`} action={<span className="num text-[15px] font-semibold text-fg">{proofCountLabel(score)}</span>} />
       <Card padding="none" className="px-[18px] py-1">
         <ProofSteps steps={steps} />
       </Card>

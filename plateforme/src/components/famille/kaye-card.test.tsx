@@ -77,7 +77,7 @@ describe("KayeEntryDetail (détail et reçu)", () => {
 describe("receiptProofs et aineStatus", () => {
   it("garde l'ordre des 3 preuves et marque les absentes", () => {
     const rows = receiptProofs([{ factor: "CONFIRMATION_AINE", valid: false }], "Léonie");
-    expect(rows.map((r) => r.label)).toEqual(["Position au domicile", "Code du domicile", "Appel de confirmation"]);
+    expect(rows.map((r) => r.label)).toEqual(["Position à l'arrivée", "Code du domicile", "Confirmation de l'aîné"]);
     expect(rows.map((r) => r.obtained)).toEqual([false, false, false]);
     expect(rows[2]?.detail).toBe("Léonie n'a pas confirmé");
   });

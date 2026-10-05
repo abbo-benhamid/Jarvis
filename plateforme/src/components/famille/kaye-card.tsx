@@ -1,6 +1,6 @@
 import { Cloud, CloudSun, Eye, Sun, Utensils } from "lucide-react";
 import type { Appetite, ProofFactor, VisitStatus } from "@prisma/client";
-import { APPETITE_LABELS, MOOD_LABELS } from "@/lib/labels";
+import { APPETITE_LABELS, MOOD_LABELS, PROOF_FACTOR_LABELS, PROOF_STATE_LABELS, proofCountLabel } from "@/lib/labels";
 import { deName, formatTime } from "@/lib/format";
 import { factorViews, moodSentence, type FactorView } from "@/server/famille/logic";
 import { Badge } from "@/components/ui/badge";
@@ -87,14 +87,12 @@ export function KayePreview({
   );
 }
 
-const PROOF_LABELS: Record<ProofFactor, string> = {
-  GPS: "Position au domicile",
-  CODE_DOMICILE: "Code du domicile",
-  CONFIRMATION_AINE: "Appel de confirmation",
-};
+/** X4 : un seul vocabulaire des preuves (lib/labels), web et app. */
+const PROOF_LABELS: Record<ProofFactor, string> = PROOF_FACTOR_LABELS;
 
 function proofDetail(v: FactorView, aineFirstName: string): string {
-  if (v.state === "ABSENT") return "Pas encore reçue";
+  // Le reçu suit un Kayé : la visite est faite. Une preuve absente n'a pas été obtenue.
+  if (v.state === "ABSENT") return PROOF_STATE_LABELS.NON_OBTENUE;
   switch (v.factor) {
     case "GPS":
       return v.state === "VALIDE" ? "Vérifiée à l'arrivée" : "Position non vérifiée";
@@ -115,7 +113,7 @@ export function receiptProofs(proofs: { factor: ProofFactor; valid: boolean }[],
 }
 
 function verdict(status: VisitStatus | undefined, obtained: number, aineFirstName: string): { title?: string; text: string } {
-  const n = `${obtained} ${obtained > 1 ? "preuves" : "preuve"} sur 3`;
+  const n = proofCountLabel(obtained);
   if (status === "VALIDEE") {
     return obtained >= 2
       ? { text: "Deux preuves suffisent. La visite est validée." }

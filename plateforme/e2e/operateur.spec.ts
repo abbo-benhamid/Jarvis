@@ -179,7 +179,7 @@ test("O6/O7 — visite à vérifier : confirmation simulée de l'aîné, puis ap
   await expect(card.getByText(/Code du domicile : valide/)).toBeVisible();
   await card.getByRole("button", { name: "L'aîné a confirmé (appel simulé)" }).click();
   await expect(page).toHaveURL(new RegExp(`confirme=${visit.id}`));
-  await expect(page.getByText(/statut « Validée », 2 preuve\(s\) sur 3/)).toBeVisible();
+  await expect(page.getByText(/statut « Validée », 2 preuves sur 3/)).toBeVisible();
   expect((await prisma.visit.findUniqueOrThrow({ where: { id: visit.id } })).status).toBe("VALIDEE");
 
   await page.goto("/operateur/notifications");
