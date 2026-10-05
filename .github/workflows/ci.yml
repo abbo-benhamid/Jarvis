@@ -1,11 +1,12 @@
-name: CI plateforme
+name: CI plateforme et app
 
+# V1c (code M6) : l'app mobile est vérifiée aussi, et à chaque changement des contrats de la plateforme.
 on:
   push:
     branches: ["**"]
-    paths: ["plateforme/**", ".github/workflows/ci.yml"]
+    paths: ["plateforme/**", "mobile/**", ".github/workflows/ci.yml"]
   pull_request:
-    paths: ["plateforme/**", ".github/workflows/ci.yml"]
+    paths: ["plateforme/**", "mobile/**", ".github/workflows/ci.yml"]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -95,3 +96,39 @@ jobs:
           name: playwright-traces
           path: plateforme/test-results
           retention-days: 7
+
+  mobile:
+    name: App mobile (types, contrats, tests unitaires)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      # Les contrats Zod de l'app doivent être la copie exacte de plateforme/src/contracts/v1.
+      - name: Contrats synchronisés
+        run: node scripts/sync-contracts.mjs --check
+
+      # Tests unitaires (modules purs, sans navigateur ni serveur).
+      - name: Tests hors ligne
+        run: npm run -s test:hors-ligne
+
+      - name: Tests push
+        run: npm run -s test:push
+
+      - name: Tests natifs
+        run: npm run -s test:natif
