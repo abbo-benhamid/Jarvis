@@ -168,19 +168,23 @@ export async function exchangeAuthCode(code: string, codeVerifier: string, now: 
   const problem = apiAccessProblem(user);
   if (problem) return fail("ACCES_REFUSE", problem);
 
+  // Code déjà échangé : il a peut-être été intercepté. On révoque la connexion qu'il a ouverte (RFC 6749 § 4.1.2).
+  const codeReused = async (): Promise<Result<ReponseJetons>> => {
+    const first = await db.refreshToken.findUnique({ where: { authCodeId: claims.jti }, select: { familyId: true } });
+    if (first) await revokeFamily(first.familyId, REVOCATION.CODE_REUTILISE, now);
+    await logAudit({ actor: { id: user.id, role: user.role }, action: "auth.api.code_reuse", entityType: "User", entityId: user.id });
+    return fail("CODE_INVALIDE", BAD_CODE);
+  };
+  if (await db.refreshToken.findUnique({ where: { authCodeId: claims.jti }, select: { id: true } })) return codeReused();
+
   const familyId = randomUUID();
   try {
     const tokens = await issueTokens(user, familyId, { authCodeId: claims.jti }, db, now);
     await logAudit({ actor: { id: user.id, role: user.role }, action: "auth.api.token", entityType: "User", entityId: user.id, metadata: { famille: familyId } });
     return { ok: true, value: tokens };
   } catch (e) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      // Code déjà échangé : il a peut-être été intercepté. On révoque la connexion qu'il a ouverte (RFC 6749 § 4.1.2).
-      const first = await db.refreshToken.findUnique({ where: { authCodeId: claims.jti }, select: { familyId: true } });
-      if (first) await revokeFamily(first.familyId, REVOCATION.CODE_REUTILISE, now);
-      await logAudit({ actor: { id: user.id, role: user.role }, action: "auth.api.code_reuse", entityType: "User", entityId: user.id });
-      return fail("CODE_INVALIDE", BAD_CODE);
-    }
+    // Deux échanges simultanés du même code : la contrainte unique (authCodeId) départage.
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return codeReused();
     throw e;
   }
 }
