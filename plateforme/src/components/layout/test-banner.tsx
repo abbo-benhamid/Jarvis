@@ -7,8 +7,8 @@ import Link from "next/link";
  * Une ligne fine (≈ 32 px) pour ne pas écraser le premier écran : texte court sur mobile,
  * phrase complète au bureau, et toujours un lien « En savoir plus » vers les mentions légales
  * (« Nature du site » : aucun service réel, pas un service d'aide à domicile autorisé).
- * [À VÉRIFIER] avec le juriste : la mention « pas un service d'aide à domicile autorisé » reste
- * sur l'accueil, au bureau et dans les mentions ; sur mobile, elle est à un toucher.
+ * Arbitrage S1 (critique juridique) : la mention « pas un service d'aide à domicile autorisé »
+ * reste visible sur TOUS les écrans, en version courte sur mobile.
  */
 export function TestBanner() {
   if (process.env.NEXT_PUBLIC_TEST_MODE === "false") return null;
@@ -18,6 +18,7 @@ export function TestBanner() {
         <span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-soleil" />
         <span>
           <b className="font-semibold text-fg">Version de test</b> · données fictives
+          <span className="lg:hidden"> · pas un service d&apos;aide à domicile autorisé</span>
           <span className="max-lg:hidden">, aucune visite réelle. Koudmen n&apos;est pas un service d&apos;aide à domicile autorisé</span>.{" "}
           <Link href="/mentions-legales" className="inline-flex min-h-6 items-center font-semibold whitespace-nowrap text-fg underline underline-offset-2">
             En savoir plus
