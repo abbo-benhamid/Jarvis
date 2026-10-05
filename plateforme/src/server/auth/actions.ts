@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { db } from "@/server/db";
-import { hashPassword, verifyPassword } from "./password";
+import { hashPassword, verifyPassword, verifyPasswordForUnknownAccount } from "./password";
 import { createSession, destroySession, readSession } from "./session";
 import { loginSchema, registerSchema, safeNextPath } from "./validation";
 import { DEMO_ACCOUNTS, type DemoRole } from "./demo";
@@ -82,7 +82,8 @@ export async function loginAction(_prev: ActionResult, formData: FormData): Prom
   }
   const user = await db.user.findUnique({ where: { email } });
   // Message identique dans les deux cas : on ne révèle pas si le compte existe.
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
+  const valid = user ? await verifyPassword(password, user.passwordHash) : await verifyPasswordForUnknownAccount(password);
+  if (!user || !valid) {
     // Audit de l'échec, sans email ni mot de passe (m5).
     await logAudit({ action: "auth.login_failed", entityType: "User", entityId: user?.id ?? null });
     return { ok: false, error: "Email ou mot de passe incorrect." };

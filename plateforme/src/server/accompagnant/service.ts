@@ -484,6 +484,9 @@ async function markCheckIn(actor: Actor, visit: Awaited<ReturnType<typeof loadOw
   return false;
 }
 
+/** RM-08 (m3) : 2 lectures de position au plus par visite (une erreur de réseau ou de précision est permise). */
+export const MAX_GPS_ATTEMPTS = 2;
+
 export type GpsCheckInInput = {
   visitId: string;
   latitude?: number;
@@ -504,6 +507,12 @@ export async function checkInWithGps(actor: Actor, input: GpsCheckInInput, now: 
   if (visit.proofs.some((p) => p.factor === "GPS" && p.valid)) {
     throw new AccompagnantError("Votre position est déjà enregistrée pour cette visite.", "CONFLIT");
   }
+  // RM-08 (m3) : pas de suivi. Au plus MAX_GPS_ATTEMPTS lectures de position par visite, valides ou non.
+  const gpsAttempts = await db.auditLog.count({ where: { action: "visit.gps.attempt", entityType: "Visit", entityId: visit.id } });
+  if (gpsAttempts >= MAX_GPS_ATTEMPTS) {
+    throw new AccompagnantError("Votre position a déjà été lue pour cette visite. Utilisez le code du domicile.", "INTERDIT");
+  }
+  await logAudit({ actor, action: "visit.gps.attempt", entityType: "Visit", entityId: visit.id, metadata: { simulated: input.simulated ?? false } });
   let evaluation: ReturnType<typeof evaluateGps>;
   if (input.simulated) {
     if (!isTestMode()) throw new AccompagnantError("La simulation est possible seulement en mode test.", "INTERDIT");

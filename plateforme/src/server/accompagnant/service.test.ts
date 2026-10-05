@@ -528,3 +528,16 @@ describe("D10 : réorientation vers un statut salarié", () => {
     expect(m.tx.caregiverProfile.update.mock.calls[0]![0].data.hourlyRateCents).toBe(1500);
   });
 });
+
+describe("RM-08 (m3) : pas de suivi de position", () => {
+  it("refuse une 3e lecture de position, même si les deux premières étaient invalides", async () => {
+    m.db.visit.findFirst.mockResolvedValue(visitFixture({ proofs: [{ factor: "GPS", valid: false }] }));
+    m.db.auditLog.count.mockResolvedValue(2);
+    process.env.NEXT_PUBLIC_TEST_MODE = "true";
+    await expect(checkInWithGps(josiane, { visitId: "visit-1", latitude: 14.6173, longitude: -61.0597, accuracy: 10 }, NOW)).rejects.toMatchObject({
+      code: "INTERDIT",
+    });
+    expect(m.recordProof).not.toHaveBeenCalled();
+    expect(m.db.auditLog.count.mock.calls[0]![0].where).toMatchObject({ action: "visit.gps.attempt", entityId: "visit-1" });
+  });
+});
