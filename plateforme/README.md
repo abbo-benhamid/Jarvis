@@ -66,7 +66,8 @@ Application web Next.js full-stack (App Router, Server Actions, Prisma, PostgreS
 | `pnpm db:deploy` | Applique les migrations (CI, prod) |
 | `pnpm db:seed` | Recrée les données de démo (refuse si `DEMO_MODE` != `true`) |
 | `pnpm ops:create-operator` | Crée un vrai compte opérateur (mot de passe généré, affiché une fois) |
-| `pnpm ops:purge-sandboxes` | Purge les bacs à sable de plus de 30 jours |
+| `pnpm ops:purge-sandboxes` | Purge les bacs à sable de plus de 30 jours et applique les durées de conservation (visites découverte 6 mois ; avis et mesures à fin du test + 6 mois) |
+| `pnpm ops:generate-codes [n]` | Génère n codes testeurs aléatoires (`T-XXXX-XXXX-XXXX`) pour `TESTER_INVITE_CODES` |
 | `pnpm db:reset` | Remet la base à zéro + seed |
 
 Playwright en local : Chromium est déjà installé. Exporte `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers`. Ne lance pas `playwright install`.
@@ -75,7 +76,11 @@ Playwright en local : Chromium est déjà installé. Exporte `PLAYWRIGHT_BROWSER
 
 1. Crée une base Neon en région UE. Note l'URL **poolée** (`DATABASE_URL`) et l'URL **directe** (`DIRECT_URL`).
 2. Crée le projet Vercel avec le dossier racine `plateforme`. Le build (`pnpm build`) applique les migrations puis construit.
-3. Déclare les variables (liste commentée dans `.env.example`) : `DATABASE_URL`, `DIRECT_URL`, `SESSION_SECRET`, `CRON_SECRET`, `TESTER_INVITE_CODES`, `DEMO_MODE=false`, `NEXT_PUBLIC_TEST_MODE=true`, `APP_URL`, `EDITEUR_NOM`, `EDITEUR_ADRESSE`, `EDITEUR_EMAIL`, `DIRECTEUR_PUBLICATION`.
+3. Déclare les variables (liste commentée dans `.env.example`) : `DATABASE_URL`, `DIRECT_URL`, `SESSION_SECRET`, `CRON_SECRET`, `TESTER_INVITE_CODES`, `TEST_END_DATE`, `DEMO_MODE=false`, `NEXT_PUBLIC_TEST_MODE=true`, `APP_URL`, `EDITEUR_NOM`, `EDITEUR_ADRESSE`, `EDITEUR_EMAIL`, `DIRECTEUR_PUBLICATION`.
+   - `SESSION_SECRET` et `CRON_SECRET` : deux valeurs **différentes**, `openssl rand -base64 48`.
+   - `TESTER_INVITE_CODES` : `pnpm ops:generate-codes 20` (un code par testeur).
+   - **Garde-fou (S1c) :** en production (`VERCEL_ENV=production`), l'application **refuse de démarrer** avec une valeur d'exemple, une valeur de CI, un secret trop court ou `RATE_LIMIT_DISABLED=true`. Vérifie en local : `KOUDMEN_STRICT_CONFIG=true pnpm start`.
+   - Région des fonctions : `fra1` (Francfort), fixée dans `vercel.json`.
 4. Déploie. `vercel.json` déclare le cron nocturne de purge.
 5. Crée les opérateurs depuis ton poste : `DATABASE_URL=<url directe> pnpm ops:create-operator --email … --prenom … --nom …`.
 6. Ne lance **jamais** `pnpm db:seed` sur la base des testeurs (il efface tout).
