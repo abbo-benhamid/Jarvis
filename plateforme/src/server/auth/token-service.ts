@@ -109,7 +109,6 @@ export async function requestAuthCode(req: CodeRequest, now: Date = new Date()):
   if (problem) return fail("ACCES_REFUSE", problem);
 
   const { code } = await signAuthCode({ sub: user.id, sv: user.sessionVersion, cc: req.codeChallenge }, keys().code, now);
-  await db.user.update({ where: { id: user.id }, data: { lastLoginAt: now } });
   await logAudit({
     actor: { id: user.id, role: user.role },
     action: req.methode === "demo" ? "auth.api.demo_login" : "auth.api.login",
@@ -182,6 +181,8 @@ export async function exchangeAuthCode(code: string, codeVerifier: string, now: 
   const familyId = randomUUID();
   try {
     const tokens = await issueTokens(user, familyId, { authCodeId: claims.jti }, db, now);
+    // Sécurité m9 : la connexion est faite à l'échange du code (PKCE), pas à l'émission du code.
+    await db.user.update({ where: { id: user.id }, data: { lastLoginAt: now } });
     await logAudit({ actor: { id: user.id, role: user.role }, action: "auth.api.token", entityType: "User", entityId: user.id, metadata: { famille: familyId } });
     return { ok: true, value: tokens };
   } catch (e) {
