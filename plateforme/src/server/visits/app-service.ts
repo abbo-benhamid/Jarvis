@@ -36,7 +36,7 @@ import type { Proposition } from "@/contracts/v1/visits-propositions";
  */
 
 /** L'accompagnant connecté (jeton d'accès déjà vérifié). */
-export type AppUser = { id: string; role: Role; firstName: string; sandboxId: string | null };
+export type AppUser = { id: string; role: Role; firstName: string; sandboxId: string | null; isDemo?: boolean };
 
 const H = 3_600_000;
 
@@ -306,17 +306,33 @@ async function saveDraft(actor: Actor, e: Extract<Evenement, { type: "KAYE_BROUI
   return { statut: "ACCEPTE" };
 }
 
-/** SOS : journal + alerte des opérateurs du même monde (bac à sable ou réel). Aucune position, aucune donnée de santé. */
+/** X6 (sécurité D2) : alertes SOS au plus par compte et par heure. Au-delà : ACCEPTE (consigne 15/112), sans nouvelle alerte. */
+export const MAX_SOS_PAR_HEURE = 3;
+
+const CONSIGNE_SOS_DEMO =
+  "Compte de démonstration : aucune alerte n'est envoyée à l'équipe. Si une personne est en danger, appelez le 15 (SAMU) ou le 112 maintenant.";
+
+/**
+ * SOS : journal + alerte des opérateurs du même monde (bac à sable ou réel). Aucune position, aucune donnée de santé.
+ * X6 : compte démo partagé → SOS simulé (journal de démo, jamais d'alerte aux opérateurs réels).
+ * X6 : au plus MAX_SOS_PAR_HEURE alertes par compte et par heure ; les suivantes sont journalisées (`sos.suppressed`).
+ */
 async function sos(actor: Actor, user: AppUser, visitId: string | null, at: Date, skew: boolean): Promise<Outcome> {
   const visit = visitId ? await db.visit.findFirst({ where: ownedVisitWhere(user.id, visitId), select: { id: true } }) : null;
   const related = visit ? { type: "Visit", id: visit.id } : { type: "User", id: user.id };
-  await logAudit({
-    actor,
-    action: "sos.triggered",
-    entityType: related.type,
-    entityId: related.id,
-    metadata: { source: "app", linkedVisit: visit !== null, clockSkew: skew },
+  const metadata = { source: "app", linkedVisit: visit !== null, clockSkew: skew };
+  if (user.isDemo) {
+    await logAudit({ actor, action: "sos.demo", entityType: related.type, entityId: related.id, metadata });
+    return { statut: "ACCEPTE", consigne: CONSIGNE_SOS_DEMO };
+  }
+  const recent = await db.auditLog.count({
+    where: { actorId: user.id, action: "sos.triggered", createdAt: { gt: new Date(Date.now() - 3_600_000) } },
   });
+  if (recent >= MAX_SOS_PAR_HEURE) {
+    await logAudit({ actor, action: "sos.suppressed", entityType: related.type, entityId: related.id, metadata });
+    return { statut: "ACCEPTE", consigne: CONSIGNE_SOS };
+  }
+  await logAudit({ actor, action: "sos.triggered", entityType: related.type, entityId: related.id, metadata });
   const operators = await db.user.findMany({ where: { role: "OPERATEUR", sandboxId: user.sandboxId }, select: { id: true }, take: 20 });
   for (const op of operators) {
     await notifyUser(op.id, "SOS_ACCOMPAGNANT", { accompagnant: user.firstName, heure: formatTime(at) }, related);

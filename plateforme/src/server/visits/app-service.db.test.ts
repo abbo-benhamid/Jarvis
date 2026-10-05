@@ -294,6 +294,30 @@ describe.runIf(enabled)("Lot A2 (API v1 : visites, événements, propositions) s
     expect(msg?.body).not.toContain("Aîné");
   });
 
+  it("X6 : 6 SOS dans un lot → 3 alertes au plus par heure ; les suivants ACCEPTE avec consigne, journalisés sos.suppressed", async () => {
+    const dora = await caregiver("Dora");
+    const lot = Array.from({ length: 6 }, () => ev("SOS", {}));
+    const results = await app.processAppEvents(dora.user, lot);
+    for (const r of results) {
+      expect(r).toMatchObject({ statut: "ACCEPTE" });
+      expect(r.consigne).toContain("112");
+    }
+    expect(await db.auditLog.count({ where: { actorId: dora.user.id, action: "sos.triggered" } })).toBe(app.MAX_SOS_PAR_HEURE);
+    expect(await db.auditLog.count({ where: { actorId: dora.user.id, action: "sos.suppressed" } })).toBe(3);
+    expect(await db.outboxMessage.count({ where: { recipientUserId: operateur.id, template: "SOS_ACCOMPAGNANT", relatedId: dora.user.id } })).toBe(app.MAX_SOS_PAR_HEURE);
+  });
+
+  it("X6 : SOS d'un compte démo partagé → jamais envoyé aux opérateurs réels (journal de démo), consigne 15/112", async () => {
+    const eva = await caregiver("Eva");
+    const [r] = await app.processAppEvents({ ...eva.user, isDemo: true }, [ev("SOS", {})]);
+    expect(r).toMatchObject({ statut: "ACCEPTE" });
+    expect(r!.consigne).toContain("démonstration");
+    expect(r!.consigne).toContain("112");
+    expect(await db.outboxMessage.count({ where: { template: "SOS_ACCOMPAGNANT", relatedId: eva.user.id } })).toBe(0);
+    expect(await db.auditLog.count({ where: { actorId: eva.user.id, action: "sos.demo" } })).toBe(1);
+    expect(await db.auditLog.count({ where: { actorId: eva.user.id, action: "sos.triggered" } })).toBe(0);
+  });
+
   it("propositions : liste, refus SANS pénalité (profil inchangé, propositions suivantes toujours visibles)", async () => {
     const mk = async () => {
       const r = await db.careRequest.create({
