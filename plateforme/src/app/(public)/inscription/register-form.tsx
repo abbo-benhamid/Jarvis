@@ -27,6 +27,7 @@ export function RegisterForm({ defaultRole, next }: { defaultRole: RoleChoice; n
       <Fieldset legend="Je crée un compte…" errors={fe?.role}>
         <Radio
           id="role-famille"
+          className="rounded-field border-[1.5px] border-line-strong bg-surface px-4 py-3 has-[:checked]:border-mer has-[:checked]:bg-mer-soft"
           name="role"
           value="FAMILLE"
           checked={role === "FAMILLE"}
@@ -35,6 +36,7 @@ export function RegisterForm({ defaultRole, next }: { defaultRole: RoleChoice; n
         />
         <Radio
           id="role-accompagnant"
+          className="rounded-field border-[1.5px] border-line-strong bg-surface px-4 py-3 has-[:checked]:border-mer has-[:checked]:bg-mer-soft"
           name="role"
           value="ACCOMPAGNANT"
           checked={role === "ACCOMPAGNANT"}
@@ -112,7 +114,7 @@ export function RegisterForm({ defaultRole, next }: { defaultRole: RoleChoice; n
         </p>
       ) : null}
       <FormMessage state={state} />
-      <PendingButton pending={pending} pendingLabel="Création…">
+      <PendingButton pending={pending} size="lg" className="w-full" pendingLabel="Création…">
         Créer mon compte
       </PendingButton>
     </form>

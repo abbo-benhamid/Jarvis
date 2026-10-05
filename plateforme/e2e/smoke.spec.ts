@@ -7,7 +7,9 @@ import { DEMO_PASSWORD, E2E_TESTER_CODE, OPERATEUR_EMAIL, OPERATEUR_PASSWORD } f
 test("D13 + S1c : l'accueil vend la tranquillité, montre « Tester Koudmen » et le prix dans le premier écran, sans démo opérateur", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 640 });
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("mwen bien");
+  // Maquette conso validée (écran a) : le titre dit la réponse ; la douleur « mwen bien » passe dans le chapeau.
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("va bien");
+  await expect(page.locator("main").getByText(/mwen bien/).first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Ce que vous recevez après une visite" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Trois promesses" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Combien ça coûte ?" })).toBeVisible();
