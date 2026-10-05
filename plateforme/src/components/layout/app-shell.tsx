@@ -21,7 +21,6 @@ export function AppShell({ user, nav, children }: { user: CurrentUser; nav: NavI
               {user.firstName} · {ROLE_LABELS[user.role]}
             </span>
             {user.isDemo ? <Badge tone="soleil">Démo partagée</Badge> : null}
-            {user.sandboxId ? <Badge tone="mer">Mode test</Badge> : null}
             <form action={logoutAction}>
               <button type="submit" className="inline-flex min-h-11 items-center rounded-lg px-3 font-semibold text-mer hover:bg-mer-soft">
                 Se déconnecter

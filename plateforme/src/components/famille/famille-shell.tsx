@@ -2,6 +2,7 @@ import Link from "next/link";
 import { BookOpen, CalendarDays, HandHeart, House, Wallet } from "lucide-react";
 import type { CurrentUser } from "@/server/auth/guards";
 import { logoutAction } from "@/server/auth/actions";
+import { ArrivalFocus } from "@/components/layout/arrival-focus";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SandboxPanel } from "@/components/sandbox/sandbox-panel";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ const NAV: BottomNavItem[] = [
 export function FamilleShell({ user, children }: { user: CurrentUser; children: React.ReactNode }) {
   return (
     <div className="flex flex-1 flex-col">
+      <ArrivalFocus />
       <header className="mx-auto flex w-full max-w-[var(--app-column)] flex-wrap items-center justify-between gap-x-2 gap-y-1 px-5 pt-2 max-[359px]:px-4">
         <Link
           href="/famille"
@@ -37,7 +39,6 @@ export function FamilleShell({ user, children }: { user: CurrentUser; children: 
         </Link>
         <div className="ml-auto flex flex-wrap items-center justify-end gap-x-1 gap-y-1">
           {user.isDemo ? <Badge tone="soleil">Démo partagée</Badge> : null}
-          {user.sandboxId ? <Badge tone="mer">Mode test</Badge> : null}
           <form action={logoutAction}>
             <button
               type="submit"

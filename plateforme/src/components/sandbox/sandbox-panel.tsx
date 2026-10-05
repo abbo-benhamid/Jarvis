@@ -7,6 +7,7 @@ import { SimulateButton } from "./simulate-button";
 import { CopyResumeLink } from "./copy-resume-link";
 import { FeedbackShortcut, ScenarioEndPrompt } from "./scenario-end";
 import { PanelDisclosure } from "./panel-disclosure";
+import { SandboxPanelFrame } from "./sandbox-panel-frame";
 
 /**
  * Panneau « Votre test » (D14, A8, A9) : UNE barre compacte, discrète, au-dessus du contenu.
@@ -15,6 +16,8 @@ import { PanelDisclosure } from "./panel-disclosure";
  * « Détails » (bouton aria-expanded) déplie les 3 scénarios et le lien de reprise. Hauteur ≈ 100 px à 390 px, ≈ 60 px au bureau :
  * le contenu réel de la page reste dans le premier écran.
  * Pas de titre h2 : le h1 de la page reste le premier titre (S1b-ux M2, WCAG 1.3.1).
+ * V1c (UX M2, X8) : le libellé « Mode test » est ici (plus dans l'en-tête) : une seule mention par écran.
+ * Sur les écrans de travail, le panneau se réduit à une pastille (SandboxPanelFrame).
  */
 export async function SandboxPanel({ user }: { user: CurrentUser }) {
   const panel = await getSandboxPanel(user);
@@ -23,6 +26,7 @@ export async function SandboxPanel({ user }: { user: CurrentUser }) {
   const { done, total } = panel.progress;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   return (
+    <SandboxPanelFrame progress={`${done}/${total}`}>
     <section
       aria-label={`Votre test : ${done} étapes faites sur ${total}`}
       className="mb-5 rounded-md bg-surface px-3.5 py-2 text-fg shadow-card"
@@ -40,8 +44,9 @@ export async function SandboxPanel({ user }: { user: CurrentUser }) {
               />
             </span>
             <span className="min-w-0">
+              <strong className="font-semibold group-data-[compact=true]:hidden">Mode test</strong>{" "}
               <strong className="num font-semibold">
-                Test {done}/{total}
+                {done}/{total}
               </strong>
               {next ? (
                 <>
@@ -152,5 +157,6 @@ export async function SandboxPanel({ user }: { user: CurrentUser }) {
         }
       />
     </section>
+    </SandboxPanelFrame>
   );
 }

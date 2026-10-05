@@ -29,7 +29,6 @@ export function OperatorShell({ user, children }: { user: CurrentUser; children:
   const badges = (
     <>
       {user.isDemo ? <Badge tone="soleil">Démo partagée</Badge> : null}
-      {user.sandboxId ? <Badge tone="mer">Mode test</Badge> : null}
     </>
   );
 

@@ -206,7 +206,7 @@ export function CheckInPanel({
           {testMode ? (
             <form action={simAction} className="flex flex-col gap-2 border-t border-line pt-3">
               <input type="hidden" name="visitId" value={visitId} />
-              <p className="text-sm text-muted">Mode test : vous n&apos;êtes pas en Martinique ? Simulez la position.</p>
+              <p className="text-sm text-muted">Pas en Martinique ? Pour le test, simulez la position.</p>
               <SubmitButton variant="quiet" pendingLabel="Simulation…">
                 Simuler ma position au domicile
               </SubmitButton>
