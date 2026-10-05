@@ -30,14 +30,14 @@ export default async function TesterPage({ searchParams }: { searchParams: Promi
         <p className="font-mono text-xs font-semibold tracking-widest text-mer uppercase">Version de test</p>
         <h1 className="text-3xl font-bold">Tester Koudmen</h1>
         <p className="text-muted">
-          Vous recevez un bac à sable : un petit monde fictif, pour vous seul. Une aînée fictive, des accompagnants fictifs, une équipe
-          Koudmen « robot ». Rien n&apos;est réel : aucune visite, aucun paiement, aucun message envoyé.
+          Vous recevez un monde de test, rien que pour vous. Une aînée fictive, des accompagnants fictifs, une équipe Koudmen « robot ». Rien
+          n&apos;est réel : aucune visite, aucun paiement, aucun message envoyé.
         </p>
       </div>
 
       {erreur === "lien" ? (
         <Alert tone="attention" title="Ce lien de reprise ne marche plus.">
-          Le bac à sable a peut-être plus de 30 jours. Créez un nouveau test avec votre code.
+          Le test a peut-être plus de 30 jours. Créez un nouveau test avec votre code.
         </Alert>
       ) : null}
 

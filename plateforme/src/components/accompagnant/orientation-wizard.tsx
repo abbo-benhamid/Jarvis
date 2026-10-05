@@ -25,8 +25,8 @@ const Q2: Option<"oui" | "non">[] = [
 ];
 const Q3: Option<OrientationAnswers["existingStatus"]>[] = [
   { value: "AUCUN", label: "Non, je n'ai pas de statut" },
-  { value: "AUTO_ENTREPRENEUR_SAP", label: "Oui, je suis auto-entrepreneur déclaré SAP" },
-  { value: "SALARIE_SAAD", label: "Oui, je travaille pour un SAAD", hint: "Service d'aide et d'accompagnement à domicile." },
+  { value: "AUTO_ENTREPRENEUR_SAP", label: "Oui, j'ai une micro-entreprise de services à la personne" },
+  { value: "SALARIE_SAAD", label: "Oui, je travaille pour un SAAD", hint: "Un service d'aide à domicile autorisé par le Département." },
 ];
 const Q4: Option<OrientationAnswers["situations"][number]>[] = [
   { value: "ETUDIANT", label: "Étudiant(e)" },
@@ -62,6 +62,7 @@ export function OrientationWizard({
 }) {
   const { state, onSubmit, pending } = useFormAction(saveOrientationAction, initial);
   const [step, setStep] = useState(0);
+  const [needAnswer, setNeedAnswer] = useState(false);
   const [draft, setDraft] = useState<Draft>({ situations: [] });
   const [showWizard, setShowWizard] = useState(initialResult === null);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -215,6 +216,10 @@ export function OrientationWizard({
       </fieldset>
 
       <FormMessage state={state.ok ? undefined : state} />
+      {/* m9 : le bouton reste actif ; sans réponse, un message explique quoi faire. */}
+      <p role="status" className="font-semibold text-hibiscus">
+        {needAnswer && !answered[step] ? "Choisissez une réponse pour continuer." : ""}
+      </p>
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
         {step > 0 ? (
@@ -225,7 +230,17 @@ export function OrientationWizard({
           <span />
         )}
         {step < 4 ? (
-          <Button size="lg" disabled={!answered[step]} onClick={() => setStep((s) => s + 1)}>
+          <Button
+            size="lg"
+            onClick={() => {
+              if (!answered[step]) {
+                setNeedAnswer(true);
+                return;
+              }
+              setNeedAnswer(false);
+              setStep((s) => s + 1);
+            }}
+          >
             Question suivante
           </Button>
         ) : complete ? (
@@ -233,7 +248,7 @@ export function OrientationWizard({
             Voir mon statut
           </PendingButton>
         ) : (
-          <Button size="lg" disabled>
+          <Button size="lg" onClick={() => setNeedAnswer(true)}>
             Voir mon statut
           </Button>
         )}

@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { InviteForm } from "@/components/famille/invite-form";
 import { CopyLink } from "@/components/famille/copy-link";
 import { appUrl } from "@/server/env";
+import { Term } from "@/components/ui/term";
 
 export const metadata: Metadata = { title: "Cercle Lakou" };
 
@@ -40,7 +41,11 @@ export default async function Page({ params }: { params: Promise<{ aineId: strin
       <PageHeader
         eyebrow="Cercle Lakou"
         title={`Le cercle de ${aine.firstName}`}
-        description="Les membres du cercle lisent les visites et le Kayé. Ils peuvent confirmer une visite."
+        description={
+          <>
+            Le <Term id="lakou" /> : les membres lisent les visites et le Kayé. Seul l&apos;aîné confirme une visite, par téléphone.
+          </>
+        }
       />
 
       <div className="grid gap-6 md:grid-cols-2">

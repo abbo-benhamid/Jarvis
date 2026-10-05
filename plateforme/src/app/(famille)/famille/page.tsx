@@ -17,7 +17,7 @@ export default async function Page() {
   return (
     <>
       <PageHeader
-        eyebrow="Mon lakou"
+        eyebrow="Espace famille"
         title={`Bonjour ${user.firstName}`}
         description={memberships.length > 0 ? "Voici les nouvelles de vos aînés." : undefined}
         actions={

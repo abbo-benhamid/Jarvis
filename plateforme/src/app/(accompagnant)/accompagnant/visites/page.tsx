@@ -18,7 +18,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
 
   return (
     <>
-      <PageHeader eyebrow="Visites" title="Mes visites" description="Le jour de la visite, ouvrez-la pour faire le check-in." />
+      <PageHeader eyebrow="Visites" title="Mes visites" description="Le jour de la visite, ouvrez-la pour enregistrer votre arrivée." />
       <div className="mx-auto flex max-w-3xl flex-col gap-6">
         {accepted !== null && Number.isFinite(accepted) ? (
           <Alert tone="succes" title="Mission acceptée">

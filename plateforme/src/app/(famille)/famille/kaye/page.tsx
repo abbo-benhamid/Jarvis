@@ -10,6 +10,7 @@ import { LinkButton } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { KayeCard } from "@/components/famille/kaye-card";
 import { FilterTabs } from "@/components/famille/filter-tabs";
+import { Term } from "@/components/ui/term";
 
 export const metadata: Metadata = { title: "Kayé" };
 
@@ -45,7 +46,12 @@ export default async function Page({ searchParams }: Props) {
       <PageHeader
         eyebrow="Kayé"
         title="Le cahier des visites"
-        description="Après chaque visite, l'accompagnant écrit quelques lignes : l'humeur, ce que vous avez partagé, l'appétit. Rien de médical."
+        description={
+          <>
+            Le <Term id="kaye" /> : après chaque visite, l&apos;accompagnant écrit quelques lignes. L&apos;humeur, ce que vous avez partagé,
+            l&apos;appétit. Rien de médical.
+          </>
+        }
       />
 
       {aines.length === 0 ? (
@@ -57,7 +63,6 @@ export default async function Page({ searchParams }: Props) {
         </EmptyState>
       ) : (
         <div className="flex flex-col gap-6">
-          {entries.length > 0 ? <MicroQuestion user={user} questionKey="KAYE_RASSURE" path="/famille/kaye" /> : null}
           <div className="flex flex-col gap-2">
             {aines.length > 1 ? (
               <FilterTabs
@@ -111,6 +116,8 @@ export default async function Page({ searchParams }: Props) {
               ))}
             </ol>
           )}
+          {/* A7 : la micro-question vient APRÈS le Kayé lu. */}
+          {entries.length > 0 ? <MicroQuestion user={user} questionKey="KAYE_RASSURE" path="/famille/kaye" /> : null}
         </div>
       )}
     </>

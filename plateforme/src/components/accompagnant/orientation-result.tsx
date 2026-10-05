@@ -3,6 +3,7 @@ import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { LevelBadge } from "@/components/status-badges";
 import { CAREGIVER_STATUS_LABELS, VERIFICATION_TYPE_LABELS } from "@/lib/labels";
+import { Term } from "@/components/ui/term";
 
 const OUTCOME_TITLES: Record<OrientationResult["outcome"], string> = {
   RECOMMANDE: "Statut recommandé",
@@ -21,6 +22,15 @@ export function OrientationResultView({ result }: { result: OrientationResult })
           {OUTCOME_TITLES[result.outcome]}
         </h2>
         {ok ? <p className="text-2xl font-bold text-mer">{CAREGIVER_STATUS_LABELS[result.status!]}</p> : null}
+        {result.status === "SALARIE_FAMILLE_CESU" ? (
+          <p className="text-sm">
+            Mot utile : <Term id="cesu" />
+          </p>
+        ) : result.status === "SAAD" ? (
+          <p className="text-sm">
+            Mot utile : <Term id="saad" />
+          </p>
+        ) : null}
       </div>
       <p className="text-lg">{result.explanation}</p>
 

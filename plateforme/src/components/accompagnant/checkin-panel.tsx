@@ -132,7 +132,7 @@ export function CheckInPanel({
               <form action={simAction} className="flex flex-col gap-2 border-t border-line pt-3">
                 <input type="hidden" name="visitId" value={visitId} />
                 <p className="text-sm text-muted">Mode test : vous n&apos;êtes pas en Martinique ? Simulez la position.</p>
-                <SubmitButton variant="ghost" pendingLabel="Simulation…">
+                <SubmitButton variant="secondary" pendingLabel="Simulation…">
                   Simuler ma position au domicile
                 </SubmitButton>
                 <FormMessage state={simState} />
@@ -181,13 +181,13 @@ export function CheckInPanel({
         )}
       </Card>
 
-      {/* 3 — Check-out */}
+      {/* 3 — Départ (check-out) */}
       <Card className="flex flex-col gap-3">
         <StepTitle n={3} icon={<LogOut className="size-6" />}>
           Fin de la visite
         </StepTitle>
         {checkedOut ? (
-          <p>Check-out fait.</p>
+          <p>Départ enregistré.</p>
         ) : !checkedIn ? (
           <p className="text-muted">Faites d&apos;abord l&apos;étape 1 ou 2.</p>
         ) : (
@@ -196,7 +196,7 @@ export function CheckInPanel({
             <p>Aucune position n&apos;est lue au départ.</p>
             <FormMessage state={outState} />
             <SubmitButton variant="secondary" size="lg" pendingLabel="Enregistrement…">
-              Je pars (check-out)
+              Je pars
             </SubmitButton>
           </form>
         )}

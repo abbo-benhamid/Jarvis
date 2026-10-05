@@ -4,25 +4,27 @@ import { KeyRound, MapPin, PhoneCall } from "lucide-react";
 import { requireRole } from "@/server/auth/guards";
 import { MicroQuestion } from "@/components/sandbox/micro-question";
 import { getFamilyAines, getFamilyVisits } from "@/server/famille/queries";
-import { canConfirmElder, displayVisitStatus, splitVisits } from "@/server/famille/logic";
+import { displayVisitStatus, splitVisits } from "@/server/famille/logic";
 import { formatDate, formatTime } from "@/lib/format";
-import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LinkButton } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { VisitStatusBadge } from "@/components/status-badges";
 import { ProofFactors } from "@/components/famille/proof-factors";
-import { ConfirmVisitForm } from "@/components/famille/confirm-visit-form";
 import { FilterTabs } from "@/components/famille/filter-tabs";
+import { Term } from "@/components/ui/term";
 
 export const metadata: Metadata = { title: "Visites" };
 
 type VisitRow = Awaited<ReturnType<typeof getFamilyVisits>>[number];
 
-/** F7 : visites à venir et passées, preuve 2 sur 3, confirmation simulée de l'aîné. */
-export default async function Page({ searchParams }: { searchParams: Promise<{ aine?: string; confirmee?: string }> }) {
+/**
+ * F7 : visites à venir et passées, preuve 2 sur 3.
+ * A5 : la famille ne confirme JAMAIS une visite. Elle voit seulement le résultat de l'appel à l'aîné.
+ */
+export default async function Page({ searchParams }: { searchParams: Promise<{ aine?: string }> }) {
   const user = await requireRole("FAMILLE");
-  const { aine: aineFilter, confirmee } = await searchParams;
+  const { aine: aineFilter } = await searchParams;
   const aines = await getFamilyAines(user.id);
   const selected = aines.find((a) => a.id === aineFilter)?.id;
   const visits = await getFamilyVisits(user.id, selected);
@@ -38,21 +40,17 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
       <PageHeader
         eyebrow="Visites"
         title="Les visites"
-        description="Chaque visite est prouvée. Il faut 2 preuves sur 3 pour la valider."
+        description={
+          <>
+            Chaque visite a une <Term id="preuve">preuve de visite</Term>. Il faut 2 preuves sur 3 pour la valider.
+          </>
+        }
       />
       <div className="flex flex-col gap-6">
-        {visits.length > 0 ? <MicroQuestion user={user} questionKey="PREUVE_COMPRISE" path="/famille/visites" /> : null}
-        {confirmee === "validee" ? (
-          <Alert tone="succes" title="Confirmation enregistrée. La visite est validée.">
-            L&apos;appel à l&apos;aîné est simulé dans cette version de test.
-          </Alert>
-        ) : null}
-        {confirmee === "partielle" ? (
-          <Alert tone="info" title="Confirmation enregistrée.">
-            Il manque encore une preuve pour valider la visite. L&apos;équipe Koudmen vérifie.
-          </Alert>
-        ) : null}
-        <ProofExplainer />
+        <ProofExplainer>
+          {/* A7 : la micro-question apparaît APRÈS l'ouverture de l'explication. */}
+          {visits.length > 0 ? <MicroQuestion user={user} questionKey="PREUVE_COMPRISE" path="/famille/visites" /> : null}
+        </ProofExplainer>
 
         {aines.length > 1 ? (
           <FilterTabs
@@ -109,7 +107,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
 }
 
 function VisitItem({ v }: { v: VisitRow }) {
-  const confirmable = canConfirmElder(v.status, v.proofs);
   return (
     <li className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -128,10 +125,12 @@ function VisitItem({ v }: { v: VisitRow }) {
       ) : (
         <ProofFactors proofs={v.proofs} />
       )}
-      {v.status === "A_VERIFIER" && !confirmable ? (
-        <p className="text-sm">L&apos;équipe Koudmen vérifie cette visite.</p>
+      {v.status === "A_VERIFIER" ? (
+        <p className="rounded-lg bg-soleil-soft p-3 text-sm">
+          <strong>À vérifier :</strong> il manque une preuve. Koudmen appelle {v.aine.firstName} pour confirmer la visite, puis l&apos;équipe
+          Koudmen vérifie. Vous n&apos;avez rien à faire.
+        </p>
       ) : null}
-      {confirmable ? <ConfirmVisitForm visitId={v.id} aineFirstName={v.aine.firstName} /> : null}
       {v.journal ? (
         <Link href={`/famille/kaye?aine=${v.aine.id}#kaye-${v.journal.id}`} className="inline-flex min-h-11 items-center font-semibold text-mer underline">
           Lire le Kayé de cette visite
@@ -141,12 +140,12 @@ function VisitItem({ v }: { v: VisitRow }) {
   );
 }
 
-/** Schéma de la preuve « 2 sur 3 ». */
-function ProofExplainer() {
+/** Schéma de la preuve « 2 sur 3 ». Ouvert par défaut : le testeur lit l'explication avant la question. */
+function ProofExplainer({ children }: { children?: React.ReactNode }) {
   const items = [
     { icon: MapPin, title: "Position", text: "L'accompagnant partage sa position une seule fois, à l'arrivée." },
     { icon: KeyRound, title: "Code du domicile", text: "Il saisit le code affiché chez l'aîné." },
-    { icon: PhoneCall, title: "Confirmation", text: "L'aîné confirme la visite par téléphone (simulé en test)." },
+    { icon: PhoneCall, title: "Appel de l'aîné", text: "Koudmen appelle l'aîné. Il tape 1 pour confirmer la visite (simulé en test)." },
   ];
   return (
     <details className="rounded-xl border border-line bg-surface px-4 py-2">
@@ -165,6 +164,7 @@ function ProofExplainer() {
       <p className="pb-3 text-sm">
         <strong>2 preuves sur 3 = visite validée.</strong> Sinon, la visite passe « À vérifier » et l&apos;équipe Koudmen contrôle.
       </p>
+      {children ? <div className="pb-3">{children}</div> : null}
     </details>
   );
 }

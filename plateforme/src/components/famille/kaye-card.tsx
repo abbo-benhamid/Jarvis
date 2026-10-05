@@ -1,5 +1,5 @@
-import { Eye, Utensils } from "lucide-react";
-import type { Appetite } from "@prisma/client";
+import { CircleAlert, CircleCheck, Eye, Utensils } from "lucide-react";
+import type { Appetite, ProofFactor, VisitStatus } from "@prisma/client";
 import { APPETITE_LABELS } from "@/lib/labels";
 import { formatTime } from "@/lib/format";
 import { moodSentence } from "@/server/famille/logic";
@@ -16,7 +16,18 @@ export type KayeEntry = {
   createdAt: Date;
   aine: { id: string; firstName: string };
   author: { firstName: string };
-  visit: { scheduledStart: Date };
+  visit: {
+    scheduledStart: Date;
+    status?: VisitStatus;
+    checkInAt?: Date | null;
+    proofs?: { factor: ProofFactor; valid: boolean }[];
+  };
+};
+
+const RECEIPT_FACTOR: Record<ProofFactor, string> = {
+  GPS: "Position vérifiée",
+  CODE_DOMICILE: "Code du domicile correct",
+  CONFIRMATION_AINE: "Appel de l'aîné confirmé",
 };
 
 /**
@@ -29,6 +40,7 @@ export function KayeCard({ entry, showAine = true }: { entry: KayeEntry; showAin
     <article aria-labelledby={titleId} className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
       {entry.alertFlag ? <SignalBanner entry={entry} /> : null}
       <div className="flex flex-col gap-4 p-5">
+        <VisitReceipt entry={entry} />
         <header className="flex items-start gap-3">
           <MoodIcon mood={entry.mood} size="lg" />
           <div className="flex min-w-0 flex-col gap-1">
@@ -77,6 +89,33 @@ export function KayeCard({ entry, showAine = true }: { entry: KayeEntry; showAin
         </dl>
       </div>
     </article>
+  );
+}
+
+/**
+ * Reçu de visite (S1b-ux M6) : la preuve en tête du Kayé, comme sur la page d'accueil.
+ * Icône ET texte : jamais la couleur seule.
+ */
+function VisitReceipt({ entry }: { entry: KayeEntry }) {
+  const { status, checkInAt, proofs } = entry.visit;
+  if (!status || !proofs) return null;
+  const valid = proofs.filter((p) => p.valid);
+  const verified = status === "VALIDEE";
+  const arrival = checkInAt ? <> Arrivée de {entry.author.firstName} à {formatTime(checkInAt)}.</> : null;
+  return (
+    <p className={`flex items-start gap-2 rounded-lg p-3 text-sm ${verified ? "bg-feuille-soft" : "bg-soleil-soft"}`}>
+      {verified ? (
+        <CircleCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-feuille" />
+      ) : (
+        <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+      )}
+      <span>
+        <strong>{verified ? "Visite vérifiée." : "Visite à vérifier."}</strong>
+        {arrival}{" "}
+        {valid.length > 0 ? `${valid.map((p) => RECEIPT_FACTOR[p.factor]).join(". ")}.` : "Aucune preuve pour le moment."}{" "}
+        <span className="text-muted">({valid.length} preuves sur 3, il en faut 2.)</span>
+      </span>
+    </p>
   );
 }
 

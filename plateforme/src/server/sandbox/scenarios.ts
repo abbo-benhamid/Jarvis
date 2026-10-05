@@ -92,7 +92,7 @@ export function caregiverScenarios(s: CaregiverSnapshot): Scenario[] {
       id: "visite",
       title: "3. La visite et le Kayé",
       steps: [
-        { id: "checkin", label: "Faites le check-in de la visite", href: "/accompagnant/visites", done: s.checkedIn },
+        { id: "checkin", label: "Enregistrez votre arrivée chez Ernest", href: "/accompagnant/visites", done: s.checkedIn },
         { id: "kaye", label: "Écrivez le Kayé", href: "/accompagnant/visites", done: s.kayeWritten },
         { id: "lu", label: "« Simuler la suite » : la famille lit votre Kayé", done: s.familyRead },
       ],

@@ -12,7 +12,8 @@ import { PendingButton, useFormAction } from "@/components/ui/use-form-action";
 /** Formulaire d'entrée du test : code, rôle joué, CGU de test, âge, données fictives (D3, D4). */
 export function StartSandboxForm({ defaultCode }: { defaultCode: string }) {
   const { state, onSubmit, pending } = useFormAction(startSandboxAction, initialActionState);
-  const [role, setRole] = useState<"FAMILLE" | "ACCOMPAGNANT">("FAMILLE");
+  // S1b-ux M15 : aucun rôle coché par défaut. Le testeur choisit lui-même.
+  const [role, setRole] = useState<"FAMILLE" | "ACCOMPAGNANT" | null>(null);
   const fe = !state.ok ? state.fieldErrors : undefined;
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
@@ -75,7 +76,7 @@ export function StartSandboxForm({ defaultCode }: { defaultCode: string }) {
         {fe?.acceptTest ? <p className="text-sm font-semibold text-hibiscus">{fe.acceptTest.join(" ")}</p> : null}
       </div>
       <FormMessage state={state} />
-      <PendingButton pending={pending} size="lg" pendingLabel="Création de votre bac à sable…">
+      <PendingButton pending={pending} size="lg" pendingLabel="Création de votre test…">
         Commencer le test
       </PendingButton>
     </form>

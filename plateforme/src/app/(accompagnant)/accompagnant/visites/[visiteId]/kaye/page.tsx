@@ -49,9 +49,9 @@ export default async function Page({
           </>
         ) : !visit.checkInAt ? (
           <>
-            <Alert tone="attention">Faites d&apos;abord le check-in de la visite. Le Kayé s&apos;écrit après.</Alert>
+            <Alert tone="attention">Enregistrez d&apos;abord votre arrivée. Le Kayé s&apos;écrit après.</Alert>
             <LinkButton href={`/accompagnant/visites/${visit.id}`} size="lg">
-              Aller au check-in
+              Enregistrer mon arrivée
             </LinkButton>
           </>
         ) : (

@@ -68,9 +68,10 @@ export const NEED_LABELS: Record<NeedType, string> = {
 };
 
 export const CAREGIVER_STATUS_LABELS: Record<CaregiverStatus, string> = {
-  SALARIE_FAMILLE_CESU: "Salarié de la famille (CESU)",
-  AUTO_ENTREPRENEUR_SAP: "Auto-entrepreneur déclaré SAP",
-  PROCHE_AIDANT_APA: "Proche aidant salarié (APA)",
+  // m7 et A11 : formules neutres (femme ou homme), sans sigle sauf CESU et SAAD (glossaire).
+  SALARIE_FAMILLE_CESU: "Payé par la famille, avec le CESU",
+  AUTO_ENTREPRENEUR_SAP: "Micro-entreprise de services à la personne",
+  PROCHE_AIDANT_APA: "Proche de l'aîné, payé avec l'aide autonomie",
   BENEVOLE_ASSO: "Bénévole via une association",
   SAAD: "Structure partenaire (SAAD)",
 };
@@ -91,12 +92,12 @@ export const VALIDATION_LABELS: Record<CaregiverValidation, string> = {
 
 export const VERIFICATION_TYPE_LABELS: Record<VerificationType, string> = {
   IDENTITE: "Pièce d'identité",
-  CASIER_B3: "Extrait de casier judiciaire (B3)",
+  CASIER_B3: "Extrait de casier judiciaire",
   REFERENCES: "Deux références",
   FORMATION: "Formation Koudmen",
-  STATUT_PRO: "Statut professionnel (SIRET, NOVA, SAAD)",
-  PSC1: "Secourisme PSC1",
-  DIPLOME: "Diplôme (DEAES, ADVF)",
+  STATUT_PRO: "Preuve de votre statut (numéro d'entreprise ou service d'aide)",
+  PSC1: "Formation aux premiers secours",
+  DIPLOME: "Diplôme d'aide à la personne",
 };
 
 export const VERIFICATION_STATUS_LABELS: Record<VerificationStatus, string> = {
@@ -144,7 +145,7 @@ export const VISIT_STATUS_LABELS: Record<VisitStatus, string> = {
 };
 
 export const PROOF_FACTOR_LABELS: Record<ProofFactor, string> = {
-  GPS: "Position au check-in",
+  GPS: "Position à l'arrivée",
   CODE_DOMICILE: "Code du domicile",
   CONFIRMATION_AINE: "Confirmation de l'aîné",
 };

@@ -183,8 +183,9 @@ export function RequestForm({ aines, defaultAineId, today }: { aines: RequestAin
         </FormField>
         {employerType === "REPRESENTANT" ? (
           <Alert tone="attention">
-            Un enfant employeur a droit au crédit d&apos;impôt seulement dans certains cas (par exemple si le parent remplit les conditions de
-            l&apos;APA). [À VÉRIFIER] avec un conseiller avant toute vraie embauche.
+            {/* [À VÉRIFIER] conditions du crédit d'impôt pour un enfant employeur (marqueur interne, jamais affiché : S1b-ux M10). */}
+            Un enfant employeur a droit au crédit d&apos;impôt seulement dans certains cas (par exemple si le parent reçoit l&apos;aide
+            autonomie du Département). Demandez conseil avant toute vraie embauche.
           </Alert>
         ) : null}
         <Alert tone="info">

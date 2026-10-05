@@ -61,7 +61,8 @@ const ACTIVITY_LEVEL: Record<OrientationAnswers["activity"], Level> = {
 
 const CUMUL_WARNINGS: Partial<Record<OrientationAnswers["situations"][number], string>> = {
   ETUDIANT: "Étudiant : gardez du temps pour vos études. Vos heures comptent dans vos revenus déclarés.",
-  RETRAITE: "Retraité : le cumul emploi-retraite est possible. Vérifiez vos règles de cumul. [À VÉRIFIER]",
+  // [À VÉRIFIER] règles de cumul emploi-retraite (marqueur interne, jamais affiché : S1b-ux M10).
+  RETRAITE: "Retraité : vous pouvez travailler et toucher votre retraite. Demandez les règles à votre caisse de retraite.",
   DEMANDEUR_EMPLOI: "Demandeur d'emploi : déclarez vos heures chaque mois à France Travail.",
   RSA: "RSA : déclarez ces revenus à la CAF chaque trimestre.",
   TEMPS_PARTIEL: "Salarié à temps partiel : vérifiez la clause d'exclusivité de votre contrat.",
@@ -134,22 +135,22 @@ export function orientCaregiver(input: OrientationAnswers): OrientationResult {
   let explanation: string;
   if (answers.existingStatus === "SALARIE_SAAD") {
     status = "SAAD";
-    explanation = "Vous travaillez pour un SAAD. Votre SAAD partenaire porte vos missions.";
+    explanation = "Vous travaillez pour un SAAD, un service d'aide à domicile. Ce service porte vos missions.";
   } else if (targetLevel === 4) {
     status = "SALARIE_FAMILLE_CESU";
     explanation =
-      "L'aide renforcée demande un diplôme (DEAES, ADVF). Vous êtes salarié(e) de la famille. Le niveau 4 s'ouvre quand l'équipe valide votre diplôme.";
+      "L'aide renforcée demande un diplôme d'aide à la personne. La famille vous paie avec le CESU. Le niveau 4 s'ouvre quand l'équipe valide votre diplôme.";
   } else if (answers.existingStatus === "AUTO_ENTREPRENEUR_SAP" && targetLevel === 2) {
     status = "AUTO_ENTREPRENEUR_SAP";
     explanation =
-      "Vous êtes auto-entrepreneur déclaré SAP. Vous faites des coups de main (niveau 2) : courses, repas, papiers, numérique.";
+      "Vous avez une micro-entreprise de services à la personne. Vous faites des coups de main (niveau 2) : courses, repas, papiers, numérique.";
   } else {
     status = "SALARIE_FAMILLE_CESU";
     explanation =
-      "Vous êtes salarié(e) de la famille, payé(e) avec le CESU. C'est le statut le plus simple et le plus sûr.";
+      "La famille vous emploie et vous paie avec le CESU. C'est le statut le plus simple et le plus sûr.";
     if (answers.existingStatus === "AUTO_ENTREPRENEUR_SAP") {
       warnings.push(
-        "La compagnie et la présence ne se font pas en auto-entrepreneur. Pour ces missions, vous êtes salarié(e) de la famille.",
+        "La compagnie et la présence ne se font pas en auto-entrepreneur. Pour ces missions, la famille vous emploie avec le CESU.",
       );
     }
   }
@@ -159,13 +160,13 @@ export function orientCaregiver(input: OrientationAnswers): OrientationResult {
     return result(
       "ORIENTATION_EXTERNE",
       null,
-      "Un conjoint ne peut pas être salarié via l'APA. Renseignez-vous sur le dédommagement PCH ou l'allocation journalière du proche aidant (AJPA).",
+      "Un conjoint ne peut pas être payé avec l'aide autonomie du Département. D'autres aides existent pour les proches aidants : demandez-les au Département ou à la CAF.",
     );
   }
   if (answers.familyLink === "ENFANT_OU_PARENT" && status === "SALARIE_FAMILLE_CESU") {
     status = "PROCHE_AIDANT_APA";
     explanation =
-      "Vous êtes un proche de la personne aidée. Vous pouvez être salarié(e) via l'APA. Vous êtes visible seulement dans son cercle Lakou.";
+      "Vous êtes un proche de la personne aidée. Vous pouvez être payé avec l'aide autonomie du Département. Vous êtes visible seulement dans son cercle Lakou.";
   }
 
   return result("RECOMMANDE", status, explanation);

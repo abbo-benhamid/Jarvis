@@ -191,7 +191,8 @@ export async function getKayeFeed(userId: string, opts: { aineId?: string; onlyS
       createdAt: true,
       aine: { select: { id: true, firstName: true } },
       author: { select: { firstName: true } },
-      visit: { select: { scheduledStart: true, proofScore: true, status: true } },
+      // S1c (affichage) : le reçu de visite en tête du Kayé (S1b-ux M6) lit aussi l'arrivée et les preuves.
+      visit: { select: { scheduledStart: true, proofScore: true, status: true, checkInAt: true, proofs: { select: { factor: true, valid: true } } } },
     },
   });
 }
