@@ -128,8 +128,8 @@ const coins = {
 const styles = StyleSheet.create({
   viseur: {
     width: '100%',
+    maxWidth: 260,
     aspectRatio: 1,
-    maxHeight: 340,
     alignSelf: 'center',
     borderRadius: radius.field,
     overflow: 'hidden',

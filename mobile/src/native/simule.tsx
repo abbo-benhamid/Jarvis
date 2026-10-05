@@ -70,7 +70,7 @@ function VueScannerSimulee({ onLecture, onAnnuler }: ProprietesScanner) {
       pied={<Button testID="lire-qr-simule" variant="ink" icon="scan" label="Simuler la lecture du QR" onPress={() => onLecture(scenario().qr ?? QR_DEMO)} />}
     >
       <View style={{ alignItems: 'center', gap: 6 }}>
-        <View style={{ width: 120, height: 120, borderRadius: 8, backgroundColor: '#FFFFFF', padding: 12, flexDirection: 'row', flexWrap: 'wrap' }}>
+        <View style={{ width: 84, height: 84, borderRadius: 6, backgroundColor: '#FFFFFF', padding: 8, flexDirection: 'row', flexWrap: 'wrap' }}>
           {Array.from({ length: 36 }, (_, i) => (
             <View key={i} style={{ width: '16.66%', aspectRatio: 1, backgroundColor: (i * 7 + (i >> 2)) % 3 ? '#0B1211' : '#FFFFFF' }} />
           ))}
