@@ -33,6 +33,7 @@ export function StartSandboxForm({ defaultCode }: { defaultCode: string }) {
       <Fieldset legend="Quel rôle voulez-vous jouer ?" errors={fe?.role}>
         <Radio
           id="role-famille"
+          className="rounded-field border-[1.5px] border-line-strong bg-surface px-4 py-3 has-[:checked]:border-mer has-[:checked]:bg-mer-soft"
           name="role"
           value="FAMILLE"
           checked={role === "FAMILLE"}
@@ -45,6 +46,7 @@ export function StartSandboxForm({ defaultCode }: { defaultCode: string }) {
         />
         <Radio
           id="role-accompagnant"
+          className="rounded-field border-[1.5px] border-line-strong bg-surface px-4 py-3 has-[:checked]:border-mer has-[:checked]:bg-mer-soft"
           name="role"
           value="ACCOMPAGNANT"
           checked={role === "ACCOMPAGNANT"}
@@ -86,7 +88,7 @@ export function StartSandboxForm({ defaultCode }: { defaultCode: string }) {
         {fe?.acceptTest ? <p className="text-sm font-semibold text-hibiscus">{fe.acceptTest.join(" ")}</p> : null}
       </div>
       <FormMessage state={state} />
-      <PendingButton pending={pending} size="lg" pendingLabel="Création de votre test…">
+      <PendingButton pending={pending} size="lg" className="w-full" pendingLabel="Création de votre test…">
         Commencer le test
       </PendingButton>
     </form>

@@ -29,14 +29,14 @@ export function SimulateButton() {
           dispatch();
         }}
       >
-        <Button type="submit" disabled={pending} aria-busy={pending}>
-          <Play aria-hidden="true" className="size-4" />
+        <Button type="submit" variant="quiet" disabled={pending} aria-busy={pending}>
+          <Play aria-hidden="true" className="text-mer" strokeWidth={1.8} />
           {pending ? "Les robots jouent…" : "Simuler la suite"}
         </Button>
       </form>
       <div role="status" aria-live="polite" className="order-last w-full">
         {result ? (
-          <p className="rounded-lg bg-surface p-3 text-sm">
+          <p className="rounded-md bg-surface p-3 text-[15px] shadow-card">
             <span className="font-semibold">{result.acted ? "Les robots ont joué. " : ""}</span>
             {result.message}{" "}
             {result.href ? (

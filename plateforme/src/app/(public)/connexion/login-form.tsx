@@ -21,7 +21,7 @@ export function LoginForm({ next }: { next?: string }) {
         <Input {...fieldA11y("password", fe?.password)} type="password" autoComplete="current-password" required />
       </FormField>
       <FormMessage state={state} />
-      <PendingButton pending={pending} pendingLabel="Connexion…">
+      <PendingButton pending={pending} size="lg" className="w-full" pendingLabel="Connexion…">
         Se connecter
       </PendingButton>
     </form>

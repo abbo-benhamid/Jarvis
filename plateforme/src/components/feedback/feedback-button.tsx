@@ -69,19 +69,19 @@ export function FeedbackButton() {
 
   return (
     <>
-      <aside aria-label="Votre avis" className="mx-auto w-full max-w-5xl px-4 pb-6 print:hidden">
-        <Button variant="soleil" onClick={() => open()} aria-haspopup="dialog">
-          <MessageSquareHeart aria-hidden="true" size={22} />
+      <aside aria-label="Votre avis" className="mx-auto w-full max-w-[var(--content-max)] px-5 pb-8 lg:px-6 print:hidden">
+        <Button variant="quiet" onClick={() => open()} aria-haspopup="dialog" className="rounded-full pr-5 pl-4">
+          <MessageSquareHeart aria-hidden="true" className="text-soleil-ink" strokeWidth={1.6} />
           Donner mon avis
         </Button>
       </aside>
       <dialog
         ref={dialogRef}
         aria-labelledby="feedback-title"
-        className="m-auto w-[min(100%-2rem,32rem)] rounded-xl border border-line bg-surface p-0 text-fg shadow-xl"
+        className="m-auto w-[min(100%-2rem,32rem)] rounded-card bg-surface p-0 text-fg shadow-float"
       >
-        <div className="flex items-center justify-between border-b border-line px-5 py-3">
-          <h2 id="feedback-title" className="text-xl font-bold">
+        <div className="flex items-center justify-between gap-3 border-b border-line px-5 py-3">
+          <h2 id="feedback-title" className="font-display text-[24px] leading-tight font-normal">
             {context.title ?? "Donner mon avis"}
           </h2>
           <Button variant="ghost" aria-label="Fermer" onClick={close}>
@@ -115,10 +115,10 @@ function FeedbackForm({ context, onDone }: { context: FeedbackContext; onDone: (
           {RATINGS.map((r) => (
             <label
               key={r.value}
-              className="flex min-h-11 min-w-11 cursor-pointer flex-col items-center justify-center rounded-lg border border-line-strong px-3 has-[:checked]:border-mer has-[:checked]:bg-mer-soft has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-[var(--focus)]"
+              className="flex min-h-14 min-w-14 flex-1 cursor-pointer flex-col items-center justify-center rounded-field border-[1.5px] border-line-strong px-2 has-[:checked]:border-mer has-[:checked]:bg-mer-soft has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-[var(--focus)]"
             >
               <input type="radio" name="rating" value={r.value} className="sr-only" required />
-              <span className="text-lg font-bold">{r.value}</span>
+              <span className="num text-lg font-semibold">{r.value}</span>
               <span className="text-xs">{r.label}</span>
             </label>
           ))}
@@ -136,7 +136,7 @@ function FeedbackForm({ context, onDone }: { context: FeedbackContext; onDone: (
       <p className="text-sm text-muted">Page : {pageName(pagePath)}</p>
       <FormMessage state={state} />
       <div className="flex justify-end">
-        <PendingButton pending={pending} pendingLabel="Envoi…">
+        <PendingButton pending={pending} size="lg" className="max-sm:w-full" pendingLabel="Envoi…">
           Envoyer mon avis
         </PendingButton>
       </div>

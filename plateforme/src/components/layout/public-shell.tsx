@@ -1,39 +1,36 @@
-import Link from "next/link";
 import { Logo } from "./logo";
 import { SiteFooter } from "./site-footer";
 import { getCurrentUser } from "@/server/auth/guards";
 import { ROLE_HOME } from "@/lib/labels";
-import { buttonClasses } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/button";
 
+/**
+ * Coque des pages publiques (maquette conso, écran a) : barre haute légère sur le sable,
+ * logo à gauche, compte à droite. Contenu max 1120 px, gouttière 20 px (24 px au bureau).
+ */
 export async function PublicShell({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   return (
     <>
-      <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-2">
-          <Logo />
-          <nav aria-label="Compte" className="flex flex-wrap gap-2">
-            {user ? (
-              <Link className={buttonClasses("primary")} href={ROLE_HOME[user.role]}>
-                Mon espace
-              </Link>
-            ) : (
-              // S1b-ux M1 et m18 : « Tester » d'abord. Sur mobile, « Se connecter » laisse la place (lien en bas de l'accueil).
-              <>
-                <Link className={buttonClasses("ghost", "md", "max-sm:hidden")} href="/connexion">
-                  Se connecter
-                </Link>
-                <Link className={buttonClasses("primary")} href="/tester">
-                  Tester
-                </Link>
-              </>
-
-            )}
-          </nav>
-        </div>
-        <div className="madras" aria-hidden="true" />
+      <header className="mx-auto flex min-h-16 w-full max-w-[var(--content-max)] items-center justify-between gap-2 px-5 pt-1 lg:px-6">
+        <Logo />
+        <nav aria-label="Compte" className="flex items-center gap-1 sm:gap-2">
+          {user ? (
+            <LinkButton href={ROLE_HOME[user.role]}>Mon espace</LinkButton>
+          ) : (
+            // S1b-ux M1 et m18 : « Tester » reste l'action principale. Sur mobile, le bouton « Tester Koudmen » est dans la page.
+            <>
+              <LinkButton href="/connexion" variant="link">
+                Se connecter
+              </LinkButton>
+              <LinkButton href="/tester" className="max-sm:hidden">
+                Tester
+              </LinkButton>
+            </>
+          )}
+        </nav>
       </header>
-      <main id="contenu" className="mx-auto w-full max-w-5xl px-4 py-8">
+      <main id="contenu" className="mx-auto w-full max-w-[var(--content-max)] flex-1 px-5 pt-4 pb-8 lg:px-6 lg:pt-8">
         {children}
       </main>
       <SiteFooter />

@@ -25,8 +25,9 @@ export default async function ProcheAidantPage({ params }: { params: Promise<{ t
 
   return (
     <PublicShell>
-      <div className="mx-auto flex max-w-xl flex-col gap-6">
-        <h1 className="text-3xl font-bold">{inv && !otherWorld ? `Proche aidant de ${inv.aine.firstName}` : "Lien proche aidant"}</h1>
+      <div className="mx-auto flex max-w-xl flex-col gap-6 lg:pt-6">
+        <p className="-mb-3 text-[13px] font-semibold tracking-[.12em] text-muted uppercase">Lien de rattachement</p>
+        <h1 className="font-display text-[36px] leading-[1.05] font-normal tracking-[-.02em] lg:text-[44px]">{inv && !otherWorld ? `Proche aidant de ${inv.aine.firstName}` : "Lien proche aidant"}</h1>
         {!inv || otherWorld ? (
           <Alert tone="danger" title="Ce lien n'est pas valable.">
             Vérifiez que vous avez copié le lien en entier. Sinon, demandez un nouveau lien à la famille.
@@ -36,14 +37,14 @@ export default async function ProcheAidantPage({ params }: { params: Promise<{ t
             Demandez un nouveau lien à {inv.createdBy.firstName}.
           </Alert>
         ) : (
-          <Card className="flex flex-col gap-4">
+          <Card className="flex flex-col gap-4 lg:p-7">
             <p>
               {inv.createdBy.firstName} vous invite à vous rattacher à {inv.aine.firstName} comme <strong>proche aidant</strong> (salarié via
               l&apos;APA). Koudmen pourra alors vous proposer pour {inv.aine.firstName} seulement. Lien valable jusqu&apos;au{" "}
               {formatDate(inv.expiresAt)}.
             </p>
             {!user ? (
-              <LinkButton href={`/connexion?next=${next}`}>Me connecter avec mon compte Accompagnant</LinkButton>
+              <LinkButton href={`/connexion?next=${next}`} size="lg">Me connecter avec mon compte Accompagnant</LinkButton>
             ) : user.role !== "ACCOMPAGNANT" ? (
               <Alert tone="attention" title="Ce lien est réservé à un compte Accompagnant.">
                 Déconnectez-vous, puis rouvrez ce lien avec le compte Accompagnant du proche aidant.

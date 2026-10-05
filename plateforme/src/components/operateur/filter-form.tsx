@@ -18,10 +18,16 @@ export type FilterField = {
 export function FilterForm({ action, fields }: { action: string; fields: FilterField[] }) {
   const active = fields.some((f) => f.value);
   return (
-    <form method="get" action={action} role="search" aria-label="Filtres" className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+    <form
+      method="get"
+      action={action}
+      role="search"
+      aria-label="Filtres"
+      className="mb-6 flex flex-col gap-4 rounded-card bg-surface-2/60 p-4 sm:flex-row sm:flex-wrap sm:items-end lg:px-5"
+    >
       {fields.map((f) => (
-        <div key={f.name} className="flex flex-col gap-1 sm:min-w-56">
-          <label htmlFor={`filtre-${f.name}`} className="font-semibold">
+        <div key={f.name} className="flex flex-col gap-1.5 sm:min-w-60">
+          <label htmlFor={`filtre-${f.name}`} className="text-[15px] font-semibold">
             {f.label}
           </label>
           <Select id={`filtre-${f.name}`} name={f.name} defaultValue={f.value ?? ""}>
@@ -35,11 +41,11 @@ export function FilterForm({ action, fields }: { action: string; fields: FilterF
         </div>
       ))}
       <div className="flex gap-2">
-        <button type="submit" className={buttonClasses("primary")}>
+        <button type="submit" className={buttonClasses("primary", "lg")}>
           Filtrer
         </button>
         {active ? (
-          <Link href={action} className={buttonClasses("ghost")}>
+          <Link href={action} className={buttonClasses("ghost", "lg")}>
             Effacer les filtres
           </Link>
         ) : null}

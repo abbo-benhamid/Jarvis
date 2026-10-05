@@ -7,13 +7,18 @@ import { DEMO_PASSWORD, E2E_TESTER_CODE, OPERATEUR_EMAIL, OPERATEUR_PASSWORD } f
 test("D13 + S1c : l'accueil vend la tranquillité, montre « Tester Koudmen » et le prix dans le premier écran, sans démo opérateur", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 640 });
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("mwen bien");
+  // Maquette conso validée (écran a) : le titre dit la réponse ; la douleur « mwen bien » passe dans le chapeau.
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("va bien");
+  await expect(page.locator("main").getByText(/mwen bien/).first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Ce que vous recevez après une visite" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Trois promesses" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Combien ça coûte ?" })).toBeVisible();
   const main = page.locator("main");
-  // M1 : le bouton est dans le premier écran (360 × 640).
-  await expect(main.getByRole("link", { name: "Tester Koudmen" }).first()).toBeInViewport();
+  // M1 : le bouton est dans le premier écran (360 × 640). Sur mobile, c'est celui du pied d'action collant (maquette écran a) ;
+  // celui du héros est masqué sous 1024 px. Un seul des deux est visible à chaque largeur.
+  const cta = main.getByTestId("cta-premier-ecran").filter({ visible: true });
+  await expect(cta).toHaveAccessibleName("Tester Koudmen");
+  await expect(cta).toBeInViewport();
   await expect(main.getByText(/Prix en test/)).toBeVisible();
   // Les seuls boutons du contenu sont les « ? » du glossaire (A11).
   for (const b of await main.getByRole("button").all()) await expect(b).toHaveAccessibleName(/Qu'est-ce que/);

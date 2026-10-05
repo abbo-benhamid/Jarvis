@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Card } from "@/components/ui/card";
 import { WithdrawConsentForm } from "@/components/sandbox/withdraw-consent-form";
+import { FormPage } from "@/components/layout/form-page";
 
 export const metadata: Metadata = { title: "Retirer mon accord" };
 export const dynamic = "force-dynamic";
@@ -12,15 +13,20 @@ export const dynamic = "force-dynamic";
 export default async function RetraitAccordPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   return (
-    <div className="mx-auto flex max-w-xl flex-col gap-6">
-      <h1 className="text-3xl font-bold">Retirer mon accord</h1>
-      <p className="text-muted">
-        Vous avez laissé votre contact pour une « visite découverte ». Si vous retirez votre accord, nous effaçons votre prénom et votre contact. Nous ne
-        vous recontactons pas.
-      </p>
-      <Card>
+    <FormPage
+      eyebrow="Visite découverte"
+      title="Retirer mon accord"
+      illustration={false}
+      lead={
+        <p>
+          Vous avez laissé votre contact pour une « visite découverte ». Si vous retirez votre accord, nous effaçons votre prénom et votre contact. Nous ne
+          vous recontactons pas.
+        </p>
+      }
+    >
+      <Card className="lg:p-7">
         <WithdrawConsentForm token={token} />
       </Card>
-    </div>
+    </FormPage>
   );
 }

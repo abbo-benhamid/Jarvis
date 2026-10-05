@@ -118,7 +118,7 @@ export function ConfirmElderForm({ visitId }: { visitId: string }) {
       <input type="hidden" name="visitId" value={visitId} />
       <FormMessage state={state} />
       <div>
-        <SubmitButton variant="soleil" pendingLabel="Appel simulé…">
+        <SubmitButton variant="primary" pendingLabel="Appel simulé…">
           L&apos;aîné a confirmé (appel simulé)
         </SubmitButton>
       </div>

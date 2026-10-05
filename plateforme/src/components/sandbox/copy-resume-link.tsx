@@ -13,11 +13,11 @@ export function CopyResumeLink({ url }: { url: string }) {
         value={url}
         aria-label="Lien de reprise de votre test"
         onFocus={(e) => e.currentTarget.select()}
-        className="min-h-11 min-w-0 flex-1 basis-48 rounded-lg border border-line-strong bg-surface px-2 font-mono text-xs"
+        className="min-h-11 min-w-0 flex-1 basis-48 rounded-field border-[1.5px] border-line-strong bg-surface px-3 font-mono text-xs"
       />
       <button
         type="button"
-        className="inline-flex min-h-11 items-center rounded-lg px-3 font-semibold text-mer hover:bg-surface"
+        className="inline-flex min-h-11 items-center rounded-icon px-3 font-semibold text-mer hover:bg-surface"
         onClick={async () => {
           try {
             await navigator.clipboard.writeText(url);

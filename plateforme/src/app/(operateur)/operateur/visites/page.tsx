@@ -78,9 +78,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
               (v.status === "EN_COURS" || v.status === "A_VERIFIER") && !v.proofs.some((p) => p.factor === "CONFIRMATION_AINE" && p.valid);
             return (
               <li key={v.id}>
-                <article aria-labelledby={titleId} className="rounded-xl border border-line bg-surface p-4">
+                <article aria-labelledby={titleId} className="rounded-card bg-surface p-5 shadow-card">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h2 id={titleId} className="text-lg font-bold">
+                    <h2 id={titleId} className="font-sans text-[17px] leading-snug font-semibold tracking-normal">
                       {v.aine.firstName} {v.aine.lastInitial ?? ""} — {formatDate(v.scheduledStart)}, {formatTime(v.scheduledStart)}
                     </h2>
                     <span className="flex flex-wrap gap-1">

@@ -1,12 +1,18 @@
 import Link from "next/link";
+import { BrandMark } from "@/components/ui/illustrations";
+import { cn } from "@/lib/cn";
 
-export function Logo({ href = "/" }: { href?: string }) {
+/** Logo Koudmen (direction artistique § 10) : marque 30 px + nom en Fraunces 500, 22 px, couleur encre. */
+export function Logo({ href = "/", className }: { href?: string; className?: string }) {
   return (
-    <Link href={href} className="inline-flex min-h-11 items-center gap-2 font-display text-2xl font-extrabold text-mer">
-      <svg aria-hidden="true" width="28" height="28" viewBox="0 0 32 32">
-        <circle cx="16" cy="16" r="14" fill="var(--soleil)" />
-        <path d="M6 20c4-3 8-3 10 0s6 3 10 0v6H6z" fill="var(--mer)" />
-      </svg>
+    <Link
+      href={href}
+      className={cn(
+        "inline-flex min-h-11 items-center gap-2.5 rounded-icon font-display text-[22px] leading-none font-medium tracking-[-.01em] text-fg no-underline",
+        className,
+      )}
+    >
+      <BrandMark size={30} />
       Koudmen
     </Link>
   );

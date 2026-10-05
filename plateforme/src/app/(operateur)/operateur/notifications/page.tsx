@@ -50,9 +50,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
         <ul className="flex flex-col gap-3">
           {rows.map((m) => (
             <li key={m.id}>
-              <article aria-label={`${m.template} à ${m.to}`} className="rounded-xl border border-line bg-surface p-4">
+              <article aria-label={`${m.template} à ${m.to}`} className="rounded-card bg-surface p-5 shadow-card">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-bold">{m.subject ?? m.template}</p>
+                  <p className="font-semibold">{m.subject ?? m.template}</p>
                   <span className="flex flex-wrap gap-1">
                     <Badge tone="mer">{CHANNEL_LABELS[m.channel]}</Badge>
                     <Badge tone="neutre">{STATUS_TEXT[m.status]}</Badge>

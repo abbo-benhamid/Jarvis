@@ -13,7 +13,7 @@ export function WithdrawConsentForm({ token }: { token: string }) {
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       <input type="hidden" name="token" value={token} />
       <FormMessage state={state} />
-      <PendingButton pending={pending} pendingLabel="Effacement…" className="sm:self-start">
+      <PendingButton pending={pending} pendingLabel="Effacement…" className="w-full sm:w-auto sm:self-start">
         Retirer mon accord et effacer mon contact
       </PendingButton>
     </form>
