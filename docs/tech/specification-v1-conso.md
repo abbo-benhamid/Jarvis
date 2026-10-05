@@ -722,7 +722,7 @@ Règles :
 | **P3** Incident de service | Touche 2 de l'IVR, absence de check-in à H+30 min | < 24 h | Notification au payeur, tâche opérateur |
 | **P4** Qualité | Touche 3 de l'IVR, demande de rappel Kozé | < 72 h | Tâche opérateur |
 
-Le registre des incidents est un module à part (`src/server/incidents/`). Il est chiffré et réservé aux opérateurs.
+Le registre des incidents est un sous-module du module santé (`src/server/sante/incidents/`), car un incident peut contenir une donnée de santé (§ 13). Il est chiffré et réservé aux opérateurs.
 
 ### 9.5 Numéro affiché et cadre ARCEP
 

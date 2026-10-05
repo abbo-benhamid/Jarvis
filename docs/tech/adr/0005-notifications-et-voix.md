@@ -115,7 +115,7 @@ flowchart TD
 - ATTENTION : l'ARCEP a créé des **tranches dédiées aux systèmes automatisés d'appel** (décision 2022-1583) [À VÉRIFIER : application aux appels de service, tranches des DROM].
 - ATTENTION : le **MAN** (mécanisme d'authentification des numéros) coupe un appel dont le numéro français n'est pas authentifié par l'opérateur d'origine. Un appel Twilio international qui affiche un 0596 peut être bloqué. Le BYOC passe par l'opérateur français, qui authentifie [À VÉRIFIER].
 - Le même numéro reçoit les appels **entrants** de l'aîné (ligne vers l'astreinte).
-- Commande du numéro : **après** la réponse de l'opérateur et de l'avocat (plan, compte F7).
+- Commande du numéro : **après** la réponse de l'opérateur et de l'avocat (`plan-v1.md` § 5, compte S7).
 
 ## 4. Règles de mise en œuvre
 
