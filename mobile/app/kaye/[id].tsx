@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { api, ApiError, messageErreur, type BrouillonKaye, type KayePublie } from '@/api';
 import { useAsync } from '@/lib/useAsync';
@@ -65,6 +65,8 @@ function versBrouillon(k: Formulaire): BrouillonKaye {
 export default function KayeFormulaire() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { c } = useTheme();
+  // Revue UX m7 : à 360 px, « Correct » débordait de sa puce sur 3 colonnes. Sous 380 px : 2 colonnes.
+  const { width: largeur } = useWindowDimensions();
   const visite = useAsync(() => api.lireVisite(id), [id]);
   const [k, setK] = useState<Formulaire | null>(null);
   const [envoi, setEnvoi] = useState<'brouillon' | 'envoi' | null>(null);
@@ -244,8 +246,8 @@ export default function KayeFormulaire() {
       <View style={styles.intro}>
         <Avatar initiale={prenom.charAt(0)} teinte="soleil" aine size={48} />
         <Text variant="h2" style={{ flex: 1 }} accessibilityRole="header">
-          {/* Espace fine insécable avant « ? » (DA § 4) : jamais de « ? » seul en fin de ligne. */}
-          Comment va {prenom} <Em>{'aujourd’hui ?'}</Em>
+          {/* Espace insécable avant « ? » (DA § 4 ; la police n’a pas l’espace fine) : jamais de « ? » seul en fin de ligne. */}
+          Comment va {prenom} <Em>{'aujourd’hui ?'}</Em>
         </Text>
       </View>
 
@@ -255,7 +257,7 @@ export default function KayeFormulaire() {
           label="Humeur"
           options={humeurs}
           value={k.humeur}
-          columns={3}
+          columns={largeur < 380 ? 2 : 3}
           onChange={(humeur) => setK({ ...k, humeur })}
           erreur={verifie ? manques.humeur : null}
         />

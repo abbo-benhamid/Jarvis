@@ -45,6 +45,8 @@ export function Choice<V extends string>({ label, options, value, onChange, colu
                 styles.option,
                 {
                   flexBasis: `${100 / columns - 3}%`,
+                  // 3 colonnes et plus : marges réduites (revue UX m7, « Correct » touchait le bord).
+                  ...(columns >= 3 ? { paddingHorizontal: 10, gap: 8 } : {}),
                   backgroundColor: on ? c.merSoft : c.surface,
                   borderColor: on ? c.mer : c.lineStrong,
                   borderWidth: on ? 2 : 1.5,

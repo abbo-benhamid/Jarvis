@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 import { space, useTheme } from '@/theme';
 
 type Props = {
@@ -54,6 +53,8 @@ export function Screen({ children, dock, header, bottomInset = 0, testID }: Prop
 
 /** Hauteur du fondu au-dessus du pied d'action (DA § 10). */
 const FONDU = 32;
+/** 8 bandes de 4 px, de transparent à opaque. */
+const BANDES = [0.06, 0.15, 0.27, 0.4, 0.55, 0.7, 0.84, 0.95];
 
 /**
  * Pied d'action (§ 10) : fond `bg` PLEIN derrière les boutons, et un fondu de 32 px AU-DESSUS.
@@ -69,16 +70,11 @@ function ActionDock({ children, bottom, onHauteur }: { children: ReactNode; bott
       testID="pied-action"
       onLayout={(e) => onHauteur(Math.ceil(e.nativeEvent.layout.height))}
     >
+      {/* Fondu en bandes (pas de dégradé SVG : sur le web, `url(#id)` visait l'id d'un autre écran caché de la pile). */}
       <View style={styles.fondu} pointerEvents="none" aria-hidden>
-        <Svg width="100%" height={FONDU} preserveAspectRatio="none">
-          <Defs>
-            <LinearGradient id="dock" x1="0" y1="0" x2="0" y2="1">
-              <Stop offset="0" stopColor={c.bg} stopOpacity={0} />
-              <Stop offset="1" stopColor={c.bg} stopOpacity={1} />
-            </LinearGradient>
-          </Defs>
-          <Rect width="100%" height={FONDU} fill="url(#dock)" />
-        </Svg>
+        {BANDES.map((o) => (
+          <View key={o} style={{ flex: 1, backgroundColor: c.bg, opacity: o }} />
+        ))}
       </View>
       <View style={styles.dockInner}>{children}</View>
     </View>

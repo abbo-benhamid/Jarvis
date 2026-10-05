@@ -104,3 +104,49 @@ test('lecture hors ligne : visites du jour et fiche depuis le cache ; SOS sans r
     .poll(async () => (await journal(request)).traites.map((t) => t.type), { timeout: 15_000 })
     .toEqual(['SOS']);
 });
+
+test('V1c X5 : déconnexion avec un envoi en attente → avertissement, « Les envoyer d’abord », rien d’effacé sans choix', async ({ page, context, request }) => {
+  await seConnecter(page);
+  await page.getByTestId('ouvrir-visite-vedette').click();
+  await page.getByTestId('bouton-ecrire-kaye').click();
+  await context.setOffline(true);
+  await page.getByRole('radio', { name: 'Bien', exact: true }).click();
+  await page.getByRole('radio', { name: 'Bon', exact: true }).click();
+  await page.getByTestId('champ-note').fill(NOTE);
+  await page.getByTestId('bouton-envoyer-kaye').click();
+  await expect(page.getByTestId('kaye-garde')).toBeVisible();
+
+  // Captures du Kayé hors ligne : pied d'action opaque, message près du bouton (UX M3, m13).
+  for (const [largeur, theme] of [[360, 'light'], [360, 'dark'], [390, 'dark']] as const) {
+    await page.setViewportSize({ width: largeur, height: 800 });
+    await page.emulateMedia({ colorScheme: theme });
+    await capture(page, `kaye-hors-ligne-${largeur}-${theme}`);
+  }
+  await page.emulateMedia({ colorScheme: 'light' });
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  // Profil → « Me déconnecter » : avertissement, pas d'effacement.
+  await page.getByRole('button', { name: 'Retour', exact: true }).click();
+  await page.getByRole('button', { name: 'Retour aux visites', exact: true }).first().click();
+  await page.getByTestId('onglet-profil').click();
+  await page.getByTestId('bouton-deconnexion').click();
+  const avertissement = page.getByTestId('confirmation-deconnexion');
+  await expect(avertissement).toContainText('1 envoi n’est pas parti.');
+  await expect(avertissement).toContainText('effacé de ce téléphone');
+  await avertissement.scrollIntoViewIfNeeded();
+  await capture(page, 'profil-deconnexion-avertissement');
+
+  // « Les envoyer d'abord » sans réseau : toujours là, rien n'est effacé.
+  await page.getByTestId('envoyer-avant-deconnexion').click();
+  await expect(page.getByTestId('info-deconnexion')).toContainText('Pas encore parti');
+  await expect(page.getByTestId('indicateur-hors-ligne')).toHaveText('Hors ligne · 1 envoi en attente');
+
+  // Retour du réseau, puis « Les envoyer d'abord » : tout part, la déconnexion devient sûre.
+  await context.setOffline(false);
+  await expect
+    .poll(async () => (await journal(request)).traites.map((t) => `${t.type}:${t.statut}`), { timeout: 15_000 })
+    .toEqual(['KAYE_PUBLICATION:ACCEPTE']);
+  await expect(page.getByTestId('confirmation-deconnexion')).toHaveCount(0, { timeout: 15_000 });
+  await page.getByTestId('bouton-deconnexion').click();
+  await expect(page.getByTestId('ecran-connexion')).toBeVisible();
+});
