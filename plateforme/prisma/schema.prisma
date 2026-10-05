@@ -194,6 +194,8 @@ enum OutboxStatus {
   EN_ATTENTE
   ENVOYE_SIMULE
   ECHEC
+  /// Lot N1 : remis au fournisseur réel (ex. Expo Push accepte le message).
+  ENVOYE
 }
 
 enum FeedbackStatus {

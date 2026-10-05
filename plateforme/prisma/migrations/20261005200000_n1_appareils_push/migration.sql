@@ -4,6 +4,9 @@ CREATE TYPE "PushPlatform" AS ENUM ('IOS', 'ANDROID');
 -- AlterEnum
 ALTER TYPE "Channel" ADD VALUE 'PUSH';
 
+-- AlterEnum
+ALTER TYPE "OutboxStatus" ADD VALUE 'ENVOYE';
+
 -- CreateTable
 CREATE TABLE "PushDevice" (
     "id" TEXT NOT NULL,
