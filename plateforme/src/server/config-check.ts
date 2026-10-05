@@ -101,7 +101,7 @@ export function productionConfigProblems(env: Env = process.env): string[] {
     if (p) out.push(`TESTER_INVITE_CODES : ${p}. Générez des codes avec : pnpm ops:generate-codes`);
   }
   if (env.RATE_LIMIT_DISABLED === "true") out.push("RATE_LIMIT_DISABLED est interdit en production.");
-  if (env.TEST_END_DATE && Number.isNaN(Date.parse(env.TEST_END_DATE))) out.push("TEST_END_DATE n'est pas une date (format AAAA-MM-JJ).");
+  if (env.TEST_END_DATE && !/^\d{4}-\d{2}-\d{2}$/.test(env.TEST_END_DATE.trim())) out.push("TEST_END_DATE n'est pas une date (format AAAA-MM-JJ).");
   return out;
 }
 

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/server/auth/guards";
-import { declineDiscoveryAction } from "@/server/sandbox/actions";
+import { declineDiscoveryAction, withdrawMyDiscoveryAction } from "@/server/sandbox/actions";
+import { db } from "@/server/db";
+import { appUrl } from "@/server/env";
+import { CopyLink } from "@/components/famille/copy-link";
 import { DISCOVERY_PRICE_LABEL } from "@/lib/measure";
 import { Alert } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
@@ -15,9 +18,12 @@ export const metadata: Metadata = { title: "Visite découverte" };
  * Offre factice (D15) : mesure la volonté de payer. Le testeur laisse SON contact, avec son accord explicite.
  * Message honnête : Koudmen est en test, rien n'est réservé.
  */
-export default async function Page({ searchParams }: { searchParams: Promise<{ envoye?: string; refus?: string }> }) {
-  await requireRole("FAMILLE");
-  const { envoye, refus } = await searchParams;
+export default async function Page({ searchParams }: { searchParams: Promise<{ envoye?: string; refus?: string; retrait?: string; retire?: string }> }) {
+  const user = await requireRole("FAMILLE");
+  const { envoye, refus, retrait, retire } = await searchParams;
+  // M6 : lien de retrait du consentement (affiché une fois) et retrait depuis l'espace.
+  const withdrawLink = retrait && /^[A-Za-z0-9_-]{20,100}$/.test(retrait) ? `${appUrl()}/retrait-accord/${retrait}` : null;
+  const hasContact = (await db.discoveryRequest.count({ where: { userId: user.id } })) > 0;
   return (
     <>
       <PageHeader
@@ -26,7 +32,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
         description={`Une première visite réelle chez votre parent, avec Kayé et preuve de visite : ${DISCOVERY_PRICE_LABEL}.`}
       />
       <div className="flex max-w-2xl flex-col gap-6">
-        {envoye ? (
+        {retire ? (
+          <Alert tone="succes" title="Votre accord est retiré.">
+            Nous avons effacé votre prénom et votre contact. Nous ne vous recontactons pas.
+          </Alert>
+        ) : envoye ? (
           <Alert tone="succes" title="Merci ! Koudmen est en test : nous vous recontacterons.">
             Aucune visite n&apos;est réservée. Aucun paiement n&apos;est demandé. L&apos;équipe vous écrit quand le service réel ouvre près de chez
             votre parent. Vous pouvez retirer votre accord à tout moment.
@@ -51,7 +61,20 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
             </form>
           </>
         )}
-        {envoye || refus ? <LinkButton href="/famille" variant="secondary">Retour à l&apos;accueil</LinkButton> : null}
+        {envoye && withdrawLink ? (
+          <Card className="flex flex-col gap-2">
+            <p className="font-semibold">Gardez ce lien pour retirer votre accord plus tard :</p>
+            <CopyLink value={withdrawLink} label="Lien pour retirer votre accord" />
+          </Card>
+        ) : null}
+        {hasContact ? (
+          <form action={withdrawMyDiscoveryAction}>
+            <SubmitButton variant="secondary" pendingLabel="Effacement…">
+              Retirer mon accord et effacer mon contact
+            </SubmitButton>
+          </form>
+        ) : null}
+        {envoye || refus || retire ? <LinkButton href="/famille" variant="secondary">Retour à l&apos;accueil</LinkButton> : null}
       </div>
     </>
   );

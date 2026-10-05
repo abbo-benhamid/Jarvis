@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { editorInfo } from "@/server/env";
+import { editorInfo, testEndLabel } from "@/server/env";
 import { Field, LegalList, LegalPage, LegalSection } from "@/components/legal/legal-page";
 
 export const metadata: Metadata = { title: "Politique de confidentialité" };
@@ -8,8 +8,9 @@ export const dynamic = "force-dynamic";
 /** D4 (T3, T11) : politique de confidentialité du test (art. 13 RGPD). */
 export default function ConfidentialitePage() {
   const e = editorInfo();
+  const end = testEndLabel();
   return (
-    <LegalPage title="Politique de confidentialité" updated="4 octobre 2026">
+    <LegalPage title="Politique de confidentialité" updated="5 octobre 2026">
       <LegalSection title="En bref">
         <LegalList
           items={[
@@ -44,24 +45,43 @@ export default function ConfidentialitePage() {
                 <td className="py-2">30 jours, puis effacement automatique</td>
               </tr>
               <tr className="border-b border-line align-top">
-                <td className="py-2 pr-3">Mesure d&apos;usage : pages vues, étapes faites, réponses aux questions rapides (sans texte libre)</td>
+                <td className="py-2 pr-3">
+                  Mesure d&apos;usage : pages vues, étapes faites, réponses aux questions rapides (sans texte libre). Données pseudonymes : elles
+                  sont reliées à votre code testeur
+                </td>
                 <td className="py-2 pr-3">Améliorer le produit</td>
-                <td className="py-2">Fin du test + 1 mois [à compléter : date]</td>
+                <td className="py-2">
+                  6 mois après la fin du test (<Field value={end} />)
+                </td>
               </tr>
               <tr className="border-b border-line align-top">
-                <td className="py-2 pr-3">Avis « Donner mon avis » : note, message, page, code testeur</td>
+                <td className="py-2 pr-3">Avis « Donner mon avis » : note, message, page, code testeur, type de navigateur (user-agent)</td>
                 <td className="py-2 pr-3">Améliorer le produit</td>
-                <td className="py-2">Fin du test + 1 mois [à compléter : date]</td>
+                <td className="py-2">
+                  6 mois après la fin du test (<Field value={end} />)
+                </td>
               </tr>
               <tr className="border-b border-line align-top">
                 <td className="py-2 pr-3">Offre « visite découverte » : prénom et contact (email ou téléphone)</td>
                 <td className="py-2 pr-3">Vous recontacter, seulement si vous l&apos;avez demandé</td>
-                <td className="py-2">Jusqu&apos;au retrait de votre accord, et au plus 6 mois</td>
+                <td className="py-2">
+                  Jusqu&apos;au retrait de votre accord, et au plus 6 mois (effacement automatique). Pour retirer votre accord : le lien donné
+                  après l&apos;envoi, le bouton de la page « visite découverte », ou un email
+                </td>
+              </tr>
+              <tr className="border-b border-line align-top">
+                <td className="py-2 pr-3">Limite d&apos;essais : empreinte chiffrée (non réversible) de votre adresse IP ou de votre compte</td>
+                <td className="py-2 pr-3">Protéger le test contre les abus (essais de codes ou de mots de passe en masse)</td>
+                <td className="py-2">Au plus 24 heures</td>
               </tr>
               <tr className="align-top">
-                <td className="py-2 pr-3">Compte créé par inscription : nom, email, mot de passe haché, connexions</td>
+                <td className="py-2 pr-3">
+                  Compte créé par inscription (démonstrations seulement ; fermée pendant le test) : nom, email, mot de passe haché, connexions
+                </td>
                 <td className="py-2 pr-3">Accès à votre espace</td>
-                <td className="py-2">Fin du test + 1 mois [à compléter : date]</td>
+                <td className="py-2">
+                  Fin du test (<Field value={end} />)
+                </td>
               </tr>
             </tbody>
           </table>
@@ -77,8 +97,8 @@ export default function ConfidentialitePage() {
         <LegalList
           items={[
             "L'équipe Koudmen (opérateurs). Les autres testeurs ne voient jamais votre bac à sable.",
-            "Nos sous-traitants techniques : Vercel Inc. (hébergement) et Neon (base de données PostgreSQL, région UE).",
-            "Ces sociétés sont américaines. Le transfert repose sur le cadre UE–États-Unis ou sur des clauses types. [À VÉRIFIER AVEC UN AVOCAT]",
+            "Nos sous-traitants techniques : Vercel Inc. (hébergement de l'application, région de Francfort, UE) et Neon Inc. (base de données PostgreSQL, région de Francfort, UE). Adresses : page Mentions légales.",
+            "L'application et la base tournent dans l'Union européenne. Vercel et Neon restent des sociétés américaines : le transfert possible repose sur le cadre UE–États-Unis (DPF) ou sur des clauses types. [À VÉRIFIER AVEC UN AVOCAT]",
           ]}
         />
       </LegalSection>
@@ -86,8 +106,8 @@ export default function ConfidentialitePage() {
       <LegalSection title="Cookies">
         <LegalList
           items={[
-            "« koudmen_session » : garde votre connexion (7 jours). Strictement nécessaire.",
-            "« koudmen_bac_a_sable » : permet de reprendre votre test sur cet appareil (30 jours). Strictement nécessaire.",
+            "« koudmen_session » : garde votre connexion (7 jours ; 12 heures pour l'équipe Koudmen). Effacé à la déconnexion. Strictement nécessaire.",
+            "« koudmen_bac_a_sable » : permet de reprendre votre test sur cet appareil (30 jours). Effacé à la déconnexion. Strictement nécessaire.",
             "Aucun cookie de publicité ni de mesure d'audience. Aucun bandeau n'est donc nécessaire.",
           ]}
         />

@@ -34,8 +34,14 @@ export default function MentionsLegalesPage() {
       <LegalSection title="Hébergement">
         <LegalList
           items={[
-            <>Application : Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, États-Unis. Site : vercel.com.</>,
-            <>Base de données : un fournisseur PostgreSQL géré (Neon), dans une région de l&apos;Union européenne.</>,
+            <>
+              Application : Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, États-Unis. Site : vercel.com. Les fonctions tournent dans la
+              région de Francfort (Union européenne).
+            </>,
+            <>
+              Base de données : Neon Inc., 2261 Market Street STE 22279, San Francisco, CA 94114, États-Unis [À VÉRIFIER]. Site : neon.tech. Les
+              données sont stockées dans une région de l&apos;Union européenne (Francfort).
+            </>,
           ]}
         />
       </LegalSection>

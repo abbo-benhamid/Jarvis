@@ -1,5 +1,6 @@
 "use server";
 
+import { createHash, randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -31,6 +32,10 @@ const startSchema = z.object({
   adult: z.literal("on", { message: "Le test est réservé aux personnes de 18 ans ou plus." }),
   acceptTest: z.literal("on", { message: "Confirmez que vous utilisez uniquement des données fictives." }),
 });
+
+function hashWithdrawToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 function formToObject(formData: FormData): Record<string, string> {
   const out: Record<string, string> = {};
@@ -127,6 +132,8 @@ export async function requestDiscoveryAction(_prev: ActionResult, formData: Form
   if (!limited.allowed) return fail(retryMessage(limited.retryAfterSeconds));
   const sandbox = user.sandboxId ? await db.sandbox.findUnique({ where: { id: user.sandboxId }, select: { testerCode: true } }) : null;
   const now = new Date();
+  // M6 : lien « Retirer mon accord ». La base garde seulement l'empreinte SHA-256 du jeton.
+  const withdrawToken = randomBytes(24).toString("base64url");
   const created = await db.discoveryRequest.create({
     data: {
       userId: user.id,
@@ -136,6 +143,7 @@ export async function requestDiscoveryAction(_prev: ActionResult, formData: Form
       contact: parsed.data.contact,
       consentText: DISCOVERY_CONSENT_TEXT,
       consentAt: now,
+      withdrawTokenHash: hashWithdrawToken(withdrawToken),
     },
     select: { id: true },
   });
@@ -143,7 +151,44 @@ export async function requestDiscoveryAction(_prev: ActionResult, formData: Form
   await logAudit({ actor: user, action: "discovery.requested", entityType: "DiscoveryRequest", entityId: created.id });
   await trackEvent(user, "discovery.requested");
   revalidatePath("/", "layout");
-  redirect("/famille/visite-decouverte?envoye=1");
+  // Le lien de retrait s'affiche une seule fois, sur la page de confirmation (le testeur le garde).
+  redirect(`/famille/visite-decouverte?envoye=1&retrait=${withdrawToken}`);
+}
+
+const withdrawSchema = z.object({ token: z.string().regex(/^[A-Za-z0-9_-]{20,100}$/) });
+
+/**
+ * Retrait du consentement PAR LIEN (M6), sans compte : le contact est EFFACÉ (pas seulement marqué).
+ * Fonctionne après la purge du bac à sable (le contact vit jusqu'à 6 mois).
+ */
+export async function withdrawDiscoveryByTokenAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const parsed = withdrawSchema.safeParse(formToObject(formData));
+  if (!parsed.success) return fail("Ce lien n'est pas valable.");
+  const limited = await hitRateLimit("retrait:ip", await clientIp());
+  if (!limited.allowed) return fail(retryMessage(limited.retryAfterSeconds));
+  const found = await db.discoveryRequest.findUnique({ where: { withdrawTokenHash: hashWithdrawToken(parsed.data.token) }, select: { id: true } });
+  if (!found) return fail("Ce lien n'est plus valable : votre accord est déjà retiré, ou votre contact est déjà effacé.");
+  await db.$transaction(async (tx) => {
+    await tx.discoveryRequest.delete({ where: { id: found.id } });
+    await logAudit({ action: "discovery.withdrawn", entityType: "DiscoveryRequest", entityId: found.id, metadata: { via: "lien" } }, tx);
+  });
+  return { ok: true, message: "Votre accord est retiré. Nous avons effacé votre prénom et votre contact." };
+}
+
+/** Retrait du consentement depuis l'espace du testeur connecté : efface SES demandes de visite découverte. */
+export async function withdrawMyDiscoveryAction(): Promise<void> {
+  const user = await requireRole("FAMILLE");
+  const mine = await db.discoveryRequest.findMany({ where: { userId: user.id }, select: { id: true } });
+  if (mine.length > 0) {
+    await db.$transaction(async (tx) => {
+      await tx.discoveryRequest.deleteMany({ where: { id: { in: mine.map((d) => d.id) } } });
+      for (const d of mine) {
+        await logAudit({ actor: user, action: "discovery.withdrawn", entityType: "DiscoveryRequest", entityId: d.id, metadata: { via: "espace" } }, tx);
+      }
+    });
+  }
+  revalidatePath("/", "layout");
+  redirect("/famille/visite-decouverte?retire=1");
 }
 
 /** « Non, pas maintenant » : la réponse compte aussi (mesure de la volonté de payer). */

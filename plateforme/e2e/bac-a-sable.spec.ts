@@ -105,6 +105,20 @@ test("famille : entrée avec code → Simuler la suite → choisir un profil →
   await expect(op.getByRole("heading", { level: 1, name: "Mesure du test" })).toBeVisible();
   await expect(op.getByText("nadia.e2e@exemple.test")).toBeVisible();
   await op.close();
+
+  // M6 : retrait du consentement par le lien donné une fois après l'envoi (sans compte, autre appareil).
+  const withdrawLink = await page.getByLabel("Lien pour retirer votre accord").inputValue();
+  expect(withdrawLink).toMatch(/\/retrait-accord\/[A-Za-z0-9_-]{20,}$/);
+  const other = await browser.newPage();
+  await other.goto(new URL(withdrawLink).pathname);
+  await other.getByRole("button", { name: "Retirer mon accord et effacer mon contact" }).click();
+  await expect(other.getByText(/Votre accord est retiré/)).toBeVisible();
+  expect(await prisma.discoveryRequest.count({ where: { contact: "nadia.e2e@exemple.test" } })).toBe(0);
+  // Deuxième clic sur le même lien : plus rien à effacer.
+  await other.reload();
+  await other.getByRole("button", { name: "Retirer mon accord et effacer mon contact" }).click();
+  await expect(other.getByText(/n'est plus valable/)).toBeVisible();
+  await other.close();
 });
 
 test("le lien de reprise rouvre le bac à sable sur un autre appareil", async ({ page, browser }) => {

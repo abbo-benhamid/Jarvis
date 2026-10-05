@@ -1,4 +1,5 @@
 import "server-only";
+import { parseTestEndDate } from "./sandbox/purge";
 import { isStrictProduction, normalizeTesterCode, parseTesterCodes, secretProblem, testerCodeProblem } from "./config-check";
 
 export { normalizeTesterCode, isStrictProduction };
@@ -71,6 +72,17 @@ export function cronSecret(): string | null {
   // B3 : en production, une valeur d'exemple ou trop courte (< 32) ferme la route.
   if (isStrictProduction() && secretProblem("CRON_SECRET", s)) return null;
   return s;
+}
+
+/** Date de fin du test (TEST_END_DATE, AAAA-MM-JJ). Null si absente : les pages affichent « [à compléter] ». */
+export function testEndDate(): Date | null {
+  return parseTestEndDate(process.env.TEST_END_DATE);
+}
+
+/** Date de fin du test, en clair (« 31 décembre 2026 »), ou « [à compléter] ». Affichée dans les CGU et la confidentialité (B2). */
+export function testEndLabel(): string {
+  const d = testEndDate();
+  return d ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeZone: "UTC" }).format(d) : MISSING;
 }
 
 /** Identité de l'éditeur (D4). Une valeur absente s'affiche « [à compléter] ». */
