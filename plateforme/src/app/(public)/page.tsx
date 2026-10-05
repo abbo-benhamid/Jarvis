@@ -54,7 +54,7 @@ export default function HomePage() {
             chaque visite, et vous dit ce qui s&apos;est vraiment passé.
           </p>
           <div className="mt-8 hidden items-center gap-5 lg:flex">
-            <LinkButton href="/tester" size="lg" iconEnd={<ArrowRight strokeWidth={1.8} />}>
+            <LinkButton href="/tester" size="lg" data-testid="cta-premier-ecran" iconEnd={<ArrowRight strokeWidth={1.8} />}>
               Tester Koudmen
             </LinkButton>
             <p className="max-w-[18rem] text-[15px] leading-snug text-muted">Gratuit, 10 minutes, sur invitation. Un monde fictif rien que pour vous.</p>
@@ -205,7 +205,7 @@ export default function HomePage() {
       {/* Mobile : l'action principale au pouce (§ 2.5). Collante dans la page : elle ne cache jamais le pied de page. */}
       <div className="sticky bottom-0 z-30 -mx-5 -mt-16 lg:hidden">
         <ActionDock position="static" meta={{ start: "Gratuit · 10 minutes", end: "Sur invitation" }}>
-          <LinkButton href="/tester" size="lg" fullWidth iconEnd={<ArrowRight strokeWidth={1.8} />}>
+          <LinkButton href="/tester" size="lg" fullWidth data-testid="cta-premier-ecran" iconEnd={<ArrowRight strokeWidth={1.8} />}>
             Tester Koudmen
           </LinkButton>
         </ActionDock>
