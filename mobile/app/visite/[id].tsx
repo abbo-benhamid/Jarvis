@@ -1,20 +1,19 @@
 import { useState, type ReactNode } from 'react';
-import { ActivityIndicator, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
   api,
   ApiError,
   API_MODE,
   CODE_DOMICILE_DEMO,
-  lirePositionUnique,
   messageErreur,
-  positionDisponible,
   type PositionPonctuelle,
   type ReponseVisite,
   type ResultatEvenement,
 } from '@/api';
 import { heureTexte, libelleJour, NBSP, plageHoraire } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
+import { lireQrDomicile, MESSAGES_QR, natif, normaliserCode, type NumeroUrgence } from '@/native';
 import { retourAuxVisites } from '@/session/navigation';
 import { fonts, radius, useTheme } from '@/theme';
 import { Badge, Button, Card, Field, Icon, IconButton, ProofBadge, Screen, SectionHeader, SwitchRow, Text } from '@/ui';
@@ -100,11 +99,27 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
   const [code, setCode] = useState('');
   const [accordPosition, setAccordPosition] = useState(false);
   const [retour, setRetour] = useState<ResultatEvenement | null>(null);
+  const [scanOuvert, setScanOuvert] = useState(false);
+  const [avisQr, setAvisQr] = useState<{ ok: boolean; texte: string } | null>(null);
 
   const n = nbPreuves(v);
   const prouvee = estProuvee(v);
   const duJour = estDuJour(v);
-  const gpsPossible = positionDisponible();
+  const gpsPossible = natif.position.disponible();
+  const scanPossible = natif.scanner.disponible();
+  const Scanner = natif.scanner.Vue;
+
+  // Le QR remplit le champ du code. L'accompagnant valide ensuite (une seule action principale).
+  const lireQr = (texte: string) => {
+    setScanOuvert(false);
+    const r = lireQrDomicile(texte);
+    if (r.ok && r.format === 'lisible') {
+      setCode(r.code);
+      setAvisQr({ ok: true, texte: `QR lu : code ${r.code}. Validez votre arrivée.` });
+    } else {
+      setAvisQr({ ok: false, texte: r.ok ? MESSAGES_QR.SIGNE_NON_PRIS_EN_CHARGE : r.message });
+    }
+  };
   const pretArrivee = code.trim().length >= 4 || accordPosition;
 
   const arriver = async () => {
@@ -115,7 +130,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
       let avisPosition: string | null = null;
       if (accordPosition) {
         try {
-          position = await lirePositionUnique();
+          position = await natif.position.lireUneFois();
         } catch (e) {
           avisPosition = messageErreur(e);
           if (!code.trim()) throw e;
@@ -125,6 +140,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
       setRetour(avisPosition ? { ...r, preuves: { ...r.preuves, position: { valide: false, message: avisPosition } } } : r);
       setCode('');
       setAccordPosition(false);
+      setAvisQr(null);
       recharger();
     } catch (e) {
       setErreur(messageErreur(e));
@@ -282,6 +298,33 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
         <>
           <SectionHeader title="Je suis arrivé·e" />
           <Card style={{ gap: 16 }} testID="carte-arrivee">
+            {scanOuvert ? (
+              <Scanner onLecture={lireQr} onAnnuler={() => setScanOuvert(false)} />
+            ) : scanPossible ? (
+              <Button
+                testID="bouton-scanner"
+                variant="quiet"
+                icon="scan"
+                label="Scanner le QR code"
+                accessibilityHint="Ouvre la caméra pour lire le QR code affiché au domicile"
+                onPress={() => {
+                  setAvisQr(null);
+                  setScanOuvert(true);
+                }}
+              />
+            ) : null}
+            {avisQr ? (
+              <View
+                testID="avis-qr"
+                accessibilityLiveRegion="polite"
+                style={[styles.bandeau, { marginTop: 0, backgroundColor: avisQr.ok ? c.feuilleSoft : c.soleilSoft }]}
+              >
+                <Icon name={avisQr.ok ? 'check' : 'info'} size={18} color={avisQr.ok ? c.feuille : c.soleilInk} />
+                <Text variant="small" style={{ flex: 1, color: avisQr.ok ? c.feuille : c.soleilInk }}>
+                  {avisQr.texte}
+                </Text>
+              </View>
+            ) : null}
             <Field
               testID="champ-code-domicile"
               label="Code du domicile"
@@ -291,8 +334,14 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
               maxLength={12}
               grand
               value={code}
-              onChangeText={(t) => setCode(t.replace(/[^0-9a-zA-Z]/g, '').toUpperCase())}
-              aide={API_MODE === 'simule' ? `Démo hors ligne : le code est ${CODE_DOMICILE_DEMO}.` : 'Il est affiché chez la personne. Il n’est pas gardé sur ce téléphone.'}
+              onChangeText={(t) => setCode(normaliserCode(t))}
+              aide={
+                API_MODE === 'simule'
+                  ? `Démo hors ligne : le code est ${CODE_DOMICILE_DEMO}.`
+                  : scanPossible
+                    ? 'Scannez le QR, ou entrez le code écrit dessous. Il n’est pas gardé sur ce téléphone.'
+                    : 'Il est affiché chez la personne. Il n’est pas gardé sur ce téléphone.'
+              }
             />
             {gpsPossible ? (
               <View style={{ gap: 8 }}>
@@ -306,6 +355,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
                 {accordPosition ? (
                   <Text variant="small" tone="muted" testID="texte-accord-position">
                     J’accepte une lecture unique de ma position, au moment où je valide. Rien n’est lu au départ, au Kayé ou au SOS.
+                    {natif.mode === 'natif' ? ' Le téléphone demande ensuite l’accès « pendant l’utilisation de l’app » : jamais en arrière-plan.' : ''}
                   </Text>
                 ) : null}
               </View>
@@ -393,7 +443,7 @@ function PanneauSos({ visiteId, onFermer }: { visiteId?: string; onFermer: () =>
           <Text variant="small" style={{ color: c.hibiscus }} testID="consigne-sos">
             {consigne}
           </Text>
-          <Button variant="danger" icon="phone" label="Appeler le 15" onPress={() => void Linking.openURL('tel:15')} />
+          <AppelsUrgence />
           <Button variant="link" label="Fermer" onPress={onFermer} />
         </>
       ) : (
@@ -409,10 +459,53 @@ function PanneauSos({ visiteId, onFermer }: { visiteId?: string; onFermer: () =>
               {erreur}
             </Text>
           ) : null}
-          <Button testID="bouton-envoyer-sos" variant="danger" label="Envoyer l’alerte" loading={envoi} onPress={() => void envoyer()} />
-          <Button variant="link" label="Annuler" onPress={onFermer} />
+          <Button
+            testID="bouton-envoyer-sos"
+            variant="danger"
+            icon="bell"
+            label="Envoyer l’alerte à Koudmen"
+            loading={envoi}
+            onPress={() => void envoyer()}
+            style={{ backgroundColor: c.surface, borderWidth: 1.5, borderColor: c.hibiscus }}
+          />
+          <Text variant="small" style={{ color: c.hibiscus }}>
+            Danger immédiat ? Appelez directement :
+          </Text>
+          <AppelsUrgence />
+          <Button testID="annuler-sos" variant="link" label="Annuler" onPress={onFermer} />
         </>
       )}
+    </View>
+  );
+}
+
+/** Liens d'appel 15 (SAMU) et 112 (urgences européen), au pouce. Aucune donnée envoyée à Koudmen. */
+function AppelsUrgence() {
+  const { c } = useTheme();
+  const numeros: { n: NumeroUrgence; detail: string }[] = [
+    { n: '15', detail: 'SAMU' },
+    { n: '112', detail: 'Urgences' },
+  ];
+  return (
+    <View style={{ flexDirection: 'row', gap: 10 }} testID="appels-urgence">
+      {numeros.map(({ n, detail }) => (
+        <Pressable
+          key={n}
+          testID={`appeler-${n}`}
+          accessibilityRole="button"
+          accessibilityLabel={`Appeler le ${n}, ${detail}`}
+          onPress={() => void natif.appel.appeler(n).catch(() => undefined)}
+          style={({ pressed }) => [styles.appel, { backgroundColor: c.hibiscus, opacity: pressed ? 0.85 : 1 }]}
+        >
+          <Icon name="phone" size={24} color={c.bg} />
+          <View>
+            <Text style={{ fontFamily: fonts.sansBold, fontSize: 24, lineHeight: 28, color: c.bg }} num>
+              {n}
+            </Text>
+            <Text style={{ fontFamily: fonts.sansMedium, fontSize: 14, lineHeight: 18, color: c.bg }}>{detail}</Text>
+          </View>
+        </Pressable>
+      ))}
     </View>
   );
 }
@@ -425,5 +518,6 @@ const styles = StyleSheet.create({
   bandeau: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginTop: 12, padding: 14, borderRadius: 16 },
   stepRow: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 64, paddingVertical: 8 },
   st: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  appel: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, minHeight: 64, borderRadius: radius.field, paddingHorizontal: 12 },
   verdict: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12, padding: 16, borderRadius: 20 },
 });
