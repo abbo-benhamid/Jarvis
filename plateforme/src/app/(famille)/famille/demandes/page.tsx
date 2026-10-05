@@ -9,6 +9,8 @@ import { communeLabel } from "@/lib/communes";
 import { formatEuros, initialWithDot } from "@/lib/format";
 import { commonSlots } from "@/server/rules/matching";
 import { Badge } from "@/components/ui/badge";
+import { Avatar } from "@/components/ui/avatar";
+import { Card } from "@/components/ui/card";
 import { ChooseProfileForm } from "@/components/famille/choose-profile-form";
 import { formatDate } from "@/lib/format";
 import { Alert } from "@/components/ui/alert";
@@ -62,8 +64,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
         description="Vous demandez. Koudmen vous propose 1 à 3 profils. Vous choisissez. La personne choisie accepte librement."
         actions={
           aines.length > 0 ? (
-            <LinkButton href="/famille/demandes/nouvelle">
-              <Plus aria-hidden="true" className="size-4" />
+            <LinkButton href="/famille/demandes/nouvelle" size="lg" fullWidth icon={<Plus strokeWidth={1.6} />}>
               Nouvelle demande
             </LinkButton>
           ) : undefined
@@ -85,10 +86,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
 
         {aines.length === 0 ? (
           <EmptyState
-            title="Ajoutez d'abord un aîné"
+            title="Ajoutez d'abord un aîné."
             action={
-              <LinkButton href="/famille/aines/nouveau">
-                <Plus aria-hidden="true" className="size-4" />
+              <LinkButton href="/famille/aines/nouveau" size="lg" fullWidth icon={<Plus strokeWidth={1.6} />}>
                 Ajouter un aîné
               </LinkButton>
             }
@@ -96,11 +96,18 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
             Une demande concerne toujours un aîné de votre cercle Lakou.
           </EmptyState>
         ) : active.length === 0 ? (
-          <EmptyState title="Aucune demande en cours" action={<LinkButton href="/famille/demandes/nouvelle">Demander un accompagnement</LinkButton>}>
+          <EmptyState
+            title="Aucune demande en cours."
+            action={
+              <LinkButton href="/famille/demandes/nouvelle" size="lg" fullWidth>
+                Demander un accompagnement
+              </LinkButton>
+            }
+          >
             Décrivez le besoin : niveau, fréquence, créneaux. Cela prend 2 minutes.
           </EmptyState>
         ) : (
-          <ul className="flex flex-col gap-4">
+          <ul className="m-0 flex list-none flex-col gap-4 p-0">
             {active.map((r) => (
               <RequestItem key={r.id} r={r} />
             ))}
@@ -108,9 +115,9 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
         )}
 
         {cancelled.length > 0 ? (
-          <details className="rounded-xl border border-line bg-surface px-4 py-2">
-            <summary className="min-h-11 cursor-pointer py-2 font-semibold">Demandes annulées ({cancelled.length})</summary>
-            <ul className="flex flex-col gap-3 pb-3">
+          <details className="rounded-card bg-surface px-5 shadow-card">
+            <summary className="flex min-h-14 cursor-pointer items-center py-3 text-[17px] font-semibold">Demandes annulées ({cancelled.length})</summary>
+            <ul className="m-0 flex list-none flex-col gap-3 p-0 pb-4">
               {cancelled.map((r) => (
                 <RequestItem key={r.id} r={r} />
               ))}
@@ -124,55 +131,52 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
 
 function RequestItem({ r }: { r: RequestRow }) {
   return (
-    <li className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <h2 className="text-xl font-bold">
-          {r.aine.firstName} {initialWithDot(r.aine.lastInitial)}
-          <span className="block text-base font-normal text-muted">
-            Demande de {r.createdBy.firstName}, le {formatDate(r.createdAt)}
-          </span>
-        </h2>
-        <RequestStatusBadge status={r.status} />
-      </div>
-      <p>{followUp(r)}</p>
-      <div className="flex flex-wrap gap-2">
-        <LevelBadge level={r.level} />
-      </div>
-      <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
-        <div>
-          <dt className="inline font-semibold">Fréquence : </dt>
-          <dd className="inline">{FREQUENCY_LABELS[r.frequency]}</dd>
-        </div>
-        <div>
-          <dt className="inline font-semibold">Durée : </dt>
-          <dd className="inline">{durationLabel(r.durationMinutes)}</dd>
-        </div>
-        <div className="sm:col-span-2">
-          <dt className="inline font-semibold">Créneaux : </dt>
-          <dd className="inline">{slotsText(r.slots)}</dd>
-        </div>
-        {r.startDate ? (
-          <div>
-            <dt className="inline font-semibold">À partir du : </dt>
-            <dd className="inline">{formatDate(r.startDate)}</dd>
+    <li>
+      <Card as="article" aria-labelledby={`demande-${r.id}`} className="flex flex-col gap-3.5">
+        <div className="flex items-start gap-3.5">
+          <Avatar name={r.aine.firstName} size={44} role="aine" />
+          <div className="min-w-0 flex-1">
+            <h2 id={`demande-${r.id}`} className="font-sans text-[17px] leading-snug font-semibold tracking-normal">
+              {r.aine.firstName} {initialWithDot(r.aine.lastInitial)}
+              <span className="block text-[15px] font-normal text-muted">
+                Demande de {r.createdBy.firstName}, le {formatDate(r.createdAt)}
+              </span>
+            </h2>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <RequestStatusBadge status={r.status} />
+              <LevelBadge level={r.level} />
+            </div>
           </div>
-        ) : null}
-        <div>
-          <dt className="inline font-semibold">Envoyée le : </dt>
-          <dd className="inline">
-            {formatDate(r.createdAt)} par {r.createdBy.firstName}
-          </dd>
         </div>
-      </dl>
-      {r.notes ? <p className="rounded-lg bg-bg p-3 text-sm">{r.notes}</p> : null}
-      <p className="text-sm">
-        <span className="font-semibold">Employeur : </span>
-        {EMPLOYER_TYPE_LABELS[r.employerType]}
-        {r.employerName ? ` — ${r.employerName}` : ""}
-      </p>
-      {r.status === "PROPOSEE" && r.proposals.length > 0 ? <ProfileList r={r} /> : null}
-      {canCancelRequest(r.status) ? <CancelRequestForm requestId={r.id} aineFirstName={r.aine.firstName} /> : null}
+        <p className="text-[17px] leading-[1.5]">{followUp(r)}</p>
+        <dl className="num m-0 border-t border-line pt-1 text-[15px]">
+          <Row label="Fréquence">{FREQUENCY_LABELS[r.frequency]}</Row>
+          <Row label="Durée">{durationLabel(r.durationMinutes)}</Row>
+          <Row label="Créneaux">{slotsText(r.slots)}</Row>
+          {r.startDate ? <Row label="À partir du">{formatDate(r.startDate)}</Row> : null}
+          <Row label="Envoyée le">
+            {formatDate(r.createdAt)} par {r.createdBy.firstName}
+          </Row>
+          <Row label="Employeur">
+            {EMPLOYER_TYPE_LABELS[r.employerType]}
+            {r.employerName ? ` — ${r.employerName}` : ""}
+          </Row>
+        </dl>
+        {r.notes ? <p className="rounded-md bg-surface-2 p-3.5 text-[15px] leading-[1.45]">{r.notes}</p> : null}
+        {r.status === "PROPOSEE" && r.proposals.length > 0 ? <ProfileList r={r} /> : null}
+        {canCancelRequest(r.status) ? <CancelRequestForm requestId={r.id} aineFirstName={r.aine.firstName} /> : null}
+      </Card>
     </li>
+  );
+}
+
+/** Ligne « libellé : valeur » (filet entre les lignes). */
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-wrap justify-between gap-x-3 border-b border-line py-2 last:border-b-0">
+      <dt className="text-muted">{label}</dt>
+      <dd className="m-0 text-right font-medium">{children}</dd>
+    </div>
   );
 }
 
@@ -183,32 +187,41 @@ function RequestItem({ r }: { r: RequestRow }) {
 function ProfileList({ r }: { r: RequestRow }) {
   const chosen = r.proposals.some((p) => p.status === "EN_ATTENTE");
   return (
-    <section aria-label={`Profils proposés pour ${r.aine.firstName}`} className="flex flex-col gap-3">
-      <h3 className="text-lg font-bold">{chosen ? "Profil choisi" : "Profils proposés : choisissez la personne"}</h3>
-      <p className="text-sm text-muted">
+    <section aria-label={`Profils proposés pour ${r.aine.firstName}`} className="flex flex-col gap-3 border-t border-line pt-4">
+      <h3 className="font-display text-[22px] leading-[1.2] font-normal tracking-[-.015em]">
+        {chosen ? "Profil choisi" : "Profils proposés : choisissez la personne"}
+      </h3>
+      <p className="text-[15px] leading-[1.45] text-muted">
         Koudmen montre des profils compatibles (commune, niveau, créneaux). Aucune note, aucun classement. Vous êtes l&apos;employeur : vous
         choisissez.
       </p>
-      <ul className="grid gap-3 md:grid-cols-2">
+      <ul className="m-0 flex list-none flex-col gap-3 p-0">
         {r.proposals.map((p) => {
           const c = p.caregiver;
           const name = caregiverDisplayName(c);
           const slots = r.slots.length > 0 ? commonSlots(r.slots, c.availabilities) : [];
           return (
             <li key={p.id}>
-              <article aria-label={name} className="flex h-full flex-col gap-2 rounded-xl border border-line bg-bg p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h4 className="text-lg font-bold">{name}</h4>
-                  {p.status === "EN_ATTENTE" ? <Badge tone="soleil">Choisi · en attente de réponse</Badge> : null}
+              <article aria-label={name} className="flex flex-col gap-2.5 rounded-lg bg-surface-2/60 p-4 ring-1 ring-line">
+                <div className="flex items-center gap-3">
+                  <Avatar name={c.user.firstName} size={44} role="accompagnant" />
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-sans text-[17px] leading-snug font-semibold tracking-normal">{name}</h4>
+                    {c.status ? <p className="text-[15px] text-muted">{CAREGIVER_STATUS_LABELS[c.status]}</p> : null}
+                  </div>
                 </div>
-                <p className="text-sm">{c.status ? CAREGIVER_STATUS_LABELS[c.status] : ""}</p>
-                {c.bio ? <p className="text-sm">{c.bio}</p> : null}
-                <p className="text-sm text-muted">
+                {p.status === "EN_ATTENTE" ? (
+                  <div>
+                    <Badge tone="soleil">Choisi · en attente de réponse</Badge>
+                  </div>
+                ) : null}
+                {c.bio ? <p className="text-[15px] leading-[1.45]">{c.bio}</p> : null}
+                <p className="text-[15px] leading-[1.45] text-muted">
                   {c.communes.map(communeLabel).join(", ")} ·{" "}
                   {c.hourlyRateCents != null ? `${formatEuros(c.hourlyRateCents)} / heure (tarif fixé par l'accompagnant)` : "bénévole"}
                 </p>
                 {slots.length > 0 ? (
-                  <p className="text-sm">
+                  <p className="text-[15px] leading-[1.45]">
                     Créneaux communs : {slots.map((s) => `${DAY_LABELS[s.dayOfWeek]} ${SLOT_LABELS[s.slot].toLowerCase()}`).join(", ")}
                   </p>
                 ) : null}

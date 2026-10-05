@@ -31,7 +31,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
         title="Réserver une vraie visite découverte"
         description={`Une première visite réelle chez votre parent, avec Kayé et preuve de visite : ${DISCOVERY_PRICE_LABEL}.`}
       />
-      <div className="flex max-w-2xl flex-col gap-6">
+      <div className="flex flex-col gap-4">
         {retire ? (
           <Alert tone="succes" title="Votre accord est retiré.">
             Nous avons effacé votre prénom et votre contact. Nous ne vous recontactons pas.
@@ -55,7 +55,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
               <DiscoveryForm />
             </Card>
             <form action={declineDiscoveryAction}>
-              <SubmitButton variant="ghost" pendingLabel="…">
+              <SubmitButton variant="link" size="lg" pendingLabel="…" className="w-full">
                 Non merci, pas maintenant
               </SubmitButton>
             </form>
@@ -69,12 +69,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
         ) : null}
         {hasContact ? (
           <form action={withdrawMyDiscoveryAction}>
-            <SubmitButton variant="secondary" pendingLabel="Effacement…">
+            <SubmitButton variant="quiet" size="lg" pendingLabel="Effacement…" className="w-full">
               Retirer mon accord et effacer mon contact
             </SubmitButton>
           </form>
         ) : null}
-        {envoye || refus || retire ? <LinkButton href="/famille" variant="secondary">Retour à l&apos;accueil</LinkButton> : null}
+        {envoye || refus || retire ? <LinkButton href="/famille" variant="quiet" size="lg" fullWidth>Retour à l&apos;accueil</LinkButton> : null}
       </div>
     </>
   );

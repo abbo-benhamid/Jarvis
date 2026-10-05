@@ -1,74 +1,90 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Check } from "lucide-react";
+import { Lock } from "lucide-react";
 import type { Plan } from "@prisma/client";
 import { changePlanAction } from "@/server/famille/actions";
 import { initialActionState } from "@/lib/action-result";
-import { PLANS } from "@/lib/plans";
-import { cn } from "@/lib/cn";
-import { Badge } from "@/components/ui/badge";
+import { OFFER_TEST_NOTICE, PLANS, type PlanInfo } from "@/lib/plans";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { FormMessage } from "@/components/ui/form-message";
+import { PlanRadio, type PlanOption } from "@/components/ui/plan-radio";
 import { PlanCostExample } from "./plan-cost";
 
-/** F9 : les 3 formules. Seul le payeur peut choisir (sinon boutons absents). Un choix demande une confirmation. */
+/** « dès 149 € par mois » → préfixe, prix, suffixe : mêmes mots, mise en forme de la maquette (écran e). */
+function splitPrice(label: string): Pick<PlanOption, "price" | "pricePrefix" | "priceSuffix"> {
+  const m = label.match(/^(dès )?(.+?)( par mois)?$/);
+  if (!m) return { price: label };
+  return { pricePrefix: m[1]?.trim(), price: m[2] ?? label, priceSuffix: m[3]?.trim() };
+}
+
+function toOption(p: PlanInfo, current: Plan | null, locked: boolean): PlanOption {
+  return {
+    value: p.plan,
+    name: p.name,
+    ...splitPrice(p.priceLabel),
+    description: p.meaning,
+    features: p.features,
+    tag: current === p.plan ? "Formule actuelle" : undefined,
+    disabled: locked && current !== p.plan,
+  };
+}
+
+/**
+ * F9 (maquette, écran e) : les 3 formules en cartes radio. Seul le payeur choisit (sinon lecture seule).
+ * Un choix demande une confirmation (erreur de doigt sur mobile). Paiement simulé.
+ */
 export function PlanChooser({ aineId, current, canChange }: { aineId: string; current: Plan | null; canChange: boolean }) {
   const [state, action, pending] = useActionState(changePlanAction, initialActionState);
-  const [confirming, setConfirming] = useState<Plan | null>(null);
+  const [selected, setSelected] = useState<Plan>(current ?? "LAKOU");
+  const [confirming, setConfirming] = useState(false);
+  const plan = PLANS.find((p) => p.plan === selected) ?? PLANS[0]!;
+  const isCurrent = selected === current;
+
   return (
-    <div className="flex flex-col gap-4">
+    <form action={action} className="flex flex-col gap-4">
+      <input type="hidden" name="aineId" value={aineId} />
+      <PlanRadio
+        name="plan"
+        legend="Formules"
+        legendHidden
+        options={PLANS.map((p) => toOption(p, current, !canChange))}
+        value={selected}
+        onValueChange={(v) => {
+          setSelected(v as Plan);
+          setConfirming(false);
+        }}
+        notice={OFFER_TEST_NOTICE}
+      />
+
+      <Card padding="dense">
+        <PlanCostExample plan={plan} />
+      </Card>
+
       <FormMessage state={state} />
-      <ul className="grid gap-4 md:grid-cols-3">
-        {PLANS.map((p) => {
-          const active = current === p.plan;
-          return (
-            <li
-              key={p.plan}
-              className={cn("flex min-w-0 flex-col gap-3 rounded-2xl border bg-surface p-4 sm:p-5", active ? "border-2 border-mer" : "border-line")}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <h2 className="text-2xl font-bold">{p.name}</h2>
-                {active ? <Badge tone="mer">Formule actuelle</Badge> : null}
-              </div>
-              <p className="text-xl font-bold">{p.priceLabel}</p>
-              <p className="text-muted">{p.meaning}</p>
-              <ul className="flex flex-1 flex-col gap-1">
-                {p.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2">
-                    <Check aria-hidden="true" className="mt-1 size-4 shrink-0 text-feuille" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <PlanCostExample plan={p} />
-              {canChange && !active ? (
-                confirming === p.plan ? (
-                  <form action={action} className="flex flex-col gap-2 rounded-xl border-2 border-mer p-3">
-                    <input type="hidden" name="aineId" value={aineId} />
-                    <input type="hidden" name="plan" value={p.plan} />
-                    <p className="font-semibold">
-                      Vous choisissez {p.name}, {p.priceLabel}. Paiement simulé. Confirmer ?
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      <Button type="submit" disabled={pending} aria-busy={pending}>
-                        {pending ? "Activation…" : "Confirmer"}
-                      </Button>
-                      <Button variant="secondary" onClick={() => setConfirming(null)} disabled={pending}>
-                        Annuler
-                      </Button>
-                    </div>
-                  </form>
-                ) : (
-                  <Button variant={p.plan === "SERENITE" ? "primary" : "secondary"} className="w-full" onClick={() => setConfirming(p.plan)}>
-                    Choisir {p.name}
-                  </Button>
-                )
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
+
+      {canChange ? (
+        isCurrent ? (
+          <p className="rounded-md bg-surface-2 p-3.5 text-center text-[15px] font-semibold">La formule {plan.name} est votre formule actuelle.</p>
+        ) : confirming ? (
+          <div className="flex flex-col gap-2 rounded-lg bg-surface p-4 shadow-card">
+            <p className="text-[17px] font-semibold">
+              Vous choisissez {plan.name}, {plan.priceLabel}. Paiement simulé. Confirmer{" "}?
+            </p>
+            <Button type="submit" size="lg" fullWidth disabled={pending} aria-busy={pending} icon={<Lock strokeWidth={1.6} />}>
+              {pending ? "Activation…" : "Confirmer"}
+            </Button>
+            <Button variant="link" fullWidth onClick={() => setConfirming(false)} disabled={pending}>
+              Annuler
+            </Button>
+          </div>
+        ) : (
+          <Button size="lg" fullWidth onClick={() => setConfirming(true)}>
+            Choisir {plan.name}
+          </Button>
+        )
+      ) : null}
+    </form>
   );
 }

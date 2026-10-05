@@ -12,7 +12,7 @@ export function ChooseProfileForm({ proposalId, name }: { proposalId: string; na
   return (
     <form action={action} className="flex flex-col gap-2">
       <input type="hidden" name="proposalId" value={proposalId} />
-      <SubmitButton pendingLabel="Envoi…" className="sm:self-start">
+      <SubmitButton pendingLabel="Envoi…" size="lg" className="w-full">
         {`Choisir ${name}`}
       </SubmitButton>
       <FormMessage state={state} />

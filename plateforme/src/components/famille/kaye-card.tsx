@@ -1,9 +1,14 @@
-import { CircleAlert, CircleCheck, Eye, Utensils } from "lucide-react";
+import { Cloud, CloudSun, Eye, Sun, Utensils } from "lucide-react";
 import type { Appetite, ProofFactor, VisitStatus } from "@prisma/client";
-import { APPETITE_LABELS } from "@/lib/labels";
+import { APPETITE_LABELS, MOOD_LABELS } from "@/lib/labels";
 import { deName, formatTime } from "@/lib/format";
-import { moodSentence } from "@/server/famille/logic";
-import { MoodIcon, MoodScale } from "./mood";
+import { factorViews, moodSentence, type FactorView } from "@/server/famille/logic";
+import { Badge } from "@/components/ui/badge";
+import { Chip } from "@/components/ui/card";
+import { KayeCard, KayeDetail } from "@/components/ui/kaye-card";
+import { VisitReceipt, type ReceiptProof } from "@/components/ui/visit-receipt";
+import { relativeDay } from "./format";
+import { kayeProof } from "./status";
 
 export type KayeEntry = {
   id: string;
@@ -24,115 +29,183 @@ export type KayeEntry = {
   };
 };
 
-const RECEIPT_FACTOR: Record<ProofFactor, string> = {
-  GPS: "Position vérifiée",
-  CODE_DOMICILE: "Code du domicile correct",
-  CONFIRMATION_AINE: "Appel de l'aîné confirmé",
+function clampMood(mood: number): 1 | 2 | 3 | 4 | 5 {
+  return Math.min(5, Math.max(1, Math.round(mood))) as 1 | 2 | 3 | 4 | 5;
+}
+
+/** Badge « À surveiller » : soleil (jamais rouge), mot + icône. */
+function SignalBadge() {
+  return (
+    <Badge tone="soleil" icon={<Eye strokeWidth={1.8} />}>
+      À surveiller
+    </Badge>
+  );
+}
+
+/**
+ * Aperçu d'une page du Kayé (fil, accueil) : la carte Kayé du design system.
+ * La phrase d'humeur est la citation ; la note de l'accompagnant suit en `muted`.
+ * Toute la carte mène au détail (reçu de visite).
+ */
+export function KayePreview({
+  entry,
+  showAine = false,
+  headingLevel = 3,
+  now,
+}: {
+  entry: KayeEntry;
+  showAine?: boolean;
+  headingLevel?: 2 | 3 | 4;
+  now?: Date;
+}) {
+  return (
+    <KayeCard
+      href={`/famille/kaye/${entry.id}`}
+      headingLevel={headingLevel}
+      author={entry.author.firstName}
+      day={
+        <>
+          {relativeDay(entry.visit.scheduledStart, now)}
+          {showAine ? <> · chez {entry.aine.firstName}</> : null}
+        </>
+      }
+      proof={kayeProof(entry.visit.status)}
+      quote={moodSentence(entry.aine.firstName, clampMood(entry.mood))}
+      translation={
+        entry.note || entry.alertFlag ? (
+          <>
+            {entry.note ? <span className="block">{entry.note}</span> : null}
+            {entry.alertFlag ? (
+              <span className="mt-2 block">
+                <SignalBadge />
+              </span>
+            ) : null}
+          </>
+        ) : undefined
+      }
+    />
+  );
+}
+
+const PROOF_LABELS: Record<ProofFactor, string> = {
+  GPS: "Position au domicile",
+  CODE_DOMICILE: "Code du domicile",
+  CONFIRMATION_AINE: "Appel de confirmation",
 };
 
+function proofDetail(v: FactorView, aineFirstName: string): string {
+  if (v.state === "ABSENT") return "Pas encore reçue";
+  switch (v.factor) {
+    case "GPS":
+      return v.state === "VALIDE" ? "Vérifiée à l'arrivée" : "Position non vérifiée";
+    case "CODE_DOMICILE":
+      return v.state === "VALIDE" ? "Code correct, saisi sur place" : "Code incorrect";
+    case "CONFIRMATION_AINE":
+      return v.state === "VALIDE" ? `${aineFirstName} a confirmé la visite` : `${aineFirstName} n'a pas confirmé`;
+  }
+}
+
+/** Preuves du reçu (2 sur 3 suffisent), dans l'ordre fixe des 3 facteurs. */
+export function receiptProofs(proofs: { factor: ProofFactor; valid: boolean }[], aineFirstName: string): ReceiptProof[] {
+  return factorViews(proofs).map((v) => ({
+    label: PROOF_LABELS[v.factor],
+    detail: proofDetail(v, aineFirstName),
+    obtained: v.state === "VALIDE",
+  }));
+}
+
+function verdict(status: VisitStatus | undefined, obtained: number, aineFirstName: string): { title?: string; text: string } {
+  const n = `${obtained} ${obtained > 1 ? "preuves" : "preuve"} sur 3`;
+  if (status === "VALIDEE") {
+    return obtained >= 2
+      ? { text: "Deux preuves suffisent. La visite est validée." }
+      : { title: `${n} · validée par Koudmen`, text: "L'équipe Koudmen a vérifié la visite." };
+  }
+  if (status === "A_VERIFIER") {
+    return {
+      title: `${n} · à vérifier`,
+      text: `Il manque une preuve. Koudmen appelle ${aineFirstName} pour confirmer, puis l'équipe vérifie. Vous n'avez rien à faire.`,
+    };
+  }
+  return { title: `${n} · visite en cours`, text: "Les preuves arrivent pendant la visite." };
+}
+
+/** Icône d'humeur du badge photo (décorative : le mot porte le sens). */
+function moodIcon(mood: number) {
+  if (mood >= 4) return <Sun strokeWidth={1.8} />;
+  if (mood === 3) return <CloudSun strokeWidth={1.8} />;
+  return <Cloud strokeWidth={1.8} />;
+}
+
 /**
- * Une page du Kayé (journal de visite). Cœur émotionnel : lisible, chaleureux.
- * Le signal « à surveiller » est visible mais calme (soleil, jamais rouge) et non médical.
+ * Détail d'une page du Kayé (maquette, écran c) : l'émotion d'abord, la preuve ensuite.
+ * Le signal « à surveiller » reste calme (soleil) et précise qu'il n'est pas médical.
  */
-export function KayeCard({ entry, showAine = true }: { entry: KayeEntry; showAine?: boolean }) {
-  const titleId = `kaye-${entry.id}`;
+export function KayeEntryDetail({ entry }: { entry: KayeEntry }) {
+  const m = clampMood(entry.mood);
+  const { status, checkInAt, proofs } = entry.visit;
+  const rows = proofs ? receiptProofs(proofs, entry.aine.firstName) : null;
+  const obtained = rows ? rows.filter((r) => r.obtained).length : 0;
+  const v = verdict(status, obtained, entry.aine.firstName);
   return (
-    <article aria-labelledby={titleId} className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
-      {entry.alertFlag ? <SignalBanner entry={entry} /> : null}
-      <div className="flex flex-col gap-4 p-5">
-        <VisitReceipt entry={entry} />
-        <header className="flex items-start gap-3">
-          <MoodIcon mood={entry.mood} size="lg" />
-          <div className="flex min-w-0 flex-col gap-1">
-            <h3 id={titleId} className="text-xl font-bold">
-              {moodSentence(entry.aine.firstName, entry.mood)}
-            </h3>
-            <p className="text-sm text-muted">
-              {showAine ? <>Visite chez {entry.aine.firstName} · </> : null}
-              {entry.author.firstName}, à {formatTime(entry.visit.scheduledStart)}
-            </p>
-            <MoodScale mood={entry.mood} />
-          </div>
-        </header>
+    <KayeDetail
+      mood={`Humeur : ${(MOOD_LABELS[m] ?? "").toLowerCase()} (${m} sur 5)`}
+      moodIcon={moodIcon(m)}
+      title={moodSentence(entry.aine.firstName, m)}
+      author={entry.author.firstName}
+      time={`visite de ${formatTime(entry.visit.scheduledStart)}`}
+    >
+      {entry.alertFlag ? (
+        <section aria-label="À surveiller" className="mb-4 flex flex-col gap-1.5 rounded-lg bg-soleil-soft p-4 text-fg">
+          <SignalBadge />
+          <p className="text-[17px] leading-[1.5]">{entry.alertNote ?? `${entry.author.firstName} a remarqué un changement.`}</p>
+          <p className="text-sm leading-snug text-muted">
+            C&apos;est une observation {deName(entry.author.firstName)}, pas une alerte médicale. Prenez des nouvelles {deName(entry.aine.firstName)}.
+            En cas d&apos;urgence, appelez le 15.
+          </p>
+        </section>
+      ) : null}
 
-        {entry.note ? (
-          <figure className="rounded-xl bg-bg px-4 py-3">
-            <blockquote className="text-lg leading-relaxed">
-              <p>« {entry.note} »</p>
-            </blockquote>
-            <figcaption className="mt-1 text-sm text-muted">— {entry.author.firstName}</figcaption>
-          </figure>
-        ) : null}
+      {entry.note ? <p className="text-[17px] leading-[1.55]">{entry.note}</p> : null}
 
-        <dl className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-x-8">
-          {entry.activities.length > 0 ? (
-            <div className="flex flex-col gap-1">
-              <dt className="text-sm font-semibold text-muted">Activités</dt>
-              <dd>
-                <ul className="flex flex-wrap gap-2">
-                  {entry.activities.map((a) => (
-                    <li key={a} className="rounded-full bg-mer-soft px-3 py-1 text-sm font-semibold text-mer">
-                      {a}
-                    </li>
-                  ))}
-                </ul>
-              </dd>
-            </div>
-          ) : null}
-          <div className="flex flex-col gap-1">
-            <dt className="text-sm font-semibold text-muted">Appétit</dt>
-            <dd className="inline-flex items-center gap-2">
-              <Utensils aria-hidden="true" className="size-4 text-muted" />
-              {APPETITE_LABELS[entry.appetite]}
+      <dl className="mt-4 flex flex-col gap-3">
+        {entry.activities.length > 0 ? (
+          <div>
+            <dt className="mb-1.5 text-[15px] font-semibold text-muted">Activités</dt>
+            <dd className="m-0">
+              <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
+                {entry.activities.map((a) => (
+                  <li key={a}>
+                    <Chip>{a}</Chip>
+                  </li>
+                ))}
+              </ul>
             </dd>
           </div>
-        </dl>
-      </div>
-    </article>
-  );
-}
+        ) : null}
+        <div className="flex items-center gap-2 text-[15px]">
+          <dt className="inline-flex items-center gap-2 font-semibold text-muted">
+            <Utensils aria-hidden="true" className="size-[18px]" strokeWidth={1.6} />
+            Appétit :
+          </dt>
+          <dd className="m-0">{APPETITE_LABELS[entry.appetite]}</dd>
+        </div>
+      </dl>
 
-/**
- * Reçu de visite (S1b-ux M6) : la preuve en tête du Kayé, comme sur la page d'accueil.
- * Icône ET texte : jamais la couleur seule.
- */
-function VisitReceipt({ entry }: { entry: KayeEntry }) {
-  const { status, checkInAt, proofs } = entry.visit;
-  if (!status || !proofs) return null;
-  const valid = proofs.filter((p) => p.valid);
-  const verified = status === "VALIDEE";
-  const arrival = checkInAt ? <> Arrivée {deName(entry.author.firstName)} à {formatTime(checkInAt)}.</> : null;
-  return (
-    <p className={`flex items-start gap-2 rounded-lg p-3 text-sm ${verified ? "bg-feuille-soft" : "bg-soleil-soft"}`}>
-      {verified ? (
-        <CircleCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-feuille" />
-      ) : (
-        <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-      )}
-      <span>
-        <strong>{verified ? "Visite vérifiée." : "Visite à vérifier."}</strong>
-        {arrival}{" "}
-        {valid.length > 0 ? `${valid.map((p) => RECEIPT_FACTOR[p.factor]).join(". ")}.` : "Aucune preuve pour le moment."}{" "}
-        <span className="text-muted">({valid.length} preuves sur 3, il en faut 2.)</span>
-      </span>
-    </p>
-  );
-}
-
-function SignalBanner({ entry }: { entry: KayeEntry }) {
-  return (
-    <div className="flex gap-3 border-b border-soleil bg-soleil-soft px-5 py-4">
-      <span aria-hidden="true" className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-soleil text-on-soleil">
-        <Eye className="size-5" />
-      </span>
-      <div className="flex flex-col gap-1">
-        <p className="font-bold">À surveiller</p>
-        {entry.alertNote ? <p>{entry.alertNote}</p> : <p>{entry.author.firstName} a remarqué un changement.</p>}
-        <p className="text-sm text-muted">
-          C&apos;est une observation {deName(entry.author.firstName)}, pas une alerte médicale. Prenez des nouvelles {deName(entry.aine.firstName)}. En cas
-          d&apos;urgence, appelez le 15.
-        </p>
-      </div>
-    </div>
+      {rows && status ? (
+        <VisitReceipt
+          className="mt-6"
+          code={`KDM-${entry.id.slice(-6).toUpperCase()}`}
+          times={[
+            { label: "Prévue", value: formatTime(entry.visit.scheduledStart) },
+            { label: "Arrivée", value: checkInAt ? formatTime(checkInAt) : "—" },
+            { label: "Preuves", value: `${obtained}/3` },
+          ]}
+          proofs={rows}
+          verdictTitle={v.title}
+          verdictText={v.text}
+        />
+      ) : null}
+    </KayeDetail>
   );
 }

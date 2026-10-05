@@ -6,7 +6,7 @@ import { todayIso } from "@/server/famille/schemas";
 import { communeLabel } from "@/lib/communes";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LinkButton } from "@/components/ui/button";
-import { PageHeader } from "@/components/ui/page-header";
+import { TopBar } from "@/components/famille/top-bar";
 import { RequestForm } from "@/components/famille/request-form";
 
 export const metadata: Metadata = { title: "Nouvelle demande" };
@@ -18,18 +18,16 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
   const aines = await getFamilyAines(user.id);
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col">
-      <PageHeader
-        eyebrow="Demandes"
-        title="Demander un accompagnement"
-        description="Décrivez le besoin. Koudmen vous propose ensuite 1 à 3 profils près de chez l'aîné. Vous choisissez."
-      />
+    <div className="flex flex-col">
+      <TopBar title="Demander un accompagnement" backHref="/famille/demandes" backLabel="Retour aux demandes" />
+      <p className="mb-5 text-[15px] leading-[1.45] text-muted">
+        Décrivez le besoin. Koudmen vous propose ensuite 1 à 3 profils près de chez l&apos;aîné. Vous choisissez.
+      </p>
       {aines.length === 0 ? (
         <EmptyState
-          title="Ajoutez d'abord un aîné"
+          title="Ajoutez d'abord un aîné."
           action={
-            <LinkButton href="/famille/aines/nouveau">
-              <Plus aria-hidden="true" className="size-4" />
+            <LinkButton href="/famille/aines/nouveau" size="lg" fullWidth icon={<Plus strokeWidth={1.6} />}>
               Ajouter un aîné
             </LinkButton>
           }

@@ -16,19 +16,19 @@ export function CancelRequestForm({ requestId, aineFirstName }: { requestId: str
   return (
     <div className="flex flex-col gap-2">
       {!asking ? (
-        <Button variant="secondary" onClick={() => setAsking(true)} className="sm:self-start">
+        <Button variant="link" onClick={() => setAsking(true)} className="self-start px-0">
           Annuler la demande
         </Button>
       ) : (
-        <form action={action} className="flex flex-col gap-2 rounded-lg border border-line bg-bg p-3">
+        <form action={action} className="flex flex-col gap-2 rounded-md bg-surface-2 p-4">
           <input type="hidden" name="requestId" value={requestId} />
           <p className="font-semibold">Annuler la demande pour {aineFirstName} ?</p>
           <p className="text-sm text-muted">Les propositions en attente seront annulées aussi.</p>
-          <div className="flex flex-wrap gap-2">
-            <SubmitButton variant="danger" pendingLabel="Annulation…">
+          <div className="flex flex-col gap-1">
+            <SubmitButton variant="danger" size="lg" pendingLabel="Annulation…" className="w-full">
               Oui, annuler
             </SubmitButton>
-            <Button variant="ghost" onClick={() => setAsking(false)}>
+            <Button variant="link" onClick={() => setAsking(false)} className="w-full">
               Non, garder
             </Button>
           </div>

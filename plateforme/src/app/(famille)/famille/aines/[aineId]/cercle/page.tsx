@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 import { requireRole } from "@/server/auth/guards";
 import { getAineForFamily, getInvitations } from "@/server/famille/queries";
 import { invitationState, type InvitationState } from "@/server/famille/logic";
 import { deName, formatDate, fullName } from "@/lib/format";
 import { Badge, type BadgeTone } from "@/components/ui/badge";
-import { Card, CardTitle } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/page-header";
+import { Card, SectionHeader } from "@/components/ui/card";
+import { Avatar } from "@/components/ui/avatar";
+import { TopBar } from "@/components/famille/top-bar";
 import { InviteForm } from "@/components/famille/invite-form";
 import { CopyLink } from "@/components/famille/copy-link";
 import { appUrl } from "@/server/env";
@@ -34,81 +33,67 @@ export default async function Page({ params }: { params: Promise<{ aineId: strin
 
   return (
     <>
-      <Link href={`/famille/aines/${aine.id}`} className="mb-2 inline-flex min-h-11 items-center gap-1 font-semibold text-mer">
-        <ChevronLeft aria-hidden="true" className="size-4" />
-        Fiche {deName(aine.firstName)}
-      </Link>
-      <PageHeader
-        eyebrow="Cercle Lakou"
-        title={`Le cercle ${deName(aine.firstName)}`}
-        description={
-          <>
-            Le <Term id="lakou" /> : les membres lisent les visites et le Kayé. Seul l&apos;aîné confirme une visite, par téléphone.
-          </>
-        }
-      />
+      <TopBar title={`Cercle Lakou ${deName(aine.firstName)}`} backHref={`/famille/aines/${aine.id}`} backLabel={`Retour à la fiche ${deName(aine.firstName)}`} />
+      <p className="mb-5 text-[15px] leading-[1.45] text-muted">
+        Le <Term id="lakou" /> : les membres lisent les visites et le Kayé. Seul l&apos;aîné confirme une visite, par téléphone.
+      </p>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="flex flex-col gap-3">
-          <CardTitle>Membres ({aine.members.length})</CardTitle>
-          <ul className="flex flex-col divide-y divide-line">
-            {aine.members.map((m) => (
-              <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
-                <div>
-                  <p className="font-semibold">
-                    {fullName(m.user)}
-                    {m.user.id === user.id ? <span className="font-normal text-muted"> (vous)</span> : null}
-                  </p>
-                  <p className="text-sm text-muted">
-                    {m.relation} · depuis le {formatDate(m.joinedAt)}
-                  </p>
-                </div>
-                {m.isPayer ? <Badge tone="mer">Payeur</Badge> : null}
-              </li>
-            ))}
-          </ul>
-          {aine.members.length === 1 ? (
-            <p className="rounded-lg bg-bg p-3 text-sm">
-              Vous êtes seul(e) dans ce cercle. Invitez un frère, une sœur ou un voisin : vous serez plusieurs à veiller sur {aine.firstName}.
-            </p>
-          ) : null}
-        </Card>
+      <SectionHeader title={`Membres (${aine.members.length})`} className="mt-0" />
+      <Card padding="none" className="px-5 py-1">
+        <ul className="m-0 list-none p-0">
+          {aine.members.map((m, i) => (
+            <li key={m.id} className={`flex min-h-16 items-center gap-3.5 py-3 ${i > 0 ? "border-t border-line" : ""}`}>
+              <Avatar name={m.user.firstName} size={44} role={i % 2 === 0 ? "proche" : "proche-2"} />
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold">
+                  {fullName(m.user)}
+                  {m.user.id === user.id ? <span className="font-normal text-muted"> (vous)</span> : null}
+                </p>
+                <p className="text-[15px] text-muted">
+                  {m.relation} · depuis le {formatDate(m.joinedAt)}
+                </p>
+              </div>
+              {m.isPayer ? <Badge tone="mer">Payeur</Badge> : null}
+            </li>
+          ))}
+        </ul>
+      </Card>
+      {aine.members.length === 1 ? (
+        <p className="mx-0.5 mt-3 text-[15px] leading-[1.45] text-muted">
+          Vous êtes seul(e) dans ce cercle. Invitez un frère, une sœur ou un voisin : vous serez plusieurs à veiller sur {aine.firstName}.
+        </p>
+      ) : null}
 
-        <Card className="flex flex-col gap-3">
-          <CardTitle>Inviter un proche</CardTitle>
-          <p className="text-sm text-muted">Koudmen crée un lien personnel. Il marche une seule fois, pendant 14 jours.</p>
-          <InviteForm aineId={aine.id} aineFirstName={aine.firstName} />
-        </Card>
-      </div>
+      <SectionHeader title="Inviter un proche" />
+      <Card className="flex flex-col gap-3">
+        <p className="text-[15px] leading-[1.45] text-muted">Koudmen crée un lien personnel. Il marche une seule fois, pendant 14 jours.</p>
+        <InviteForm aineId={aine.id} aineFirstName={aine.firstName} />
+      </Card>
 
       {invitations.length > 0 ? (
-        <section aria-labelledby="invitations" className="mt-8 flex flex-col gap-3">
-          <h2 id="invitations" className="text-xl font-bold">
-            Invitations envoyées
-          </h2>
-          <ul className="flex flex-col gap-2">
+        <section aria-labelledby="invitations">
+          <SectionHeader id="invitations" title="Invitations envoyées" />
+          <ul className="m-0 flex list-none flex-col gap-3 p-0">
             {invitations.map((inv) => {
               const state = invitationState(inv, now);
               const badge = INVITATION_BADGE[state];
               return (
-                <li key={inv.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-surface px-4 py-3">
-                  <div>
-                    <p className="font-semibold">
-                      {inv.relation}
-                      {inv.email ? <span className="font-normal text-muted"> · {inv.email}</span> : null}
-                    </p>
+                <li key={inv.id}>
+                  <Card padding="dense" className="flex flex-col gap-2">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <p className="min-w-0 font-semibold">
+                        {inv.relation}
+                        {inv.email ? <span className="block font-normal break-all text-muted">{inv.email}</span> : null}
+                      </p>
+                      <Badge tone={badge.tone}>{badge.label}</Badge>
+                    </div>
                     <p className="text-sm text-muted">
                       Créée par {inv.createdBy.firstName} le {formatDate(inv.createdAt)}
                       {state === "VALIDE" ? ` · expire le ${formatDate(inv.expiresAt)}` : null}
                       {state === "UTILISEE" && inv.acceptedBy ? ` · ${inv.acceptedBy.firstName} a rejoint le cercle` : null}
                     </p>
-                  </div>
-                  <Badge tone={badge.tone}>{badge.label}</Badge>
-                  {state === "VALIDE" ? (
-                    <div className="w-full">
-                      <CopyLink value={`${appUrl()}/invitation/${inv.token}`} label={`Lien pour : ${inv.relation}`} />
-                    </div>
-                  ) : null}
+                    {state === "VALIDE" ? <CopyLink value={`${appUrl()}/invitation/${inv.token}`} label={`Lien pour : ${inv.relation}`} /> : null}
+                  </Card>
                 </li>
               );
             })}

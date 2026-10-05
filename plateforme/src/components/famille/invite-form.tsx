@@ -38,12 +38,12 @@ export function InviteForm({ aineId, aineFirstName }: { aineId: string; aineFirs
           <Input {...fieldA11y("email", fe?.email, true)} type="email" autoComplete="off" inputMode="email" />
         </FormField>
         <FormMessage state={state.ok ? { ok: true } : state} />
-        <PendingButton pending={pending} pendingLabel="Création du lien…" className="sm:self-start">
+        <PendingButton pending={pending} pendingLabel="Création du lien…" size="lg" className="w-full">
           Créer le lien d&apos;invitation
         </PendingButton>
       </form>
       {state.ok && state.data ? (
-        <div className="flex flex-col gap-3 rounded-xl border border-feuille bg-feuille-soft p-4" role="status">
+        <div className="flex flex-col gap-3 rounded-md bg-feuille-soft p-4" role="status">
           <p className="font-bold">{state.message}</p>
           <CopyLink value={state.data.link} />
           <p className="text-sm">Ce lien marche une seule fois. Il expire le {formatDate(state.data.expiresAt)}.</p>
