@@ -28,16 +28,16 @@ export function CopyLink({ value, label = "Lien d'invitation" }: { value: string
       <label htmlFor={id} className="font-semibold">
         {label}
       </label>
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="flex flex-col gap-2">
         <input
           ref={inputRef}
           id={id}
           readOnly
           value={value}
           onFocus={(e) => e.currentTarget.select()}
-          className="block min-h-11 w-full rounded-lg border border-line-strong bg-bg px-3 py-2 font-mono text-sm text-fg"
+          className="block min-h-12 w-full rounded-md border-[1.5px] border-line-strong bg-surface-2 px-3 py-2 font-mono text-sm text-fg"
         />
-        <Button variant="secondary" onClick={copy} className="shrink-0">
+        <Button variant="quiet" onClick={copy} className="w-full">
           {status === "copied" ? <Check aria-hidden="true" className="size-4" /> : <Copy aria-hidden="true" className="size-4" />}
           {status === "copied" ? "Lien copié" : "Copier le lien"}
         </Button>
@@ -45,7 +45,7 @@ export function CopyLink({ value, label = "Lien d'invitation" }: { value: string
           href={`https://wa.me/?text=${encodeURIComponent(`Rejoins le cercle Koudmen : ${value}`)}`}
           target="_blank"
           rel="noopener noreferrer"
-          className={buttonClasses("secondary", "md", "shrink-0")}
+          className={buttonClasses("quiet", "md", "w-full")}
         >
           Envoyer par WhatsApp
           <span className="sr-only"> (nouvelle fenêtre)</span>

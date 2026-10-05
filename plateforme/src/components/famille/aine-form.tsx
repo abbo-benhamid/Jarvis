@@ -39,7 +39,7 @@ export function AineForm({ defaults }: { defaults?: AineFormDefaults }) {
       {defaults ? <input type="hidden" name="aineId" value={defaults.aineId} /> : null}
 
       <Card className="flex flex-col gap-4">
-        <h2 className="text-xl font-bold">1. Qui est l&apos;aîné ?</h2>
+        <h2 className="font-display text-[22px] leading-[1.2] font-normal tracking-[-.015em] text-balance">1. Qui est l&apos;aîné{"\u202f"}?</h2>
         <p className="text-sm text-muted">Koudmen demande le minimum : le prénom et l&apos;initiale du nom suffisent.</p>
         <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
           <FormField label="Prénom" htmlFor="firstName" errors={fe?.firstName} required>
@@ -92,7 +92,7 @@ export function AineForm({ defaults }: { defaults?: AineFormDefaults }) {
       </Card>
 
       <Card className="flex flex-col gap-4">
-        <h2 className="text-xl font-bold">2. De quoi a-t-il besoin ?</h2>
+        <h2 className="font-display text-[22px] leading-[1.2] font-normal tracking-[-.015em] text-balance">2. De quoi a-t-il besoin{"\u202f"}?</h2>
         <Alert tone="info">N&apos;écrivez aucune information médicale. Koudmen ne demande pas de diagnostic ni de traitement.</Alert>
         <Fieldset legend="Besoins (un ou plusieurs)" errors={fe?.needs}>
           <div className="grid gap-x-4 sm:grid-cols-2">
@@ -121,7 +121,7 @@ export function AineForm({ defaults }: { defaults?: AineFormDefaults }) {
       </Card>
 
       <Card className="flex flex-col gap-4">
-        <h2 className="text-xl font-bold">3. Son accord</h2>
+        <h2 className="font-display text-[22px] leading-[1.2] font-normal tracking-[-.015em] text-balance">3. Son accord</h2>
         <p className="text-sm text-muted">
           L&apos;aîné doit être d&apos;accord pour être accompagné. S&apos;il ne peut pas répondre, son représentant (tuteur, mandataire) donne l&apos;accord.
         </p>
@@ -147,7 +147,7 @@ export function AineForm({ defaults }: { defaults?: AineFormDefaults }) {
         >
           <Input {...fieldA11y("consentByName", fe?.consentByName, consentBy === "REPRESENTANT")} defaultValue={defaults?.consentByName ?? ""} autoComplete="off" required maxLength={120} />
         </FormField>
-        <div className="rounded-lg border border-line bg-bg px-3">
+        <div className="rounded-md bg-surface-2 px-3">
           <Checkbox
             id="consentGiven"
             name="consentGiven"
@@ -170,7 +170,7 @@ export function AineForm({ defaults }: { defaults?: AineFormDefaults }) {
       </Card>
 
       <FormMessage state={state} />
-      <PendingButton pending={pending} size="lg" pendingLabel="Enregistrement…" className="sm:self-start">
+      <PendingButton pending={pending} size="lg" pendingLabel="Enregistrement…" className="w-full">
         {editing ? "Enregistrer les modifications" : "Créer le profil"}
       </PendingButton>
     </form>

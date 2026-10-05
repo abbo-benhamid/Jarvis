@@ -1,20 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CalendarDays, ChevronRight, HandHeart, NotebookPen, ShieldCheck, Users } from "lucide-react";
+import { BookOpen, CalendarDays, HandHeart, HeartHandshake, Pencil, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { requireRole } from "@/server/auth/guards";
 import { getAineForFamily } from "@/server/famille/queries";
 import { communeLabel } from "@/lib/communes";
-import { formatDate, fullName } from "@/lib/format";
+import { deName, formatDate, fullName, initialWithDot } from "@/lib/format";
 import { LEVEL_DESCRIPTIONS, NEED_LABELS, PLAN_LABELS } from "@/lib/labels";
 import { Alert } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardTitle } from "@/components/ui/card";
+import { Avatar } from "@/components/ui/avatar";
+import { Card, CardLink, CardTitle, Chip, SectionHeader } from "@/components/ui/card";
 import { LinkButton } from "@/components/ui/button";
-import { PageHeader } from "@/components/ui/page-header";
+import { ProofSteps } from "@/components/ui/proof-steps";
 import { LevelBadge } from "@/components/status-badges";
 import { HomeCode } from "@/components/famille/home-code";
 import { CaregiverLinkForm } from "@/components/famille/caregiver-link-form";
+import { TopBar } from "@/components/famille/top-bar";
 
 export const metadata: Metadata = { title: "Fiche de l'aîné" };
 
@@ -29,24 +30,24 @@ export default async function Page({ params, searchParams }: Props) {
   if (!data) notFound();
   const { aine, isPayer } = data;
   const payer = aine.members.find((m) => m.isPayer);
-  const name = `${aine.firstName} ${aine.lastInitial ?? ""}`.trim();
+  const name = `${aine.firstName} ${initialWithDot(aine.lastInitial)}`.trim();
 
   return (
     <>
-      <PageHeader
-        eyebrow="Fiche de l'aîné"
-        title={name}
-        description={`${communeLabel(aine.commune)}${aine.addressHint ? ` · ${aine.addressHint}` : ""}`}
-        actions={
-          isPayer ? (
-            <LinkButton href={`/famille/aines/${aine.id}/modifier`} variant="secondary">
-              Modifier le profil
-            </LinkButton>
-          ) : undefined
-        }
-      />
+      <TopBar title="Fiche de l'aîné" backHref="/famille" backLabel="Retour à l'accueil" />
 
-      <div className="flex flex-col gap-6">
+      <header className="mb-5 flex items-center gap-4">
+        <Avatar name={aine.firstName} size={56} role="aine" />
+        <div className="min-w-0">
+          <h2 className="font-display text-[30px] leading-[1.1] font-normal tracking-[-.02em]">{name}</h2>
+          <p className="text-[15px] text-muted">
+            {communeLabel(aine.commune)}
+            {aine.addressHint ? ` · ${aine.addressHint}` : ""}
+          </p>
+        </div>
+      </header>
+
+      <div className="flex flex-col gap-3">
         {sp.cree ? (
           <Alert tone="succes" title={`Le profil de ${aine.firstName} est créé.`}>
             Prochaines étapes : invitez vos proches, puis demandez un accompagnement.
@@ -60,82 +61,102 @@ export default async function Page({ params, searchParams }: Props) {
         ) : null}
 
         <NextSteps aineId={aine.id} firstName={aine.firstName} members={aine.members.length} requests={aine._count.requests} />
+      </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <HomeCode code={aine.homeCode} aineFirstName={aine.firstName} />
+      <SectionHeader title={`Pour ${aine.firstName}`} />
+      <nav aria-label={`Raccourcis pour ${aine.firstName}`}>
+        <ul className="m-0 flex list-none flex-col gap-3 p-0">
+          <Shortcut href={`/famille/aines/${aine.id}/cercle`} icon={<Users />} label={`Cercle Lakou (${aine.members.length})`} detail="Les proches qui lisent les nouvelles" />
+          <Shortcut href={`/famille/kaye?aine=${aine.id}`} icon={<BookOpen />} label="Lire le Kayé" detail="Le cahier des visites" />
+          <Shortcut href={`/famille/visites?aine=${aine.id}`} icon={<CalendarDays />} label="Voir les visites" detail="À venir, passées, preuves" />
+          <Shortcut
+            href={`/famille/demandes/nouvelle?aine=${aine.id}`}
+            icon={<HandHeart />}
+            label="Demander un accompagnement"
+            detail="Koudmen vous propose 1 à 3 profils"
+          />
+        </ul>
+      </nav>
 
-          <Card className="flex flex-col gap-3">
-            <CardTitle>Accompagnement</CardTitle>
-            <div className="flex flex-wrap gap-2">
-              <LevelBadge level={aine.activityLevel} />
-            </div>
-            <p className="text-sm text-muted">{LEVEL_DESCRIPTIONS[aine.activityLevel]}</p>
-            <div>
-              <p className="font-semibold">Besoins</p>
-              <ul className="mt-1 flex flex-wrap gap-2">
-                {aine.needs.map((n) => (
-                  <li key={n}>
-                    <Badge tone="neutre">{NEED_LABELS[n]}</Badge>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <p>
-              <span className="font-semibold">Téléphone : </span>
-              {aine.phone ?? "non renseigné"}
-            </p>
-          </Card>
+      <SectionHeader title="Profil" />
+      <div className="flex flex-col gap-3">
+        <HomeCode code={aine.homeCode} aineFirstName={aine.firstName} />
 
-          <Card className="flex flex-col gap-2">
-            <CardTitle className="inline-flex items-center gap-2">
-              <ShieldCheck aria-hidden="true" className="size-5 text-feuille" />
-              Accord de l&apos;aîné
-            </CardTitle>
-            <p>
-              Donné par <strong>{aine.consentByName}</strong> ({aine.consentByType === "AINE" ? "l'aîné lui-même" : "son représentant"}).
-            </p>
-            <p className="text-sm text-muted">Enregistré le {formatDate(aine.consentAt)}.</p>
-          </Card>
+        <Card className="flex flex-col gap-3">
+          <CardTitle className="mb-0">Accompagnement</CardTitle>
+          <div>
+            <LevelBadge level={aine.activityLevel} />
+          </div>
+          <p className="text-[15px] leading-[1.45] text-muted">{LEVEL_DESCRIPTIONS[aine.activityLevel]}</p>
+          <div>
+            <p className="mb-2 text-[15px] font-semibold">Besoins</p>
+            <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
+              {aine.needs.map((n) => (
+                <li key={n}>
+                  <Chip>{NEED_LABELS[n]}</Chip>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <p className="border-t border-line pt-3 text-[15px]">
+            <span className="text-muted">Téléphone : </span>
+            <span className="num font-medium">{aine.phone ?? "non renseigné"}</span>
+          </p>
+          {isPayer ? (
+            <LinkButton href={`/famille/aines/${aine.id}/modifier`} variant="quiet" size="lg" fullWidth icon={<Pencil strokeWidth={1.6} />}>
+              Modifier le profil
+            </LinkButton>
+          ) : null}
+        </Card>
 
-          <Card className="flex flex-col gap-2">
-            <CardTitle>Formule</CardTitle>
-            <p className="text-lg font-bold">{aine.subscription ? PLAN_LABELS[aine.subscription.plan] : "Aucune"}</p>
-            <p className="text-sm text-muted">Payeur : {payer ? fullName(payer.user) : "—"}</p>
-            <Link href={`/famille/formule?aine=${aine.id}`} className="inline-flex min-h-11 items-center gap-1 font-semibold text-mer underline-offset-4 hover:underline">
-              {isPayer ? "Changer de formule" : "Voir les formules"} <ChevronRight aria-hidden="true" className="size-4" />
-            </Link>
-          </Card>
-        </div>
+        <Card className="flex flex-col gap-2">
+          <CardTitle className="mb-0 inline-flex items-center gap-2">
+            <ShieldCheck aria-hidden="true" className="size-[18px] text-feuille" strokeWidth={1.6} />
+            Accord de l&apos;aîné
+          </CardTitle>
+          <p className="text-[15px] leading-[1.45]">
+            Donné par <strong className="font-semibold">{aine.consentByName}</strong> (
+            {aine.consentByType === "AINE" ? "l'aîné lui-même" : "son représentant"}).
+          </p>
+          <p className="text-sm text-muted">Enregistré le {formatDate(aine.consentAt)}.</p>
+        </Card>
+
+        <CardLink href={`/famille/formule?aine=${aine.id}`}>
+          <span className="block text-[15px] text-muted">Formule</span>
+          <b className="block text-[17px] font-semibold">{aine.subscription ? PLAN_LABELS[aine.subscription.plan] : "Aucune"}</b>
+          <span className="block text-[15px] text-muted">Payeur : {payer ? fullName(payer.user) : "—"}</span>
+          <span className="mt-1 block font-semibold text-mer">{isPayer ? "Changer de formule" : "Voir les formules"}</span>
+        </CardLink>
 
         {/* A6 (D7) : rattacher un proche aidant à cet aîné (payeur seulement). */}
         {isPayer ? (
           <Card className="flex flex-col gap-2">
-            <CardTitle>Proche aidant</CardTitle>
+            <CardTitle className="mb-0 inline-flex items-center gap-2">
+              <HeartHandshake aria-hidden="true" className="size-[18px] text-mer" strokeWidth={1.6} />
+              Proche aidant
+            </CardTitle>
             <CaregiverLinkForm aineId={aine.id} aineFirstName={aine.firstName} />
           </Card>
         ) : null}
-
-        <nav aria-label={`Raccourcis pour ${aine.firstName}`}>
-          <ul className="grid gap-3 sm:grid-cols-2">
-            <Shortcut href={`/famille/aines/${aine.id}/cercle`} icon={Users} label={`Cercle Lakou (${aine.members.length})`} />
-            <Shortcut href={`/famille/kaye?aine=${aine.id}`} icon={NotebookPen} label="Lire le Kayé" />
-            <Shortcut href={`/famille/visites?aine=${aine.id}`} icon={CalendarDays} label="Voir les visites" />
-            <Shortcut href={`/famille/demandes/nouvelle?aine=${aine.id}`} icon={HandHeart} label="Demander un accompagnement" />
-          </ul>
-        </nav>
       </div>
     </>
   );
 }
 
-function Shortcut({ href, icon: Icon, label }: { href: string; icon: typeof Users; label: string }) {
+function Shortcut({ href, icon, label, detail }: { href: string; icon: React.ReactNode; label: string; detail: string }) {
   return (
     <li>
-      <Link href={href} className="flex min-h-14 items-center gap-3 rounded-xl border border-line bg-surface px-4 py-3 font-semibold hover:bg-mer-soft">
-        <Icon aria-hidden="true" className="size-5 shrink-0 text-mer" />
-        <span className="flex-1">{label}</span>
-        <ChevronRight aria-hidden="true" className="size-4 text-muted" />
-      </Link>
+      <CardLink href={href} padding="dense">
+        <span className="flex items-center gap-3.5">
+          <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-full bg-mer-soft text-mer [&_svg]:size-5 [&_svg]:[stroke-width:1.6]">
+            {icon}
+          </span>
+          <span className="min-w-0">
+            <b className="block font-semibold">{label}</b>
+            <span className="block text-[15px] text-muted">{detail}</span>
+          </span>
+        </span>
+      </CardLink>
     </li>
   );
 }
@@ -143,42 +164,34 @@ function Shortcut({ href, icon: Icon, label }: { href: string; icon: typeof User
 /** Guide de démarrage : visible tant que le cercle n'a qu'un membre ou qu'aucune demande n'existe. */
 function NextSteps({ aineId, firstName, members, requests }: { aineId: string; firstName: string; members: number; requests: number }) {
   if (members > 1 && requests > 0) return null;
-  const steps = [
-    { done: true, label: `Profil de ${firstName} créé`, href: null },
-    { done: members > 1, label: "Inviter un proche dans le cercle Lakou", href: `/famille/aines/${aineId}/cercle` },
-    { done: requests > 0, label: "Demander un accompagnement", href: `/famille/demandes/nouvelle?aine=${aineId}` },
-  ];
+  const inviteDone = members > 1;
+  const requestDone = requests > 0;
+  const link = (href: string, text: string) => (
+    <Link href={href} className="font-semibold text-mer underline underline-offset-4">
+      {text}
+    </Link>
+  );
   return (
-    <Card aria-labelledby="next-steps" className="flex flex-col gap-3">
-      <h2 id="next-steps" className="text-xl font-bold">
+    <Card aria-labelledby="next-steps" padding="none" className="px-5 pt-4 pb-1">
+      <h2 id="next-steps" className="font-display text-[22px] leading-[1.2] font-normal tracking-[-.015em]">
         Pour bien démarrer
       </h2>
-      <ol className="flex flex-col gap-2">
-        {steps.map((s, i) => (
-          <li key={s.label} className="flex items-center gap-3">
-            <span
-              aria-hidden="true"
-              className={
-                s.done
-                  ? "inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-feuille font-bold text-on-mer"
-                  : "inline-flex size-8 shrink-0 items-center justify-center rounded-full border-2 border-mer font-bold text-mer"
-              }
-            >
-              {s.done ? "✓" : i + 1}
-            </span>
-            {s.href && !s.done ? (
-              <Link href={s.href} className="inline-flex min-h-11 items-center font-semibold text-mer underline">
-                {s.label}
-              </Link>
-            ) : (
-              <span className={s.done ? "text-muted" : ""}>
-                {s.label}
-                {s.done ? <span className="sr-only"> (fait)</span> : null}
-              </span>
-            )}
-          </li>
-        ))}
-      </ol>
+      <ProofSteps
+        className="mt-2"
+        steps={[
+          { state: "done", label: `Profil ${deName(firstName)} créé` },
+          {
+            state: inviteDone ? "done" : "current",
+            icon: <UserPlus />,
+            label: inviteDone ? "Inviter un proche dans le cercle Lakou" : link(`/famille/aines/${aineId}/cercle`, "Inviter un proche dans le cercle Lakou"),
+          },
+          {
+            state: requestDone ? "done" : inviteDone ? "current" : "todo",
+            icon: <HandHeart />,
+            label: requestDone ? "Demander un accompagnement" : link(`/famille/demandes/nouvelle?aine=${aineId}`, "Demander un accompagnement"),
+          },
+        ]}
+      />
     </Card>
   );
 }

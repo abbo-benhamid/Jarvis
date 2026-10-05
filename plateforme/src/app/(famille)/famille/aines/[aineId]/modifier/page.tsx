@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import { requireRole } from "@/server/auth/guards";
 import { getAineForFamily } from "@/server/famille/queries";
 import { Alert } from "@/components/ui/alert";
-import { PageHeader } from "@/components/ui/page-header";
+import { TopBar } from "@/components/famille/top-bar";
+import { deName } from "@/lib/format";
 import { AineForm } from "@/components/famille/aine-form";
 
 export const metadata: Metadata = { title: "Modifier le profil de l'aîné" };
@@ -18,8 +19,8 @@ export default async function Page({ params }: { params: Promise<{ aineId: strin
   const { aine, isPayer } = data;
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col">
-      <PageHeader eyebrow="Fiche de l'aîné" title={`Modifier le profil de ${aine.firstName}`} />
+    <div className="flex flex-col">
+      <TopBar title={`Modifier le profil ${deName(aine.firstName)}`} backHref={`/famille/aines/${aine.id}`} backLabel={`Retour à la fiche ${deName(aine.firstName)}`} />
       {isPayer ? (
         <AineForm
           defaults={{
@@ -37,7 +38,7 @@ export default async function Page({ params }: { params: Promise<{ aineId: strin
         />
       ) : (
         <Alert tone="info" title="Seul le gestionnaire principal modifie ce profil.">
-          <Link href={`/famille/aines/${aine.id}`} className="font-semibold text-mer underline">
+          <Link href={`/famille/aines/${aine.id}`} className="font-semibold text-mer underline underline-offset-4">
             Retour à la fiche
           </Link>
         </Alert>

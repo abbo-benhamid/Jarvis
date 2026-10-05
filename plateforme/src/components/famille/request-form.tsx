@@ -34,7 +34,7 @@ export function RequestForm({ aines, defaultAineId, today }: { aines: RequestAin
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-6" noValidate>
       <Card className="flex flex-col gap-4">
-        <h2 className="text-xl font-bold">1. Pour qui ?</h2>
+        <h2 className="font-display text-[22px] leading-[1.2] font-normal tracking-[-.015em] text-balance">1. Pour qui{"\u202f"}?</h2>
         {aines.length === 1 ? (
           <>
             <input type="hidden" name="aineId" value={aineId} />
@@ -77,7 +77,7 @@ export function RequestForm({ aines, defaultAineId, today }: { aines: RequestAin
       </Card>
 
       <Card className="flex flex-col gap-4">
-        <h2 className="text-xl font-bold">2. Quand ?</h2>
+        <h2 className="font-display text-[22px] leading-[1.2] font-normal tracking-[-.015em] text-balance">2. Quand{"\u202f"}?</h2>
         <Fieldset legend="Fréquence" errors={fe?.frequency}>
           <div className="grid sm:grid-cols-2">
             {FREQUENCY_VALUES.map((f) => (
@@ -147,7 +147,7 @@ export function RequestForm({ aines, defaultAineId, today }: { aines: RequestAin
       </Card>
 
       <Card className="flex flex-col gap-4">
-        <h2 className="text-xl font-bold">3. Un mot pour l&apos;accompagnant (facultatif)</h2>
+        <h2 className="font-display text-[22px] leading-[1.2] font-normal tracking-[-.015em] text-balance">3. Un mot pour l&apos;accompagnant (facultatif)</h2>
         <Alert tone="info">Pas d&apos;information médicale : pas de diagnostic, pas de traitement, pas de médicament.</Alert>
         <FormField label="Notes" htmlFor="notes" hint="Exemple : elle aime parler du carnaval, il a un petit chien." errors={fe?.notes}>
           <Textarea {...fieldA11y("notes", fe?.notes, true)} maxLength={500} />
@@ -155,7 +155,7 @@ export function RequestForm({ aines, defaultAineId, today }: { aines: RequestAin
       </Card>
 
       <Card className="flex flex-col gap-4">
-        <h2 className="text-xl font-bold">4. Qui emploie l&apos;accompagnant ?</h2>
+        <h2 className="font-display text-[22px] leading-[1.2] font-normal tracking-[-.015em] text-balance">4. Qui emploie l&apos;accompagnant{"\u202f"}?</h2>
         <p className="text-sm text-muted">
           Koudmen met en relation. Koudmen n&apos;est pas l&apos;employeur. L&apos;employeur (ou le client d&apos;un auto-entrepreneur) est
           l&apos;aîné ou son représentant.
@@ -194,7 +194,7 @@ export function RequestForm({ aines, defaultAineId, today }: { aines: RequestAin
       </Card>
 
       <FormMessage state={state} />
-      <PendingButton pending={pending} size="lg" pendingLabel="Envoi de la demande…" className="sm:self-start">
+      <PendingButton pending={pending} size="lg" pendingLabel="Envoi de la demande…" className="w-full">
         Envoyer la demande
       </PendingButton>
     </form>
