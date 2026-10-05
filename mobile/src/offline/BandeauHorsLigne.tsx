@@ -29,6 +29,8 @@ const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`;
 export function texteIndicateur(e: Pick<EtatHorsLigne, 'enLigne' | 'enAttente' | 'envoiEnCours' | 'blocage'>): string | null {
   const attente = e.enAttente > 0 ? `${pluriel(e.enAttente, 'envoi')} en attente` : null;
   if (e.enLigne === false) return attente ? `Hors ligne · ${attente}` : 'Hors ligne';
+  // Clé de chiffrement indisponible pour l'instant : rien n'est effacé, nouvel essai plus tard.
+  if (e.blocage === 'stockage') return `${attente ?? 'Envois gardés'} · lecture impossible pour l’instant, rien n’est effacé`;
   if (!attente) return null;
   if (e.envoiEnCours) return `Envoi en cours · ${e.enAttente} en attente`;
   if (e.blocage === 'session') return `${attente} · reconnectez-vous`;

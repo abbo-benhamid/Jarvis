@@ -41,7 +41,9 @@ export type CodeErreurApp =
   /** La position ne peut pas être lue (refus, appareil sans GPS). */
   | 'POSITION_INDISPONIBLE'
   /** Lot M3 : pas de réseau, l'événement est gardé dans la file hors ligne. Il part tout seul au retour du réseau. */
-  | 'EN_ATTENTE';
+  | 'EN_ATTENTE'
+  /** Le serveur répond « encore en cours » trop longtemps : l'envoi est retiré de la file et signalé « à vérifier ». */
+  | 'A_VERIFIER';
 
 /** Erreur unique de l'app. Le `message` est en français simple : il s'affiche tel quel. */
 export class ApiError extends Error {

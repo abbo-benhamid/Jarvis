@@ -36,6 +36,8 @@ export function serveurFactice() {
     perdreProchaineReponse: false,
     /** Le prochain envoi reçoit DOUBLON / EN_COURS (envoi parallèle encore traité). Une fois. */
     enCoursUneFois: false,
+    /** Chaque envoi reçoit DOUBLON / EN_COURS (réservation orpheline côté serveur). */
+    enCoursToujours: false,
     /** Erreur HTTP levée au prochain envoi (session perdue, 5xx…). Une fois. */
     erreurUneFois: null as ApiError | null,
     refuser: null as null | ((e: Evenement) => MotifRefus | null),
@@ -52,7 +54,7 @@ export function serveurFactice() {
         throw err;
       }
       recus.push(e);
-      if (s.enCoursUneFois) {
+      if (s.enCoursUneFois || s.enCoursToujours) {
         s.enCoursUneFois = false;
         return { clientEventId: e.clientEventId, type: e.type, statut: 'DOUBLON', statutOrigine: 'EN_COURS', horlogeSuspecte: false };
       }
