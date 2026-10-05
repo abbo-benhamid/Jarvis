@@ -16,13 +16,13 @@ const ACTIVITES = ['Discussion', 'Promenade', 'Lecture', 'Jeux de société', 'C
 
 /**
  * Échelle d'humeur UNIQUE web / app (arbitrage V1 X4) : du mieux au moins bien, de « Très bien » à « Pas bien ».
- * [À VÉRIFIER] après fusion : mêmes 5 libellés que `MOOD_LABELS` de plateforme/src/lib/labels.ts.
+ * Mêmes 5 libellés que `MOOD_LABELS` de plateforme/src/lib/labels.ts.
  */
 const LIBELLES_HUMEUR: Record<'1' | '2' | '3' | '4' | '5', string> = {
   '5': 'Très bien',
   '4': 'Bien',
   '3': 'Correct',
-  '2': 'Bas',
+  '2': 'Pas très bien',
   '1': 'Pas bien',
 };
 

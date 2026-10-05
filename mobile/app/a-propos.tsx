@@ -129,7 +129,7 @@ export default function APropos() {
           icon="shield"
           label="Politique de confidentialité"
           accessibilityHint="Ouvre la page du site dans le navigateur"
-          onPress={() => ouvrir('/confidentialite')}
+          onPress={() => ouvrir('/confidentialite#application')}
         />
         <Button
           testID="lien-mentions-legales"

@@ -53,7 +53,7 @@ test.describe('V1c : Kayé', () => {
         await expect(page.getByTestId('ecran-kaye-formulaire')).toBeVisible();
 
         const humeurs = await page.getByTestId('humeur').getByRole('radio').allInnerTexts();
-        expect(humeurs.map((t) => t.replace(/\s+/g, ' ').trim())).toEqual(['Très bien', 'Bien', 'Correct', 'Bas', 'Pas bien']);
+        expect(humeurs.map((t) => t.replace(/\s+/g, ' ').trim())).toEqual(['Très bien', 'Bien', 'Correct', 'Pas très bien', 'Pas bien']);
         await expect(page.getByRole('radio', { name: 'Non observé' })).toBeVisible();
         await expect(page.getByTestId('bouton-envoyer-kaye')).toContainText('Envoyer le Kayé');
         await capture(page, `kaye-${largeur}-${theme}`);
