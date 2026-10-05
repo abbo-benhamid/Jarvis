@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/server/auth/session-token";
+import { isStrictProduction, secretProblem } from "@/server/config-check";
 
 /**
  * Première barrière (edge) : sans session valide, pas d'accès aux espaces privés.
@@ -8,8 +9,9 @@ import { SESSION_COOKIE, verifySessionToken } from "@/server/auth/session-token"
 export async function middleware(req: NextRequest) {
   const secret = process.env.SESSION_SECRET;
   const token = req.cookies.get(SESSION_COOKIE)?.value;
-  const session =
-    secret && secret.length >= 32 ? await verifySessionToken(token, new TextEncoder().encode(secret)) : null;
+  // B3 : en production, un secret d'exemple ne valide aucune session.
+  const usable = secret && secret.length >= 32 && !(isStrictProduction() && secretProblem("SESSION_SECRET", secret));
+  const session = usable ? await verifySessionToken(token, new TextEncoder().encode(secret)) : null;
   if (!session) {
     const url = req.nextUrl.clone();
     url.pathname = "/connexion";

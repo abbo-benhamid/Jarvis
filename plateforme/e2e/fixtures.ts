@@ -20,8 +20,12 @@ export const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? "";
 /** Opérateur RÉEL local créé par le seed (aucun compte démo opérateur). */
 export const OPERATEUR_EMAIL = process.env.SEED_OPERATOR_EMAIL ?? "operateur@koudmen.test";
 export const OPERATEUR_PASSWORD = process.env.SEED_OPERATOR_PASSWORD ?? "";
-/** Code testeur des e2e : doit figurer dans TESTER_INVITE_CODES. */
-export const E2E_TESTER_CODE = "E2E-TEST";
+/**
+ * Code testeur des e2e : lu dans TESTER_INVITE_CODES (aucun code en dur, B1).
+ * Le premier code qui contient « E2E » ; sinon le premier code de la liste.
+ */
+const ENV_CODES = (process.env.TESTER_INVITE_CODES ?? "").split(",").map((c) => c.trim().toUpperCase()).filter(Boolean);
+export const E2E_TESTER_CODE = ENV_CODES.find((c) => c.includes("E2E")) ?? ENV_CODES[0] ?? "";
 /** Marqueur des retours testeurs créés par les tests. */
 export const FEEDBACK_MARK = "[E2E]";
 
@@ -181,7 +185,7 @@ export async function operatorId(): Promise<string> {
 
 /** Efface toutes les données créées par les tests e2e (comptes @e2e.koudmen.test, retours [E2E], inscriptions e2e). */
 export async function cleanupE2E() {
-  // Bacs à sable des e2e (code E2E-TEST) : purge complète, puis traces de mesure.
+  // Bacs à sable des e2e (code E2E de TESTER_INVITE_CODES) : purge complète, puis traces de mesure.
   const sandboxes = await prisma.sandbox.findMany({ where: { testerCode: E2E_TESTER_CODE }, select: { id: true } });
   await purgeSandboxIds(prisma, sandboxes.map((x) => x.id));
   await prisma.usageEvent.deleteMany({ where: { testerCode: E2E_TESTER_CODE } });

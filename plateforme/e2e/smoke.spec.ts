@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { DEMO_PASSWORD, E2E_TESTER_CODE, OPERATEUR_EMAIL, OPERATEUR_PASSWORD } from "./fixtures";
 
 /**
- * Smoke tests S1b. Prérequis : base migrée + seedée, DEMO_MODE=true, TESTER_INVITE_CODES contient E2E-TEST.
+ * Smoke tests S1b. Prérequis : base migrée + seedée, DEMO_MODE=true, TESTER_INVITE_CODES contient un code avec « E2E ».
  */
 test("D13 : l'accueil vend la tranquillité, avec un seul bouton « Tester Koudmen » et sans démo opérateur", async ({ page }) => {
   await page.goto("/");
