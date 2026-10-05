@@ -48,7 +48,10 @@
     "proxy:dev": "node scripts/proxy-dev.mjs",
     "e2e:simule": "playwright test -c e2e/playwright.simule.config.ts",
     "test:natif": "playwright test -c src/native/__tests__/unitaires.config.ts",
-    "e2e:natif": "playwright test -c src/native/__tests__/playwright.config.ts"
+    "e2e:natif": "playwright test -c src/native/__tests__/playwright.config.ts",
+    "test:hors-ligne": "playwright test -c src/offline/__tests__/unitaires.config.ts",
+    "e2e:hors-ligne": "playwright test -c src/offline/__tests__/playwright.config.ts",
+    "export:web:hors-ligne": "EXPO_PUBLIC_API_URL=/ expo export -p web --output-dir dist-hors-ligne --clear"
   },
   "private": true
 }

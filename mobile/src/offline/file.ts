@@ -110,6 +110,8 @@ export function messageAttente(type: TypeEvenement): string {
   }
 }
 
+const erreurDeconnecte = () => new ApiError('NON_AUTHENTIFIE', 'Vous êtes déconnecté. Les envois en attente sont effacés de ce téléphone.');
+
 type Ligne = {
   id: string;
   seq: number;
@@ -209,7 +211,9 @@ export function creerFile(o: OptionsFile): FileEvenements {
   async function persister(l: Ligne) {
     const gen = generation;
     try {
-      if (gen === generation) await stockage.ecrireLigne(versStockage(l));
+      await stockage.ecrireLigne(versStockage(l));
+      // Déconnexion pendant l'écriture : on retire ce qui vient d'être écrit.
+      if (gen !== generation) await stockage.supprimerLigne(l.id);
     } catch (e) {
       if (__DEV_SAFE__) console.warn('[hors ligne] écriture impossible', e);
     }
@@ -421,8 +425,11 @@ export function creerFile(o: OptionsFile): FileEvenements {
 
   return {
     async soumettre(ev) {
+      const gen = generation;
       await charger();
+      if (gen !== generation) throw erreurDeconnecte();
       const l = await ajouter(ev);
+      if (gen !== generation) throw erreurDeconnecte();
       const resultat = attendre(l.id);
       void synchroniser({ forcer: true });
       return resultat;
@@ -466,9 +473,7 @@ export function creerFile(o: OptionsFile): FileEvenements {
       prochainEssaiA = null;
       blocage = null;
       envoiEnCours = false;
-      for (const id of [...attentes.keys()]) {
-        regler(id, { erreur: new ApiError('NON_AUTHENTIFIE', 'Vous êtes déconnecté. Les envois en attente sont effacés de ce téléphone.') });
-      }
+      for (const id of [...attentes.keys()]) regler(id, { erreur: erreurDeconnecte() });
       notifier();
     },
   };
