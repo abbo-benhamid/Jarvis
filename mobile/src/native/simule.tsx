@@ -76,7 +76,7 @@ function VueScannerSimulee({ onLecture, onAnnuler }: ProprietesScanner) {
           ))}
         </View>
         <Text variant="small" style={{ color: '#FFFFFF' }}>
-          Caméra simulée (démo)
+          Caméra simulée
         </Text>
       </View>
     </CadreScanner>

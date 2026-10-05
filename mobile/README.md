@@ -25,7 +25,7 @@ Les variables `EXPO_PUBLIC_*` sont figées au build : ajoutez `--clear` si vous 
    EXPO_PUBLIC_API_URL=http://<IP-de-l-ordinateur>:3000 npx expo start
    ```
 3. Scannez le QR code. Connexion : `accompagnant@demo.koudmen.test` et `DEMO_PASSWORD` de `plateforme/.env`,
-   ou le lien « Essayer avec le compte de démonstration ».
+   ou le lien « Essayer avec le compte d’exemple » (visible en mode simulé ou en développement seulement).
 
 Sans serveur : `EXPO_PUBLIC_API_MODE=simule npx expo start` (mot de passe `koudmen`, code du domicile `LKW7Q3`).
 La démo simulée reprend la Léonie J. du site (`plateforme/prisma/seed.ts`) et **le même code** `LKW7Q3` (arbitrage V1 X3).
@@ -50,6 +50,22 @@ Limites d'Expo Go :
   Les textes Koudmen (`NSCameraUsageDescription`, `NSLocationWhenInUseUsageDescription`) apparaissent seulement
   dans un build (`npx eas-cli@latest build --profile development`), à faire au premier build EAS (ADR 0008).
 - Pour rejouer l'invite après un refus : supprimez les autorisations d'Expo Go dans les réglages du téléphone.
+
+## Micro-animations et langage de lancement (sprint V2-app)
+
+| Élément | Animation | Durée |
+|---|---|---|
+| Preuve obtenue | La coche se dessine (seulement si obtenue sous les yeux) | 320 ms |
+| Compteur « 2 preuves sur 3 » | Léger « pop » 1 → 1,06 → 1 au seuil, sans dépassement | 240 ms |
+| Kayé envoyé | Rond de succès, puis coche dessinée | 200 + 320 ms |
+| Cartes de visites | Fondu + 8 px, décalage 40 ms | 200 ms |
+| Avatar de l'aîné | L'anneau madras se dessine, bande après bande | 480 ms |
+| Valider / Envoyer | Retour haptique léger, puis « succès » (`expo-haptics`, iOS / Android) | — |
+
+- Code : `src/ui/Mouvement.tsx`, `src/ui/haptique(.native).ts`.
+- « Réduire les animations » du système : tout est figé à l'état final (`AccessibilityInfo.isReduceMotionEnabled`).
+- Textes : plus de « version de test », « fictif » ni « démo » à l'écran. Mode simulé seulement : « Code d’exemple : LKW7Q3 ».
+- e2e : `e2e/simule/v2-mouvement.spec.ts`.
 
 ## Connexion et jetons (lot M2)
 

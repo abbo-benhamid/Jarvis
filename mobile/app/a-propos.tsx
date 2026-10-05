@@ -5,7 +5,7 @@ import { SITE_URL } from '@/api';
 import { useSession } from '@/session/SessionProvider';
 import { retourAuxVisites } from '@/session/navigation';
 import { useTheme } from '@/theme';
-import { Badge, Button, Card, Icon, type IconName, IconButton, Screen, SectionHeader, Text } from '@/ui';
+import { Button, Card, Icon, type IconName, IconButton, Screen, SectionHeader, Text } from '@/ui';
 
 /**
  * « À propos et confidentialité » (arbitrage V1 X7, revue sécurité D3).
@@ -93,9 +93,9 @@ export default function APropos() {
       <Text variant="h2" accessibilityRole="header" style={{ marginTop: 8 }}>
         À propos et confidentialité
       </Text>
-      <View style={{ flexDirection: 'row', marginTop: 12 }}>
-        <Badge kind="soleil" icon="info" label="Version de test" />
-      </View>
+      <Text variant="body" tone="muted" style={{ marginTop: 8 }} testID="annonce-lancement">
+        Koudmen ouvre bientôt en Martinique.
+      </Text>
 
       <Card style={{ marginTop: 16, gap: 8 }} testID="carte-editeur">
         <Text variant="bodyStrong">Qui édite Koudmen ?</Text>
@@ -103,7 +103,7 @@ export default function APropos() {
           L’équipe Koudmen, en Martinique. Son identité complète (nom, adresse, contact) est dans les mentions légales.
         </Text>
         <Text variant="small" tone="muted">
-          Koudmen est un prototype en test. Ce n’est pas un service d’aide à domicile autorisé. En cas d’urgence, appelez le 15 ou le 112.
+          En cas d’urgence, appelez le 15 ou le 112.
         </Text>
       </Card>
 

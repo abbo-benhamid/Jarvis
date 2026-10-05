@@ -136,7 +136,7 @@ test.describe('V1c : profil et « À propos et confidentialité »', () => {
         await page.emulateMedia({ colorScheme: theme });
         await seConnecter(page);
         await page.getByTestId('onglet-profil').click();
-        await expect(page.getByTestId('ecran-profil')).toContainText('pas un service d’aide à domicile autorisé');
+        await expect(page.getByTestId('ecran-profil')).toContainText('Me déconnecter');
         await page.getByTestId('lien-a-propos').evaluate((el) => el.scrollIntoView({ block: 'center' }));
         await capture(page, `profil-${largeur}-${theme}`);
         await page.getByTestId('lien-a-propos').click();
@@ -157,7 +157,7 @@ test.describe('V1c : profil et « À propos et confidentialité »', () => {
   test('à propos lisible depuis l’écran de connexion, sans compte', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('lien-a-propos-connexion').click();
-    await expect(page.getByTestId('ecran-a-propos')).toContainText('pas un service d’aide à domicile autorisé');
+    await expect(page.getByTestId('ecran-a-propos')).toContainText('Koudmen ouvre bientôt en Martinique');
     await page.getByRole('button', { name: 'Retour', exact: true }).click();
     await expect(page.getByTestId('ecran-connexion')).toBeVisible();
   });

@@ -118,7 +118,7 @@ export default function Connexion() {
           onSubmitEditing={() => void valider(false)}
           returnKeyType="go"
           erreur={manque.motDePasse ?? erreur}
-          aide={api.mode === 'simule' ? `Démo hors ligne : ${EMAIL_DEMO}, mot de passe « ${MOT_DE_PASSE_DEMO} ».` : undefined}
+          aide={api.mode === 'simule' ? `Compte d’exemple : ${EMAIL_DEMO}, mot de passe « ${MOT_DE_PASSE_DEMO} ».` : undefined}
         />
         <Button
           testID="bouton-connexion"
@@ -128,21 +128,21 @@ export default function Connexion() {
           loading={envoi === 'compte'}
           accessibilityHint={pret ? undefined : 'Entrez d’abord votre e-mail et votre mot de passe.'}
         />
-        <Button
-          testID="bouton-demo"
-          variant="link"
-          label="Essayer avec le compte de démonstration"
-          onPress={() => void valider(true)}
-          loading={envoi === 'demo'}
-          disabled={envoi !== null}
-        />
+        {/* V2-app : le compte partagé n'apparaît qu'en simulé ou en développement (jamais dans un build publié). */}
+        {api.mode === 'simule' || __DEV__ ? (
+          <Button
+            testID="bouton-demo"
+            variant="link"
+            label="Essayer avec le compte d’exemple"
+            onPress={() => void valider(true)}
+            loading={envoi === 'demo'}
+            disabled={envoi !== null}
+          />
+        ) : null}
       </View>
 
       <View style={{ alignItems: 'center', marginTop: 16 }}>
         <Button testID="lien-a-propos-connexion" variant="link" label="À propos et confidentialité" onPress={() => router.push('/a-propos')} />
-        <Text variant="caption" tone="muted" center>
-          Version de test · pas un service d’aide à domicile autorisé.
-        </Text>
       </View>
 
       <View style={[styles.note, { borderColor: c.line }]}>

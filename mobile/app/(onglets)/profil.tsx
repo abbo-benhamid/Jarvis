@@ -6,7 +6,7 @@ import { api } from '@/api';
 import { useEtatHorsLigne } from '@/offline/BandeauHorsLigne';
 import { useSession } from '@/session/SessionProvider';
 import { radius, useTheme, type ThemePreference } from '@/theme';
-import { Avatar, Badge, Button, Card, Choice, Icon, type IconName, MadrasLine, Screen, SectionHeader, TabBarSpace, Text } from '@/ui';
+import { Avatar, Button, Card, Choice, Icon, type IconName, MadrasLine, Screen, SectionHeader, TabBarSpace, Text } from '@/ui';
 
 /** « 1 envoi n'est pas parti. » / « 2 envois ne sont pas partis. » */
 function texteEnvoisNonPartis(n: number): string {
@@ -70,11 +70,6 @@ export default function Profil() {
           </Text>
         </View>
       </View>
-      {session.demo || session.bacASable ? (
-        <View style={{ flexDirection: 'row', marginTop: 12 }}>
-          <Badge kind="soleil" icon="info" label={session.bacASable ? 'Version de test' : 'Compte de démonstration'} />
-        </View>
-      ) : null}
       <MadrasLine style={{ marginTop: 20 }} />
 
       <SectionHeader title="Votre activité" />
@@ -173,10 +168,7 @@ export default function Profil() {
           {info}
         </Text>
       ) : null}
-      <Text variant="caption" tone="muted" center style={{ marginTop: 16 }}>
-        Version de test · pas un service d’aide à domicile autorisé.
-      </Text>
-      <Text variant="caption" tone="muted" center style={{ marginTop: 4 }} num>
+      <Text variant="caption" tone="muted" center style={{ marginTop: 16 }} num>
         Koudmen {Constants.expoConfig?.version ?? ''} · {api.mode === 'simule' ? 'données simulées' : api.url}
       </Text>
       <View style={{ height: 8, backgroundColor: c.bg }} />
