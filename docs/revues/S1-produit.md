@@ -248,26 +248,40 @@ flowchart LR
 
 ### 9.2 Trois scénarios guidés
 
-**Scénario 1 — « Des nouvelles de Manman » (diaspora et aidant local, 10 min)**
-> « Votre mère, Léonie, 81 ans, vit seule à Fort-de-France. Vous habitez à Créteil. »
-1. Regardez la page d'accueil pendant 30 secondes. Dites ce que fait Koudmen.
+> **S1c (5 octobre 2026) : protocole aligné sur l'application.** Les scénarios ci-dessous suivent les 3 scénarios réels du panneau « Votre test ». Les écarts relevés par la revue S1b-ux (M17) sont corrigés dans le protocole, pas dans l'application :
+> - Ernest habite dans **une des communes choisies par la testeuse** (le robot le crée là), pas forcément au Lamentin.
+> - Le remplacement de Josiane et l'offre « en direct, en CESU » n'existent pas dans l'application : ils passent dans l'entretien (question 5, « Fuite »).
+> - Le revenu net estimé est maintenant affiché (profil et propositions).
+
+Chaque testeur entre par « Tester Koudmen » avec son code, puis **choisit lui-même** son rôle (aucun rôle n'est coché par défaut).
+
+**Scénario 1 — « Des nouvelles de Léonie » (rôle Famille, 10 min)**
+> « Votre mère, Léonie, 81 ans, vit seule à Fort-de-France. Vous habitez à Créteil. Votre frère Frédéric est déjà dans le cercle. »
+1. Regardez la page d'accueil pendant 30 secondes. Dites ce que fait Koudmen et combien cela coûte.
 2. Lisez le dernier Kayé de Léonie. Trouvez le signal « à surveiller ».
-3. Vérifiez que la dernière visite a bien eu lieu. Expliquez comment vous le savez.
-4. Invitez votre frère, qui habite à Lyon.
-5. Regardez les formules. Dites laquelle vous prendriez, et à quel prix.
+3. Vérifiez que la dernière visite a bien eu lieu. Expliquez comment vous le savez (reçu de visite, page Visites).
+4. Invitez un autre proche dans le cercle Lakou (par exemple votre sœur, à Lyon).
 
-**Scénario 2 — « Je deviens accompagnant » (accompagnants, 15 min)**
+**Scénario 2 — « Trouver un accompagnant » (rôle Famille, 8 min)**
+1. Touchez « Simuler la suite » : Koudmen propose des profils.
+2. Choisissez une personne. Dites pourquoi.
+3. Touchez deux fois « Simuler la suite » : la personne accepte, puis fait la visite.
+4. Lisez le Kayé de cette visite.
+
+**Scénario 3 — « Un imprévu et le prix » (rôle Famille, 8 min)**
+1. Une visite est « À vérifier ». Dites ce que vous comprenez et ce que vous feriez.
+2. Regardez les formules. Dites laquelle vous prendriez, et à quel prix total par mois.
+3. Dites si vous voulez une vraie visite découverte à 49 €.
+
+**Scénario accompagnant — « Je deviens accompagnant » (rôle Accompagnant, 15 min, 3 parties du panneau)**
 > « Vous êtes retraitée à Schœlcher. Vous voulez un complément de revenu et vous sentir utile. »
-1. Inscrivez-vous et répondez aux 5 questions d'orientation. Expliquez votre statut avec vos mots.
-2. Fixez votre tarif horaire. Dites si le revenu net affiché vous convient.
-3. Acceptez la proposition pour Ernest, au Lamentin.
-4. Faites le check-in de la visite, puis écrivez le Kayé en moins de 2 minutes.
+1. Répondez aux 5 questions sur votre statut. Expliquez votre statut avec vos mots.
+2. Fixez votre tarif horaire, vos communes et vos créneaux. Dites si le **revenu net estimé** vous convient.
+3. Cochez vos documents et demandez la vérification.
+4. Touchez « Simuler la suite » : l'équipe valide, puis une famille vous choisit. Acceptez la mission pour Ernest.
+5. Ouvrez la visite. Enregistrez votre arrivée (position simulée + code du domicile affiché sur la page). Écrivez le Kayé en moins de 2 minutes.
 
-**Scénario 3 — « Un imprévu » (diaspora, 8 min)**
-> « Cette semaine, deux choses arrivent. »
-1. Une visite est « à vérifier ». Dites ce que vous comprenez et ce que vous feriez.
-2. Josiane est malade samedi. Découvrez qui la remplace.
-3. Josiane vous propose de continuer « en direct, en CESU, c'est moins cher ». Dites ce que vous décidez et pourquoi.
+À la fin de chaque scénario, l'application demande l'avis du testeur (une note + une question ouverte).
 
 ### 9.3 Cinq questions à poser (après les scénarios)
 
