@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Koudmen — Maquette</title>
+<title>Koudmen Conso</title>
 <meta name="description" content="Maquette haute fidélité de Koudmen : cinq écrans mobiles, thème clair et sombre.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,7 +19,7 @@
   --surface:#FFFDF8;       /* coton */
   --surface-2:#EFE9DE;     /* sable creusé : puces, champs */
   --ink:#1A2321;           /* encre */
-  --muted:#5A645F;         /* 5.6:1 sur --bg */
+  --muted:#5A645F;         /* 5.5:1 sur --bg */
   --line:#E3DBCD;          /* filet décoratif */
   --line-strong:#8A877D;   /* bord des contrôles, >= 3:1 */
   --mer:#0D5F58;           /* accent principal, 7.3:1 sur --surface */
@@ -80,7 +80,7 @@ svg.i.xs{width:16px;height:16px;stroke-width:1.8}
 /* ===== Planche ===== */
 .board-head{max-width:1360px;margin:0 auto;padding:40px 24px 8px;display:flex;flex-wrap:wrap;gap:24px;align-items:flex-end;justify-content:space-between}
 .board-head .eyebrow{font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
-.board-head h1{font-family:"Fraunces",serif;font-weight:500;font-size:clamp(34px,5vw,56px);line-height:1.04;letter-spacing:-.02em;margin:0;max-width:16ch}
+.board-head h1{font-family:"Fraunces",serif;font-weight:400;font-size:clamp(34px,5vw,60px);line-height:1.04;letter-spacing:-.025em;margin:0;max-width:20ch;text-wrap:balance}
 .board-head h1 em{font-style:italic;color:var(--mer)}
 .board-head p.lead{color:var(--muted);max-width:52ch;margin:14px 0 0;font-size:18px}
 .madras-line{height:2px;border-radius:2px;background:var(--madras);opacity:.9}
@@ -124,7 +124,7 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
 
 .card{background:var(--surface);border-radius:24px;box-shadow:var(--shadow);padding:20px}
 .card + .card,.stack > * + *{margin-top:12px}
-.section-h{display:flex;align-items:baseline;justify-content:space-between;margin:28px 2px 12px}
+.section-h{display:flex;align-items:baseline;justify-content:space-between;margin:24px 2px 10px}
 .section-h h2{font-size:15px;font-weight:600;margin:0;color:var(--muted);letter-spacing:.01em}
 
 .badge{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px 0 8px;border-radius:999px;font-size:14px;font-weight:600;white-space:nowrap}
@@ -152,7 +152,7 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
 .tab[aria-current="page"] .pill{background:var(--mer-soft);color:var(--mer)}
 
 /* Pied collant (CTA) */
-.dock{position:absolute;left:0;right:0;bottom:0;z-index:25;padding:28px 20px 30px;background:linear-gradient(to bottom,transparent,var(--bg) 26%)}
+.dock{position:absolute;left:0;right:0;bottom:0;z-index:25;padding:32px 20px 30px;background:linear-gradient(to bottom,color-mix(in srgb,var(--bg) 0%,transparent),var(--bg) 32px)}
 .dock .meta{display:flex;justify-content:space-between;align-items:baseline;margin:0 4px 12px;font-size:15px;color:var(--muted)}
 .dock .meta strong{color:var(--ink);font-size:17px}
 
@@ -161,7 +161,7 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
 .photo svg{display:block;width:100%;height:auto}
 
 /* ===== (a) Accueil public ===== */
-.hero-title{font-family:"Fraunces",serif;font-weight:400;font-size:42px;line-height:1.02;letter-spacing:-.025em;margin:18px 0 0}
+.hero-title{text-wrap:balance;font-family:"Fraunces",serif;font-weight:400;font-size:42px;line-height:1.02;letter-spacing:-.025em;margin:18px 0 0}
 .hero-title em{font-style:italic;color:var(--mer)}
 .hero-lead{color:var(--muted);margin:14px 0 0;font-size:17px;line-height:1.5}
 .notif{position:absolute;left:14px;right:14px;bottom:14px;display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:18px;background:color-mix(in srgb,var(--surface) 86%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 8px 24px -10px rgba(0,0,0,.25)}
@@ -178,17 +178,17 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
 .greet{display:flex;align-items:center;justify-content:space-between;margin-top:6px}
 .greet h1{font-family:"Fraunces",serif;font-weight:400;font-size:30px;letter-spacing:-.02em;margin:0;line-height:1.1}
 .greet p{margin:4px 0 0;color:var(--muted);font-size:15px}
-.status-card{margin-top:20px;padding:22px;border-radius:28px;background:var(--surface);box-shadow:var(--shadow);position:relative;overflow:hidden}
+.status-card{margin-top:18px;padding:20px 22px;border-radius:28px;background:var(--surface);box-shadow:var(--shadow);position:relative;overflow:hidden}
 .status-card .who{display:flex;gap:16px;align-items:center}
 .status-card .who b{font-weight:600;font-size:17px;display:block}
-.status-card .who span{color:var(--muted);font-size:15px}
-.status-card .state{font-family:"Fraunces",serif;font-weight:400;font-size:34px;letter-spacing:-.02em;line-height:1.05;margin:22px 0 6px}
+.status-card .who div span{color:var(--muted);font-size:15px}
+.status-card .state{font-family:"Fraunces",serif;font-weight:400;font-size:36px;letter-spacing:-.02em;line-height:1.05;margin:18px 0 6px}
 .status-card .state em{font-style:italic;color:var(--feuille)}
 .status-card .sub{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:15px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);margin-top:20px;border-top:1px solid var(--line);padding-top:16px}
 .stats div + div{border-left:1px solid var(--line);padding-left:14px}
 .stats b{display:block;font-size:24px;font-weight:600;letter-spacing:-.01em;line-height:1.1}
-.stats span{font-size:13.5px;color:var(--muted)}
+.stats span{display:block;font-size:13.5px;line-height:1.3;color:var(--muted);margin-top:4px}
 .visit{display:flex;gap:16px;align-items:center}
 .datebox{width:56px;height:62px;border-radius:16px;background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none}
 .datebox small{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--hibiscus)}
@@ -196,9 +196,12 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
 .visit .txt{flex:1;min-width:0}
 .visit .txt b{display:block;font-weight:600}
 .visit .txt span{color:var(--muted);font-size:15px;display:block;line-height:1.4}
-.kaye-card{padding:0;overflow:hidden}
-.kaye-card .photo{border-radius:0}
-.kaye-card .body{padding:18px 20px 20px}
+.kaye-card{padding:16px;display:flex;gap:14px;align-items:flex-start}
+.kaye-card .photo{width:76px;height:76px;flex:none;border-radius:16px}
+.kaye-card .photo svg{height:100%}
+.kaye-card .body{flex:1;min-width:0}
+.kaye-card .quote{font-size:18px;margin:8px 0 2px}
+.kaye-card .quote-tr{font-size:14px;line-height:1.35}
 .kaye-meta{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .kaye-meta .by{display:flex;align-items:center;gap:10px;font-size:15px}
 .kaye-meta .by b{font-weight:600}
@@ -216,7 +219,7 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
 /* ===== (c) Détail Kayé ===== */
 .k-photo{position:relative;margin-top:4px}
 .k-photo .badge{position:absolute;left:12px;top:12px;background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:blur(8px);color:var(--ink)}
-.k-title{font-family:"Fraunces",serif;font-weight:400;font-size:28px;line-height:1.1;letter-spacing:-.02em;margin:20px 0 8px}
+.k-title{font-family:"Fraunces",serif;font-weight:400;font-size:28px;line-height:1.12;letter-spacing:-.02em;margin:20px 0 8px;text-wrap:balance}
 .k-text{margin:0;font-size:17px;line-height:1.55}
 .receipt{margin-top:24px;background:var(--surface);border-radius:22px;box-shadow:var(--shadow);position:relative;overflow:hidden}
 .receipt .madras-line{border-radius:0;height:3px}
@@ -249,14 +252,15 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
 .timeline{display:flex;gap:8px;margin-top:16px;overflow:hidden}
 .slot{flex:1;padding:12px 14px;border-radius:16px;background:var(--surface-2);font-size:14px;line-height:1.3;min-height:60px}
 .slot b{display:block;font-size:16px;font-weight:600}
-.slot.now{background:var(--ink);color:var(--bg)}
-.slot.now span{opacity:.75}
-.map{position:relative;height:150px;border-radius:20px;overflow:hidden;margin:-4px -4px 0}
+.slot.now{background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--mer)}
+.slot.now b{color:var(--mer)}
+.slot span{color:var(--muted)}
+.map{position:relative;height:128px;border-radius:20px;overflow:hidden;margin:-4px -4px 0}
 .map svg{display:block;width:100%;height:100%}
 .map .eta{position:absolute;right:12px;top:12px}
 .place{display:flex;gap:14px;align-items:center;margin-top:16px}
 .place b{display:block;font-weight:600;font-size:18px}
-.place span{display:block;color:var(--muted);font-size:15px}
+.place div span{display:block;color:var(--muted);font-size:15px}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 .chip{display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:999px;background:var(--surface-2);font-size:14.5px;font-weight:500}
 .steps{list-style:none;margin:0;padding:0}
@@ -292,8 +296,8 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
 .plan .tag{position:absolute;top:-11px;right:16px}
 .split{display:flex;gap:14px;align-items:center}
 .split .txt{flex:1}
-.split .txt b{display:block;font-weight:600}
-.split .txt span{display:block;color:var(--muted);font-size:14.5px;line-height:1.4}
+.split .txt b{display:block;font-weight:600;line-height:1.3}
+.split .txt span{display:block;color:var(--muted);font-size:14.5px;line-height:1.4;margin-top:2px}
 .toggle{width:52px;height:32px;border-radius:999px;background:var(--mer);position:relative;flex:none;border:0}
 .toggle::after{content:"";position:absolute;top:3px;right:3px;width:26px;height:26px;border-radius:50%;background:var(--on-mer)}
 .summary{list-style:none;padding:0;margin:0}
@@ -322,10 +326,11 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
 .ratio-l{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-top:8px}
 .type-a{font-family:"Fraunces",serif;font-weight:400;font-size:64px;line-height:1;letter-spacing:-.03em}
 .type-a em{color:var(--mer)}
-.type-row{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--line);padding:12px 0;gap:12px}
+.type-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;border-top:1px solid var(--line);padding:12px 0;gap:12px}
 .type-row:first-of-type{margin-top:18px}
 .type-row small{color:var(--muted);font-size:13px;white-space:nowrap}
 
+@media (min-width:1180px) and (max-width:1480px){.phone{zoom:.86}figure.shot figcaption{width:336px}.screens{gap:48px 36px}}
 @media (max-width:900px){.specimen{grid-template-columns:1fr}}
 @media (max-width:460px){
   .board-head{padding:28px 16px 4px}
@@ -392,7 +397,7 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
   <div>
     <p class="eyebrow">Koudmen · Direction artistique · Maquette v1</p>
     <h1>Le calme d'une bonne nouvelle, <em>chaque semaine.</em></h1>
-    <p class="lead">Cinq écrans, une seule voix : sobre, chaleureuse, précise. Des neutres « sable », un vert mer pour agir, et un fil madras réservé à ce qui compte : l'aîné et la preuve.</p>
+    <p class="lead">Cinq écrans, une seule voix : sobre, chaleureuse, précise. Des neutres « sable », un vert mer pour agir, et un fil madras réservé à ce qui compte : l'aîné et la preuve.</p>
   </div>
   <div class="theme-switch" role="group" aria-label="Thème de la maquette">
     <button type="button" data-set="light" aria-pressed="false"><svg class="i sm"><use href="#i-sun"/></svg>Clair</button>
@@ -440,7 +445,7 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
       </div>
       <p class="eyebrow" style="margin:18px 0 0">Martinique · Guadeloupe</p>
       <h2 class="hero-title">De loin, <em>sachez</em> qu'elle va bien.</h2>
-      <p class="hero-lead">Une accompagnante de confiance rend visite à votre parent. Après chaque visite, vous recevez son Kayé : un mot, une photo, une preuve.</p>
+      <p class="hero-lead">Une accompagnante de confiance rend visite à votre parent. Après chaque visite, vous recevez son Kayé : un mot, une photo, une preuve.</p>
 
       <div class="photo" style="margin-top:22px">
         <svg viewBox="0 0 350 218" role="img" aria-label="Illustration : lever de soleil sur la mer, une case créole sur le morne">
@@ -478,13 +483,13 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
       </div>
 
       <ul class="promise">
-        <li><span class="ic"><svg class="i sm"><use href="#i-shield"/></svg></span><div><b>Chaque visite est prouvée</b><span>2 preuves sur 3 : la position, le tag chez elle, son appel.</span></div></li>
+        <li><span class="ic"><svg class="i sm"><use href="#i-shield"/></svg></span><div><b>Chaque visite est prouvée</b><span>2 preuves sur 3 : la position, le tag chez elle, son appel.</span></div></li>
         <li><span class="ic"><svg class="i sm"><use href="#i-heart"/></svg></span><div><b>Toujours la même personne</b><span>Ou une remplaçante qu'elle connaît déjà.</span></div></li>
         <li><span class="ic"><svg class="i sm"><use href="#i-users"/></svg></span><div><b>Tout le lakou est informé</b><span>Frères, sœurs et voisins lisent les mêmes nouvelles.</span></div></li>
       </ul>
     </div>
     <div class="dock">
-      <div class="meta"><span>Dès <strong class="num">39 €</strong> par mois</span><span>Sans engagement</span></div>
+      <div class="meta"><span>Dès <strong class="num">39&nbsp;€</strong> par mois</span><span>Offre en test</span></div>
       <button class="btn btn-primary" type="button">Commencer <svg class="i sm"><use href="#i-arrow"/></svg></button>
     </div>
     <div class="home-ind" aria-hidden="true"></div>
@@ -527,17 +532,17 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
       <div class="section-h"><h2>Dernier Kayé</h2><a class="link" href="#" style="font-size:15px;min-height:auto">Tout voir</a></div>
       <article class="card kaye-card">
         <div class="photo" aria-hidden="true">
-          <svg viewBox="0 0 350 150">
+          <svg viewBox="0 0 350 150" preserveAspectRatio="xMidYMid slice">
             <use href="#ph-garden"/>
           </svg>
         </div>
         <div class="body">
           <div class="kaye-meta">
-            <div class="by"><span class="av t-mer" style="--s:32px;font-size:14px">J</span><span><b>Josiane</b> <span>· samedi</span></span></div>
+            <div class="by"><span><b>Josiane</b> <span>· samedi</span></span></div>
             <span class="badge proof"><svg class="i xs"><use href="#i-shield"/></svg>Prouvée</span>
           </div>
-          <p class="quote">« Di Sandrine pa enkyèt kò'y. »</p>
-          <p class="quote-tr">« Dites à Sandrine de ne pas s'inquiéter. »</p>
+          <p class="quote">« Di Sandrine pa enkyèt kò'y. »</p>
+          <p class="quote-tr">« Dites à Sandrine de ne pas s'inquiéter. »</p>
         </div>
       </article>
     </div>
@@ -550,7 +555,7 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
     </nav>
     <div class="home-ind" aria-hidden="true"></div>
   </div></div>
-  <figcaption><b>b</b><div><span>Accueil famille · Sandrine</span><small>Une seule réponse en grand : « Elle va bien. » Le reste se lit en trois secondes.</small></div></figcaption>
+  <figcaption><b>b</b><div><span>Accueil famille · Sandrine</span><small>Une seule réponse en grand : « Elle va bien. » Le reste se lit en trois secondes.</small></div></figcaption>
 </figure>
 
 <!-- ============ (c) DÉTAIL KAYÉ + REÇU ============ -->
@@ -566,7 +571,7 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
       </div>
       <div class="k-photo">
         <div class="photo"><svg viewBox="0 0 350 210" role="img" aria-label="Photo du jardin de Léonie, avec ses giraumons"><use href="#ph-garden-tall"/></svg></div>
-        <span class="badge"><svg class="i xs" style="color:var(--soleil-ink)"><use href="#i-sun"/></svg>Humeur : joyeuse</span>
+        <span class="badge"><svg class="i xs" style="color:var(--soleil-ink)"><use href="#i-sun"/></svg>Humeur : joyeuse</span>
       </div>
       <h2 class="k-title">Le marché, puis le blaff de midi.</h2>
       <div class="kaye-meta" style="margin-bottom:12px">
@@ -608,7 +613,7 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
     </div>
     <div class="home-ind" aria-hidden="true"></div>
   </div></div>
-  <figcaption><b>c</b><div><span>Kayé et reçu de visite</span><small>L'émotion d'abord, la preuve ensuite. Le reçu a la forme d'un ticket : on le comprend sans lire.</small></div></figcaption>
+  <figcaption><b>c</b><div><span>Kayé et reçu de visite</span><small>L'émotion d'abord, la preuve ensuite. Le reçu a la forme d'un ticket : on le comprend sans lire.</small></div></figcaption>
 </figure>
 
 <!-- ============ (d) ACCOMPAGNANTE : VISITE DU JOUR ============ -->
@@ -622,7 +627,7 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
         <span class="av t-mer" style="--s:44px">J</span>
       </div>
       <div class="timeline num">
-        <div class="slot now"><b>10:00</b><span>Léonie · maintenant</span></div>
+        <div class="slot now" aria-current="true"><b>10:00</b><span>Léonie · en cours</span></div>
         <div class="slot"><b>15:00</b><span>M. Désiré</span></div>
       </div>
 
@@ -648,21 +653,21 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
           <div><b>Léonie Bellance</b><span>Quartier Désert, Sainte-Luce</span></div>
           <button class="icon-btn filled" type="button" aria-label="Appeler Léonie" style="margin-left:auto"><svg class="i sm"><use href="#i-phone"/></svg></button>
         </div>
-        <div class="chips"><span class="chip">Dominos</span><span class="chip">Messe de 7 h</span><span class="chip">Son jardin</span><span class="chip">Parle créole</span></div>
+        <div class="chips"><span class="chip">Dominos</span><span class="chip">Son jardin</span><span class="chip">Parle créole</span></div>
       </section>
 
       <div class="section-h"><h2>Preuve de visite · 2 sur 3 suffisent</h2></div>
       <section class="card" style="padding:4px 18px">
         <ul class="steps">
-          <li><span class="st done"><svg class="i xs"><use href="#i-check"/></svg></span><span class="lbl">Position au domicile<small>Vous êtes arrivée</small></span></li>
-          <li><span class="st cur"><svg class="i xs"><use href="#i-scan"/></svg></span><span class="lbl">Scanner le tag<small>Sur la porte de la cuisine</small></span><a class="link act" href="#">Scanner</a></li>
+          <li><span class="st done"><svg class="i xs"><use href="#i-check"/></svg></span><span class="lbl">Position au domicile<small>Arrivée à 9 h 58</small></span><time class="num act" style="color:var(--feuille);font-weight:600">OK</time></li>
+          <li><span class="st cur"><svg class="i xs"><use href="#i-scan"/></svg></span><span class="lbl">Scanner le tag<small>Sur la porte de la cuisine</small></span><span class="badge sun act">À faire</span></li>
           <li><span class="st todo"><svg class="i xs"><use href="#i-phone"/></svg></span><span class="lbl">Appel à Léonie<small>Elle tape 1 en fin de visite</small></span></li>
         </ul>
       </section>
     </div>
     <div class="dock">
-      <button class="btn btn-primary" type="button" style="min-height:60px;font-size:18px"><svg class="i"><use href="#i-check"/></svg>Je suis arrivée</button>
-      <p class="hint">Heure d'arrivée enregistrée : 9 h 58</p>
+      <button class="btn btn-primary" type="button" style="min-height:60px;font-size:18px"><svg class="i"><use href="#i-scan"/></svg>Scanner le tag</button>
+      <p class="hint">Vous êtes arrivée à 9 h 58. Encore 1 preuve.</p>
     </div>
     <div class="home-ind" aria-hidden="true"></div>
   </div></div>
@@ -682,16 +687,16 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
       </div>
       <div class="progress" aria-hidden="true"><i></i></div>
       <p class="step-l">Étape 3 sur 3</p>
-      <h2 class="k-title" style="margin-top:8px">Comment veiller sur Léonie ?</h2>
+      <h2 class="k-title" style="margin-top:8px">Comment veiller sur Léonie ?</h2>
 
       <div class="plans" role="radiogroup" aria-label="Formules">
-        <div class="plan" role="radio" aria-checked="false" tabindex="-1"><span class="radio"></span><div class="p-txt"><div class="p-name"><b>Libre</b><span class="price num">0 €</span></div><span>Le Kayé partagé avec le lakou.</span></div></div>
+        <div class="plan" role="radio" aria-checked="false" tabindex="-1"><span class="radio"></span><div class="p-txt"><div class="p-name"><b>Libre</b><span class="price num">0 €</span></div><span>Le cercle Lakou et le Kayé partagé, sans visite.</span></div></div>
         <div class="plan" role="radio" aria-checked="false" tabindex="-1"><span class="radio"></span><div class="p-txt"><div class="p-name"><b>Kozé</b><span class="price num">39 € <small>/ mois</small></span></div><span>Un appel chaque semaine à Léonie.</span></div></div>
         <div class="plan on" role="radio" aria-checked="true" tabindex="0">
           <span class="badge sun tag">Conseillé pour Léonie</span>
           <span class="radio"></span>
           <div class="p-txt">
-            <div class="p-name"><b>Sérénité</b><span class="price num">149 € <small>/ mois</small></span></div>
+            <div class="p-name"><b>Sérénité</b><span class="price num"><small>dès</small> 149 € <small>/ mois</small></span></div>
             <span>Une visite chaque semaine, prouvée.</span>
             <ul class="feat">
               <li><svg class="i xs"><use href="#i-check"/></svg>Tout Kozé, plus une visite par semaine</li>
@@ -704,7 +709,7 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
 
       <div class="card split" style="margin-top:12px">
         <div class="av-stack" aria-hidden="true"><span class="av t-hib">M</span><span class="av t-leaf">N</span></div>
-        <div class="txt"><b>Partager avec le lakou</b><span>Marc et Nadia paient avec vous : <b class="num" style="display:inline">49,67 €</b> chacun.</span></div>
+        <div class="txt"><b>Partager les frais</b><span>Marc et Nadia paient avec vous : <b class="num" style="display:inline">49,67 €</b> chacun.</span></div>
         <button class="toggle" type="button" role="switch" aria-checked="true" aria-label="Partager le paiement"></button>
       </div>
 
@@ -720,7 +725,7 @@ figure.shot figcaption small{display:block;color:var(--muted);font-size:15px;lin
     </div>
     <div class="dock">
       <button class="btn btn-primary" type="button"><svg class="i sm"><use href="#i-lock"/></svg>Payer <span class="num">49,67 €</span></button>
-      <p class="hint">Offre en test. Aucun prélèvement réel.</p>
+      <p class="hint">Offre en test, non commercialisée.</p>
     </div>
     <div class="home-ind" aria-hidden="true"></div>
   </div></div>
