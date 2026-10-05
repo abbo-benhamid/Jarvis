@@ -1,6 +1,6 @@
 # Spécification V1 « Conso » de Koudmen
 
-> **Statut :** proposition de l'architecte, 2026-10-05. À valider par le fondateur (orchestrateur).
+> **Statut :** proposition de l'architecte, 2026-10-05, relue et complétée le même jour (cohérence avec les ADR 0004 à 0007 et le plan). À valider par le fondateur (orchestrateur).
 > **Succède à :** MVP de test ([`specification-mvp.md`](specification-mvp.md), ADR 0001 à 0003, `docs/revues/*`).
 > **Décisions liées :** [ADR 0004](adr/0004-paiements-abonnement-stripe-heures-hors-plateforme.md) (paiements), [ADR 0005](adr/0005-notifications-et-voix.md) (notifications et voix), [ADR 0006](adr/0006-pwa-puis-expo.md) (PWA puis Expo), [ADR 0007](adr/0007-hebergement-hds-clever-cloud.md) (hébergement HDS).
 > **Plan de travail :** [`plan-v1.md`](plan-v1.md).
@@ -106,7 +106,7 @@ Ces règles viennent du MVP et des revues. La V1 les garde **telles quelles**.
 | Variable `KOUDMEN_ENV` | Où | Données | Robots, codes testeurs | Adaptateurs autorisés |
 |---|---|---|---|---|
 | `demo` | Vercel + Neon (actuel) | Fictives | **Oui** (bac à sable ADR 0003) | **Simulés seulement** (forcé) |
-| `staging` | Clever Cloud HDS (application séparée) | Fictives | Non | Simulés, ou mode test des fournisseurs (Stripe test, numéros de l'équipe) |
+| `staging` | **Construction :** Vercel + Neon (projet séparé de la démo). **Dès le contrat HDS :** Clever Cloud (application séparée) | Fictives | Non | Simulés, ou mode test des fournisseurs (Stripe test, numéro de test Meta, compte d'essai Twilio) |
 | `production` | Clever Cloud HDS | Réelles | **Non** (le code refuse) | Réels. Simulé refusé quand l'interrupteur dépasse `FERME` |
 
 Règles de code :
@@ -114,17 +114,21 @@ Règles de code :
 2. Les modules `src/server/sandbox/**` vérifient `KOUDMEN_ENV === "demo"` à l'entrée. Sinon : erreur 404.
 3. Le bandeau de test devient un **bandeau d'environnement** : « Démonstration — données fictives » (`demo`), « Pré-production » (`staging`), rien en `production`.
 4. Une base de données ne sert **qu'un** environnement. Aucune copie de la production vers `staging` ou `demo`.
+5. `config-check.ts` refuse le démarrage si `KOUDMEN_ENV=production` **et** l'hébergement n'est pas HDS : variable `VERCEL` présente, ou `HOSTING_PROVIDER` différent de `clever-cloud-hds` (ADR 0007). Ce verrou est le premier « interrupteur » : il rend impossible une production sur Vercel.
 
 ```mermaid
 flowchart LR
   subgraph V["Vercel + Neon (non HDS)"]
     D[demo<br/>bac à sable, robots<br/>données fictives]
+    S0[staging de construction<br/>données fictives<br/>clés de test]
   end
   subgraph CC["Clever Cloud (HDS)"]
-    S[staging<br/>données fictives<br/>clés de test]
+    S[staging HDS<br/>données fictives<br/>clés de test]
     P[production<br/>données réelles]
   end
   G[Dépôt GitHub] -->|branche main| D
+  G -->|branche main| S0
+  S0 -. "remplacé dès le contrat HDS" .-> S
   G -->|branche main| S
   G -->|"tag v1.x (manuel)"| P
   P x--x|"jamais de copie"| S
@@ -156,7 +160,7 @@ stateDiagram-v2
 | État | Qui entre | Messages et appels réels | Paiements |
 |---|---|---|---|
 | `FERME` | Opérateurs seulement | Non (simulés) | Non |
-| `CANARI` | Opérateurs + **comptes de l'équipe** (liste blanche) | Oui, **seulement** vers les numéros et e-mails de la liste blanche | Stripe en mode **test** |
+| `CANARI` | Opérateurs + **comptes de l'équipe** (liste blanche) | Oui, **seulement** vers les numéros et e-mails de la liste blanche | Stripe en mode **réel**, cartes de l'équipe, remboursement par un opérateur (ADR 0004) |
 | `PILOTE` | Familles et accompagnants **invités** par l'équipe (code d'invitation à usage unique) | Oui | Stripe en mode **réel** |
 | `OUVERT` | Tout le monde (inscription libre sur le territoire) | Oui | Réel |
 
@@ -487,7 +491,7 @@ Règles :
 7. **Rétractation de 14 jours** (L221-18) : si le payeur demande l'exécution immédiate, remboursement au prorata. Remboursement par un opérateur, depuis l'espace opérateur (audit).
 8. **Factures** : émises par Stripe au nom de Koudmen (SIREN, adresse, TVA). Mention « Abonnement à des services numériques. Non éligible au crédit d'impôt pour l'emploi d'un salarié à domicile. »
 9. **TVA** : taux selon le lieu d'établissement de Koudmen et la nature du service (8,5 % en Martinique, 20 % en Hexagone ?). **[À VÉRIFIER avec l'expert-comptable]**. Option : Stripe Tax.
-10. **Mode test** : `CANARI` utilise les clés de test Stripe. `PILOTE` et `OUVERT` utilisent les clés réelles.
+10. **Clés Stripe** : `demo` n'a aucune clé (simulé forcé). `staging` utilise les clés de **test**. `production` utilise **seulement** les clés réelles, dès `CANARI` : l'équipe paie avec ses vraies cartes, puis un opérateur rembourse. Ainsi la chaîne réelle (3-D Secure, factures, webhooks en mode réel) est testée avant `PILOTE`, sans mélange d'objets test et réels dans une même base (ADR 0004).
 
 ### 7.4 Les formules (contenu à confirmer)
 
@@ -876,6 +880,7 @@ flowchart TB
 | Application | Next.js en mode `standalone`, Node 22, 2 instances (Clever Cloud) |
 | Worker | Même dépôt, autre point d'entrée (`pnpm worker`), 1 instance |
 | File de tâches | **pg-boss** (sur PostgreSQL). Pas de Redis en V1 |
+| Mode du worker | **Clever Cloud** : processus permanent (`pnpm worker`). **Vercel** (demo, staging de construction) : pas de processus permanent ; une route `/api/cron/worker-tick` (protégée par `CRON_SECRET`) vide la file chaque minute. Même code de traitement (`src/server/jobs/handlers/**`), deux déclencheurs. [À VÉRIFIER : cron à la minute = offre Vercel Pro] |
 | Base | PostgreSQL 16 managé, **éligible HDS** [À VÉRIFIER : offre exacte chez Clever Cloud] |
 | Stockage objet | Cellar (Clever Cloud) si couvert par l'HDS, sinon Scaleway Object Storage HDS [À VÉRIFIER] |
 | Secrets | Variables chiffrées de Clever Cloud. Clé maître de chiffrement des champs à part, avec version |
@@ -893,7 +898,7 @@ gantt
   Compte + devis HDS Clever Cloud (fondateur)     :a1, 2026-10-12, 21d
   Build standalone + worker + pg-boss (dev)        :a2, 2026-10-12, 7d
   section Staging HDS
-  Staging sur Clever Cloud (données fictives)      :b1, after a2, 5d
+  Staging sur Clever Cloud (données fictives)      :b1, after a1 a2, 5d
   Tests e2e sur staging                            :b2, after b1, 3d
   section Production HDS
   Contrat HDS signé (porte G1)                     :milestone, c0, after a1, 0d
@@ -905,7 +910,7 @@ gantt
 
 Étapes :
 1. Ajouter `output: "standalone"` et un script de démarrage du worker. Garder le build Vercel pour la démo.
-2. Créer `staging` sur Clever Cloud **dès le sprint 0** (données fictives). Tous les tests e2e tournent dessus.
+2. Pendant la construction, `staging` tourne sur Vercel + Neon (projet séparé de la démo). **Dès que le compte Clever Cloud existe**, créer `staging` sur Clever Cloud (données fictives) et y faire tourner les tests e2e. L'ancien `staging` Vercel est alors supprimé.
 3. Signer le contrat HDS (fondateur). Créer `production` avec l'interrupteur `FERME`.
 4. Appliquer les migrations Prisma (`prisma migrate deploy`) au démarrage, avec un verrou.
 5. Tester la restauration d'une sauvegarde. Lancer le pentest. Passer en `CANARI`.
@@ -1110,9 +1115,24 @@ erDiagram
   }
   AppSetting {
     LaunchState launchState
-    string[] canaryAllowlist
+    string launchChangedById
+    string launchPendingApprovalById "4 yeux"
   }
 ```
+
+Tables nouvelles non détaillées dans le schéma ci-dessus :
+
+| Table | Champs principaux | Note |
+|---|---|---|
+| `AuthToken` | `userId`, `purpose` (`EMAIL_VERIF`, `RESET_MDP`, `OTP_TEL`), `tokenHash`, `expiresAt`, `usedAt`, `attempts` | Jamais le jeton en clair. OTP : 5 essais au plus |
+| `ChannelOptIn` | `userId`, `channel` (`WHATSAPP`, `SMS`, `EMAIL`, `PUSH`), `optedInAt`, `optedOutAt`, `source` (écran, réponse STOP) | Preuve de l'opt-in exigée par Meta |
+| `PushSubscription` | `userId`, `type` (`WEBPUSH`, `EXPO`), `endpoint` ou `expoToken`, `keysEnc`, `userAgent`, `lastSeenAt` | Supprimée sur 404 / 410 |
+| `BillingCustomer` | `userId` (payeur), `stripeCustomerId` (unique) | Aucun numéro de carte |
+| `BillingInvoice` | `subscriptionId`, `stripeInvoiceId` (unique), `amountCents`, `status`, `hostedUrl`, `paidAt` | Conservée 10 ans |
+| `VisitEvent` | `visitId`, `clientEventId` (unique), `type`, `occurredAt`, `receivedAt`, `payload` (sans position brute) | Événements hors ligne (§ 10.2) |
+| `DeliveryAttempt` | `outboxMessageId`, `channel`, `provider`, `attemptNo`, `status`, `providerRef`, `error`, `at` | Preuve de remise |
+| `LaunchInvite` | `codeHash`, `role`, `territory`, `createdById`, `usedById`, `expiresAt` | Codes à usage unique de l'état `PILOTE` |
+| `CanaryAllowlistEntry` | `kind` (`PHONE`, `EMAIL`), `valueHash` (HMAC), `label`, `addedById` | Remplace `AppSetting.canaryAllowlist` : pas de numéro en clair |
 
 Autres changements :
 - `User` : `emailVerifiedAt`, `phoneEnc`, `phoneVerifiedAt`, `timezone`, `totpSecretEnc`, `totpEnabledAt`, `recoveryCodesHash[]`, `lastLoginAt`.
@@ -1141,7 +1161,9 @@ flowchart TB
     LAU[lancement] --- AUD[audit]
   end
   subgraph PORTS["src/server/ports (interfaces)"]
-    PP[PaymentPort] 
+    PP[PaymentPort]
+    HP[HoursPaymentPort]
+    JQ[JobQueuePort]
     MP[MessagingPort]
     VP[VoicePort]
     PU[PushPort]
@@ -1180,9 +1202,10 @@ Chaque port a **une implémentation simulée** (défaut) et une ou plusieurs imp
 | `IdentityVerificationPort` | `ADAPTER_IDENTITY` | `manuel` \| `ubble` \| `idnow` | Contrôle humain en visio |
 | `CompanyRegistryPort` | `ADAPTER_SIRENE` | `simule` \| `insee` | Répond « actif » pour les SIRET de test |
 | `ObjectStoragePort` | `ADAPTER_STORAGE` | `local` \| `s3` | Dossier local chiffré |
+| `JobQueuePort` | `JOB_RUNNER` | `inline` (tests) \| `cron-tick` (Vercel) \| `pgboss-worker` (Clever Cloud) | `inline` exécute la tâche tout de suite |
 
 Règles :
-1. `config-check.ts` refuse un adaptateur simulé si `KOUDMEN_ENV=production` et `launchState ≠ FERME`.
+1. En `production`, chaque variable `ADAPTER_*` doit désigner un adaptateur **réel** (`config-check.ts`, au démarrage). Le **routeur d'envoi** (`src/server/adapters/router.ts`) envoie quand même vers l'adaptateur simulé tant que `launchState = FERME`, et bloque hors liste blanche en `CANARI` (§ 3.3). La décision « simulé ou réel » se prend donc **à chaque envoi**, pas seulement au démarrage.
 2. `config-check.ts` refuse un adaptateur réel si `KOUDMEN_ENV=demo`.
 3. Chaque adaptateur réel a un **test de contrat** qui tourne contre le bac à sable du fournisseur (Stripe test, numéro de test Twilio), lancé à la main.
 
@@ -1209,6 +1232,23 @@ API JSON versionnée, pour la PWA hors ligne aujourd'hui et pour Expo demain. Au
 
 Le document OpenAPI est généré depuis les schémas Zod (`/api/v1/openapi.json`, en `staging` seulement).
 
+### 18.3 Variables d'environnement V1
+
+Les clés viennent des comptes que le fondateur crée (liste et ordre : [`plan-v1.md`](plan-v1.md) § 5). Une variable absente garde l'adaptateur simulé, sauf en `production` (refus au démarrage).
+
+| Groupe | Variables | Environnements |
+|---|---|---|
+| Socle | `KOUDMEN_ENV`, `HOSTING_PROVIDER`, `LAUNCH_MAX_STATE`, `APP_BASE_URL`, `SESSION_SECRET`, `CRON_SECRET`, `FIELD_ENCRYPTION_KEYS` (versionnées), `ALLOWLIST_HMAC_KEY` | Tous |
+| Base | `DATABASE_URL`, `DIRECT_URL` | Tous |
+| Stripe | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_KOZE`, `STRIPE_PRICE_SERENITE` | staging (test), production (réel) |
+| Meta WhatsApp | `WHATSAPP_ACCESS_TOKEN` (utilisateur système), `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_WABA_ID`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN` | staging (numéro de test), production |
+| Brevo | `BREVO_API_KEY`, `BREVO_WEBHOOK_SECRET`, `EMAIL_FROM`, `SMS_SENDER` | staging, production |
+| Twilio | `TWILIO_ACCOUNT_SID`, `TWILIO_API_KEY_SID`, `TWILIO_API_KEY_SECRET`, `TWILIO_AUTH_TOKEN` (signature), `VOICE_FROM_MQ`, `VOICE_FROM_GP`, `ONCALL_PHONE` | staging, production |
+| Web Push | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | staging, production |
+| INSEE | `INSEE_API_KEY` | staging, production |
+| Stockage | `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY` | staging, production |
+| Observabilité | `SENTRY_DSN` | staging, production |
+
 ---
 
 ## 19. Questions ouvertes
@@ -1222,3 +1262,8 @@ Le document OpenAPI est généré depuis les schémas Zod (`/api/v1/openapi.json
 7. [À VÉRIFIER Meta] Tarif WhatsApp pour les indicatifs +596 / +590.
 8. [À VÉRIFIER fondateur] Contenu et prix final des formules Kozé et Sérénité.
 9. [À VÉRIFIER Clever Cloud] Le stockage objet Cellar est-il dans le périmètre HDS ?
+10. [À VÉRIFIER ARCEP / opérateur] Le mécanisme d'authentification des numéros (MAN) laisse-t-il passer un appel Twilio qui affiche un 0596 relié en BYOC ? Test obligatoire en `CANARI`.
+11. [À VÉRIFIER Stripe] Un compte Stripe France accepte-t-il une société dont le siège est en Martinique ou en Guadeloupe (DROM) ? Réponse attendue : oui, mais à confirmer à l'ouverture du compte.
+12. [À VÉRIFIER Vercel] L'offre gratuite (Hobby) interdit l'usage commercial. La démo et le staging de construction passent sur l'offre Pro.
+13. [À VÉRIFIER fondateur] Siège de la société (Martinique ou Hexagone) : il change la TVA, le greffe et les aides (question 6).
+14. [À VÉRIFIER avocat] Le routeur bloque tout envoi réel hors liste blanche en `CANARI`. L'équipe peut-elle se servir de ses propres proches âgés comme testeurs en `CANARI` ? Proposition : **non** avant `PILOTE` (ce sont des données réelles d'un tiers).
