@@ -5,7 +5,7 @@ import { creerApiSimulee } from './simule';
 
 export * from './types';
 export type { KoudmenApi } from './client';
-export { API_MODE, API_URL } from './config';
+export { API_MODE, API_URL, SITE_URL } from './config';
 export { MESSAGES } from './messages';
 export { lirePositionUnique, positionDisponible } from './position';
 export { CODE_DOMICILE_DEMO, EMAIL_DEMO, MOT_DE_PASSE_DEMO } from './simule';

@@ -86,6 +86,8 @@ function Navigation() {
             <Stack.Screen name="kaye/[id]" options={{ animation: 'slide_from_bottom' }} />
             <Stack.Screen name="propositions" options={{ animation: 'slide_from_right' }} />
           </Stack.Protected>
+          {/* V1c (X7) : « À propos et confidentialité », lisible connecté ou non (Profil, écran de connexion). */}
+          <Stack.Screen name="a-propos" options={{ animation: 'slide_from_right' }} />
         </Stack>
       </BandeauHorsLigne>
     </>
