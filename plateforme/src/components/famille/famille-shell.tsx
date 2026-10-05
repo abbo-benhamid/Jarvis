@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpen, CalendarDays, HandHeart, House, LogOut, Wallet } from "lucide-react";
+import { BookOpen, CalendarDays, HandHeart, House, Wallet } from "lucide-react";
 import type { CurrentUser } from "@/server/auth/guards";
 import { logoutAction } from "@/server/auth/actions";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -41,9 +41,8 @@ export function FamilleShell({ user, children }: { user: CurrentUser; children: 
           <form action={logoutAction}>
             <button
               type="submit"
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-icon px-2.5 text-[15px] font-semibold text-mer hover:bg-mer-soft [&_svg]:size-[18px]"
+              className="inline-flex min-h-11 items-center rounded-icon px-2.5 text-[15px] font-semibold text-mer hover:bg-mer-soft"
             >
-              <LogOut aria-hidden="true" strokeWidth={1.6} />
               Se déconnecter
             </button>
           </form>
