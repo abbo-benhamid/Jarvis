@@ -1,9 +1,23 @@
-export { Button, LinkButton, buttonClasses, type ButtonVariant, type ButtonSize } from "./button";
+// Composants d'interface Koudmen (direction artistique v1). Démo : /tester/design.
+export { Button, LinkButton, IconButton, buttonClasses, type ButtonVariant, type ButtonSize } from "./button";
 export { SubmitButton } from "./submit-button";
 export { Input, Textarea, Select, Checkbox, Radio } from "./input";
 export { FormField, Fieldset, fieldA11y } from "./form-field";
-export { Card, CardTitle } from "./card";
-export { Badge, type BadgeTone } from "./badge";
+export { Card, CardTitle, CardLink, cardClasses, SectionHeader, Eyebrow, Kreyol, MadrasLine, Chip, DateBox, type CardPadding } from "./card";
+export { Badge, ProofBadge, type BadgeTone, type ProofBadgeStatus } from "./badge";
+export { Avatar, AvatarStack, initialOf, type AvatarTone, type AvatarRole } from "./avatar";
+export { StatusCard, type StatusTone, type StatusStat } from "./status-card";
+export { KayeCard, KayeDetail } from "./kaye-card";
+export { VoiceMemo } from "./voice-memo";
+export { VisitReceipt, receiptVerdict, PROOFS_REQUIRED, type ReceiptProof } from "./visit-receipt";
+export { ProofSteps, type ProofStep, type ProofStepState } from "./proof-steps";
+export { BottomNav, BottomSpacer, isActiveTab, type BottomNavItem } from "./bottom-nav";
+export { ActionDock } from "./action-dock";
+export { PlanRadio, PLAN_NOTICE, type PlanOption } from "./plan-radio";
+export { Switch } from "./switch";
+export { ThemeToggle } from "./theme-toggle";
+export { THEME_STORAGE_KEY, THEME_INIT_SCRIPT, type ThemeChoice } from "./theme";
+export { GardenIllustration, SunriseIllustration, CaseIllustration, BrandMark } from "./illustrations";
 export { Alert, type AlertTone } from "./alert";
 export { EmptyState } from "./empty-state";
 export { PageHeader } from "./page-header";
