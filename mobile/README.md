@@ -1,6 +1,6 @@
 # Koudmen — app mobile (accompagnant)
 
-Lots **M1** (squelette), **M2** (connexion et visites réelles) et **M4** (QR, position ponctuelle, SOS) de l'ADR 0008.
+Lots **M1** (squelette), **M2** (connexion et visites réelles), **M3** (hors ligne) et **M4** (QR, position ponctuelle, SOS) de l'ADR 0008.
 Expo SDK 57 · React Native 0.86 · Expo Router · TypeScript strict · contrats Zod de l'API v1.
 
 ## Choisir la source des données
@@ -68,7 +68,7 @@ sequenceDiagram
 - Pas de délai de grâce côté serveur : deux renouvellements simultanés révoqueraient la connexion. `src/api/http.ts` les sérialise.
 - `JETON_INVALIDE` / `JETON_REUTILISE` : jetons effacés, retour à la connexion avec un message.
 - Web : le jeton de renouvellement reste **en mémoire** (recharger la page demande de se reconnecter).
-- Événements (`POST /evenements`) : un `clientEventId` neuf par action ; après une coupure réseau, un seul renvoi avec le même identifiant (idempotent).
+- Événements (`POST /evenements`) : un `clientEventId` neuf par action. Ils passent par la file hors ligne (lot M3) : chaque renvoi garde le même identifiant (idempotent).
 - Position : une lecture au check-in, avec accord. Web : API du navigateur. iOS / Android : `expo-location` (lot M4).
 
 ## Arrivée avec QR et position (lot M4)
@@ -92,6 +92,60 @@ flowchart TD
 | `KDM482` | Code lisible (QR actuels) |
 | `koudmen:domicile:KDM482` | Code lisible (format v1 à imprimer) |
 | `koudmen:domicile:s1:<jeton>` | Jeton signé futur : reconnu, message « pas encore accepté » |
+
+## Hors ligne (lot M3)
+
+L'accompagnant travaille souvent sans réseau (mornes, maisons en béton). L'app garde ses actions et les envoie plus tard.
+
+```mermaid
+flowchart TD
+  A["Action : arrivée, départ, Kayé, SOS"] --> Q[("File sur l'appareil<br/>SQLite, contenu chiffré")]
+  Q --> T{Envoi tout de suite}
+  T -->|ACCEPTE / DOUBLON| OK[Retirée de la file]
+  T -->|REFUSE, 400, 404| R["Refus définitif<br/>message affiché une fois<br/>jamais renvoyé"]
+  T -->|Pas de réseau, 5xx, 429| W["Gardée · « Hors ligne · 1 envoi en attente »<br/>nouvel essai : 2 s, 4 s, 8 s… 5 min max"]
+  W --> S{"Retour du réseau<br/>réouverture de l'app<br/>nouvelle action"}
+  S --> T
+  D[Déconnexion] --> P["Purge : cache + file + clé"]
+```
+
+| Règle | Détail |
+|---|---|
+| Ordre | Un événement à la fois, dans l'ordre d'arrivée. **Exception : le SOS passe devant.** |
+| Doublons | Renvoi avec le **même** `clientEventId` : le serveur répond `DOUBLON` (api-v1 § 9.2). Double appui sur « Départ » ou « SOS » : une seule ligne. Kayé corrigé : le dernier texte part. |
+| Erreur réseau | `RESEAU`, `5xx`, `429`, réponse illisible, `DOUBLON`/`EN_COURS` : arrêt de la file (l'ordre est gardé), attente progressive. |
+| Erreur définitive | `REFUSE` (motif du serveur), `400`, `404`, `413` : l'événement n'est plus envoyé. Le refus garde le motif et le message, **pas** le contenu du Kayé. |
+| Session perdue | La file s'arrête et garde tout. Elle repart à la reconnexion **du même compte**. Autre compte : tout est effacé d'abord. |
+| SOS sans réseau | Tentative immédiate. Échec : « l'alerte n'est pas partie », boutons **15** et **112** (écran SOS), envoi au retour du réseau. |
+| Écran | Sans réseau, l'action lève `EN_ATTENTE` : le message s'affiche, le texte reste à l'écran, le bandeau compte les envois. |
+
+Cache de lecture : visites **du jour** (pas les 7 jours), leurs fiches (préchargées), le compte (`/me`).
+Durée 24 h pour les visites. Chaque lecture repasse par le schéma Zod. Sans réseau au démarrage, l'app rouvre la session
+depuis le cache si un jeton de renouvellement est gardé ; le jeton est renouvelé au retour du réseau.
+
+### Chiffrement au repos : choix
+
+| Option | Expo Go | Décision |
+|---|---|---|
+| SQLCipher (`expo-sqlite`, `useSQLCipher`) | **Non** (propriété de build native) | Écartée pour l'instant |
+| SQLite + chiffrement applicatif AES-256-GCM (`expo-crypto`), clé dans `expo-secure-store` | Oui | **Retenue** |
+
+- Chiffré : le contenu de chaque événement (Kayé = donnée de santé, code du domicile, position) et chaque valeur du cache.
+- En clair : identifiants opaques, type, compteurs (nécessaires au tri).
+- Clé : 256 bits aléatoires, `AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY`. Déconnexion : lignes effacées (`secure_delete`, `VACUUM`) **et** clé effacée.
+- Donnée illisible (clé perdue, réinstallation) : effacée, jamais envoyée.
+- Web (export) : **mémoire** seulement, derrière la même interface (`plateforme.ts`). Rien n'est écrit dans le navigateur ;
+  recharger la page perd la file (et demande déjà de se reconnecter).
+- [À VÉRIFIER] au premier essai sur téléphone : AES de `expo-crypto` dans Expo Go SDK 57, et passage à SQLCipher au premier build EAS (lot E1).
+
+### Vérifier
+
+```bash
+npm run test:hors-ligne                    # unitaires : ordre, doublons, reprise, erreurs, purge, chiffrement, cache
+EXPO_OFFLINE=1 npm run export:web:hors-ligne
+npm run e2e:hors-ligne                     # coupure réseau réelle (context.setOffline), API factice
+SHOTS_DIR=/chemin npm run e2e:hors-ligne   # + captures
+```
 
 ## Contrats
 
@@ -141,10 +195,12 @@ flowchart LR
   subgraph src["src/"]
     API["api/<br/>interface KoudmenApi<br/>+ simule.ts"]
     NAT["native/<br/>QR, position, appel<br/>+ simule.tsx"]
+    OFF["offline/<br/>file, cache,<br/>SQLite chiffrée"]
     TH["theme/<br/>jetons provisoires"]
     UI["ui/<br/>composants"]
   end
   app --> API & UI & NAT
+  API --> OFF
   UI --> TH
 ```
 
@@ -158,6 +214,7 @@ flowchart LR
 | `src/theme/` | Thème **provisoire** tiré de `docs/design/direction-artistique.md`. À remplacer par la sortie de `design/tokens.json` (lot W1). |
 | `src/ui/` | Composants : `Button`, `Card`, `Badge`/`ProofBadge`, `Avatar` (anneau madras), `Choice`, `SwitchRow`, `Field`, `TabBar`, `Screen` (pied d'action), illustrations. |
 | `src/native/` | Lot M4. Interface `Natif` (`types.ts`) : `position` (`position.native.ts` = expo-location, `position.ts` = navigateur), `scanner` (`VueScanner.tsx`, expo-camera), `appel` (`tel:`). `codeDomicile.ts` décode le QR. `simule.tsx` pour la démo et les tests. |
+| `src/offline/` | Lot M3. `file.ts` (file d'événements), `cache.ts`, `chiffre.ts`, `horsligne.ts` (assemblage), `plateforme.native.ts` (SQLite + AES-GCM) / `plateforme.ts` (web, mémoire), `reseau.ts` (expo-network + AppState), `BandeauHorsLigne.tsx`. |
 | `src/visites/` | Règles d'affichage des visites (2 preuves sur 3). |
 | `e2e/` | Playwright sur l'export web : `reel/` (vrai serveur), `simule/` (hors ligne). |
 
@@ -173,7 +230,8 @@ flowchart LR
 
 ## Limites
 
-- Pas de file hors ligne (lot M3) : une action sans réseau affiche une erreur, le texte du Kayé reste à l'écran.
+- Hors ligne (M3) : après un Kayé gardé, l'écran reste sur le formulaire (message + bandeau). Un nouvel appui après l'envoi réel donne un refus « déjà envoyé » (affiché dans le bandeau). Un écran « Kayé gardé » dédié serait plus clair (`app/kaye/[id].tsx`).
+- Hors ligne (M3) : un check-in gardé ne change pas la fiche avant l'envoi (pas d'état optimiste).
 - Pas de push (lot N1).
 - QR signé (`koudmen:domicile:s1:<jeton>`) : reconnu mais pas encore envoyé, le serveur n'accepte que le code lisible (api-v1 § 9.7).
 - Web : le scan demande `BarcodeDetector` (Chrome Android oui, Safari iOS non) ; sinon saisie manuelle seulement.
