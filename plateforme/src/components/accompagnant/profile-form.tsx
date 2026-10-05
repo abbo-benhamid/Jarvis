@@ -7,6 +7,7 @@ import { initialActionState } from "@/lib/action-result";
 import { COMMUNES } from "@/lib/communes";
 import { DAY_LABELS, SLOT_LABELS } from "@/lib/labels";
 import { formatEuros } from "@/lib/format";
+import { EXAMPLE_HOURS_PER_VISIT, EXAMPLE_VISITS_PER_MONTH, formatEurosRounded, netIncomeEstimate } from "@/lib/estimates";
 import { FormField, Fieldset, fieldA11y } from "@/components/ui/form-field";
 import { Input, Textarea } from "@/components/ui/input";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -40,6 +41,9 @@ export function ProfileForm({
   const [v, setV] = useState(initial);
   const fe = !state.ok ? state.fieldErrors : undefined;
   const paid = status !== "BENEVOLE_ASSO";
+  const rateCents = Math.round(Number(v.hourlyRate.replace(",", ".").trim()) * 100);
+  const net =
+    Number.isFinite(rateCents) && rateCents > 0 ? netIncomeEstimate(status, rateCents, EXAMPLE_HOURS_PER_VISIT * 60, EXAMPLE_VISITS_PER_MONTH) : null;
 
   const toggle = (key: "communes" | "availabilities", value: string, on: boolean) =>
     setV((s) => ({ ...s, [key]: on ? [...s[key], value] : s[key].filter((x) => x !== value) }));
@@ -56,7 +60,7 @@ export function ProfileForm({
           <FormField
             label="Votre tarif, en euros par heure"
             htmlFor="hourlyRate"
-            hint="Vous fixez votre tarif librement. Koudmen et la famille ne le modifient pas. La famille le voit avant de choisir."
+            hint="Par exemple : 15. Vous fixez votre tarif librement. Koudmen et la famille ne le modifient pas. La famille le voit avant de choisir."
             errors={fe?.hourlyRate}
           >
             <div className="flex items-center gap-2">
@@ -65,18 +69,17 @@ export function ProfileForm({
                 {...text("hourlyRate")}
                 inputMode="decimal"
                 autoComplete="off"
-                placeholder="15"
                 className="max-w-40 text-2xl font-bold"
               />
               <span className="text-lg font-semibold">€ / heure</span>
             </div>
           </FormField>
           {smicCents != null ? (
-            <p className="text-sm text-muted">
-              Vous êtes salarié(e) : votre tarif est un salaire horaire brut. Il ne peut pas être sous{" "}
-              {formatEuros(smicCents)} (SMIC 2026 et minimum de la convention IDCC 3239, à confirmer). Le formulaire refuse un montant plus bas.
+            <p className="text-sm">
+              Vous êtes salarié(e) : votre tarif est un salaire brut. Minimum légal : {formatEuros(smicCents)} brut de l&apos;heure.
             </p>
           ) : null}
+          <NetIncomeBox status={status} net={net} />
         </Card>
       ) : (
         <Card>
@@ -186,5 +189,30 @@ export function ProfileForm({
         Enregistrer mon profil
       </PendingButton>
     </form>
+  );
+}
+
+/** A4 : revenu net estimé, mis à jour pendant la saisie du tarif. Valeur indicative. */
+function NetIncomeBox({ status, net }: { status: CaregiverStatus; net: ReturnType<typeof netIncomeEstimate> }) {
+  if (status === "SAAD") {
+    return <p className="text-sm text-muted">Votre salaire net est fixé par votre structure.</p>;
+  }
+  return (
+    <div role="status" aria-live="polite" className="rounded-xl border-2 border-feuille bg-feuille-soft p-3">
+      {net ? (
+        <>
+          <p className="font-bold">Revenu net estimé : environ {formatEuros(net.hourlyCents)} de l&apos;heure.</p>
+          <p>
+            Pour {EXAMPLE_VISITS_PER_MONTH} visites de {EXAMPLE_HOURS_PER_VISIT} h par mois : environ {formatEurosRounded(net.perMonthCents)} net.
+          </p>
+          <p className="mt-1 text-sm">
+            Estimation indicative, avant impôt sur le revenu.{" "}
+            {status === "AUTO_ENTREPRENEUR_SAP" ? "Cotisations d'auto-entrepreneur déduites." : "Cotisations salariales déduites."}
+          </p>
+        </>
+      ) : (
+        <p>Écrivez votre tarif : Koudmen affiche votre revenu net estimé.</p>
+      )}
+    </div>
   );
 }

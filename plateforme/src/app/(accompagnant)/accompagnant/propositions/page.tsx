@@ -14,6 +14,8 @@ import { communeLabel } from "@/lib/communes";
 import { DAY_LABELS, FREQUENCY_LABELS, SLOT_LABELS } from "@/lib/labels";
 import { formatDate, formatEuros } from "@/lib/format";
 import { formatDuration } from "@/components/accompagnant/format";
+import { formatEurosRounded, netIncomeEstimate, VISITS_PER_MONTH } from "@/lib/estimates";
+import type { CaregiverStatus } from "@prisma/client";
 
 export const metadata: Metadata = { title: "Propositions" };
 
@@ -103,6 +105,13 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
                           {profile.hourlyRateCents != null ? `${formatEuros(profile.hourlyRateCents)} / heure` : "Non fixé"}{" "}
                           <span className="text-muted">(fixé par vous)</span>
                         </dd>
+                        <NetIncomeRow
+                          status={profile.status}
+                          rateCents={profile.hourlyRateCents}
+                          durationMinutes={p.request.durationMinutes}
+                          visitsPerMonth={VISITS_PER_MONTH[p.request.frequency]}
+                          oneOff={p.request.frequency === "PONCTUELLE"}
+                        />
                       </>
                     ) : null}
                   </dl>
@@ -125,6 +134,34 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
           </ul>
         )}
       </div>
+    </>
+  );
+}
+
+/** A4 : revenu net estimé de la mission (indicatif, avant impôt). */
+function NetIncomeRow({
+  status,
+  rateCents,
+  durationMinutes,
+  visitsPerMonth,
+  oneOff,
+}: {
+  status: CaregiverStatus | null;
+  rateCents: number | null;
+  durationMinutes: number;
+  visitsPerMonth: number;
+  oneOff: boolean;
+}) {
+  const net = netIncomeEstimate(status, rateCents, durationMinutes, visitsPerMonth);
+  if (!net) return null;
+  return (
+    <>
+      <dt className="font-semibold">Revenu net estimé</dt>
+      <dd>
+        <strong>environ {formatEurosRounded(net.perVisitCents)} par visite</strong>
+        {oneOff ? null : <> · environ {formatEurosRounded(net.perMonthCents)} par mois</>}
+        <span className="block text-sm text-muted">Estimation indicative, avant impôt sur le revenu.</span>
+      </dd>
     </>
   );
 }

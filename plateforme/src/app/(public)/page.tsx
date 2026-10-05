@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { CheckCircle2, HeartHandshake, MapPin, NotebookPen, ShieldCheck, Smile } from "lucide-react";
 import { LinkButton } from "@/components/ui/button";
+import { PLANS, OFFER_TEST_NOTICE } from "@/lib/plans";
+import { PlanCostExample } from "@/components/famille/plan-cost";
+import { Term } from "@/components/ui/term";
 
 /**
  * Page d'accueil (D13) : elle vend la TRANQUILLITÉ, dans cet ordre :
- * 1. la douleur ; 2. un exemple de Kayé (fictif) ; 3. trois promesses ; 4. UN SEUL bouton « Tester Koudmen ».
+ * 1. la douleur + le bouton « Tester Koudmen » dans le premier écran (S1b-ux M1) + le prix (A3) ;
+ * 2. un exemple de Kayé (fictif) ; 3. trois promesses ; 4. le prix détaillé ; 5. rappel du bouton.
  * Pas de bouton opérateur, pas de démo partagée (D1).
  */
 const PROMISES = [
@@ -28,15 +32,28 @@ const PROMISES = [
 export default function HomePage() {
   return (
     <div className="flex flex-col gap-12">
-      {/* 1. La douleur */}
+      {/* 1. La douleur, le bouton et le prix : tout dans le premier écran */}
       <section className="flex flex-col gap-4 pt-2">
         <p className="font-mono text-xs font-semibold tracking-widest text-mer uppercase">Martinique · diaspora</p>
         <h1 className="max-w-3xl text-4xl font-extrabold sm:text-5xl">
-          Manman dit « mwen bien ». <span className="text-mer">Vous ne savez jamais vraiment.</span>
+          {"Manman dit «\u00a0mwen bien\u00a0»."} <span className="text-mer">Vous ne savez jamais vraiment.</span>
         </h1>
         <p className="max-w-2xl text-lg text-muted">
-          Vous habitez à Créteil, à Lyon ou à Montréal. Elle vit seule à Fort-de-France. Koudmen envoie quelqu&apos;un du quartier, et vous dit ce
-          qui s&apos;est vraiment passé.
+          Vous habitez à Créteil, à Lyon ou à Montréal. Elle vit seule à Fort-de-France. Koudmen envoie quelqu&apos;un du quartier, prouve
+          chaque visite, et vous dit ce qui s&apos;est vraiment passé.
+        </p>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+          <LinkButton href="/tester" size="lg" className="sm:self-start">
+            Tester Koudmen
+          </LinkButton>
+          <p className="text-sm text-muted">Gratuit, 10 minutes, sur invitation. Un monde fictif rien que pour vous.</p>
+        </div>
+        <p className="max-w-2xl">
+          <strong>Prix en test :</strong> formule Libre 0 €, Kozé 39 €, Sérénité dès 149 € par mois. Les heures de visite sont en plus, avec
+          50 % de crédit d&apos;impôt.{" "}
+          <Link href="#prix" className="font-semibold text-mer underline">
+            Voir un exemple de prix
+          </Link>
         </p>
       </section>
 
@@ -47,7 +64,9 @@ export default function HomePage() {
         </h2>
         <figure className="max-w-xl rounded-2xl border border-line bg-surface p-5 shadow-sm">
           <div className="flex items-center justify-between gap-2">
-            <p className="font-bold">Kayé de Léonie, 81 ans</p>
+            <p className="font-bold">
+              <Term id="kaye">Kayé</Term> de Léonie, 81 ans
+            </p>
             <p className="text-sm text-muted">samedi, 16 h 10</p>
           </div>
           <p className="mt-3 flex items-start gap-2 rounded-lg bg-feuille-soft p-3 text-sm">
@@ -86,7 +105,29 @@ export default function HomePage() {
         </ul>
       </section>
 
-      {/* 4. Un seul bouton */}
+      {/* 4. Le prix (A3) */}
+      <section aria-labelledby="prix-titre" id="prix" className="flex scroll-mt-4 flex-col gap-4">
+        <h2 id="prix-titre" className="text-2xl font-bold">
+          Combien ça coûte ?
+        </h2>
+        <p className="max-w-2xl text-muted">
+          Vous payez une formule à Koudmen. Les heures de visite se paient à part, à l&apos;accompagnant. Pour ces heures, l&apos;État vous rend
+          50 % en crédit d&apos;impôt. {OFFER_TEST_NOTICE}
+        </p>
+        <ul className="grid gap-4 md:grid-cols-3">
+          {PLANS.map((p) => (
+            <li key={p.plan} className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-5">
+              <p className="text-lg font-bold">
+                {p.name} · {p.priceLabel}
+              </p>
+              <p className="text-muted">{p.meaning}</p>
+              <PlanCostExample plan={p} />
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* 5. Rappel du bouton */}
       <section aria-labelledby="tester" className="flex flex-col items-start gap-3 rounded-2xl bg-mer-soft p-6">
         <h2 id="tester" className="flex items-center gap-2 text-2xl font-bold">
           <HeartHandshake aria-hidden="true" className="size-6 text-mer" />

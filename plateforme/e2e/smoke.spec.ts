@@ -4,14 +4,19 @@ import { DEMO_PASSWORD, E2E_TESTER_CODE, OPERATEUR_EMAIL, OPERATEUR_PASSWORD } f
 /**
  * Smoke tests S1b. Prérequis : base migrée + seedée, DEMO_MODE=true, TESTER_INVITE_CODES contient E2E-TEST.
  */
-test("D13 : l'accueil vend la tranquillité, avec un seul bouton « Tester Koudmen » et sans démo opérateur", async ({ page }) => {
+test("D13 + S1c : l'accueil vend la tranquillité, montre « Tester Koudmen » et le prix dans le premier écran, sans démo opérateur", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 640 });
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("mwen bien");
   await expect(page.getByRole("heading", { name: "Ce que vous recevez après une visite" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Trois promesses" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Combien ça coûte ?" })).toBeVisible();
   const main = page.locator("main");
-  await expect(main.getByRole("link", { name: "Tester Koudmen" })).toHaveCount(1);
-  await expect(main.getByRole("button")).toHaveCount(0);
+  // M1 : le bouton est dans le premier écran (360 × 640).
+  await expect(main.getByRole("link", { name: "Tester Koudmen" }).first()).toBeInViewport();
+  await expect(main.getByText(/Prix en test/)).toBeVisible();
+  // Les seuls boutons du contenu sont les « ? » du glossaire (A11).
+  for (const b of await main.getByRole("button").all()) await expect(b).toHaveAccessibleName(/Qu'est-ce que/);
   await expect(page.getByText(/Opérateur/)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Donner mon avis" })).toBeVisible();
   // T9 : bandeau de test présent.

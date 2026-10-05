@@ -185,7 +185,7 @@ export const CHANNEL_LABELS: Record<Channel, string> = {
 };
 
 export const PLAN_LABELS: Record<Plan, string> = {
-  LAKOU: "Lakou",
+  LAKOU: "Libre",
   KOZE: "Kozé",
   SERENITE: "Sérénité",
 };

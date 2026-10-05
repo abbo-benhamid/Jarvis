@@ -10,18 +10,24 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-4 py-2">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-2">
           <Logo />
-          <nav aria-label="Compte" className="flex gap-2">
+          <nav aria-label="Compte" className="flex flex-wrap gap-2">
             {user ? (
               <Link className={buttonClasses("primary")} href={ROLE_HOME[user.role]}>
                 Mon espace
               </Link>
             ) : (
-              // D13 : un seul appel à l'action sur la page (« Tester Koudmen ») ; ici, seulement la connexion.
-              <Link className={buttonClasses("ghost")} href="/connexion">
-                Se connecter
-              </Link>
+              // S1b-ux M1 et m18 : « Tester » d'abord. Sur mobile, « Se connecter » laisse la place (lien en bas de l'accueil).
+              <>
+                <Link className={buttonClasses("ghost", "md", "max-sm:hidden")} href="/connexion">
+                  Se connecter
+                </Link>
+                <Link className={buttonClasses("primary")} href="/tester">
+                  Tester
+                </Link>
+              </>
+
             )}
           </nav>
         </div>

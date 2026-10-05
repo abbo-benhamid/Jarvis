@@ -11,6 +11,7 @@ import { FilterTabs } from "@/components/famille/filter-tabs";
 import { PlanChooser } from "@/components/famille/plan-chooser";
 import { MicroQuestion } from "@/components/sandbox/micro-question";
 import { OFFER_TEST_NOTICE } from "@/lib/plans";
+import { Term } from "@/components/ui/term";
 import { DISCOVERY_PRICE_LABEL } from "@/lib/measure";
 
 export const metadata: Metadata = { title: "Formule" };
@@ -26,7 +27,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
       <>
         <PageHeader eyebrow="Formule" title="Les formules" />
         <EmptyState title="Ajoutez d'abord un aîné" action={<LinkButton href="/famille/aines/nouveau">Ajouter un aîné</LinkButton>}>
-          La formule Lakou (gratuite) est activée dès la création du profil.
+          La formule Libre (gratuite) est activée dès la création du profil.
         </EmptyState>
       </>
     );
@@ -43,9 +44,18 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
       <PageHeader eyebrow="Formule" title={`La formule de ${aine.firstName}`} description="Choisissez le niveau de veille. Vous pouvez changer à tout moment." />
       <div className="flex flex-col gap-6">
         <Alert tone="attention" title={OFFER_TEST_NOTICE}>
-          Version de test : le paiement est simulé. Aucune carte n&apos;est demandée, aucun argent n&apos;est prélevé. Les heures
-          d&apos;accompagnement se paient à part, à l&apos;accompagnant ; Koudmen vous donne un relevé d&apos;heures et vous déclarez
-          vous-même (CESU).
+          Version de test : le paiement est simulé. Aucune carte n&apos;est demandée, aucun argent n&apos;est prélevé.
+        </Alert>
+
+        <Alert tone="info" title="Comment se calcule le prix ?">
+          <ul className="mt-1 flex list-disc flex-col gap-1 pl-5">
+            <li>Vous payez la formule à Koudmen, chaque mois.</li>
+            <li>
+              Vous payez les heures de visite à part, à l&apos;accompagnant. Vous le déclarez vous-même avec le <Term id="cesu" />.
+            </li>
+            <li>Pour ces heures, l&apos;État vous rend 50 % en crédit d&apos;impôt.</li>
+          </ul>
+          <p className="mt-1 text-sm">Chaque formule montre un exemple de total par mois. Ces chiffres sont des estimations.</p>
         </Alert>
 
         {aines.length > 1 ? (
