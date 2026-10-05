@@ -11,7 +11,7 @@ for (const scheme of ["light", "dark"] as const) {
     await page.goto("/tester/design");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("bonne nouvelle");
     await expect(page.getByRole("region", { name: "État de Léonie" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Reçu de visite" })).toContainText("2 preuves sur 3 · visite validée");
+    await expect(page.getByRole("region", { name: "Reçu de visite", exact: true })).toContainText("2 preuves sur 3 · visite validée");
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     expect(overflow).toBeLessThanOrEqual(0);
     await page.screenshot({ path: info.outputPath(`design-390-${scheme}.png`), fullPage: true });
@@ -31,9 +31,14 @@ test("la bascule de thème pose data-theme et le garde après rechargement", asy
 
 test("formules : radios natives au clavier", async ({ page }) => {
   await page.goto("/tester/design");
-  const serenite = page.getByRole("radio", { name: /Sérénité/ });
+  const serenite = page.getByRole("radio", { name: /^Sérénité/ });
   await expect(serenite).toBeChecked();
-  await page.getByRole("radio", { name: /Kozé/ }).check();
-  await expect(page.getByRole("radio", { name: /Kozé/ })).toBeChecked();
+  // Clavier : flèche haut depuis Sérénité → Kozé.
+  await serenite.focus();
+  await page.keyboard.press("ArrowUp");
+  await expect(page.getByRole("radio", { name: /^Kozé/ })).toBeChecked();
   await expect(serenite).not.toBeChecked();
+  // Toucher : toute la carte est cliquable.
+  await page.getByText("Le cercle Lakou et le Kayé partagé, sans visite.").click();
+  await expect(page.getByRole("radio", { name: /^Libre/ })).toBeChecked();
 });

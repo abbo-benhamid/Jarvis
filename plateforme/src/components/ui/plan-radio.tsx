@@ -95,11 +95,6 @@ export function PlanRadio({
                 }}
                 className="peer sr-only"
               />
-              {o.tag ? (
-                <Badge tone="soleil" className="absolute -top-[11px] right-4">
-                  {o.tag}
-                </Badge>
-              ) : null}
               <span
                 aria-hidden="true"
                 className={cn(
@@ -128,6 +123,12 @@ export function PlanRadio({
                   </ul>
                 ) : null}
               </span>
+              {/* Après le texte dans le DOM : le nom lu commence par la formule ; affiché à cheval sur le bord haut. */}
+              {o.tag ? (
+                <Badge tone="soleil" className="absolute -top-[11px] right-4">
+                  {o.tag}
+                </Badge>
+              ) : null}
             </label>
           );
         })}
