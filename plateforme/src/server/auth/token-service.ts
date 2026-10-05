@@ -288,7 +288,7 @@ export async function logout(input: { accessToken: string | null; refreshToken?:
 
 /**
  * Efface les jetons expirés ou révoqués depuis plus de `keepDays` jours (traces de détection de réutilisation).
- * À brancher sur la purge nocturne (hors périmètre du lot A1).
+ * Appelée par la purge nocturne (V1c, X9 : src/server/app-retention.ts).
  */
 export async function purgeRefreshTokens(now: Date = new Date(), keepDays = 7): Promise<number> {
   const limit = new Date(now.getTime() - keepDays * 86_400_000);

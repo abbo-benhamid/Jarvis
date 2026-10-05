@@ -196,6 +196,8 @@ enum OutboxStatus {
   ECHEC
   /// Lot N1 : remis au fournisseur réel (ex. Expo Push accepte le message).
   ENVOYE
+  /// V1c (m1) : push réservé, envoi en cours. Repris après 5 min (processus arrêté).
+  EN_COURS
 }
 
 enum FeedbackStatus {
@@ -622,9 +624,13 @@ model OutboxMessage {
   sandbox         Sandbox?     @relation(fields: [sandboxId], references: [id], onDelete: Cascade)
   createdAt       DateTime     @default(now())
   sentAt          DateTime?
+  /// V1c (m1) : essais d'envoi push (échec définitif après 3).
+  attempts        Int          @default(0)
 
   @@index([createdAt])
   @@index([sandboxId])
+  /// V1c (m12) : requête du flush push (channel = PUSH, status = EN_ATTENTE, ordre createdAt).
+  @@index([channel, status, createdAt])
 }
 
 model Feedback {

@@ -14,7 +14,7 @@ export const metadata: Metadata = { title: "Boîte d'envoi" };
 export const dynamic = "force-dynamic";
 
 const CHANNELS = Object.keys(CHANNEL_LABELS) as Channel[];
-const STATUS_TEXT = { ENVOYE_SIMULE: "Envoi simulé", ENVOYE: "Envoyé", EN_ATTENTE: "En attente", ECHEC: "Échec" } as const;
+const STATUS_TEXT = { ENVOYE_SIMULE: "Envoi simulé", ENVOYE: "Envoyé", EN_ATTENTE: "En attente", EN_COURS: "Envoi en cours", ECHEC: "Échec" } as const;
 
 export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   await requireRole("OPERATEUR");
