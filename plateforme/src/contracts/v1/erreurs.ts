@@ -22,8 +22,12 @@ export const CODES_ERREUR = [
   "ACCES_REFUSE",
   /** 404 : ressource absente. */
   "INTROUVABLE",
+  /** 409 : l'état a changé (proposition plus en attente, demande déjà pourvue). L'app recharge. */
+  "CONFLIT",
   /** 413 : corps trop gros. */
   "REQUETE_TROP_GROSSE",
+  /** 422 : requête valide, mais action impossible (profil non validé, tarif manquant…). Message affichable. */
+  "ACTION_IMPOSSIBLE",
   /** 429 : trop d'essais. En-tête Retry-After en secondes. */
   "TROP_DE_REQUETES",
   /** 500 : erreur du serveur. Aucun détail technique. */
@@ -57,7 +61,9 @@ export const STATUT_HTTP: Record<CodeErreur, number> = {
   JETON_REUTILISE: 401,
   ACCES_REFUSE: 403,
   INTROUVABLE: 404,
+  CONFLIT: 409,
   REQUETE_TROP_GROSSE: 413,
+  ACTION_IMPOSSIBLE: 422,
   TROP_DE_REQUETES: 429,
   ERREUR_INTERNE: 500,
 };
