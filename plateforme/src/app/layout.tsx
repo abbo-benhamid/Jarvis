@@ -16,6 +16,11 @@ export const metadata: Metadata = {
   description: "Le réseau de confiance qui veille sur nos aînés, ici et là-bas. Prototype de test : données fictives uniquement.",
   // D3 : aucune page indexée pendant le test (voir aussi l'en-tête X-Robots-Tag et robots.txt).
   robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
+  icons: {
+    icon: [{ url: "/icons/icon.svg", type: "image/svg+xml" }, { url: "/icons/icon-192.png", sizes: "192x192" }],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  appleWebApp: { capable: true, title: "Koudmen", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {
