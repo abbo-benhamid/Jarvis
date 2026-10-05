@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { router } from 'expo-router';
 import { api, ApiError, CODE_DEMO } from '@/api';
 import { useSession } from '@/session/SessionProvider';
@@ -12,6 +12,7 @@ import { Badge, Button, CaseIllustration, Em, Field, Icon, Kreyol, Logo, MadrasL
  */
 export default function Connexion() {
   const { c } = useTheme();
+  const { width } = useWindowDimensions();
   const { connecter } = useSession();
   const [etape, setEtape] = useState<'telephone' | 'code'>('telephone');
   const [telephone, setTelephone] = useState('');
@@ -55,8 +56,8 @@ export default function Connexion() {
       </View>
       <MadrasLine style={{ marginTop: 14 }} />
 
-      <View style={[styles.illus, { backgroundColor: c.surface, boxShadow: '0px 1px 2px rgba(40,32,20,0.05)' }]}>
-        <CaseIllustration width={300} />
+      <View style={[styles.illus, { backgroundColor: c.sky2 }]}>
+        <CaseIllustration width={Math.min(width, 440) - 40} bleed />
       </View>
 
       <Text variant="eyebrow" tone="muted" style={{ marginTop: 28 }}>
@@ -104,7 +105,7 @@ export default function Connexion() {
               onChangeText={(t) => setCode(t.replace(/\D/g, ''))}
               onSubmitEditing={valider}
               erreur={erreur}
-              aide={`Mode démonstration : tapez ${CODE_DEMO}.`}
+              aide={`Mode démonstration : tapez ${CODE_DEMO}.`}
             />
             <Button testID="bouton-connexion" label="Me connecter" icon="lock" onPress={valider} loading={envoi} disabled={code.length !== 6} />
             <Button
@@ -124,9 +125,9 @@ export default function Connexion() {
         <Icon name="shield" size={18} color={c.feuille} />
         <View style={{ flex: 1 }}>
           <Text variant="small" tone="muted">
-            Vous gardez la main : vous fixez votre tarif et vous pouvez refuser une visite sans pénalité.
+            Vous gardez la main : vous fixez votre tarif et vous pouvez refuser une visite sans pénalité.
           </Text>
-          <Kreyol style={{ marginTop: 6, fontSize: 16 }}>Bonjou ! Sa ka maché ?</Kreyol>
+          <Kreyol style={{ marginTop: 6, fontSize: 16 }}>Bonjou ! Sa ka maché ?</Kreyol>
         </View>
       </View>
     </Screen>
@@ -135,6 +136,6 @@ export default function Connexion() {
 
 const styles = StyleSheet.create({
   brand: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 56 },
-  illus: { marginTop: 20, borderRadius: 28, alignItems: 'center', overflow: 'hidden', paddingVertical: 10 },
+  illus: { marginTop: 20, borderRadius: 28, alignItems: 'center', overflow: 'hidden' },
   note: { flexDirection: 'row', gap: 12, marginTop: 28, padding: 16, borderRadius: 20, borderWidth: 1 },
 });

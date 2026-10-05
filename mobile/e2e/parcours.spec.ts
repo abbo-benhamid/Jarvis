@@ -29,7 +29,7 @@ test('connexion simulée, liste des visites, fiche visite', async ({ page }) => 
   await expect(fiche.getByTestId('etape-POSITION')).toContainText('Position au domicile');
   await expect(fiche.getByTestId('etape-CODE')).toContainText('Code du domicile');
   await expect(fiche.getByTestId('etape-CONFIRMATION_AINE')).toContainText('Confirmation de Léonie');
-  await expect(fiche.getByTestId('badge-preuve').first()).toContainText('Preuve 1/2');
+  await expect(fiche.getByTestId('badge-preuve')).toContainText('Preuve 1/2');
 
   // Pas de défilement horizontal à 390 px.
   const largeur = await page.evaluate(() => document.documentElement.scrollWidth);
@@ -45,7 +45,7 @@ test('preuves, puis Kayé rapide envoyé', async ({ page }) => {
   await page.getByTestId('champ-code-domicile').fill('4821');
   await page.getByRole('button', { name: 'Valider le code' }).click();
   await expect(page.getByTestId('verdict-preuve')).toContainText('2 preuves sur 3');
-  await expect(page.getByTestId('badge-preuve').first()).toContainText('Prouvée');
+  await expect(page.getByTestId('ecran-fiche-visite').getByTestId('badge-preuve')).toContainText('Prouvée');
 
   await page.getByTestId('bouton-ecrire-kaye').click();
   await expect(page.getByTestId('ecran-kaye-formulaire')).toBeVisible();

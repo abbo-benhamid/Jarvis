@@ -3,7 +3,7 @@ import { fonts, radius, useTheme } from '@/theme';
 import { Icon, type IconName } from './Icon';
 import { Text } from './Text';
 
-type Kind = 'preuve' | 'soleil' | 'neutre' | 'alerte' | 'mer';
+type Kind = 'preuve' | 'soleil' | 'neutre' | 'alerte' | 'mer' | 'verre';
 
 type Props = {
   label: string;
@@ -24,6 +24,8 @@ export function Badge({ label, kind = 'neutre', icon, testID }: Props) {
     neutre: { bg: c.surface2, fg: c.fg },
     alerte: { bg: c.hibiscusSoft, fg: c.hibiscus },
     mer: { bg: c.merSoft, fg: c.mer },
+    /** Posé sur une image : fond coton. */
+    verre: { bg: c.surface, fg: c.fg },
   };
   const t = tons[kind];
   return (

@@ -44,12 +44,12 @@ export function MapIllustration({ height = 128 }: { height?: number }) {
 }
 
 /** Case créole au soleil, pour l'état vide et la connexion (trait fin + aplats, § 8). */
-export function CaseIllustration({ width = 240 }: { width?: number }) {
+export function CaseIllustration({ width = 240, bleed }: { width?: number; bleed?: boolean }) {
   const { c } = useTheme();
   const h = width * 0.62;
   return (
     <Svg width={width} height={h} viewBox="0 0 240 150" aria-hidden>
-      <Rect width={240} height={150} rx={24} fill={c.sky2} />
+      <Rect width={240} height={150} rx={bleed ? 0 : 24} fill={c.sky2} />
       <Circle cx={182} cy={46} r={20} fill={c.soleil} opacity={0.9} />
       <Path d="M0 108c30-18 62-24 96-16s70 6 96-6 40-8 48-4v68H0z" fill={c.hill} opacity={0.75} />
       <Path d="M0 124c40-8 80 4 120 0s80-12 120-6v32H0z" fill={c.sea1} />

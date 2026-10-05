@@ -69,10 +69,10 @@ export default function KayeFormulaire() {
           </Text>
           <Text variant="body" tone="muted" center style={{ marginTop: 10 }}>
             {fini === 'envoye'
-              ? `La famille de ${prenom} le reçoit maintenant.${k.aSurveiller ? ' Elle reçoit aussi une alerte « à surveiller ».' : ''}`
+              ? `La famille de ${prenom} le reçoit maintenant.${k.aSurveiller ? ' Elle reçoit aussi une alerte « à surveiller ».' : ''}`
               : 'Vous pouvez le finir plus tard, depuis l’onglet Kayé.'}
           </Text>
-          {fini === 'envoye' ? <Kreyol style={{ marginTop: 14 }}>Mèsi anpil !</Kreyol> : null}
+          {fini === 'envoye' ? <Kreyol style={{ marginTop: 14 }}>Mèsi anpil !</Kreyol> : null}
         </Card>
       </Screen>
     );
@@ -121,7 +121,7 @@ export default function KayeFormulaire() {
       <View style={styles.intro}>
         <Avatar initiale={prenom.charAt(0)} teinte="soleil" aine size={48} />
         <Text variant="h2" style={{ flex: 1 }} accessibilityRole="header">
-          Comment va {prenom} <Em>aujourd’hui ?</Em>
+          Comment va {prenom} <Em>aujourd’hui ?</Em>
         </Text>
       </View>
 
@@ -131,7 +131,7 @@ export default function KayeFormulaire() {
         <Field
           testID="champ-note"
           label="Une note pour la famille"
-          placeholder={`Ex. : « Nous avons joué aux dominos. ${prenom} a gagné deux fois. »`}
+          placeholder={`Ex. : « Nous avons joué aux dominos. ${prenom} a gagné deux fois. »`}
           multiline
           value={k.note}
           onChangeText={(note) => setK({ ...k, note })}
@@ -152,8 +152,8 @@ export default function KayeFormulaire() {
           <>
             <Field
               testID="champ-a-surveiller"
-              label="Qu’avez-vous remarqué ?"
-              placeholder="Ex. : « Elle boit peu. Sa cheville est gonflée. »"
+              label="Qu’avez-vous remarqué ?"
+              placeholder="Ex. : « Elle boit peu. Sa cheville est gonflée. »"
               multiline
               value={k.aSurveillerDetail}
               onChangeText={(aSurveillerDetail) => setK({ ...k, aSurveillerDetail })}
@@ -162,7 +162,7 @@ export default function KayeFormulaire() {
             <View style={[styles.urgence, { backgroundColor: c.hibiscusSoft }]}>
               <Icon name="info" size={18} color={c.hibiscus} />
               <Text variant="small" style={{ flex: 1, color: c.hibiscus }}>
-                Urgence : appelez le 15 ou le 112. Ce Kayé n’est pas un avis médical.
+                Urgence : appelez le 15 ou le 112. Ce Kayé n’est pas un avis médical.
               </Text>
             </View>
           </>
@@ -175,7 +175,9 @@ export default function KayeFormulaire() {
         </Text>
       ) : !pret ? (
         <Text variant="small" tone="muted" style={{ marginTop: 12 }}>
-          Choisissez l’humeur et l’appétit pour envoyer.
+          {!k.humeur || !k.appetit
+            ? 'Choisissez l’humeur et l’appétit pour envoyer.'
+            : 'Décrivez ce qu’il faut surveiller pour envoyer.'}
         </Text>
       ) : null}
     </Screen>

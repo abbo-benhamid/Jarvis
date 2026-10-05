@@ -137,7 +137,7 @@ function Fiche({ v, header, onChange }: { v: Visite; header: React.ReactNode; on
           <View style={[styles.info, { backgroundColor: c.surface2 }]} accessibilityLiveRegion="polite">
             <Icon name="info" size={16} color={c.muted} />
             <Text variant="small" tone="muted" style={{ flex: 1 }}>
-              Démo : l’appel passe par Koudmen. Votre numéro et celui de {v.aine.prenom} restent cachés.
+              Démo : l’appel passe par Koudmen. Votre numéro et celui de {v.aine.prenom} restent cachés.
             </Text>
           </View>
         ) : null}
@@ -153,7 +153,7 @@ function Fiche({ v, header, onChange }: { v: Visite; header: React.ReactNode; on
         </Text>
       </Card>
 
-      <SectionHeader title={`Preuve d’arrivée · ${PREUVES_REQUISES} sur 3 suffisent`} aside={<ProofBadge obtenues={n} requises={PREUVES_REQUISES} />} />
+      <SectionHeader title={`Preuve d’arrivée · ${PREUVES_REQUISES} sur 3`} aside={<ProofBadge obtenues={n} requises={PREUVES_REQUISES} />} />
       <Card padding={0} style={{ paddingHorizontal: 18, paddingVertical: 4 }}>
         {ORDRE_PREUVES.map((type, i) => {
           const p = preuve(v, type);
@@ -216,7 +216,7 @@ function Fiche({ v, header, onChange }: { v: Visite; header: React.ReactNode; on
                       grand
                       value={code}
                       onChangeText={(t) => setCode(t.replace(/\D/g, ''))}
-                      aide={`Démo : le code est ${CODE_DOMICILE_DEMO}.`}
+                      aide={`Démo : le code est ${CODE_DOMICILE_DEMO}.`}
                     />
                     <Button
                       variant="quiet"

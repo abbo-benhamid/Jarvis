@@ -60,7 +60,7 @@ export function AineCarte({ v, onAppeler }: { v: Visite; onAppeler?: () => void 
       <View>
         <MapIllustration />
         <View style={styles.eta}>
-          <Badge kind="neutre" icon="nav" label={`${v.trajetMin} min`} />
+          <Badge kind="verre" icon="nav" label={`${v.trajetMin} min`} />
         </View>
       </View>
       <View style={styles.place}>

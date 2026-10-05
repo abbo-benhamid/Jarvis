@@ -50,6 +50,7 @@ export function TabBar({ items, activeName, onSelect }: Props) {
               accessibilityRole="tab"
               accessibilityLabel={it.label}
               accessibilityState={{ selected: on }}
+              aria-selected={on}
               aria-current={on ? 'page' : undefined}
               style={styles.tab}
             >
