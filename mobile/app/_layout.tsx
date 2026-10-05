@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -51,12 +51,21 @@ export default function RootLayout() {
 
 function Navigation() {
   const { c, scheme } = useTheme();
-  const { session } = useSession();
+  const { etat, session } = useSession();
 
   useEffect(() => {
     void SystemUI.setBackgroundColorAsync(c.bg).catch(() => undefined);
     if (Platform.OS === 'web' && typeof document !== 'undefined') appliquerStylesWeb(c.bg, c.focus, c.focusHalo, scheme);
   }, [c, scheme]);
+
+  if (etat.statut === 'demarrage') {
+    // Reprise de la connexion gardée sur l'appareil (POST /auth/refresh) : quelques centaines de ms.
+    return (
+      <View style={{ flex: 1, backgroundColor: c.bg, alignItems: 'center', justifyContent: 'center' }} testID="ecran-demarrage">
+        <ActivityIndicator color={c.mer} size="large" accessibilityLabel="Ouverture de votre session" />
+      </View>
+    );
+  }
 
   return (
     <>
@@ -69,6 +78,7 @@ function Navigation() {
           <Stack.Screen name="(onglets)" />
           <Stack.Screen name="visite/[id]" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="kaye/[id]" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="propositions" options={{ animation: 'slide_from_right' }} />
         </Stack.Protected>
       </Stack>
     </>

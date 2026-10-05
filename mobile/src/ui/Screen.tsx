@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
@@ -21,7 +21,10 @@ type Props = {
 export function Screen({ children, dock, header, bottomInset = 0, testID }: Props) {
   const { c } = useTheme();
   const insets = useSafeAreaInsets();
-  const reserve = dock ? 170 : 32 + bottomInset;
+  // Hauteur RÉELLE du pied d'action (mesurée) : le contenu défile entièrement au-dessus.
+  // Avant (M1) : réserve fixe de 170 px, trop courte pour un pied à deux boutons (Kayé).
+  const [hauteurDock, setHauteurDock] = useState(190);
+  const reserve = dock ? hauteurDock + 16 : 32 + bottomInset;
 
   return (
     <KeyboardAvoidingView
@@ -33,22 +36,31 @@ export function Screen({ children, dock, header, bottomInset = 0, testID }: Prop
       {header ? <View style={styles.column}>{header}</View> : null}
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[styles.column, styles.content, { paddingBottom: reserve + insets.bottom }]}
+        contentContainerStyle={[styles.column, styles.content, { paddingBottom: dock ? reserve : reserve + insets.bottom }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         {children}
       </ScrollView>
-      {dock ? <ActionDock bottom={insets.bottom}>{dock}</ActionDock> : null}
+      {dock ? (
+        <ActionDock bottom={insets.bottom} onHauteur={setHauteurDock}>
+          {dock}
+        </ActionDock>
+      ) : null}
     </KeyboardAvoidingView>
   );
 }
 
 /** Pied d'action : dégradé vers le fond sur 32 px, puis l'action principale (§ 10). */
-function ActionDock({ children, bottom }: { children: ReactNode; bottom: number }) {
+function ActionDock({ children, bottom, onHauteur }: { children: ReactNode; bottom: number; onHauteur: (h: number) => void }) {
   const { c } = useTheme();
   return (
-    <View style={[styles.dock, { paddingBottom: Math.max(bottom, 16) + 8 }]} pointerEvents="box-none">
+    <View
+      style={[styles.dock, { paddingBottom: Math.max(bottom, 16) + 8 }]}
+      pointerEvents="box-none"
+      testID="pied-action"
+      onLayout={(e) => onHauteur(Math.ceil(e.nativeEvent.layout.height))}
+    >
       <Svg style={StyleSheet.absoluteFill} width="100%" height="100%" preserveAspectRatio="none" aria-hidden>
         <Defs>
           <LinearGradient id="dock" x1="0" y1="0" x2="0" y2="1">

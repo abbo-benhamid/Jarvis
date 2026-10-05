@@ -1,34 +1,42 @@
 import { useCallback } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { api, PREUVES_REQUISES, type Visite } from '@/api';
-import { dateLongue, heureCourte, libelleJour, pluriel, plageHoraire } from '@/lib/format';
+import { api, messageErreur, type Visite } from '@/api';
+import { dateLongue, heureCourte, plageHoraire, pluriel } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 import { useSession } from '@/session/SessionProvider';
 import { fonts, radius, useTheme } from '@/theme';
-import { Avatar, Button, Card, CaseIllustration, Kreyol, ProofBadge, Screen, SectionHeader, TabBarSpace, Text } from '@/ui';
-import { estDuJour, nbPreuves } from '@/visites/regles';
-import { AineCarte, VisiteLigne } from '@/visites/VisiteResume';
+import { Avatar, Button, Card, CaseIllustration, Icon, Kreyol, Screen, SectionHeader, TabBarSpace, Text } from '@/ui';
+import { estDuJour, libelleStatut } from '@/visites/regles';
+import { AineCarte, VisiteBadge, VisiteLigne } from '@/visites/VisiteResume';
 
+/** Visites du jour et des 7 prochains jours (GET /api/v1/visites?jours=7). */
 export default function Visites() {
   const { c } = useTheme();
   const { session } = useSession();
   const visites = useAsync(() => api.listerVisites(), []);
+  const propositions = useAsync(() => api.listerPropositions(), []);
   const { recharger } = visites;
+  const rechargerPropositions = propositions.recharger;
 
   useFocusEffect(
     useCallback(() => {
       void recharger();
-    }, [recharger]),
+      void rechargerPropositions();
+    }, [recharger, rechargerPropositions]),
   );
 
   const liste = visites.donnees ?? [];
   const duJour = liste.filter(estDuJour);
-  const aVenir = liste.filter((v) => !estDuJour(v));
-  const vedette = duJour.find((v) => v.statut === 'EN_COURS') ?? duJour.find((v) => v.statut === 'A_VENIR');
+  const aVenir = liste.filter((v) => !estDuJour(v) && new Date(v.debut) > new Date());
+  const vedette =
+    duJour.find((v) => v.statut === 'EN_COURS' && !v.kayePublie) ??
+    duJour.find((v) => v.actions.checkIn || v.actions.kaye) ??
+    duJour.find((v) => v.statut === 'PREVUE');
   const autresDuJour = duJour.filter((v) => v !== vedette);
   const ouvrir = (v: Visite) => router.push({ pathname: '/visite/[id]', params: { id: v.id } });
-  const prenom = session?.accompagnant.prenom ?? '';
+  const prenom = session?.prenom ?? '';
+  const nbPropositions = propositions.donnees?.length ?? 0;
 
   return (
     <Screen testID="ecran-visites" bottomInset={TabBarSpace}>
@@ -44,6 +52,27 @@ export default function Visites() {
         <Avatar initiale={prenom.charAt(0)} teinte="mer" size={44} />
       </View>
 
+      {nbPropositions > 0 ? (
+        <Pressable
+          testID="lien-propositions"
+          onPress={() => router.push('/propositions')}
+          accessibilityRole="button"
+          accessibilityLabel={`${pluriel(nbPropositions, 'nouvelle proposition')}. Vous pouvez accepter ou refuser, sans pénalité.`}
+          style={({ pressed }) => [styles.propositions, { backgroundColor: pressed ? c.surface2 : c.soleilSoft }]}
+        >
+          <Icon name="bell" size={20} color={c.soleilInk} />
+          <View style={{ flex: 1 }}>
+            <Text variant="bodyStrong" tone="soleilInk">
+              {pluriel(nbPropositions, 'nouvelle proposition')}
+            </Text>
+            <Text variant="small" tone="soleilInk">
+              Accepter ou refuser : vous choisissez, sans pénalité.
+            </Text>
+          </View>
+          <Icon name="right" size={18} color={c.soleilInk} />
+        </Pressable>
+      ) : null}
+
       {duJour.length > 0 ? (
         <View style={styles.timeline} accessibilityLabel="Programme du jour">
           {duJour.map((v) => {
@@ -53,20 +82,15 @@ export default function Visites() {
                 key={v.id}
                 onPress={() => ouvrir(v)}
                 accessibilityRole="button"
-                accessibilityLabel={`${heureCourte(v.debut)}, ${v.aine.prenom}${now ? ', visite en cours' : ''}`}
+                accessibilityLabel={`${heureCourte(v.debut)}, ${v.aine.prenom}, ${libelleStatut(v)}`}
                 aria-current={now ? 'true' : undefined}
-                style={[
-                  styles.slot,
-                  { backgroundColor: now ? c.surface : c.surface2 },
-                  now && { borderColor: c.mer, borderWidth: 1.5 },
-                ]}
+                style={[styles.slot, { backgroundColor: now ? c.surface : c.surface2 }, now && { borderColor: c.mer, borderWidth: 1.5 }]}
               >
                 <Text style={{ fontFamily: fonts.sansSemiBold, fontSize: 16, lineHeight: 20, color: now ? c.mer : c.fg }} num>
                   {heureCourte(v.debut)}
                 </Text>
                 <Text variant="small" tone="muted" numberOfLines={1} style={{ fontSize: 14 }}>
-                  {v.aine.prenom}
-                  {v.statut === 'EN_COURS' ? ' · en cours' : v.statut === 'TERMINEE' ? ' · terminée' : ''}
+                  {v.aine.prenom} · {libelleStatut(v)}
                 </Text>
               </Pressable>
             );
@@ -81,10 +105,10 @@ export default function Visites() {
       ) : null}
 
       {visites.statut === 'erreur' ? (
-        <Card style={{ marginTop: 16 }}>
+        <Card style={{ marginTop: 16 }} testID="erreur-visites">
           <Text variant="bodyStrong">Les visites ne sont pas chargées.</Text>
           <Text variant="small" tone="muted" style={{ marginTop: 4 }}>
-            Vérifiez votre connexion, puis réessayez.
+            {messageErreur(visites.erreur)}
           </Text>
           <Button label="Réessayer" variant="quiet" onPress={() => void recharger()} style={{ marginTop: 14 }} />
         </Card>
@@ -95,14 +119,16 @@ export default function Visites() {
           <AineCarte v={vedette} />
           <View style={[styles.consigne, { borderTopColor: c.line }]}>
             <Text variant="caption" tone="muted" num>
-              {plageHoraire(vedette.debut, vedette.fin)} · {vedette.statut === 'EN_COURS' ? 'en cours' : 'à venir'}
+              {plageHoraire(vedette.debut, vedette.fin)} · {libelleStatut(vedette)}
             </Text>
-            <Text variant="body" style={{ marginTop: 4 }}>
-              {vedette.consigne}
-            </Text>
+            {vedette.demande.consignes ? (
+              <Text variant="body" style={{ marginTop: 4 }}>
+                {vedette.demande.consignes}
+              </Text>
+            ) : null}
           </View>
           <View style={styles.vedetteBas}>
-            <ProofBadge obtenues={nbPreuves(vedette)} requises={PREUVES_REQUISES} />
+            <VisiteBadge v={vedette} />
           </View>
           <Button
             testID="ouvrir-visite-vedette"
@@ -113,20 +139,20 @@ export default function Visites() {
           />
         </Card>
       ) : visites.statut === 'pret' ? (
-        <Card style={{ marginTop: 16, alignItems: 'center' }}>
+        <Card style={{ marginTop: 16, alignItems: 'center' }} testID="aucune-visite">
           <CaseIllustration width={200} />
           <Text variant="h3" center style={{ marginTop: 12 }}>
             Pas de visite aujourd’hui.
           </Text>
           <Text variant="small" tone="muted" center style={{ marginTop: 6 }}>
-            Profitez de votre journée. Vos prochaines visites sont plus bas.
+            {aVenir.length > 0 ? 'Profitez de votre journée. Vos prochaines visites sont plus bas.' : 'Aucune visite prévue cette semaine.'}
           </Text>
         </Card>
       ) : null}
 
       {autresDuJour.length > 0 ? (
         <>
-          <SectionHeader title="Plus tard aujourd’hui" />
+          <SectionHeader title="Aujourd’hui, aussi" />
           <View style={{ gap: 12 }}>
             {autresDuJour.map((v) => (
               <VisiteLigne key={v.id} v={v} onPress={() => ouvrir(v)} />
@@ -160,8 +186,9 @@ export default function Visites() {
 
 const styles = StyleSheet.create({
   greet: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10 },
-  timeline: { flexDirection: 'row', gap: 8, marginTop: 16 },
-  slot: { flex: 1, minHeight: 60, paddingVertical: 10, paddingHorizontal: 14, borderRadius: radius.field, borderWidth: 1.5, borderColor: 'transparent' },
+  propositions: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, padding: 14, borderRadius: radius.field, minHeight: 64 },
+  timeline: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 },
+  slot: { flexGrow: 1, flexBasis: '30%', minHeight: 60, paddingVertical: 10, paddingHorizontal: 14, borderRadius: radius.field, borderWidth: 1.5, borderColor: 'transparent' },
   consigne: { marginTop: 16, paddingTop: 14, borderTopWidth: 1 },
   vedetteBas: { flexDirection: 'row', alignItems: 'center', marginTop: 14 },
   pied: { alignItems: 'center', gap: 6, marginTop: 28 },
