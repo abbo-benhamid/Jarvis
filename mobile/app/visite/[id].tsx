@@ -15,6 +15,7 @@ import {
 } from '@/api';
 import { heureTexte, libelleJour, NBSP, plageHoraire } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
+import { retourAuxVisites } from '@/session/navigation';
 import { fonts, radius, useTheme } from '@/theme';
 import { Badge, Button, Card, Field, Icon, IconButton, ProofBadge, Screen, SectionHeader, SwitchRow, Text } from '@/ui';
 import { aLaPreuve, estDuJour, estProuvee, libellePreuve, nbPreuves, ORDRE_PREUVES } from '@/visites/regles';
@@ -40,7 +41,7 @@ export default function FicheVisite() {
 
   const header = (
     <View style={styles.topbar}>
-      <IconButton icon="left" accessibilityLabel="Retour aux visites" onPress={() => (router.canGoBack() ? router.back() : router.replace('/visites'))} />
+      <IconButton icon="left" accessibilityLabel="Retour aux visites" onPress={() => (router.canGoBack() ? router.back() : retourAuxVisites())} />
       <Text variant="title" numberOfLines={1} style={{ flex: 1, textAlign: 'center' }}>
         {visite.donnees ? `Chez ${visite.donnees.aine.prenom}` : 'Visite'}
       </Text>
@@ -70,7 +71,7 @@ export default function FicheVisite() {
               {messageErreur(visite.erreur)}
             </Text>
             {visite.erreur instanceof ApiError && visite.erreur.code === 'INTROUVABLE' ? (
-              <Button label="Retour aux visites" variant="quiet" onPress={() => router.replace('/visites')} style={{ marginTop: 14 }} />
+              <Button label="Retour aux visites" variant="quiet" onPress={retourAuxVisites} style={{ marginTop: 14 }} />
             ) : (
               <Button label="Réessayer" variant="quiet" onPress={() => void visite.recharger()} style={{ marginTop: 14 }} />
             )}
@@ -203,7 +204,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
   } else {
     dock = (
       <>
-        <Button large variant="ink" label="Retour aux visites" icon="left" onPress={() => router.replace('/visites')} />
+        <Button large variant="ink" label="Retour aux visites" icon="left" onPress={retourAuxVisites} />
         <Text variant="small" tone="muted" center style={styles.hint}>
           {v.kayePublie ? 'Kayé envoyé à la famille. Merci.' : 'Cette visite est terminée.'}
         </Text>

@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { api, ApiError, messageErreur, type Proposition } from '@/api';
-import { dateLongue, NBSP, pluriel } from '@/lib/format';
+import { dateLongue, NBSP, NNBSP, pluriel } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
+import { retourAuxVisites } from '@/session/navigation';
 import { useTheme } from '@/theme';
 import { Avatar, Badge, Button, Card, CaseIllustration, Em, Field, Icon, IconButton, Screen, Text } from '@/ui';
 
@@ -35,7 +36,7 @@ export default function Propositions() {
 
   const header = (
     <View style={styles.topbar}>
-      <IconButton icon="left" accessibilityLabel="Retour" onPress={() => (router.canGoBack() ? router.back() : router.replace('/visites'))} />
+      <IconButton icon="left" accessibilityLabel="Retour" onPress={() => (router.canGoBack() ? router.back() : retourAuxVisites())} />
       <Text variant="title" style={{ flex: 1, textAlign: 'center' }}>
         Propositions
       </Text>
@@ -51,7 +52,7 @@ export default function Propositions() {
       <View style={[styles.regle, { backgroundColor: c.feuilleSoft }]} testID="regle-sans-penalite">
         <Icon name="shield" size={20} color={c.feuille} />
         <Text variant="small" style={{ flex: 1, color: c.feuille }}>
-          Refuser est toujours possible, <Text variant="smallStrong" style={{ color: c.feuille }}>sans pénalité</Text> : votre profil
+          Refuser est toujours possible, <Text variant="smallStrong" style={{ color: c.feuille }}>sans pénalité</Text>{NNBSP}: votre profil
           et vos prochaines propositions ne changent pas. La famille ne voit pas votre note.
         </Text>
       </View>

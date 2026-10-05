@@ -1,37 +1,78 @@
 # Koudmen — app mobile (accompagnant)
 
-Lot **M1** de l'ADR 0008 : squelette Expo, données **simulées**.
-Expo SDK 57 · React Native 0.86 · Expo Router · TypeScript strict.
+Lots **M1** (squelette) et **M2** (connexion et visites réelles) de l'ADR 0008.
+Expo SDK 57 · React Native 0.86 · Expo Router · TypeScript strict · contrats Zod de l'API v1.
+
+## Choisir la source des données
+
+| Variable | Valeur | Effet |
+|---|---|---|
+| `EXPO_PUBLIC_API_URL` | `http://localhost:3000` (défaut) | API v1 de `plateforme/` |
+| `EXPO_PUBLIC_API_URL` | `/` | même origine (export web + `scripts/proxy-dev.mjs`) |
+| `EXPO_PUBLIC_API_MODE` | `simule` | démo hors ligne, données en mémoire |
+
+Repli : `expo.extra.apiUrl` / `expo.extra.apiMode` dans un `app.config`.
+Les variables `EXPO_PUBLIC_*` sont figées au build : ajoutez `--clear` si vous changez de valeur (cache Metro).
 
 ## Lancer sur un vrai téléphone (Expo Go)
 
-1. Installez **Expo Go** sur le téléphone (App Store ou Google Play).
-2. Sur l'ordinateur, dans `mobile/` :
+1. Installez **Expo Go**. Le téléphone et l'ordinateur sont sur le **même Wi-Fi**.
+2. Lancez `plateforme/` (`DEMO_MODE=true`), puis dans `mobile/` :
    ```bash
    npm install
-   npx expo start
+   EXPO_PUBLIC_API_URL=http://<IP-de-l-ordinateur>:3000 npx expo start
    ```
-3. Scannez le QR code :
-   - iPhone : avec l'appareil photo ;
-   - Android : avec Expo Go.
-4. Le téléphone et l'ordinateur doivent être sur le **même Wi-Fi**. Sinon : `npx expo start --tunnel`.
+3. Scannez le QR code. Connexion : `accompagnant@demo.koudmen.test` et `DEMO_PASSWORD` de `plateforme/.env`,
+   ou le lien « Essayer avec le compte de démonstration ».
 
-Connexion de démonstration :
-- numéro : n'importe quel numéro de 9 chiffres ou plus ;
-- code SMS : **123456** ;
-- code du domicile (saisie à la main) : **4821**.
+Sans serveur : `EXPO_PUBLIC_API_MODE=simule npx expo start` (mot de passe `koudmen`, code du domicile `KDM482`).
+
+## Connexion et jetons (lot M2)
+
+```mermaid
+sequenceDiagram
+  participant App
+  participant API as API v1
+  App->>App: vérificateur PKCE + défi S256 (expo-crypto)
+  App->>API: POST /auth/code
+  App->>API: POST /auth/token
+  API-->>App: jeton d'accès (mémoire) + renouvellement (expo-secure-store)
+  App->>API: GET /me, /visites… (Bearer)
+  API-->>App: 401 NON_AUTHENTIFIE
+  App->>API: POST /auth/refresh (UN SEUL à la fois, promesse partagée)
+  App->>API: nouvel essai de l'appel
+```
+
+- Pas de délai de grâce côté serveur : deux renouvellements simultanés révoqueraient la connexion. `src/api/http.ts` les sérialise.
+- `JETON_INVALIDE` / `JETON_REUTILISE` : jetons effacés, retour à la connexion avec un message.
+- Web : le jeton de renouvellement reste **en mémoire** (recharger la page demande de se reconnecter).
+- Événements (`POST /evenements`) : un `clientEventId` neuf par action ; après une coupure réseau, un seul renvoi avec le même identifiant (idempotent).
+- Position : une lecture au check-in, avec accord. Web : API du navigateur. iOS / Android : lot M4 (`expo-location`) [À VÉRIFIER].
+
+## Contrats
+
+```bash
+npm run sync:contracts              # copie plateforme/src/contracts/v1 → src/contracts (sans *.test.ts)
+npm run sync:contracts -- --check   # échoue si la copie n'est plus à jour
+```
+
+`src/contracts/` est **généré** : ne le modifiez pas à la main.
 
 ## Vérifier sans téléphone
 
 ```bash
-npx tsc --noEmit                 # types
-npx expo export -p web           # export web dans dist/
-npm run e2e                      # Playwright, 390 px (serveur statique e2e/serve.mjs)
-SHOTS_DIR=/chemin npm run e2e -- captures   # captures clair et sombre
+npx tsc --noEmit
+# 1. Contre le vrai serveur (critère M2). plateforme/ lancée sur :3731 (DEMO_MODE=true), sans db:seed.
+EXPO_OFFLINE=1 npm run export:web:reel
+API_CIBLE=http://localhost:3731 npm run e2e
+SHOTS_DIR=/chemin npm run e2e         # + captures 390 px clair et sombre
+# 2. Démo hors ligne.
+EXPO_OFFLINE=1 npm run export:web:simule && npm run e2e:simule
 ```
 
-Dans la sandbox : `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers` (Chromium préinstallé, `@playwright/test` 1.56.1).
-Si l'API Expo est bloquée par le proxy : préfixez par `EXPO_OFFLINE=1`.
+- **CORS** : l'API v1 n'envoie pas d'en-têtes CORS. `scripts/proxy-dev.mjs` sert l'export web **et** relaie `/api/*` vers `plateforme/` : même origine, `plateforme/` ne change pas. Outil de dev seulement.
+- Les e2e créent leurs données sur le compte démo (`e2e/reel/donnees.ts`, client Prisma de `plateforme/`), puis les effacent. Ils remettent à zéro les compteurs `login:*` de la base **locale**.
+- Sandbox : `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers` (Chromium préinstallé, `@playwright/test` 1.56.1).
 
 ## Structure
 
@@ -55,12 +96,14 @@ flowchart LR
 | Dossier | Rôle |
 |---|---|
 | `app/` | Écrans (une route par fichier). Pas de logique métier. |
-| `src/api/` | `KoudmenApi` (interface) + `simule.ts`. Le lot M2 ajoute `http.ts` vers `/api/v1`. |
+| `src/api/` | `KoudmenApi` (interface), `http.ts` (API v1, jetons, PKCE), `simule.ts` (hors ligne), `position.ts`. |
+| `src/session/` | `SessionProvider` (reprise au démarrage, session perdue), navigation. |
+| `src/contracts/` | **Généré** par `scripts/sync-contracts.mjs`. |
+| `scripts/` | `sync-contracts.mjs`, `proxy-dev.mjs`. |
 | `src/theme/` | Thème **provisoire** tiré de `docs/design/direction-artistique.md`. À remplacer par la sortie de `design/tokens.json` (lot W1). |
 | `src/ui/` | Composants : `Button`, `Card`, `Badge`/`ProofBadge`, `Avatar` (anneau madras), `Choice`, `SwitchRow`, `Field`, `TabBar`, `Screen` (pied d'action), illustrations. |
 | `src/visites/` | Règles d'affichage des visites (2 preuves sur 3). |
-| `e2e/` | Playwright sur l'export web. |
-| `src/contracts/` | **Absent exprès** : généré au lot M2 (`scripts/sync-contracts.mjs`). |
+| `e2e/` | Playwright sur l'export web : `reel/` (vrai serveur), `simule/` (hors ligne). |
 
 ## Règles respectées
 
@@ -69,9 +112,11 @@ flowchart LR
 - Cibles tactiles ≥ 44 px (boutons principaux 56–60 px), `accessibilityLabel` sur chaque bouton-icône, rôles `tab`, `radio`, `switch`.
 - Thème clair et sombre (suit le système, choix manuel dans Profil).
 
-## Limites du lot M1
+## Limites
 
-- Données en mémoire : tout revient à zéro au redémarrage.
-- Pas de vraie position, pas de scan (lot M4), pas de hors ligne (lot M3), pas de push (lot N1).
+- Pas de file hors ligne (lot M3) : une action sans réseau affiche une erreur, le texte du Kayé reste à l'écran.
+- Pas de position native ni de scan QR (lot M4), pas de push (lot N1).
+- `aine.interets` est vide côté serveur (api-v1 § 9.7) : pas de puces de centres d'intérêt pour l'instant.
+- La confirmation de l'aîné (« tapez 1 ») se fait côté serveur : l'app l'affiche seulement.
 - Le choix du thème n'est pas mémorisé.
 - Graphie créole (« Bonjou », « Sa ka maché », « Mèsi anpil », « Bon travay ») : [À VÉRIFIER] avec un locuteur.

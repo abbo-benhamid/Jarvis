@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { api, messageErreur, type BrouillonKaye, type KayePublie } from '@/api';
 import { useAsync } from '@/lib/useAsync';
+import { retourAuxVisites } from '@/session/navigation';
 import { fonts, useTheme } from '@/theme';
 import { Avatar, Button, Card, Choice, Em, Field, Icon, IconButton, Kreyol, Screen, SwitchRow, Text, type ChoiceOption } from '@/ui';
 
@@ -102,7 +103,7 @@ export default function KayeFormulaire() {
       <Screen
         header={header}
         testID="ecran-kaye-fini"
-        dock={<Button large variant="primary" label="Retour aux visites" icon="left" onPress={() => router.replace('/visites')} />}
+        dock={<Button large variant="primary" label="Retour aux visites" icon="left" onPress={retourAuxVisites} />}
       >
         <Card hero style={{ marginTop: 16, alignItems: 'center', paddingVertical: 32 }}>
           <View style={[styles.okRond, { backgroundColor: c.feuilleSoft }]}>
@@ -210,6 +211,7 @@ export default function KayeFormulaire() {
                   accessibilityRole="checkbox"
                   accessibilityLabel={a}
                   accessibilityState={{ checked: on }}
+                  aria-checked={on}
                   style={[styles.activite, { backgroundColor: on ? c.merSoft : c.surface, borderColor: on ? c.mer : c.lineStrong, borderWidth: on ? 2 : 1.5 }]}
                 >
                   {on ? <Icon name="check" size={16} color={c.mer} /> : null}
