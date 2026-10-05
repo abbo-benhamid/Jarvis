@@ -1,138 +1,275 @@
 @import "tailwindcss";
 
 /*
- * Design tokens Koudmen (palette de site/koudmen-carte.html).
- * Utilise les classes Tailwind générées : bg-mer, text-fg, border-line, bg-soleil-soft…
- * Le thème sombre suit le système (prefers-color-scheme). Ne code jamais une couleur en dur.
+ * Koudmen — styles globaux (direction artistique v1 : docs/design/direction-artistique.md).
+ * Référence visuelle : site/maquette-conso.html.
+ *
+ * Les jetons (couleurs, rayons, ombres, polices) viennent de design/tokens.json.
+ * Le bloc entre @tokens:start et @tokens:end est GÉNÉRÉ : node design/scripts/build-tokens.mjs
+ * Classes Tailwind disponibles : bg-surface, bg-surface-2, text-fg, text-muted, text-soleil-ink,
+ * bg-mer-soft, rounded-card, rounded-button, shadow-card, font-display…
+ * Ne codez jamais une couleur en dur. Préférez les jetons aux classes dark: (les jetons suivent déjà le thème).
  */
+
+/* @tokens:start — généré par design/scripts/build-tokens.mjs depuis design/tokens.json. Ne pas modifier à la main. */
 :root {
-  --bg: #f3f6f5;
-  --surface: #ffffff;
-  --fg: #13302e;
-  --muted: #4f6865;
-  --line: #cfdcd9;
-  /* Bordure des contrôles (champs) : contraste >= 3:1 sur surface et fond (WCAG 1.4.11). */
-  --line-strong: #768a87;
-  --mer: #0e6b63;
-  --mer-strong: #0a544e;
-  --soleil: #e0a21b;
-  /* Hibiscus et feuille foncés : texte >= 4.5:1 sur leur fond doux (badges). */
-  --hibiscus: #b02a43;
-  --feuille: #2d6e31;
-  --mer-soft: #dcefeb;
-  --soleil-soft: #fbefd2;
-  --hibiscus-soft: #f8dde2;
-  --feuille-soft: #e1f0e1;
-  /* Texte posé sur une couleur pleine */
-  --on-mer: #ffffff;
-  --on-soleil: #13302e;
-  --on-hibiscus: #ffffff;
-  /* Focus : anneau foncé (>= 3:1 sur tous les fonds) + liseré soleil (identité). */
-  --focus: #13302e;
-  --focus-halo: #e0a21b;
+  --bg: #F6F2EA;
+  --surface: #FFFDF8;
+  --surface-2: #EFE9DE;
+  --fg: #1A2321;
+  --muted: #5A645F;
+  --line: #E3DBCD;
+  --line-strong: #8A877D;
+  --mer: #0D5F58;
+  --mer-strong: #0A4C46;
+  --mer-soft: #E2EEEA;
+  --on-mer: #FFFFFF;
+  --soleil: #E0A21B;
+  --soleil-ink: #7E5300;
+  --soleil-soft: #F8EDD3;
+  --on-soleil: #1A2321;
+  --hibiscus: #A8283F;
+  --hibiscus-soft: #F6E1E3;
+  --on-hibiscus: #FFFFFF;
+  --feuille: #2B6A30;
+  --feuille-soft: #E4EFE1;
+  --focus: #1A2321;
+  --focus-halo: #E0A21B;
+  --sky-1: #F3DDB9;
+  --sky-2: #F8EEDF;
+  --sea-1: #9CC7BE;
+  --sea-2: #5E9F95;
+  --hill: #B9C9A6;
+  --pump: #D99A3A;
+  --leaf: #6F9265;
+  --stroke: #1A2321;
+  --shadow: 0 1px 2px rgb(40 32 20 / .05), 0 10px 30px -14px rgb(40 32 20 / .18);
+  --shadow-lg: 0 2px 4px rgb(40 32 20 / .04), 0 30px 60px -30px rgb(40 32 20 / .35);
+  --photo-filter: none;
+  --madras: linear-gradient(90deg, var(--hibiscus) 0 28%, var(--soleil) 28% 52%, var(--mer) 52% 82%, var(--feuille) 82% 100%);
+  --madras-ring: conic-gradient(var(--hibiscus) 0 25%, var(--soleil) 0 50%, var(--mer) 0 75%, var(--feuille) 0);
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 320ms;
+  --motion-ease: cubic-bezier(.2, .8, .2, 1);
+  --app-column: 440px;
+  --content-max: 1120px;
+  --bottom-reserve: 120px;
   color-scheme: light;
 }
 
+/* Sombre : suit le système, sauf choix manuel « clair » (data-theme sur <html>). */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0c1a19;
-    --surface: #122523;
-    --fg: #e4efed;
-    --muted: #9db5b1;
-    --line: #24403d;
-    --line-strong: #6f8f8a;
-    --mer: #4cc3b5;
-    --mer-strong: #7dd8cc;
-    --soleil: #f0bd4f;
-    --hibiscus: #ef6f86;
-    --feuille: #7cc47f;
-    --mer-soft: #163a36;
-    --soleil-soft: #3a2f14;
-    --hibiscus-soft: #3d1c24;
-    --feuille-soft: #1a3a1c;
-    --on-mer: #0c1a19;
-    --on-soleil: #0c1a19;
-    --on-hibiscus: #0c1a19;
-    --focus: #f0bd4f;
-    --focus-halo: #0c1a19;
+  :root:not([data-theme="light"]) {
+    --bg: #0F1413;
+    --surface: #171D1C;
+    --surface-2: #212927;
+    --fg: #EEE9E0;
+    --muted: #A3ABA6;
+    --line: #262F2D;
+    --line-strong: #6E7975;
+    --mer: #6CC9BB;
+    --mer-strong: #8AD6CA;
+    --mer-soft: #18302C;
+    --on-mer: #0B1110;
+    --soleil: #F0BD4F;
+    --soleil-ink: #F0BD4F;
+    --soleil-soft: #2E2614;
+    --on-soleil: #0B1110;
+    --hibiscus: #F2879A;
+    --hibiscus-soft: #33191F;
+    --on-hibiscus: #0B1110;
+    --feuille: #8BCB8E;
+    --feuille-soft: #1A2A1C;
+    --focus: #F0BD4F;
+    --focus-halo: #0F1413;
+    --sky-1: #2A2F33;
+    --sky-2: #1A2124;
+    --sea-1: #24504B;
+    --sea-2: #1A3B37;
+    --hill: #2C3A2E;
+    --pump: #B9802F;
+    --leaf: #4E6B48;
+    --stroke: #EEE9E0;
+    --shadow: 0 0 0 1px rgb(255 255 255 / .04);
+    --shadow-lg: 0 30px 60px -30px rgb(0 0 0 / .8);
+    --photo-filter: brightness(.92) saturate(.9);
     color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0F1413;
+  --surface: #171D1C;
+  --surface-2: #212927;
+  --fg: #EEE9E0;
+  --muted: #A3ABA6;
+  --line: #262F2D;
+  --line-strong: #6E7975;
+  --mer: #6CC9BB;
+  --mer-strong: #8AD6CA;
+  --mer-soft: #18302C;
+  --on-mer: #0B1110;
+  --soleil: #F0BD4F;
+  --soleil-ink: #F0BD4F;
+  --soleil-soft: #2E2614;
+  --on-soleil: #0B1110;
+  --hibiscus: #F2879A;
+  --hibiscus-soft: #33191F;
+  --on-hibiscus: #0B1110;
+  --feuille: #8BCB8E;
+  --feuille-soft: #1A2A1C;
+  --focus: #F0BD4F;
+  --focus-halo: #0F1413;
+  --sky-1: #2A2F33;
+  --sky-2: #1A2124;
+  --sea-1: #24504B;
+  --sea-2: #1A3B37;
+  --hill: #2C3A2E;
+  --pump: #B9802F;
+  --leaf: #4E6B48;
+  --stroke: #EEE9E0;
+  --shadow: 0 0 0 1px rgb(255 255 255 / .04);
+  --shadow-lg: 0 30px 60px -30px rgb(0 0 0 / .8);
+  --photo-filter: brightness(.92) saturate(.9);
+  color-scheme: dark;
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-fg: var(--fg);
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
   --color-mer: var(--mer);
   --color-mer-strong: var(--mer-strong);
-  --color-soleil: var(--soleil);
-  --color-hibiscus: var(--hibiscus);
-  --color-feuille: var(--feuille);
   --color-mer-soft: var(--mer-soft);
-  --color-soleil-soft: var(--soleil-soft);
-  --color-hibiscus-soft: var(--hibiscus-soft);
-  --color-feuille-soft: var(--feuille-soft);
   --color-on-mer: var(--on-mer);
+  --color-soleil: var(--soleil);
+  --color-soleil-ink: var(--soleil-ink);
+  --color-soleil-soft: var(--soleil-soft);
   --color-on-soleil: var(--on-soleil);
+  --color-hibiscus: var(--hibiscus);
+  --color-hibiscus-soft: var(--hibiscus-soft);
   --color-on-hibiscus: var(--on-hibiscus);
-  --font-sans: "Source Sans 3", "Segoe UI", system-ui, -apple-system, sans-serif;
-  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --color-feuille: var(--feuille);
+  --color-feuille-soft: var(--feuille-soft);
+  --font-sans: var(--font-figtree, "Figtree"), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces, "Fraunces"), ui-serif, Georgia, serif;
+  --font-mono: ui-monospace, Menlo, monospace;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --radius-2xl: 28px;
+  --radius-icon: 14px;
+  --radius-field: 16px;
+  --radius-button: 18px;
+  --radius-media: 20px;
+  --radius-card: 24px;
+  --radius-hero: 28px;
+  --shadow-card: var(--shadow);
+  --shadow-float: var(--shadow-lg);
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-in: ease-in;
+}
+/* @tokens:end */
+
+/* Bascule manuelle (data-theme="dark" sur <html>). Les jetons gèrent aussi la préférence système. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Base : en couche « base » pour que les classes utilitaires (font-sans, text-…) gardent la priorité. */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    /* Les ancres ciblées (#prix…) ne passent pas sous le haut de l'écran. */
+    scroll-padding-top: 1rem;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 17px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
 }
 
-html {
-  -webkit-text-size-adjust: 100%;
-}
+/* Classes partagées : en couche « components » (une classe utilitaire peut les ajuster). */
+@layer components {
+  /* Chiffres : tabulaires et alignés (2/3, 10:04, 49,67 €). */
+  .num {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
 
-body {
-  background: var(--bg);
-  color: var(--fg);
-  font-family: var(--font-sans);
-  font-size: 17px;
-  line-height: 1.6;
-}
+  /* Mot ou phrase en créole : Fraunces italique, couleur soleil lisible. */
+  .kreyol {
+    font-family: var(--font-display);
+    font-style: italic;
+    color: var(--soleil-ink);
+  }
 
-h1,
-h2,
-h3 {
-  font-family: var(--font-display);
-  line-height: 1.15;
-  text-wrap: balance;
+  /* Filet madras : 2 px, réservé à ce qui compte (séparateur de page, haut du reçu). */
+  .madras {
+    height: 2px;
+    background: var(--madras);
+  }
+
+  /* Anneau madras de l'aîné (2 px) : seul le bord du dégradé conique reste visible. */
+  .kd-madras-ring {
+    padding: 2px;
+    background: var(--madras-ring);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+  }
+
+  /* Photo réelle ou illustration « photo » : adoucie en sombre. */
+  .photo-filter {
+    filter: var(--photo-filter);
+  }
 }
 
 /*
  * Focus visible sur TOUT élément interactif (WCAG 2.4.7, 2.4.11, 1.4.11).
- * Double anneau : liseré intérieur (halo) + anneau extérieur à fort contraste (>= 3:1 en clair et en sombre).
+ * Contour 3 px --focus, décalé de 2 px, plus halo 5 px --focus-halo (direction artistique § 12).
  */
 :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--focus-halo);
-  border-radius: 6px;
-}
-
-/* Les ancres ciblées (#prix…) ne passent pas sous le haut de l'écran. */
-html {
-  scroll-padding-top: 1rem;
-}
-
-/* Bande madras (identité visuelle). */
-.madras {
-  height: 6px;
-  background: repeating-linear-gradient(
-    90deg,
-    var(--hibiscus) 0 34px,
-    var(--soleil) 34px 58px,
-    var(--mer) 58px 80px,
-    var(--feuille) 80px 92px
-  );
+  box-shadow: 0 0 0 5px var(--focus-halo);
 }
 
 dialog::backdrop {
   background: rgb(0 0 0 / 0.45);
+}
+
+/* Respiration du point « va bien » (3,2 s). Aucune boucle si l'utilisateur réduit les animations. */
+@keyframes kd-breathe {
+  50% {
+    box-shadow: 0 0 0 7px var(--kd-dot-halo, var(--feuille-soft));
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .kd-breathe {
+    animation: kd-breathe 3.2s ease-in-out infinite;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -140,6 +277,7 @@ dialog::backdrop {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
