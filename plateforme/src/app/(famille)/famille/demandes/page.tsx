@@ -19,6 +19,8 @@ import { LinkButton } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { LevelBadge, RequestStatusBadge } from "@/components/status-badges";
 import { CancelRequestForm } from "@/components/famille/cancel-request-form";
+import { employerSentence, requestAuthorText } from "@/components/famille/request-texts";
+import { Term } from "@/components/ui/term";
 
 export const metadata: Metadata = { title: "Demandes d'accompagnement" };
 
@@ -109,7 +111,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
         ) : (
           <ul className="m-0 flex list-none flex-col gap-4 p-0">
             {active.map((r) => (
-              <RequestItem key={r.id} r={r} />
+              <RequestItem key={r.id} r={r} viewer={user} />
             ))}
           </ul>
         )}
@@ -119,7 +121,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
             <summary className="flex min-h-14 cursor-pointer items-center py-3 text-[17px] font-semibold">Demandes annulées ({cancelled.length})</summary>
             <ul className="m-0 flex list-none flex-col gap-3 p-0 pb-4">
               {cancelled.map((r) => (
-                <RequestItem key={r.id} r={r} />
+                <RequestItem key={r.id} r={r} viewer={user} />
               ))}
             </ul>
           </details>
@@ -129,7 +131,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
   );
 }
 
-function RequestItem({ r }: { r: RequestRow }) {
+function RequestItem({ r, viewer }: { r: RequestRow; viewer: { id: string; sandboxId: string | null } }) {
   return (
     <li>
       <Card as="article" aria-labelledby={`demande-${r.id}`} className="flex flex-col gap-3.5">
@@ -139,12 +141,15 @@ function RequestItem({ r }: { r: RequestRow }) {
             <h2 id={`demande-${r.id}`} className="font-sans text-[17px] leading-snug font-semibold tracking-normal">
               {r.aine.firstName} {initialWithDot(r.aine.lastInitial)}
               <span className="block text-[15px] font-normal text-muted">
-                Demande de {r.createdBy.firstName}, le {formatDate(r.createdAt)}
+                {requestAuthorText(r, viewer)}, le {formatDate(r.createdAt)}
               </span>
             </h2>
             <div className="mt-2 flex flex-wrap gap-2">
               <RequestStatusBadge status={r.status} />
-              <LevelBadge level={r.level} />
+              <span className="inline-flex items-center">
+                <LevelBadge level={r.level} />
+                <Term id="niveau">{""}</Term>
+              </span>
             </div>
           </div>
         </div>
@@ -155,12 +160,9 @@ function RequestItem({ r }: { r: RequestRow }) {
           <Row label="Créneaux">{slotsText(r.slots)}</Row>
           {r.startDate ? <Row label="À partir du">{formatDate(r.startDate)}</Row> : null}
           <Row label="Envoyée le">
-            {formatDate(r.createdAt)} par {r.createdBy.firstName}
+            {formatDate(r.createdAt)}{r.createdById === viewer.id ? "" : ` par ${r.createdBy.firstName}`}
           </Row>
-          <Row label="Employeur">
-            {EMPLOYER_TYPE_LABELS[r.employerType]}
-            {r.employerName ? ` — ${r.employerName}` : ""}
-          </Row>
+          <Row label="Employeur">{r.employerType === "AINE" ? r.aine.firstName : (r.employerName ?? EMPLOYER_TYPE_LABELS[r.employerType])}</Row>
         </dl>
         {r.notes ? <p className="rounded-md bg-surface-2 p-3.5 text-[15px] leading-[1.45]">{r.notes}</p> : null}
         {r.status === "PROPOSEE" && r.proposals.length > 0 ? <ProfileList r={r} /> : null}
@@ -192,8 +194,7 @@ function ProfileList({ r }: { r: RequestRow }) {
         {chosen ? "Profil choisi" : "Profils proposés : choisissez la personne"}
       </h3>
       <p className="text-[15px] leading-[1.45] text-muted">
-        Koudmen montre des profils compatibles (commune, niveau, créneaux). Aucune note, aucun classement. Vous êtes l&apos;employeur : vous
-        choisissez.
+        Koudmen montre des profils compatibles (commune, niveau, créneaux). Aucune note, aucun classement. {employerSentence(r)}
       </p>
       <ul className="m-0 flex list-none flex-col gap-3 p-0">
         {r.proposals.map((p) => {
@@ -207,7 +208,12 @@ function ProfileList({ r }: { r: RequestRow }) {
                   <Avatar name={c.user.firstName} size={44} role="accompagnant" />
                   <div className="min-w-0 flex-1">
                     <h4 className="font-sans text-[17px] leading-snug font-semibold tracking-normal">{name}</h4>
-                    {c.status ? <p className="text-[15px] text-muted">{CAREGIVER_STATUS_LABELS[c.status]}</p> : null}
+                    {c.status ? (
+                      <p className="text-[15px] text-muted">
+                        {CAREGIVER_STATUS_LABELS[c.status]}
+                        {c.status === "SALARIE_FAMILLE_CESU" ? <Term id="cesu">{""}</Term> : null}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
                 {p.status === "EN_ATTENTE" ? (
