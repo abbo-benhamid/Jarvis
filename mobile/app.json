@@ -33,9 +33,12 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#F6F2EA",
-          "dark": { "backgroundColor": "#0F1413" }
+          "dark": {
+            "backgroundColor": "#0F1413"
+          }
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
