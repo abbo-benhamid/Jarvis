@@ -3,7 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { db } from "@/server/db";
 import { appUrl, cookieSecure } from "@/server/env";
-import { createSession } from "@/server/auth/session";
+import { createSession, RESUME_COOKIE } from "@/server/auth/session";
 import { logAudit } from "@/server/audit";
 import type { CurrentUser } from "@/server/auth/guards";
 import { missingProfileItems } from "@/server/accompagnant/rules";
@@ -20,7 +20,7 @@ export { SANDBOX_TTL_DAYS };
  * - Le jeton est aussi gardé dans un cookie httpOnly (30 jours) pour reprendre depuis le même appareil.
  */
 
-export const RESUME_COOKIE = "koudmen_bac_a_sable";
+export { RESUME_COOKIE };
 /** Garde-fou : nombre maximal de bacs à sable par code testeur. */
 export const MAX_SANDBOXES_PER_CODE = 200;
 
@@ -62,12 +62,12 @@ export async function createSandbox(input: { testerCode: string; role: PlayedRol
   const actor = { id: testerUserId, role: input.role, sandboxId: sandbox.id };
   await logAudit({ actor, action: "sandbox.created", entityType: "Sandbox", entityId: sandbox.id, metadata: { role: input.role, cguAccepted: true } });
   await trackEvent(actor, "sandbox.created", { metadata: { role: input.role } });
-  await openSession(testerUserId, input.role, input.firstName, token);
+  await openSession(testerUserId, input.role, input.firstName, token, 0);
   return { sandboxId: sandbox.id, role: input.role };
 }
 
-async function openSession(userId: string, role: PlayedRole, firstName: string, token: string) {
-  await createSession({ sub: userId, role, name: firstName, demo: false });
+async function openSession(userId: string, role: PlayedRole, firstName: string, token: string, sessionVersion: number) {
+  await createSession({ sub: userId, role, name: firstName, demo: false, sv: sessionVersion });
   (await cookies()).set(RESUME_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
@@ -85,7 +85,7 @@ export async function findSandboxByToken(token: string | null | undefined) {
   if (sandbox.createdAt.getTime() < Date.now() - SANDBOX_TTL_DAYS * 86_400_000) return null;
   const user = await db.user.findUnique({
     where: { email: sandboxEmail(sandbox.id, "vous") },
-    select: { id: true, role: true, firstName: true },
+    select: { id: true, role: true, firstName: true, sessionVersion: true },
   });
   if (!user || (user.role !== "FAMILLE" && user.role !== "ACCOMPAGNANT")) return null;
   return { sandbox, user: { ...user, role: user.role as PlayedRole } };
@@ -95,7 +95,7 @@ export async function findSandboxByToken(token: string | null | undefined) {
 export async function resumeSandbox(token: string): Promise<PlayedRole | null> {
   const found = await findSandboxByToken(token);
   if (!found) return null;
-  await openSession(found.user.id, found.user.role, found.user.firstName, token);
+  await openSession(found.user.id, found.user.role, found.user.firstName, token, found.user.sessionVersion);
   await db.sandbox.update({ where: { id: found.sandbox.id }, data: { lastSeenAt: new Date() } });
   await trackEvent({ id: found.user.id, role: found.user.role, sandboxId: found.sandbox.id }, "sandbox.resumed");
   return found.user.role;

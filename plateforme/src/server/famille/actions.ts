@@ -11,12 +11,14 @@ import { enqueueNotification, notifyUser } from "@/server/outbox";
 import { appUrl } from "@/server/env";
 import { sameScope } from "@/server/scope";
 import { confirmElderSimulated, generateUniqueHomeCode } from "@/server/visits/service";
-import { chooseProfile, MatchingError } from "@/server/matching/service";
+import { cancelCareRequest, chooseProfile, MatchingError } from "@/server/matching/service";
+import { trackEvent } from "@/server/sandbox/events";
 import { getCommune } from "@/lib/communes";
 import { getPlan } from "@/lib/plans";
 import { formatEuros } from "@/lib/format";
 import type { ActionResult } from "@/lib/action-result";
 import {
+  caregiverLinkSchema,
   aineCreateSchema,
   aineUpdateSchema,
   cancelRequestSchema,
@@ -182,7 +184,8 @@ export async function joinCircleAction(_prev: ActionResult, formData: FormData):
   if (!parsed.success) return { ok: false, error: "Ce lien d'invitation n'est pas valide." };
   const inv = await db.invitation.findUnique({ where: { token: parsed.data.token }, include: { aine: { select: { sandboxId: true } } } });
   // Cloisonnement (D2) : un lien d'un bac à sable ne s'ouvre pas depuis un autre monde.
-  if (!inv || !sameScope(inv.aine.sandboxId, user.sandboxId)) return { ok: false, error: "Ce lien d'invitation n'est pas valide." };
+  // A6 : un lien « proche aidant » ne fait jamais entrer dans le cercle Lakou.
+  if (!inv || inv.kind !== "LAKOU" || !sameScope(inv.aine.sandboxId, user.sandboxId)) return { ok: false, error: "Ce lien d'invitation n'est pas valide." };
   const now = new Date();
   const state = invitationState(inv, now);
   if (state === "EXPIREE") return { ok: false, error: "Ce lien a expiré. Demandez un nouveau lien à la personne qui vous a invité(e)." };
@@ -205,6 +208,41 @@ export async function joinCircleAction(_prev: ActionResult, formData: FormData):
   if (!joined) return { ok: false, error: "Ce lien a déjà été utilisé. Demandez un nouveau lien à la personne qui vous a invité(e)." };
   revalidatePath("/famille");
   redirect(`/famille/aines/${inv.aineId}?bienvenue=1`);
+}
+
+// ─────────────────────────────── A6 : rattacher un proche aidant (D7) ───────────────────────────────
+
+/**
+ * A6 : le payeur crée un lien pour rattacher un PROCHE AIDANT (compte Accompagnant, statut PROCHE_AIDANT_APA)
+ * à cet aîné. Après acceptation, Koudmen peut proposer ce proche aidant pour CET aîné seulement (D7).
+ */
+export async function inviteCaregiverRelativeAction(
+  _prev: ActionResult<{ link: string; expiresAt: string }>,
+  formData: FormData,
+): Promise<ActionResult<{ link: string; expiresAt: string }>> {
+  const user = await requireRole("FAMILLE");
+  const parsed = caregiverLinkSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success) return { ok: false, error: NOT_FOUND };
+  const member = await db.lakouMember.findUnique({ where: { aineId_userId: { aineId: parsed.data.aineId, userId: user.id } }, select: { isPayer: true } });
+  if (!member) return { ok: false, error: NOT_FOUND };
+  if (!member.isPayer) return { ok: false, error: "Seul le gestionnaire principal du profil peut rattacher un proche aidant." };
+
+  const token = randomBytes(24).toString("base64url");
+  const expiresAt = invitationExpiry();
+  const link = `${appUrl()}/proche-aidant/${token}`;
+  await db.$transaction(async (tx) => {
+    const inv = await tx.invitation.create({
+      data: { aineId: parsed.data.aineId, token, kind: "PROCHE_AIDANT", relation: "proche aidant", createdById: user.id, expiresAt },
+      select: { id: true },
+    });
+    // Jamais le jeton dans l'audit.
+    await logAudit({ actor: user, action: "caregiver_link.invited", entityType: "Invitation", entityId: inv.id, metadata: { aineId: parsed.data.aineId } }, tx);
+  });
+  return {
+    ok: true,
+    message: "Lien créé. Envoyez-le à votre proche : il l'ouvre avec son compte Accompagnant (statut proche aidant).",
+    data: { link, expiresAt: expiresAt.toISOString() },
+  };
 }
 
 // ─────────────────────────────── F5 / F6 : demandes ───────────────────────────────
@@ -243,7 +281,10 @@ export async function createRequestAction(_prev: ActionResult, formData: FormDat
   redirect("/famille/demandes?envoyee=1");
 }
 
-/** F5 : annule une demande OUVERTE ou PROPOSEE. Les propositions en attente sont annulées. */
+/**
+ * F5 : annule une demande OUVERTE ou PROPOSEE (M5). Tout se passe dans UNE transaction (cancelCareRequest) :
+ * statut relu sous verrou, profils proposés ET choisi annulés, accompagnant choisi prévenu.
+ */
 export async function cancelRequestAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireRole("FAMILLE");
   const parsed = cancelRequestSchema.safeParse(formDataToObject(formData));
@@ -252,11 +293,12 @@ export async function cancelRequestAction(_prev: ActionResult, formData: FormDat
   if (!req || !(await canAccessAine(user, req.aineId))) return { ok: false, error: NOT_FOUND };
   if (!canCancelRequest(req.status)) return { ok: false, error: "Cette demande ne peut plus être annulée." };
 
-  await db.$transaction(async (tx) => {
-    await tx.careRequest.update({ where: { id: req.id }, data: { status: "ANNULEE" } });
-    await tx.missionProposal.updateMany({ where: { requestId: req.id, status: "EN_ATTENTE" }, data: { status: "ANNULEE" } });
-    await logAudit({ actor: user, action: "request.cancelled", entityType: "CareRequest", entityId: req.id, metadata: { previousStatus: req.status } }, tx);
-  });
+  try {
+    await cancelCareRequest(user, req.id);
+  } catch (e) {
+    if (e instanceof MatchingError) return { ok: false, error: e.message };
+    throw e;
+  }
   revalidatePath("/famille/demandes");
   revalidatePath("/famille");
   redirect("/famille/demandes?annulee=1");
@@ -283,6 +325,8 @@ export async function chooseProfileAction(_prev: ActionResult, formData: FormDat
     if (e instanceof MatchingError) return { ok: false, error: e.message };
     throw e;
   }
+  // m7 : étape clé D6 dans la mesure D15 (bac à sable seulement).
+  if (user.sandboxId) await trackEvent(user, "profile.chosen");
   revalidatePath("/famille/demandes");
   revalidatePath("/famille");
   redirect(`/famille/demandes?choisi=${encodeURIComponent(chosen.caregiverFirstName)}`);

@@ -36,9 +36,13 @@ jobs:
     env:
       DATABASE_URL: postgresql://koudmen:koudmen@localhost:5432/koudmen?schema=public
       DIRECT_URL: postgresql://koudmen:koudmen@localhost:5432/koudmen?schema=public
+      # Valeurs FACTICES de CI : publiques, donc refusées en production (VERCEL_ENV=production).
       SESSION_SECRET: ci-secret-uniquement-pour-les-tests-0123456789abcdef
       CRON_SECRET: ci-cron-secret-0123456789
-      TESTER_INVITE_CODES: E2E-TEST,NADIA-07
+      TESTER_INVITE_CODES: E2E-CODE-FACTICE-CI,CODE-FACTICE-CI-2
+      # Les e2e créent beaucoup de bacs à sable depuis la même adresse : limites de débit coupées (CI seulement).
+      RATE_LIMIT_DISABLED: "true"
+      TEST_END_DATE: "2026-12-31"
       DEMO_MODE: "true"
       DEMO_PASSWORD: demo-koudmen-ci
       SEED_OPERATOR_EMAIL: operateur@koudmen.test

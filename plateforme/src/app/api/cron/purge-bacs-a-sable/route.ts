@@ -2,10 +2,12 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/server/db";
 import { cronSecret } from "@/server/env";
-import { purgeExpiredSandboxes } from "@/server/sandbox/purge";
+import { purgeExpiredSandboxes, purgeRetention } from "@/server/sandbox/purge";
+import { testEndDate } from "@/server/env";
 
 /**
- * Purge des bacs à sable de plus de 30 jours (D2). Appelée chaque nuit par Vercel Cron (vercel.json).
+ * Purge nocturne (Vercel Cron, vercel.json) : bacs à sable de plus de 30 jours (D2), puis durées de
+ * conservation (M6) : visites découverte > 6 mois, avis et mesures à « fin du test + 6 mois ».
  * Vercel envoie « Authorization: Bearer <CRON_SECRET> ». Sans CRON_SECRET configuré, la route refuse tout.
  */
 export const dynamic = "force-dynamic";
@@ -21,6 +23,7 @@ function authorized(req: NextRequest): boolean {
 export async function GET(req: NextRequest) {
   if (!authorized(req)) return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
   const purged = await purgeExpiredSandboxes(db);
-  await db.auditLog.create({ data: { action: "sandbox.purged", entityType: "Sandbox", metadata: { purged } } });
-  return NextResponse.json({ purged });
+  const retention = await purgeRetention(db, new Date(), testEndDate());
+  await db.auditLog.create({ data: { action: "sandbox.purged", entityType: "Sandbox", metadata: { purged, ...retention } } });
+  return NextResponse.json({ purged, ...retention });
 }

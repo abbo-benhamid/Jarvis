@@ -6,10 +6,13 @@ import { getCurrentUser } from "@/server/auth/guards";
 import { ROLE_HOME } from "@/lib/labels";
 import { RegisterForm } from "./register-form";
 import { safeNextPath } from "@/server/auth/validation";
+import { registrationOpen } from "@/server/env";
 
 export const metadata: Metadata = { title: "Créer un compte" };
 
 export default async function InscriptionPage({ searchParams }: { searchParams: Promise<{ role?: string; next?: string }> }) {
+  // A10 / M1 : inscription fermée hors du mode démo. Les testeurs entrent par le bac à sable.
+  if (!registrationOpen()) redirect("/tester");
   const user = await getCurrentUser();
   if (user) redirect(ROLE_HOME[user.role]);
   const { role, next } = await searchParams;

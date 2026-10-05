@@ -17,6 +17,7 @@ import type {
 import { z } from "zod";
 import { allowedLevelsFor, type Level } from "@/server/rules/status-levels";
 import { MATCH_REASON_LABELS, type MatchResult } from "@/server/rules/matching";
+import { rateBelowSalariedFloor } from "@/server/accompagnant/rules";
 
 // ─────────────── Décisions sur un accompagnant ───────────────
 
@@ -88,10 +89,13 @@ export function validationBlockers(p: {
   status: CaregiverStatus | null;
   communes: string[];
   verifications: { type: VerificationType; status: VerificationStatus }[];
+  /** D10 : contrôlé si fourni (tarif en centimes). */
+  hourlyRateCents?: number | null;
 }): string[] {
   const out: string[] = [];
   if (!p.status) out.push("L'orientation statut n'est pas faite.");
   if (p.communes.length === 0) out.push("Aucune commune desservie.");
+  if (rateBelowSalariedFloor(p.status, p.hourlyRateCents)) out.push("Le tarif est sous le minimum légal d'un salarié (D10).");
   if (p.verifications.length === 0) out.push("Aucune vérification déclarée.");
   const pending = p.verifications.filter((v) => !OPTIONAL_VERIFICATIONS.includes(v.type) && v.status !== "VALIDE");
   if (pending.length > 0) out.push(`${pending.length} vérification(s) obligatoire(s) pas encore validée(s).`);

@@ -77,6 +77,11 @@ describe("validationBlockers", () => {
       }),
     ).toEqual([]);
   });
+  it("D10 (M1) : bloque la validation d'un salarié sous le plancher légal", () => {
+    const verifications = [{ type: "IDENTITE" as const, status: "VALIDE" as const }];
+    expect(validationBlockers({ ...ok, verifications, hourlyRateCents: 900 })).toEqual(["Le tarif est sous le minimum légal d'un salarié (D10)."]);
+    expect(validationBlockers({ ...ok, verifications, hourlyRateCents: 1500 })).toEqual([]);
+  });
   it("bloque sans statut, sans commune, sans vérification", () => {
     expect(validationBlockers({ status: null, communes: [], verifications: [] })).toHaveLength(3);
   });

@@ -30,6 +30,9 @@ export default defineConfig({
     ? undefined
     : {
         command: `pnpm exec next start -p ${PORT}`,
+        // Les e2e créent beaucoup de bacs à sable depuis la même adresse : limites de débit coupées
+        // (jamais en production : config-check refuse RATE_LIMIT_DISABLED). Tests des limites : rate-limit.db.test.ts.
+        env: { RATE_LIMIT_DISABLED: process.env.RATE_LIMIT_DISABLED ?? "true" },
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,

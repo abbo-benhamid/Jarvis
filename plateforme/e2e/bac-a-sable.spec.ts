@@ -109,6 +109,20 @@ test("famille : entrée avec code → Simuler la suite → choisir un profil →
   await expect(op.getByRole("heading", { level: 1, name: "Mesure du test" })).toBeVisible();
   await expect(op.getByText("nadia.e2e@exemple.test")).toBeVisible();
   await op.close();
+
+  // M6 : retrait du consentement par le lien donné une fois après l'envoi (sans compte, autre appareil).
+  const withdrawLink = await page.getByLabel("Lien pour retirer votre accord").inputValue();
+  expect(withdrawLink).toMatch(/\/retrait-accord\/[A-Za-z0-9_-]{20,}$/);
+  const other = await browser.newPage();
+  await other.goto(new URL(withdrawLink).pathname);
+  await other.getByRole("button", { name: "Retirer mon accord et effacer mon contact" }).click();
+  await expect(other.getByText(/Votre accord est retiré/)).toBeVisible();
+  expect(await prisma.discoveryRequest.count({ where: { contact: "nadia.e2e@exemple.test" } })).toBe(0);
+  // Deuxième clic sur le même lien : plus rien à effacer.
+  await other.reload();
+  await other.getByRole("button", { name: "Retirer mon accord et effacer mon contact" }).click();
+  await expect(other.getByText(/n'est plus valable/)).toBeVisible();
+  await other.close();
 });
 
 test("le lien de reprise rouvre le bac à sable sur un autre appareil", async ({ page, browser }) => {
@@ -129,5 +143,25 @@ test("le lien de reprise rouvre le bac à sable sur un autre appareil", async ({
 
   // Un compte de bac à sable n'ouvre jamais l'espace opérateur.
   await page.goto("/operateur");
+  await expect(page).toHaveURL(/\/accompagnant$/);
+
+  // M3 + M7 : la déconnexion efface les DEUX cookies et révoque le jeton déjà émis.
+  const before = await page.context().cookies();
+  const session = before.find((c) => c.name === "koudmen_session")!;
+  expect(before.some((c) => c.name === "koudmen_bac_a_sable")).toBe(true);
+  await page.getByRole("button", { name: "Se déconnecter" }).first().click();
+  await expect(page).toHaveURL(/\/$/);
+  const names = (await page.context().cookies()).map((c) => c.name);
+  expect(names).not.toContain("koudmen_session");
+  expect(names).not.toContain("koudmen_bac_a_sable");
+  // Le jeton copié avant la déconnexion ne sert plus (appareil volé, cookie copié).
+  const replay = await browser.newContext();
+  await replay.addCookies([session]);
+  const p3 = await replay.newPage();
+  await p3.goto("/accompagnant");
+  await expect(p3).toHaveURL(/\/connexion/);
+  await replay.close();
+  // Le lien de reprise, lui, rouvre toujours le test (nouvelle session).
+  await page.goto(path);
   await expect(page).toHaveURL(/\/accompagnant$/);
 });

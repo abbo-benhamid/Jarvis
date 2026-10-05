@@ -81,7 +81,8 @@ export async function getAineForFamily(user: CurrentUser, aineId: string) {
 /** F4 : invitations de l'aîné (accès vérifié par l'appelant). */
 export async function getInvitations(aineId: string) {
   return db.invitation.findMany({
-    where: { aineId },
+    // A6 : les liens « proche aidant » ne sont pas des invitations au cercle.
+    where: { aineId, kind: "LAKOU" },
     orderBy: { createdAt: "desc" },
     take: 20,
     select: {
@@ -221,8 +222,8 @@ export async function getPlanContext(user: CurrentUser, aineId: string) {
 
 /** F10 : invitation par jeton (page publique). Ne renvoie que le strict nécessaire. */
 export async function getInvitationByToken(token: string, now: Date = new Date()) {
-  const inv = await db.invitation.findUnique({
-    where: { token },
+  const inv = await db.invitation.findFirst({
+    where: { token, kind: "LAKOU" },
     select: {
       id: true,
       aineId: true,
@@ -230,6 +231,23 @@ export async function getInvitationByToken(token: string, now: Date = new Date()
       expiresAt: true,
       acceptedAt: true,
       aine: { select: { firstName: true, lastInitial: true, sandboxId: true } },
+      createdBy: { select: { firstName: true } },
+    },
+  });
+  if (!inv) return null;
+  return { ...inv, state: invitationState(inv, now) };
+}
+
+/** A6 : lien « proche aidant » (page publique /proche-aidant/[token]). */
+export async function getCaregiverLinkInvitation(token: string, now: Date = new Date()) {
+  const inv = await db.invitation.findFirst({
+    where: { token, kind: "PROCHE_AIDANT" },
+    select: {
+      id: true,
+      aineId: true,
+      expiresAt: true,
+      acceptedAt: true,
+      aine: { select: { firstName: true, sandboxId: true } },
       createdBy: { select: { firstName: true } },
     },
   });

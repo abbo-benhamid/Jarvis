@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { editorInfo } from "@/server/env";
+import { editorInfo, testEndLabel } from "@/server/env";
 import { Field, LegalPage, LegalSection } from "@/components/legal/legal-page";
 
 export const metadata: Metadata = { title: "Conditions d'utilisation du test" };
@@ -47,7 +47,12 @@ export default function CguTestPage() {
     },
     {
       title: "10. Fin du test",
-      body: "Date de fin prévue : [à compléter]. Les comptes et les données du test sont supprimés au plus tard 1 mois après la fin.",
+      body: (
+        <>
+          Date de fin prévue : <Field value={testEndLabel()} />. Votre bac à sable est effacé 30 jours après sa création. Les avis et la mesure
+          d&apos;usage sont effacés 6 mois après la fin du test.
+        </>
+      ),
     },
     {
       title: "11. Contact et droit applicable",

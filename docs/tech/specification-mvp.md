@@ -529,10 +529,39 @@ Autres changements : `Plan.VEYE` renommé `KOZE` (D5) ; `Mission.employerType/em
 |---|---|
 | `DATABASE_URL` / `DIRECT_URL` | Connexion poolée (application) / directe (migrations) |
 | `SESSION_SECRET`, `CRON_SECRET` | Sessions ; route de purge (Vercel Cron) |
-| `TESTER_INVITE_CODES` | Codes testeurs (D3) |
+| `TESTER_INVITE_CODES` | Codes testeurs (D3). Production : aléatoires, ≥ 12 caractères (`pnpm ops:generate-codes`) |
+| `TEST_END_DATE` | Date de fin du test (AAAA-MM-JJ) : CGU, confidentialité, purge « fin + 6 mois » (S1c) |
+| `KOUDMEN_STRICT_CONFIG` | `true` = contrôles de production en local (sur Vercel : `VERCEL_ENV=production`) (S1c) |
+| `RATE_LIMIT_DISABLED` | Local et CI seulement (e2e). Refusé en production (S1c) |
 | `DEMO_MODE` (= `false` avec de vrais testeurs), `DEMO_PASSWORD` | Démo partagée du fondateur (D1) |
 | `NEXT_PUBLIC_TEST_MODE` | Bandeau + position simulée (actifs par défaut) |
 | `APP_URL` | Liens (repli : URL de production Vercel) |
 | `EDITEUR_NOM`, `EDITEUR_ADRESSE`, `EDITEUR_EMAIL`, `DIRECTEUR_PUBLICATION` | Mentions légales (D4) |
 
 Build : `prisma generate && prisma migrate deploy && next build`. `vercel.json` : cron nocturne de purge. En-têtes : CSP, `X-Frame-Options`, `Referrer-Policy`, HSTS, `X-Robots-Tag: noindex`.
+
+### 14.5 S1c « Corrections avant mise en ligne » (volet serveur)
+
+```mermaid
+flowchart LR
+  D[Démarrage en production] -->|valeur d'exemple, CI, trop courte| X[Refus : 500 partout]
+  R[Requête publique] --> L{Limite en base<br/>RateLimit}
+  L -->|dépassée| T[« Trop d'essais »]
+  L -->|ok| A[Action]
+  S[Suspension d'un accompagnant] --> P[Propositions ANNULEE]
+  S --> M[Missions SUSPENDUE<br/>visites futures annulées]
+  M --> O[Demande rouverte<br/>famille prévenue]
+```
+
+| Sujet | Règle |
+|---|---|
+| Démarrage (B1, B3) | `src/instrumentation.ts` → `config-check.ts` : refus si secret ou code d'exemple, de CI, ou trop court |
+| Limites de débit (M4, M5) | Table `RateLimit` (empreinte salée de l'IP ou du compte) : connexion, code testeur, avis, événements, visite découverte, retrait |
+| Session (M7) | `User.sessionVersion` dans le jeton ; incrémentée à la déconnexion. Opérateur : 12 h. Déconnexion : efface aussi le cookie de reprise (M3) |
+| Inscription (A10) | `/inscription` fermée si `DEMO_MODE` ≠ `true` |
+| Conservation (M6) | Visite découverte : 6 mois. Avis, mesures, micro-réponses : fin du test + 6 mois. Retrait du consentement : `/retrait-accord/<jeton>` ou bouton dans l'espace |
+| Suspension (A1) | `releaseCaregiver()` : propositions actives annulées, missions `SUSPENDUE`, visites futures effacées, demande rouverte (copie OUVERTE, l'ancienne ANNULEE) |
+| Concurrence (m1) | Verrou `SELECT … FOR UPDATE` de la demande EN PREMIER dans chaque transaction du flux D6 |
+| Proche aidant (A6, D7) | Lien `/proche-aidant/<jeton>` créé par le payeur (`Invitation.kind = PROCHE_AIDANT`) → `linkedAineId` |
+
+Migration : `s1c_securite` (`User.sessionVersion`, `RateLimit`, `MissionStatus.SUSPENDUE`, `Invitation.kind`, `DiscoveryRequest.withdrawTokenHash`, `Sandbox.simulationLockedUntil`). Reste à faire : `docs/revues/backlog.md`.

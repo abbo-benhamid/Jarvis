@@ -48,6 +48,16 @@ vi.mock("@/server/visits/service", () => ({
   generateUniqueHomeCode: () => generateUniqueHomeCode(),
 }));
 vi.mock("@/server/env", () => ({ appUrl: () => "https://koudmen.test" }));
+const cancelCareRequest = vi.fn(async (..._a: unknown[]) => ({ cancelledProposals: 2 }));
+const chooseProfile = vi.fn(async (..._a: unknown[]) => ({ caregiverFirstName: "Josiane" }));
+class MatchingError extends Error {}
+vi.mock("@/server/matching/service", () => ({
+  cancelCareRequest: (...a: unknown[]) => cancelCareRequest(...a),
+  chooseProfile: (...a: unknown[]) => chooseProfile(...a),
+  MatchingError,
+}));
+const trackEvent = vi.fn(async (..._a: unknown[]) => undefined);
+vi.mock("@/server/sandbox/events", () => ({ trackEvent: (...a: unknown[]) => trackEvent(...a) }));
 vi.mock("next/cache", () => ({ revalidatePath: (p: string) => revalidatePath(p) }));
 vi.mock("next/headers", () => ({ cookies: async () => cookieStore }));
 vi.mock("next/navigation", () => ({
@@ -170,7 +180,7 @@ describe("joinCircleAction", () => {
   const future = () => new Date(Date.now() + 86_400_000);
 
   it("refuse un lien expiré", async () => {
-    db.invitation.findUnique.mockResolvedValue({ id: "i", aineId: AINE, relation: "nièce", expiresAt: new Date(Date.now() - 1000), acceptedAt: null, aine: { sandboxId: null } });
+    db.invitation.findUnique.mockResolvedValue({ id: "i", kind: "LAKOU", aineId: AINE, relation: "nièce", expiresAt: new Date(Date.now() - 1000), acceptedAt: null, aine: { sandboxId: null } });
     const r = await actions.joinCircleAction(empty, fd({ token }));
     expect(r.ok).toBe(false);
     expect(!r.ok && r.error).toContain("expiré");
@@ -178,13 +188,13 @@ describe("joinCircleAction", () => {
   });
 
   it("refuse un lien déjà utilisé", async () => {
-    db.invitation.findUnique.mockResolvedValue({ id: "i", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: new Date(), aine: { sandboxId: null } });
+    db.invitation.findUnique.mockResolvedValue({ id: "i", kind: "LAKOU", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: new Date(), aine: { sandboxId: null } });
     const r = await actions.joinCircleAction(empty, fd({ token }));
     expect(!r.ok && r.error).toContain("déjà été utilisé");
   });
 
   it("refuse si un autre compte a utilisé le lien entre-temps (course)", async () => {
-    db.invitation.findUnique.mockResolvedValue({ id: "i", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: null, aine: { sandboxId: null } });
+    db.invitation.findUnique.mockResolvedValue({ id: "i", kind: "LAKOU", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: null, aine: { sandboxId: null } });
     db.lakouMember.findUnique.mockResolvedValue(null);
     db.invitation.updateMany.mockResolvedValue({ count: 0 });
     const r = await actions.joinCircleAction(empty, fd({ token }));
@@ -193,7 +203,7 @@ describe("joinCircleAction", () => {
   });
 
   it("ajoute le membre au cercle, journalise et redirige", async () => {
-    db.invitation.findUnique.mockResolvedValue({ id: "i", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: null, aine: { sandboxId: null } });
+    db.invitation.findUnique.mockResolvedValue({ id: "i", kind: "LAKOU", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: null, aine: { sandboxId: null } });
     db.lakouMember.findUnique.mockResolvedValue(null);
     db.invitation.updateMany.mockResolvedValue({ count: 1 });
     await expect(actions.joinCircleAction(empty, fd({ token }))).rejects.toThrow(`REDIRECT:/famille/aines/${AINE}?bienvenue=1`);
@@ -202,10 +212,30 @@ describe("joinCircleAction", () => {
   });
 
   it("D2 : refuse un lien qui vient d'un autre monde (bac à sable)", async () => {
-    db.invitation.findUnique.mockResolvedValue({ id: "i", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: null, aine: { sandboxId: "sbx-autre" } });
+    db.invitation.findUnique.mockResolvedValue({ id: "i", kind: "LAKOU", aineId: AINE, relation: "nièce", expiresAt: future(), acceptedAt: null, aine: { sandboxId: "sbx-autre" } });
     const r = await actions.joinCircleAction(empty, fd({ token }));
     expect(!r.ok && r.error).toContain("pas valide");
     expect(db.lakouMember.create).not.toHaveBeenCalled();
+  });
+
+  it("A6 : un lien « proche aidant » n'ouvre jamais le cercle Lakou", async () => {
+    db.invitation.findUnique.mockResolvedValue({ id: "i", kind: "PROCHE_AIDANT", aineId: AINE, relation: "proche aidant", expiresAt: future(), acceptedAt: null, aine: { sandboxId: null } });
+    const r = await actions.joinCircleAction(empty, fd({ token }));
+    expect(!r.ok && r.error).toContain("pas valide");
+    expect(db.lakouMember.create).not.toHaveBeenCalled();
+  });
+
+  it("A6 : seul le payeur crée un lien proche aidant ; le jeton n'est pas dans l'audit", async () => {
+    db.lakouMember.findUnique.mockResolvedValue({ isPayer: false });
+    const refused = await actions.inviteCaregiverRelativeAction(empty, fd({ aineId: AINE }));
+    expect(!refused.ok && refused.error).toMatch(/gestionnaire principal/);
+    db.lakouMember.findUnique.mockResolvedValue({ isPayer: true });
+    db.invitation.create.mockResolvedValue({ id: "inv-pa" });
+    const r = await actions.inviteCaregiverRelativeAction(empty, fd({ aineId: AINE }));
+    expect(r.ok && r.data?.link).toMatch(/^https:\/\/koudmen\.test\/proche-aidant\/[A-Za-z0-9_-]{32}$/);
+    expect(db.invitation.create.mock.calls[0]![0].data).toMatchObject({ kind: "PROCHE_AIDANT", aineId: AINE });
+    const linkToken = (r.ok && r.data?.link.split("/").pop()) || "";
+    expect(JSON.stringify(logAudit.mock.calls)).not.toContain(linkToken);
   });
 
   it("refuse un jeton mal formé sans requête", async () => {
@@ -260,11 +290,29 @@ describe("cancelRequestAction", () => {
     await expect(actions.cancelRequestAction(empty, fd({ requestId: "cmreq0000000000000000001" }))).rejects.toThrow(
       "REDIRECT:/famille/demandes?annulee=1",
     );
-    expect(db.careRequest.update).toHaveBeenCalledWith({ where: { id: "cmreq0000000000000000001" }, data: { status: "ANNULEE" } });
-    expect(db.missionProposal.updateMany).toHaveBeenCalledWith({
-      where: { requestId: "cmreq0000000000000000001", status: "EN_ATTENTE" },
-      data: { status: "ANNULEE" },
-    });
+    // M5 : toute l'annulation passe par la transaction du service (verrou, statut relu, propositions, message).
+    expect(cancelCareRequest).toHaveBeenCalledWith(user, "cmreq0000000000000000001");
+    expect(db.careRequest.update).not.toHaveBeenCalled();
+  });
+
+  it("M5 : une acceptation simultanée gagne → message clair, pas de redirection", async () => {
+    db.careRequest.findUnique.mockResolvedValue({ id: "cmreq0000000000000000001", aineId: AINE, status: "PROPOSEE" });
+    cancelCareRequest.mockRejectedValueOnce(new MatchingError("Cette demande ne peut plus être annulée."));
+    const r = await actions.cancelRequestAction(empty, fd({ requestId: "cmreq0000000000000000001" }));
+    expect(r).toEqual({ ok: false, error: "Cette demande ne peut plus être annulée." });
+  });
+});
+
+describe("chooseProfileAction", () => {
+  const PROP = "cmprop000000000000000001";
+  it("m7 : émet profile.chosen dans un bac à sable seulement", async () => {
+    db.missionProposal.findUnique.mockResolvedValue({ id: PROP, request: { aineId: AINE } });
+    requireRole.mockResolvedValueOnce({ ...user, sandboxId: "sbx1" } as never);
+    await expect(actions.chooseProfileAction(empty, fd({ proposalId: PROP }))).rejects.toThrow("REDIRECT:/famille/demandes?choisi=Josiane");
+    expect(trackEvent).toHaveBeenCalledWith(expect.objectContaining({ sandboxId: "sbx1" }), "profile.chosen");
+    trackEvent.mockClear();
+    await expect(actions.chooseProfileAction(empty, fd({ proposalId: PROP }))).rejects.toThrow("REDIRECT:");
+    expect(trackEvent).not.toHaveBeenCalled();
   });
 });
 

@@ -19,7 +19,7 @@ describe("registerSchema", () => {
     password: "motdepasse",
     location: "HEXAGONE",
     acceptTest: "on",
-    testerCode: "NADIA-07",
+    testerCode: "CODE-FACTICE-TEST",
     acceptCgu: "on",
     adult: "on",
   };

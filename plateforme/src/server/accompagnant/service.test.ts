@@ -49,6 +49,10 @@ vi.mock("@/server/audit", () => ({ logAudit: m.logAudit }));
 vi.mock("@/server/outbox", () => ({ notifyLakou: m.notifyLakou }));
 vi.mock("@/server/env", () => ({ isDemoMode: m.isDemoMode }));
 vi.mock("@/server/visits/service", () => ({ recordProof: m.recordProof, refreshVisitStatus: m.refreshVisitStatus }));
+vi.mock("@/server/matching/locks", () => ({ lockCareRequests: vi.fn(async () => undefined) }));
+vi.mock("@/server/matching/service", () => ({
+  inTransaction: async (client: unknown, fn: (t: unknown) => unknown) => (client ? fn(client) : m.db.$transaction(fn as never)),
+}));
 
 const service = await import("./service");
 const { AccompagnantError, acceptProposal, declineProposal, checkInWithCode, checkInWithGps, checkOut, createKaye, saveOrientation } =
@@ -193,6 +197,23 @@ describe("acceptProposal — transaction d'acceptation", () => {
     await expect(acceptProposal(josiane, "prop-ernest-josiane", NOW)).rejects.toMatchObject({ code: "INTERDIT" });
   });
 
+  it("D10 : refuse un salarié dont le tarif est sous le plancher (réorientation après un tarif libre)", async () => {
+    m.tx.missionProposal.findFirst.mockResolvedValue(proposalFixture({ rate: 900 }));
+    await expect(acceptProposal(josiane, "prop-ernest-josiane", NOW)).rejects.toMatchObject({ code: "TARIF" });
+    expect(m.tx.careRequest.updateMany).not.toHaveBeenCalled();
+    expect(m.tx.mission.create).not.toHaveBeenCalled();
+  });
+
+  it("m1 : verrouille la DEMANDE avant d'écrire (même ordre que choisir, annuler, suspendre)", async () => {
+    const { lockCareRequests } = await import("@/server/matching/locks");
+    m.tx.missionProposal.findFirst.mockResolvedValue(proposalFixture());
+    m.tx.careRequest.updateMany.mockResolvedValue({ count: 0 });
+    await expect(acceptProposal(josiane, "prop-ernest-josiane", NOW)).rejects.toMatchObject({ code: "CONFLIT" });
+    expect(lockCareRequests).toHaveBeenCalledWith(m.tx, ["req-ernest"]);
+    // La demande est écrite (et contrôlée) avant la proposition.
+    expect(m.tx.missionProposal.updateMany).not.toHaveBeenCalled();
+  });
+
   it("demande un tarif avant d'accepter (salarié sans tarif)", async () => {
     m.tx.missionProposal.findFirst.mockResolvedValue(proposalFixture({ rate: null }));
     await expect(acceptProposal(josiane, "prop-ernest-josiane", NOW)).rejects.toThrow(/tarif/);
@@ -248,7 +269,9 @@ describe("declineProposal — refus sans pénalité", () => {
 
 // ─────────────────────────────── Propriété de la visite ───────────────────────────────
 
-function visitFixture(over: Partial<{ checkInAt: Date | null; checkOutAt: Date | null; status: string; proofs: unknown[]; journal: unknown }> = {}) {
+function visitFixture(
+  over: Partial<{ checkInAt: Date | null; checkOutAt: Date | null; status: string; proofs: unknown[]; journal: unknown; validation: string; missionStatus: string }> = {},
+) {
   return {
     id: "visit-1",
     aineId: "aine-leonie",
@@ -260,6 +283,8 @@ function visitFixture(over: Partial<{ checkInAt: Date | null; checkOutAt: Date |
     aine: { id: "aine-leonie", firstName: "Léonie", latitude: 14.6173, longitude: -61.0597, homeCode: "LKW7Q3" },
     proofs: over.proofs ?? [],
     journal: over.journal ?? null,
+    caregiver: { validation: over.validation ?? "VALIDE" },
+    mission: { status: over.missionStatus ?? "ACTIVE" },
   };
 }
 
@@ -463,5 +488,56 @@ describe("saveOrientation", () => {
     m.db.caregiverProfile.upsert.mockResolvedValue({ id: "cg-1", validation: "VALIDE", hasDiploma: false });
     await expect(saveOrientation(josiane, answers)).rejects.toMatchObject({ code: "INTERDIT" });
     expect(m.db.$transaction).not.toHaveBeenCalled();
+  });
+});
+
+// ─────────────────────────────── A1 : accompagnant suspendu ───────────────────────────────
+
+describe("A1 : un accompagnant suspendu ou une mission suspendue n'a plus de check-in ni de Kayé", () => {
+  const kaye = { visitId: "visit-1", mood: 4, appetite: "BON" as const, activities: [], note: null, alertFlag: false, alertNote: null };
+
+  it.each([
+    ["profil suspendu", { validation: "SUSPENDU" }],
+    ["profil refusé", { validation: "REFUSE" }],
+    ["mission suspendue", { missionStatus: "SUSPENDUE" }],
+  ])("%s : check-in GPS, code et Kayé refusés, aucune écriture", async (_n, over) => {
+    m.db.visit.findFirst.mockResolvedValue(visitFixture({ ...over, checkInAt: NOW }));
+    await expect(checkInWithGps(josiane, { visitId: "visit-1", simulated: true }, NOW)).rejects.toMatchObject({ code: "INTERDIT" });
+    await expect(checkInWithCode(josiane, "visit-1", "LKW7Q3", NOW)).rejects.toMatchObject({ code: "INTERDIT" });
+    await expect(createKaye(josiane, kaye)).rejects.toMatchObject({ code: "INTERDIT" });
+    expect(m.recordProof).not.toHaveBeenCalled();
+    expect(m.db.visit.updateMany).not.toHaveBeenCalled();
+    expect(m.tx.journalEntry.create).not.toHaveBeenCalled();
+    expect(m.notifyLakou).not.toHaveBeenCalled();
+  });
+});
+
+describe("D10 : réorientation vers un statut salarié", () => {
+  const salarie = { activity: "PRESENCE" as const, paid: true, existingStatus: "AUCUN" as const, situations: [], familyLink: "AUCUN" as const };
+
+  it("efface un tarif sous le plancher : le profil redevient incomplet", async () => {
+    m.db.caregiverProfile.upsert.mockResolvedValue({ id: "cg-1", validation: "BROUILLON", hasDiploma: false, hourlyRateCents: 900, availabilities: [], verifications: [] });
+    const r = await saveOrientation(josiane, salarie);
+    expect(r.status).toBe("SALARIE_FAMILLE_CESU");
+    expect(m.tx.caregiverProfile.update.mock.calls[0]![0].data.hourlyRateCents).toBeNull();
+  });
+
+  it("garde un tarif au-dessus du plancher", async () => {
+    m.db.caregiverProfile.upsert.mockResolvedValue({ id: "cg-1", validation: "BROUILLON", hasDiploma: false, hourlyRateCents: 1500, availabilities: [], verifications: [] });
+    await saveOrientation(josiane, salarie);
+    expect(m.tx.caregiverProfile.update.mock.calls[0]![0].data.hourlyRateCents).toBe(1500);
+  });
+});
+
+describe("RM-08 (m3) : pas de suivi de position", () => {
+  it("refuse une 3e lecture de position, même si les deux premières étaient invalides", async () => {
+    m.db.visit.findFirst.mockResolvedValue(visitFixture({ proofs: [{ factor: "GPS", valid: false }] }));
+    m.db.auditLog.count.mockResolvedValue(2);
+    process.env.NEXT_PUBLIC_TEST_MODE = "true";
+    await expect(checkInWithGps(josiane, { visitId: "visit-1", latitude: 14.6173, longitude: -61.0597, accuracy: 10 }, NOW)).rejects.toMatchObject({
+      code: "INTERDIT",
+    });
+    expect(m.recordProof).not.toHaveBeenCalled();
+    expect(m.db.auditLog.count.mock.calls[0]![0].where).toMatchObject({ action: "visit.gps.attempt", entityId: "visit-1" });
   });
 });

@@ -24,7 +24,8 @@
     "postinstall": "prisma generate",
     "build:local": "prisma generate && next build",
     "ops:create-operator": "tsx scripts/create-operator.ts",
-    "ops:purge-sandboxes": "tsx scripts/purge-sandboxes.ts"
+    "ops:purge-sandboxes": "tsx scripts/purge-sandboxes.ts",
+    "ops:generate-codes": "tsx scripts/generate-tester-codes.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -5,6 +5,7 @@ import type { Role } from "@prisma/client";
 import { db } from "@/server/db";
 import { readSession } from "./session";
 import { ROLE_HOME } from "@/lib/labels";
+import { isDemoMode } from "@/server/env";
 
 /** Champs sûrs de l'utilisateur courant (jamais le hash du mot de passe). */
 export type CurrentUser = {
@@ -18,15 +19,22 @@ export type CurrentUser = {
   sandboxId: string | null;
 };
 
-/** Utilisateur connecté ou null. Mis en cache pour la durée d'une requête. */
+/**
+ * Utilisateur connecté ou null. Mis en cache pour la durée d'une requête.
+ * - M7 : la version de session du jeton doit être celle du compte (la déconnexion l'incrémente).
+ * - m5 : un compte démo est refusé hors du mode démo, même avec une session déjà ouverte.
+ */
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const session = await readSession();
   if (!session) return null;
   const user = await db.user.findUnique({
     where: { id: session.sub },
-    select: { id: true, email: true, role: true, firstName: true, lastName: true, isDemo: true, sandboxId: true },
+    select: { id: true, email: true, role: true, firstName: true, lastName: true, isDemo: true, sandboxId: true, sessionVersion: true },
   });
-  return user;
+  if (!user || user.sessionVersion !== session.sv) return null;
+  if (user.isDemo && !isDemoMode()) return null;
+  const { sessionVersion: _sv, ...safe } = user;
+  return safe;
 });
 
 /** Exige une connexion. Sinon : redirection vers /connexion. */

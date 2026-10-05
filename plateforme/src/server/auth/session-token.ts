@@ -7,6 +7,12 @@ import type { Role } from "@prisma/client";
 
 export const SESSION_COOKIE = "koudmen_session";
 export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 jours
+/** M7 : session opérateur courte (12 heures). */
+export const OPERATOR_SESSION_MAX_AGE_SECONDS = 60 * 60 * 12;
+
+export function sessionMaxAgeFor(role: Role): number {
+  return role === "OPERATEUR" ? OPERATOR_SESSION_MAX_AGE_SECONDS : SESSION_MAX_AGE_SECONDS;
+}
 
 export type SessionPayload = {
   /** id de l'utilisateur */
@@ -14,6 +20,8 @@ export type SessionPayload = {
   role: Role;
   name: string;
   demo: boolean;
+  /** Version de session (M7) : doit être égale à User.sessionVersion. -1 = jeton ancien (refusé). */
+  sv: number;
 };
 
 const ROLES: readonly Role[] = ["FAMILLE", "ACCOMPAGNANT", "OPERATEUR"];
@@ -23,7 +31,7 @@ export async function signSessionToken(
   secret: Uint8Array,
   maxAgeSeconds = SESSION_MAX_AGE_SECONDS,
 ): Promise<string> {
-  return new SignJWT({ role: payload.role, name: payload.name, demo: payload.demo })
+  return new SignJWT({ role: payload.role, name: payload.name, demo: payload.demo, sv: payload.sv })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(payload.sub)
     .setIssuedAt()
@@ -47,6 +55,7 @@ export async function verifySessionToken(
       role,
       name: typeof payload.name === "string" ? payload.name : "",
       demo: payload.demo === true,
+      sv: typeof payload.sv === "number" && Number.isInteger(payload.sv) ? payload.sv : -1,
     };
   } catch {
     return null;

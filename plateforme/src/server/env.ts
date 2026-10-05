@@ -1,4 +1,8 @@
 import "server-only";
+import { parseTestEndDate } from "./sandbox/purge";
+import { isStrictProduction, normalizeTesterCode, parseTesterCodes, secretProblem, testerCodeProblem } from "./config-check";
+
+export { normalizeTesterCode, isStrictProduction };
 
 /**
  * Lecture centralisée des variables d'environnement serveur.
@@ -10,12 +14,22 @@ export function getSessionSecret(): Uint8Array {
   if (!secret || secret.length < 32) {
     throw new Error("SESSION_SECRET manquant ou trop court (32 caractères minimum).");
   }
+  // B3 : en production, une valeur d'exemple (publique) ne signe jamais une session.
+  if (isStrictProduction()) {
+    const problem = secretProblem("SESSION_SECRET", secret);
+    if (problem) throw new Error(problem);
+  }
   return new TextEncoder().encode(secret);
 }
 
 /** Mode démo (comptes partagés seedés). D1 : les comptes démo sont refusés si DEMO_MODE != "true". */
 export function isDemoMode(): boolean {
   return process.env.DEMO_MODE === "true";
+}
+
+/** A10 / M1 : l'inscription libre (comptes du monde réel) existe seulement en mode démo. */
+export function registrationOpen(): boolean {
+  return isDemoMode();
 }
 
 /**
@@ -35,17 +49,13 @@ export function cookieSecure(): boolean {
   return process.env.NODE_ENV === "production";
 }
 
-/** Normalise un code testeur : majuscules, sans espaces. */
-export function normalizeTesterCode(raw: string): string {
-  return raw.trim().toUpperCase().replace(/\s+/g, "");
-}
-
-/** Codes d'invitation testeur (D3). Variable TESTER_INVITE_CODES : liste séparée par des virgules. */
+/**
+ * Codes d'invitation testeur (D3). Variable TESTER_INVITE_CODES : liste séparée par des virgules.
+ * B1 : en production, un code public, d'exemple ou trop court n'ouvre rien (le démarrage est aussi refusé).
+ */
 export function testerInviteCodes(): string[] {
-  return (process.env.TESTER_INVITE_CODES ?? "")
-    .split(",")
-    .map(normalizeTesterCode)
-    .filter((c) => c.length > 0);
+  const codes = parseTesterCodes(process.env.TESTER_INVITE_CODES);
+  return isStrictProduction() ? codes.filter((c) => testerCodeProblem(c) === null) : codes;
 }
 
 /** true si le code est dans TESTER_INVITE_CODES. Retourne le code normalisé, ou null. */
@@ -58,7 +68,21 @@ export function validTesterCode(raw: string | null | undefined): string | null {
 /** Secret de la route de purge (Vercel Cron envoie « Authorization: Bearer <CRON_SECRET> »). */
 export function cronSecret(): string | null {
   const s = process.env.CRON_SECRET;
-  return s && s.length >= 16 ? s : null;
+  if (!s || s.length < 16) return null;
+  // B3 : en production, une valeur d'exemple ou trop courte (< 32) ferme la route.
+  if (isStrictProduction() && secretProblem("CRON_SECRET", s)) return null;
+  return s;
+}
+
+/** Date de fin du test (TEST_END_DATE, AAAA-MM-JJ). Null si absente : les pages affichent « [à compléter] ». */
+export function testEndDate(): Date | null {
+  return parseTestEndDate(process.env.TEST_END_DATE);
+}
+
+/** Date de fin du test, en clair (« 31 décembre 2026 »), ou « [à compléter] ». Affichée dans les CGU et la confidentialité (B2). */
+export function testEndLabel(): string {
+  const d = testEndDate();
+  return d ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeZone: "UTC" }).format(d) : MISSING;
 }
 
 /** Identité de l'éditeur (D4). Une valeur absente s'affiche « [à compléter] ». */

@@ -114,6 +114,67 @@ describe.runIf(enabled)("bacs à sable sur une vraie base", async () => {
     expect(r.message).toMatch(/code du domicile : [A-Z0-9]{6}/);
   });
 
+  it("A6 : un testeur proche aidant est rattaché à Ernest, puis choisi — plus de robot bloqué ni de demande orpheline", async () => {
+    const c = await sandbox("ACCOMPAGNANT");
+    await db.caregiverProfile.update({
+      where: { userId: c.tester.id },
+      data: {
+        status: "PROCHE_AIDANT_APA",
+        allowedLevels: [1, 2, 3],
+        hourlyRateCents: 900, // sous le plancher : le robot le relève (D10)
+        verifications: { create: [{ type: "IDENTITE" }, { type: "CASIER_B3" }] },
+      },
+    });
+    expect((await robots.simulateNext(c.tester)).step).toBe("PROFIL_ENVOYE");
+    const sent = await db.caregiverProfile.findUniqueOrThrow({ where: { userId: c.tester.id } });
+    const { PLANCHER_SALARIE_CENTS } = await import("@/lib/legal");
+    expect(sent.hourlyRateCents).toBe(PLANCHER_SALARIE_CENTS);
+    expect((await robots.simulateNext(c.tester)).step).toBe("PROFIL_VALIDE");
+    const r = await robots.simulateNext(c.tester);
+    expect(r.step).toBe("FAMILLE_CHOISIT");
+    expect(r.message).toMatch(/proche aidant/);
+    const profile = await db.caregiverProfile.findUniqueOrThrow({ where: { userId: c.tester.id } });
+    const ernest = await db.aine.findFirstOrThrow({ where: { sandboxId: c.sandboxId, firstName: "Ernest" } });
+    expect(profile.linkedAineId).toBe(ernest.id);
+    // Une seule demande, avec sa proposition choisie : aucune demande orpheline.
+    const requests = await db.careRequest.findMany({ where: { aine: { sandboxId: c.sandboxId } }, include: { proposals: true } });
+    expect(requests).toHaveLength(1);
+    expect(requests[0]!.proposals.map((p) => p.status)).toEqual(["EN_ATTENTE"]);
+    expect((await robots.simulateNext(c.tester)).step).toBe("ATTENTE_REPONSE");
+  });
+
+  it("A6 : le lien « proche aidant » rattache seulement un proche aidant du même monde, une seule fois", async () => {
+    const f = await sandbox("FAMILLE");
+    const other = await sandbox("FAMILLE");
+    const { linkCaregiverToAine } = await import("@/server/accompagnant/service");
+    const aine = await db.aine.findFirstOrThrow({ where: { sandboxId: f.sandboxId, ownerId: f.tester.id } });
+    const mkLink = async () => {
+      const token = `pa-${Math.random().toString(36).slice(2)}-${Date.now()}-xxxxxxxx`;
+      await db.invitation.create({
+        data: { aineId: aine.id, token, kind: "PROCHE_AIDANT", relation: "proche aidant", createdById: f.tester.id, expiresAt: new Date(Date.now() + 86_400_000) },
+      });
+      return token;
+    };
+    // Un accompagnant robot du même monde, qu'on passe au statut proche aidant.
+    const cg = await db.caregiverProfile.findFirstOrThrow({ where: { user: { sandboxId: f.sandboxId }, status: "SALARIE_FAMILLE_CESU" }, include: { user: true } });
+    const actor = { id: cg.user.id, role: cg.user.role, firstName: cg.user.firstName, sandboxId: f.sandboxId };
+    const t1 = await mkLink();
+    await expect(linkCaregiverToAine(actor, t1)).rejects.toMatchObject({ code: "INTERDIT" });
+    await db.caregiverProfile.update({ where: { id: cg.id }, data: { status: "PROCHE_AIDANT_APA" } });
+    // Autre monde : le lien « n'existe pas ».
+    const otherCg = await db.caregiverProfile.findFirstOrThrow({ where: { user: { sandboxId: other.sandboxId } }, include: { user: true } });
+    await expect(
+      linkCaregiverToAine({ id: otherCg.user.id, role: otherCg.user.role, firstName: "X", sandboxId: other.sandboxId }, t1),
+    ).rejects.toMatchObject({ code: "INTROUVABLE" });
+    await expect(linkCaregiverToAine(actor, t1)).resolves.toMatchObject({ aineId: aine.id });
+    expect((await db.caregiverProfile.findUniqueOrThrow({ where: { id: cg.id } })).linkedAineId).toBe(aine.id);
+    await expect(linkCaregiverToAine(actor, t1)).rejects.toMatchObject({ code: "CONFLIT" });
+    // Le lien n'ouvre pas le cercle Lakou, et n'apparaît pas dans les invitations du cercle.
+    const { getInvitations, getInvitationByToken } = await import("@/server/famille/queries");
+    expect((await getInvitations(aine.id)).some((i) => i.token === t1)).toBe(false);
+    expect(await getInvitationByToken(t1)).toBeNull();
+  });
+
   it("purge : efface tout le monde du bac à sable, garde les avis anonymisés", async () => {
     const s = await sandbox("FAMILLE");
     await db.feedback.create({ data: { rating: 4, message: "[DBTEST] avis", pagePath: "/", sandboxId: s.sandboxId, testerCode: "DBTEST" } });

@@ -74,6 +74,11 @@ describe("complétude du profil et demande de vérification", () => {
   it("profil complet → rien ne manque", () => {
     expect(missingProfileItems(complete)).toEqual([]);
   });
+  it("D10 (M1) : un salarié sous le plancher légal n'est pas complet ; l'auto-entrepreneur fixe librement", () => {
+    expect(missingProfileItems({ ...complete, hourlyRateCents: 900 }).map((m) => m.key)).toEqual(["hourlyRate"]);
+    expect(missingProfileItems({ ...complete, status: "PROCHE_AIDANT_APA", hourlyRateCents: 900 }).map((m) => m.key)).toEqual(["hourlyRate"]);
+    expect(missingProfileItems({ ...complete, status: "AUTO_ENTREPRENEUR_SAP", siret: "12345678901234", hourlyRateCents: 900 })).toEqual([]);
+  });
   it("sans statut → seulement l'orientation", () => {
     expect(missingProfileItems({ ...complete, status: null }).map((m) => m.key)).toEqual(["status"]);
   });

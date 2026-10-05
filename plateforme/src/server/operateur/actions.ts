@@ -9,7 +9,8 @@ import { db } from "@/server/db";
 import { logAudit } from "@/server/audit";
 import { notifyUser } from "@/server/outbox";
 import { confirmElderSimulated } from "@/server/visits/service";
-import { MatchingError, proposeProfile } from "@/server/matching/service";
+import { MatchingError, proposeProfile, releaseCaregiver } from "@/server/matching/service";
+import { isConcurrencyError } from "@/server/matching/locks";
 import { REAL_WORLD, sameScope } from "@/server/scope";
 import { VALIDATION_LABELS } from "@/lib/labels";
 import { fail, type ActionResult } from "@/lib/action-result";
@@ -87,28 +88,12 @@ export async function decideCaregiverAction(_prev: ActionResult, formData: FormD
       });
       if (res.count !== 1) throw new BusinessError("Le profil a changé entre-temps. Rechargez la page.");
 
-      // Refus ou suspension : les propositions en attente sont annulées. La demande redevient OUVERTE
-      // si plus aucune proposition n'attend de réponse.
-      let cancelled = 0;
-      if (to === "REFUSE" || to === "SUSPENDU") {
-        const pending = await tx.missionProposal.findMany({
-          where: { caregiverId: cg.id, status: "EN_ATTENTE" },
-          select: { id: true, requestId: true },
-        });
-        cancelled = pending.length;
-        if (pending.length > 0) {
-          await tx.missionProposal.updateMany({
-            where: { id: { in: pending.map((p) => p.id) } },
-            data: { status: "ANNULEE", respondedAt: new Date() },
-          });
-          for (const requestId of new Set(pending.map((p) => p.requestId))) {
-            const still = await tx.missionProposal.count({ where: { requestId, status: "EN_ATTENTE" } });
-            if (still === 0) {
-              await tx.careRequest.updateMany({ where: { id: requestId, status: "PROPOSEE" }, data: { status: "OUVERTE" } });
-            }
-          }
-        }
-      }
+      // A1 : refus ou suspension → propositions actives (choisies ET à choisir) annulées, missions SUSPENDUE,
+      // visites futures annulées, demandes rouvertes, famille prévenue. Une seule fonction partagée.
+      const released =
+        to === "REFUSE" || to === "SUSPENDU"
+          ? await releaseCaregiver(tx, cg.id, user)
+          : { cancelledProposals: 0, suspendedMissions: 0, cancelledVisits: 0, reopenedRequests: 0 };
 
       await logAudit(
         {
@@ -116,7 +101,7 @@ export async function decideCaregiverAction(_prev: ActionResult, formData: FormD
           action: AUDIT_ACTION[decision],
           entityType: "CaregiverProfile",
           entityId: cg.id,
-          metadata: { from: cg.validation, to, withReason: decisionNeedsReason(decision), cancelledProposals: cancelled },
+          metadata: { from: cg.validation, to, withReason: decisionNeedsReason(decision), ...released },
         },
         tx,
       );
@@ -134,6 +119,7 @@ export async function decideCaregiverAction(_prev: ActionResult, formData: FormD
     });
   } catch (e) {
     if (e instanceof BusinessError) return fail(e.message);
+    if (isConcurrencyError(e)) return fail("Le profil ou une demande a changé entre-temps. Rechargez la page, puis réessayez.");
     throw e;
   }
 

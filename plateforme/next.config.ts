@@ -41,6 +41,9 @@ const nextConfig: NextConfig = {
       { source: "/:path*", headers: securityHeaders },
       // Le lien de reprise contient un secret : il ne doit jamais partir dans un en-tête Referer.
       { source: "/tester/reprendre/:token", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
+      // Lien de retrait du consentement et page qui l'affiche (M6) : même règle.
+      { source: "/retrait-accord/:token", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
+      { source: "/famille/visite-decouverte", headers: [{ key: "Referrer-Policy", value: "no-referrer" }] },
     ];
   },
   async redirects() {
