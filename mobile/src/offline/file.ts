@@ -106,7 +106,8 @@ export function messageAttente(type: TypeEvenement): string {
     case 'KAYE_PUBLICATION':
       return 'Pas de réseau. Le Kayé est gardé sur ce téléphone. Il part tout seul au retour du réseau.';
     case 'SOS':
-      return 'Pas de réseau : l’alerte n’est pas partie. Elle part au retour du réseau. Appelez le 15 ou le 112 maintenant.';
+      // L'écran SOS ajoute « En cas de danger, appelez le 15 ou le 112. » et montre les deux boutons d'appel.
+      return 'Pas de réseau : l’alerte n’est pas partie. Elle part au retour du réseau.';
   }
 }
 

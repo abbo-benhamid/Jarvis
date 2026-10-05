@@ -36,9 +36,9 @@ test.describe('envoi', () => {
     expect(lignes[0]).toMatchObject({ id: e.clientEventId, statut: 'EN_ATTENTE', tentatives: 1 });
   });
 
-  test('SOS hors ligne : le message demande d’appeler le 15 ou le 112', async () => {
+  test('SOS hors ligne : le message dit que l’alerte n’est pas partie (l’écran propose le 15 et le 112)', async () => {
     const { file } = monter({ reseau: false });
-    await expect(file.soumettre(ev.sos())).rejects.toMatchObject({ code: 'EN_ATTENTE', message: expect.stringMatching(/15 ou le 112/) });
+    await expect(file.soumettre(ev.sos())).rejects.toMatchObject({ code: 'EN_ATTENTE', message: expect.stringMatching(/alerte n’est pas partie/) });
   });
 });
 
