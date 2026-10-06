@@ -81,7 +81,7 @@ export default async function Page({ params }: { params: Promise<{ visiteId: str
           <details className="rounded-md border-2 border-dashed border-mer bg-mer-soft px-4 py-1">
             <summary className="flex min-h-11 cursor-pointer items-center gap-2 font-semibold text-mer">
               <KeyRound aria-hidden="true" className="size-5" strokeWidth={1.6} />
-              Aide pour le test
+              Aide pour la démo
             </summary>
             <div className="flex flex-col gap-2 pb-3">
               {testHomeCode ? (

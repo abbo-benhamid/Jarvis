@@ -39,7 +39,7 @@ function pageName(path: string): string {
     [/^\/accompagnant\/verifications/, "Vérifications"],
     [/^\/accompagnant\/orientation/, "Mon statut"],
     [/^\/accompagnant/, "Accueil accompagnant"],
-    [/^\/tester/, "Tester Koudmen"],
+    [/^\/tester/, "Essayer la démo"],
     [/^\/fin-de-scenario/, "Fin de scénario"],
   ];
   return names.find(([re]) => re.test(path))?.[1] ?? "Cette page";

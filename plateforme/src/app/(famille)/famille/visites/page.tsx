@@ -160,7 +160,7 @@ function ProofExplainer({ children }: { children?: React.ReactNode }) {
   const items = [
     { icon: MapPin, title: "Position à l'arrivée", text: "L'accompagnant partage sa position une seule fois, à l'arrivée." },
     { icon: KeyRound, title: "Code du domicile", text: "Il scanne le QR code ou saisit le code affiché chez l'aîné." },
-    { icon: PhoneCall, title: "Confirmation de l'aîné", text: "Koudmen appelle l'aîné. Il tape 1 pour confirmer la visite (simulé en test)." },
+    { icon: PhoneCall, title: "Confirmation de l'aîné", text: "Koudmen appelle l'aîné. Il tape 1 pour confirmer la visite (simulé dans la démo)." },
   ];
   return (
     <details className="group rounded-card bg-surface px-5 shadow-card">

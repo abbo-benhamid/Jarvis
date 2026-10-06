@@ -24,7 +24,7 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
                 Se connecter
               </LinkButton>
               <LinkButton href="/tester" className="max-sm:hidden">
-                Tester
+                Essayer la démo
               </LinkButton>
             </>
           )}

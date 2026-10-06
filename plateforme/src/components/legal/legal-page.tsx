@@ -10,7 +10,7 @@ export function LegalPage({ title, updated, children }: { title: string; updated
       <header className="flex flex-col gap-2 pb-2">
         <p className="text-[13px] leading-snug font-semibold tracking-[.12em] text-muted uppercase">Informations légales</p>
         <h1 className="font-display text-[36px] leading-[1.05] font-normal tracking-[-.02em] lg:text-[44px]">{title}</h1>
-        <p className="text-[15px] text-muted">Version de test · mise à jour le {updated}</p>
+        <p className="text-[15px] text-muted">Démo · mise à jour le {updated}</p>
       </header>
       {children}
     </article>

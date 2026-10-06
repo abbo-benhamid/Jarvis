@@ -28,7 +28,7 @@ export async function SandboxPanel({ user }: { user: CurrentUser }) {
   return (
     <SandboxPanelFrame progress={`${done}/${total}`}>
     <section
-      aria-label={`Votre test : ${done} étapes faites sur ${total}`}
+      aria-label={`Votre démo : ${done} étapes faites sur ${total}`}
       className="mb-5 rounded-md bg-surface px-3.5 py-2 text-fg shadow-card"
     >
       <PanelDisclosure
@@ -44,7 +44,7 @@ export async function SandboxPanel({ user }: { user: CurrentUser }) {
               />
             </span>
             <span className="min-w-0">
-              <strong className="font-semibold group-data-[compact=true]:hidden">Mode test</strong>{" "}
+              <strong className="font-semibold group-data-[compact=true]:hidden">Démo</strong>{" "}
               <strong className="num font-semibold">
                 {done}/{total}
               </strong>
@@ -90,8 +90,8 @@ export async function SandboxPanel({ user }: { user: CurrentUser }) {
         details={
           <>
             <p className="mt-2 text-sm text-muted">
-              Votre monde de test est fictif et rien que pour vous. Les autres
-              personnes sont des robots. « Simuler la suite » fait avancer
+              Votre démo est rien que pour vous. Les autres personnes sont
+              des robots. « Simuler la suite » fait avancer
               l&apos;histoire.
             </p>
             <ol className="m-0 mt-3 grid list-none gap-3 p-0 md:grid-cols-3">
@@ -143,13 +143,13 @@ export async function SandboxPanel({ user }: { user: CurrentUser }) {
                 <CopyResumeLink url={panel.resumeUrl} />
               ) : null}
               <p>
-                Code testeur : <strong>{panel.testerCode}</strong> · Votre test
-                est effacé le {formatDate(panel.expiresAt)}. ·{" "}
+                Code testeur : <strong>{panel.testerCode}</strong> · Votre démo
+                est effacée le {formatDate(panel.expiresAt)}. ·{" "}
                 <Link
                   href="/cgu-test"
                   className="inline-flex min-h-6 items-center underline"
                 >
-                  CGU du test
+                  CGU de la démo
                 </Link>
               </p>
             </div>

@@ -59,7 +59,7 @@ export function KayeCard({
       </div>
     </>
   );
-  const classes = cn("flex items-start gap-3.5 rounded-card bg-surface p-4 text-fg shadow-card", className);
+  const classes = cn("kd-appear flex items-start gap-3.5 rounded-card bg-surface p-4 text-fg shadow-card", className);
   return href ? (
     <Link href={href} className={cn(classes, "no-underline transition-colors duration-[120ms] hover:bg-surface-2/40")}>
       {body}

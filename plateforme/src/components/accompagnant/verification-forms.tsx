@@ -84,7 +84,7 @@ export function VerificationRow({ item }: { item: VerificationRowData }) {
 }
 
 /** Texte enregistré quand le testeur coche « J'ai ce document » (aucun fichier, aucune donnée réelle). */
-const QUICK_DECLARATION = "Document déclaré par case à cocher (version de test).";
+const QUICK_DECLARATION = "Document déclaré par case à cocher (démo).";
 
 /**
  * S1b-ux M11 : dans un monde de test, une case « J'ai ce document » par point et UN seul bouton.
@@ -135,7 +135,7 @@ export function QuickDeclareForm({ items, canRequestReview }: { items: Verificat
   return (
     <Card className="flex flex-col gap-3">
       <h2 className="font-sans text-[17px] leading-[1.3] font-semibold">Vos documents</h2>
-      <p className="text-[15px] text-muted">Version de test : aucun fichier à envoyer. Cochez les documents que vous avez.</p>
+      <p className="text-[15px] text-muted">Démo : aucun fichier à envoyer. Cochez les documents que vous avez.</p>
       <fieldset className="flex flex-col divide-y divide-line">
         <legend className="sr-only">Documents que vous avez</legend>
         {items.map((i) => (

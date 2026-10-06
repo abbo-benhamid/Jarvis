@@ -36,8 +36,8 @@ export function SandboxPanelFrame({ progress, children }: { progress: string; ch
         className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-mer-soft px-3.5 text-[15px] font-semibold text-mer"
       >
         <FlaskConical aria-hidden="true" className="size-4" strokeWidth={1.8} />
-        Mode test · <span className="num">{progress}</span>
-        <span className="sr-only"> : afficher le panneau du test</span>
+        Démo · <span className="num">{progress}</span>
+        <span className="sr-only"> : afficher le panneau de la démo</span>
         <ChevronDown aria-hidden="true" className={cn("size-4 transition-transform", open && "rotate-180")} strokeWidth={1.8} />
       </button>
       <div id={id} hidden={!open} className="mt-2">

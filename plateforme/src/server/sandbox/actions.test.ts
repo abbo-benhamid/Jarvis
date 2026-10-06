@@ -51,7 +51,7 @@ beforeEach(() => {
   process.env.TESTER_INVITE_CODES = "T-ABCD-FGHJ-KMNP";
 });
 
-describe("« Tester Koudmen » (B1)", () => {
+describe("« Essayer la démo » (B1)", () => {
   it("limite les essais de code par IP, avant même de lire le code", async () => {
     hitRateLimit.mockResolvedValue({ allowed: false, count: 31, retryAfterSeconds: 1800 });
     const r = await actions.startSandboxAction(initialActionState, form(START));

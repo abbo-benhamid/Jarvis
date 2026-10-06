@@ -60,7 +60,7 @@ export default async function Page() {
             />
           )}
           <p className="mt-2 text-sm text-muted">
-            Ces personnes attendent un message honnête : « Koudmen est en test ». Effacez un contact sur simple demande.
+            Ces personnes attendent un message honnête : « Koudmen ouvre bientôt ». Effacez un contact sur simple demande.
           </p>
         </Card>
 
@@ -133,7 +133,7 @@ export default async function Page() {
         <Card aria-labelledby="t-bacs">
           <CardTitle id="t-bacs">Derniers bacs à sable</CardTitle>
           {m.sandboxes.length === 0 ? (
-            <EmptyState title="Aucun bac à sable." className="shadow-none">Un testeur crée son bac à sable avec « Tester Koudmen » et son code.</EmptyState>
+            <EmptyState title="Aucun bac à sable." className="shadow-none">Un testeur crée son bac à sable avec « Essayer la démo » et son code.</EmptyState>
           ) : (
             <DataTable
               head={["Créé", "Code", "Rôle joué", "Dernière activité", "Simulations"]}

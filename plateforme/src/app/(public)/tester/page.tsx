@@ -12,7 +12,7 @@ import { StartSandboxForm } from "./start-form";
 import { Clock, Lock, Sparkles } from "lucide-react";
 import { FormPage, ReassuranceList } from "@/components/layout/form-page";
 
-export const metadata: Metadata = { title: "Tester Koudmen" };
+export const metadata: Metadata = { title: "Essayer la démo" };
 export const dynamic = "force-dynamic";
 
 /**
@@ -28,38 +28,38 @@ export default async function TesterPage({ searchParams }: { searchParams: Promi
 
   return (
     <FormPage
-      eyebrow="Version de test"
-      title="Tester Koudmen"
+      eyebrow="Démo"
+      title="Essayer la démo"
       lead={
         <p>
-          Vous recevez un monde de test, rien que pour vous. Une aînée fictive, des accompagnants fictifs, une équipe Koudmen « robot ». Rien
-          n&apos;est réel : aucune visite, aucun paiement, aucun message envoyé.
+          Vous recevez une démo rien que pour vous, avec une aînée, des accompagnants et une équipe Koudmen « robot ». Rien n&apos;est
+          réel : aucune visite, aucun paiement, aucun message envoyé.
         </p>
       }
       aside={
         <ReassuranceList
           items={[
             { icon: <Clock strokeWidth={1.6} />, title: "10 minutes", text: "Un parcours guidé. Vous pouvez arrêter et reprendre." },
-            { icon: <Sparkles strokeWidth={1.6} />, title: "Un monde fictif", text: "Personnages inventés. Rien ne part vers une vraie personne." },
-            { icon: <Lock strokeWidth={1.6} />, title: "Rien que pour vous", text: "Votre test est privé. Il s'efface après 30 jours." },
+            { icon: <Sparkles strokeWidth={1.6} />, title: "Des données d'exemple", text: "Rien ne part vers une vraie personne." },
+            { icon: <Lock strokeWidth={1.6} />, title: "Rien que pour vous", text: "Votre démo est privée. Elle s'efface après 30 jours." },
           ]}
         />
       }
     >
       {erreur === "lien" ? (
         <Alert tone="attention" title="Ce lien de reprise ne marche plus.">
-          Le test a peut-être plus de 30 jours. Créez un nouveau test avec votre code.
+          La démo a peut-être plus de 30 jours. Créez une nouvelle démo avec votre code.
         </Alert>
       ) : null}
 
       {existing ? (
         <Card className="flex flex-col gap-3 bg-mer-soft shadow-none">
-          <p className="font-semibold">Vous avez déjà un test en cours sur cet appareil.</p>
+          <p className="font-semibold">Vous avez déjà une démo en cours sur cet appareil.</p>
           {/* Lien simple (pas de préchargement) : le lien de reprise rouvre la session. */}
           <a href={`/tester/reprendre/${token}`} className={buttonClasses("primary", "lg", "w-full")}>
-            Reprendre mon test ({existing.user.role === "FAMILLE" ? "Famille" : "Accompagnant"})
+            Reprendre ma démo ({existing.user.role === "FAMILLE" ? "Famille" : "Accompagnant"})
           </a>
-          <p className="text-sm text-muted">Ou commencez un nouveau test ci-dessous.</p>
+          <p className="text-sm text-muted">Ou commencez une nouvelle démo ci-dessous.</p>
         </Card>
       ) : null}
 
@@ -68,7 +68,7 @@ export default async function TesterPage({ searchParams }: { searchParams: Promi
       </Card>
 
       <p className="text-[15px] text-muted">
-        Pas de code ? Koudmen est en test sur invitation. Écrivez à l&apos;équipe (voir les{" "}
+        Pas de code ? La démo est sur invitation. Écrivez à l&apos;équipe (voir les{" "}
         <Link href="/mentions-legales" className="font-semibold text-mer underline underline-offset-4">
           mentions légales
         </Link>

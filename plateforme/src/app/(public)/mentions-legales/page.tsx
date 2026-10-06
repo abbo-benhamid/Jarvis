@@ -47,13 +47,13 @@ export default function MentionsLegalesPage() {
       </LegalSection>
 
       <LegalSection title="Nature du site">
-        <p>Koudmen est un prototype en test. Il sert à recueillir l&apos;avis de testeurs invités.</p>
+        <p>Koudmen ouvre bientôt en Martinique. Ce site est une démo. Il sert à recueillir l&apos;avis de testeurs invités.</p>
         <LegalList
           items={[
             "Koudmen ne rend aucun service réel. Aucune visite réelle n'a lieu.",
             "Aucun paiement réel n'est demandé. Aucun message réel n'est envoyé.",
             "Koudmen n'est pas un service d'aide à domicile autorisé.",
-            "Les offres affichées sont en test et ne sont pas commercialisées.",
+            "Les tarifs affichés sont des tarifs de lancement. Ils ne sont pas encore commercialisés.",
           ]}
         />
       </LegalSection>
@@ -73,7 +73,7 @@ export default function MentionsLegalesPage() {
           </Link>{" "}
           et les{" "}
           <Link href="/cgu-test" className="font-semibold text-mer underline">
-            conditions d&apos;utilisation du test
+            conditions d&apos;utilisation de la démo
           </Link>
           .
         </p>

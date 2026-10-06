@@ -2,11 +2,12 @@ import Link from "next/link";
 import { ArrowRight, MapPin, NotebookPen, ShieldCheck } from "lucide-react";
 import { LinkButton } from "@/components/ui/button";
 import { Eyebrow, Kreyol } from "@/components/ui/card";
-import { Avatar } from "@/components/ui/avatar";
 import { KayeCard } from "@/components/ui/kaye-card";
 import { VisitReceipt } from "@/components/ui/visit-receipt";
 import { ActionDock } from "@/components/ui/action-dock";
-import { GardenIllustration, SunriseIllustration } from "@/components/ui/illustrations";
+import { GardenIllustration } from "@/components/ui/illustrations";
+import { HeroScene } from "@/components/accueil/hero-scene";
+import { VisitTutorial } from "@/components/accueil/visit-tutorial";
 import { PLANS, OFFER_TEST_NOTICE } from "@/lib/plans";
 import { PROOF_FACTOR_LABELS } from "@/lib/labels";
 import { PlanCostExample } from "@/components/famille/plan-cost";
@@ -14,8 +15,8 @@ import { Term } from "@/components/ui/term";
 
 /**
  * Page d'accueil (D13, maquette conso écran a) : elle vend la TRANQUILLITÉ, dans cet ordre :
- * 1. la réponse + le bouton « Tester Koudmen » dans le premier écran (S1b-ux M1) + le prix (A3) ;
- * 2. trois promesses ; 3. un exemple de Kayé et de reçu (fictifs) ; 4. le prix détaillé ; 5. rappel du bouton.
+ * 1. la réponse + le bouton « Découvrir Koudmen » dans le premier écran (S1b-ux M1) + le prix (A3) ;
+ * 2. trois promesses ; 3. le tutoriel animé (arrivée, preuves, Kayé) ; 4. le prix détaillé ; 5. rappel du bouton.
  * Pas de bouton opérateur, pas de démo partagée (D1).
  * Mobile : le bouton est au pouce, dans un pied d'action collant. Bureau : il est dans le héros.
  */
@@ -54,13 +55,13 @@ export default function HomePage() {
             chaque visite, et vous dit ce qui s&apos;est vraiment passé.
           </p>
           <div className="mt-8 hidden items-center gap-5 lg:flex">
-            <LinkButton href="/tester" size="lg" data-testid="cta-premier-ecran" iconEnd={<ArrowRight strokeWidth={1.8} />}>
-              Tester Koudmen
+            <LinkButton href="/tester" size="lg" className="shrink-0 whitespace-nowrap" data-testid="cta-premier-ecran" iconEnd={<ArrowRight strokeWidth={1.8} />}>
+              Découvrir Koudmen
             </LinkButton>
-            <p className="max-w-[18rem] text-[15px] leading-snug text-muted">Gratuit, 10 minutes, sur invitation. Un monde fictif rien que pour vous.</p>
+            <p className="max-w-[18rem] text-[15px] leading-snug text-muted">Gratuit, 10 minutes, sur invitation. Une démo rien que pour vous.</p>
           </div>
           <p className="mt-6 max-w-xl text-[15px] leading-relaxed lg:mt-8">
-            <strong>Prix en test :</strong> formule Libre 0 €, Kozé 39 €, Sérénité dès 149 € par mois. Les heures de visite sont en plus, avec 50 %
+            <strong>Tarifs de lancement :</strong> formule Libre 0 €, Kozé 39 €, Sérénité dès 149 € par mois. Les heures de visite sont en plus, avec 50 %
             de crédit d&apos;impôt.{" "}
             <Link href="#prix" className="inline-flex min-h-11 items-center font-semibold text-mer underline underline-offset-4">
               Voir un exemple de prix
@@ -68,16 +69,7 @@ export default function HomePage() {
           </p>
         </div>
 
-        <figure className="relative m-0 overflow-hidden rounded-media shadow-card lg:rounded-hero">
-          <SunriseIllustration label="Illustration : lever de soleil sur la mer, une case créole sur le morne" />
-          <figcaption className="absolute inset-x-3.5 bottom-3.5 flex items-center gap-3 rounded-[18px] bg-[color-mix(in_srgb,var(--surface)_88%,transparent)] px-3.5 py-3 shadow-[0_8px_24px_-10px_rgb(0_0_0/.25)] backdrop-blur-[12px] lg:inset-x-5 lg:bottom-5">
-            <Avatar name="Léonie" role="aine" size={36} />
-            <span className="min-w-0 text-[14.5px] leading-[1.35]">
-              <b className="mb-0.5 block text-[13px] font-semibold text-muted">Kayé de Léonie · exemple fictif</b>
-              Elle a bien mangé. Elle a ri en parlant du marché.
-            </span>
-          </figcaption>
-        </figure>
+        <HeroScene label="Illustration : lever de soleil sur la mer, une case créole sur le morne" />
       </section>
 
       {/* 2. Trois promesses */}
@@ -106,45 +98,50 @@ export default function HomePage() {
         </ul>
       </section>
 
-      {/* 3. La preuve : un exemple de Kayé et de reçu (fictifs) */}
-      <section aria-labelledby="exemple-kaye" className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start lg:gap-14">
-        <div className="flex flex-col gap-3 lg:sticky lg:top-8">
-          <Eyebrow>Exemple fictif</Eyebrow>
-          <h2 id="exemple-kaye" className={H2}>
-            Ce que vous recevez après une visite
-          </h2>
-          <p className="max-w-prose text-muted">
-            Après chaque visite, vous lisez le <Term id="kaye">Kayé</Term> : un mot de l&apos;accompagnant et l&apos;humeur de votre parent. Le reçu
-            dit comment la visite est prouvée.
-          </p>
-          <p className="text-sm text-muted">Personnages inventés.</p>
-        </div>
-        <div className="flex flex-col gap-4">
-          <KayeCard
-            author="Josiane"
-            day="samedi, 16 h 10"
-            headingLevel={3}
-            thumbnail={<GardenIllustration shape="thumb" className="h-full w-full" />}
-            quote="« Léonie m'a raconté le carnaval de 1962. Elle a beaucoup ri. Elle demande des nouvelles de vos enfants. »"
-            translation="Humeur : très bien · Appétit : bon · Dominos sur la galerie, café, nouvelles du quartier."
-          />
-          <VisitReceipt
-            title="Reçu de la visite chez Léonie, 81 ans"
-            headingLevel={3}
-            code="EXEMPLE"
-            times={[
-              { label: "Arrivée", value: "14:02" },
-              { label: "Départ", value: "16:04" },
-              { label: "Durée", value: "2 h" },
-            ]}
-            proofs={[
-              { label: PROOF_FACTOR_LABELS.GPS, detail: "Position vérifiée", time: "14:02", obtained: true },
-              { label: PROOF_FACTOR_LABELS.CODE_DOMICILE, detail: "Code correct", time: "14:03", obtained: true },
-              { label: PROOF_FACTOR_LABELS.CONFIRMATION_AINE, detail: "Pas nécessaire cette fois", obtained: false },
-            ]}
-            verdictText="Deux preuves suffisent."
-          />
-        </div>
+      {/* 3. La preuve : tutoriel animé (arrivée, preuves, Kayé), joué une fois à l'arrivée à l'écran */}
+      <section aria-labelledby="exemple-kaye">
+        <VisitTutorial
+          intro={
+            <>
+              <Eyebrow>Exemple</Eyebrow>
+              <h2 id="exemple-kaye" className={H2}>
+                Ce que vous recevez après une visite
+              </h2>
+              <p className="max-w-prose text-muted">
+                Après chaque visite, vous lisez le <Term id="kaye">Kayé</Term> : un mot de l&apos;accompagnant et l&apos;humeur de votre parent.
+                Le reçu dit comment la visite est prouvée.
+              </p>
+            </>
+          }
+          receipt={
+            <VisitReceipt
+              title="Reçu de la visite chez Léonie, 81 ans"
+              headingLevel={3}
+              code="EXEMPLE"
+              times={[
+                { label: "Arrivée", value: "14:02" },
+                { label: "Départ", value: "16:04" },
+                { label: "Durée", value: "2 h" },
+              ]}
+              proofs={[
+                { label: PROOF_FACTOR_LABELS.GPS, detail: "Position vérifiée", time: "14:02", obtained: true },
+                { label: PROOF_FACTOR_LABELS.CODE_DOMICILE, detail: "Code correct", time: "14:03", obtained: true },
+                { label: PROOF_FACTOR_LABELS.CONFIRMATION_AINE, detail: "Pas nécessaire cette fois", obtained: false },
+              ]}
+              verdictText="Deux preuves suffisent."
+            />
+          }
+          kaye={
+            <KayeCard
+              author="Josiane"
+              day="samedi, 16 h 10"
+              headingLevel={3}
+              thumbnail={<GardenIllustration shape="thumb" className="h-full w-full" />}
+              quote="« Léonie m'a raconté le carnaval de 1962. Elle a beaucoup ri. Elle demande des nouvelles de vos enfants. »"
+              translation="Humeur : très bien · Appétit : bon · Dominos sur la galerie, café, nouvelles du quartier."
+            />
+          }
+        />
       </section>
 
       {/* 4. Le prix (A3) */}
@@ -184,12 +181,12 @@ export default function HomePage() {
           <h2 id="tester" className={H2}>
             Voyez comment ça marche pour votre parent
           </h2>
-          <p>Test sur invitation. Un monde fictif rien que pour vous. 10 minutes. Gratuit.</p>
+          <p>Essayez la démo, sur invitation : 10 minutes, gratuit, rien que pour vous.</p>
           <LinkButton href="/tester" size="lg" className="mt-2 max-sm:w-full" iconEnd={<ArrowRight strokeWidth={1.8} />}>
-            Tester Koudmen
+            Essayer la démo
           </LinkButton>
           <p className="text-[15px] text-muted">
-            Vous voulez accompagner des aînés ? Le test vous propose aussi le rôle « Accompagnant ».{" "}
+            Vous voulez accompagner des aînés ? La démo vous propose aussi le rôle « Accompagnant ».{" "}
             <Link href="/connexion" className="inline-flex min-h-11 items-center font-semibold text-mer underline underline-offset-4">
               Déjà un compte : se connecter
             </Link>
@@ -198,15 +195,11 @@ export default function HomePage() {
         <GardenIllustration shape="wide" className="hidden rounded-media lg:block" />
       </section>
 
-      <p className="text-sm text-muted">
-        Koudmen est en test : aucune visite réelle, aucun paiement. Koudmen n&apos;est pas un service d&apos;aide à domicile autorisé.
-      </p>
-
       {/* Mobile : l'action principale au pouce (§ 2.5). Collante dans la page : elle ne cache jamais le pied de page. */}
       <div className="sticky bottom-0 z-30 -mx-5 -mt-16 lg:hidden">
         <ActionDock position="static" meta={{ start: "Gratuit · 10 minutes", end: "Sur invitation" }}>
           <LinkButton href="/tester" size="lg" fullWidth data-testid="cta-premier-ecran" iconEnd={<ArrowRight strokeWidth={1.8} />}>
-            Tester Koudmen
+            Découvrir Koudmen
           </LinkButton>
         </ActionDock>
       </div>

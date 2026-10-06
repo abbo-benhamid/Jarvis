@@ -4,7 +4,7 @@ import { DEMO_PASSWORD, E2E_TESTER_CODE, OPERATEUR_EMAIL, OPERATEUR_PASSWORD } f
 /**
  * Smoke tests S1b. Prérequis : base migrée + seedée, DEMO_MODE=true, TESTER_INVITE_CODES contient un code avec « E2E ».
  */
-test("D13 + S1c : l'accueil vend la tranquillité, montre « Tester Koudmen » et le prix dans le premier écran, sans démo opérateur", async ({ page }) => {
+test("D13 + S1c : l'accueil vend la tranquillité, montre « Découvrir Koudmen » et le prix dans le premier écran, sans démo opérateur", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 640 });
   await page.goto("/");
   // Maquette conso validée (écran a) : le titre dit la réponse ; la douleur « mwen bien » passe dans le chapeau.
@@ -17,15 +17,56 @@ test("D13 + S1c : l'accueil vend la tranquillité, montre « Tester Koudmen » e
   // M1 : le bouton est dans le premier écran (360 × 640). Sur mobile, c'est celui du pied d'action collant (maquette écran a) ;
   // celui du héros est masqué sous 1024 px. Un seul des deux est visible à chaque largeur.
   const cta = main.getByTestId("cta-premier-ecran").filter({ visible: true });
-  await expect(cta).toHaveAccessibleName("Tester Koudmen");
+  await expect(cta).toHaveAccessibleName("Découvrir Koudmen");
   await expect(cta).toBeInViewport();
-  await expect(main.getByText(/Prix en test/)).toBeVisible();
-  // Les seuls boutons du contenu sont les « ? » du glossaire (A11).
-  for (const b of await main.getByRole("button").all()) await expect(b).toHaveAccessibleName(/Qu'est-ce que/);
+  await expect(main.getByText("Tarifs de lancement :")).toBeVisible();
+  // Les seuls boutons du contenu sont les « ? » du glossaire (A11) et les commandes d'animation (pause, « Revoir »).
+  for (const b of await main.getByRole("button").all())
+    await expect(b).toHaveAccessibleName(/Qu'est-ce que|Mettre l'animation en pause|Revoir l'animation des étapes/);
   await expect(page.getByText(/Opérateur/)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Donner mon avis" })).toBeVisible();
-  // T9 : bandeau de test présent.
-  await expect(page.getByRole("note")).toContainText("Version de test");
+  // Langage de lancement : plus de bandeau « Version de test » ni de « fictif » sur l'accueil ;
+  // une ligne honnête dans le pied de page, avec le lien vers les mentions légales.
+  await expect(page.getByText(/Version de test|fictif|Personnages inventés|Mode test/)).toHaveCount(0);
+  const ouverture = page.getByTestId("ouverture");
+  await expect(ouverture).toContainText("Koudmen ouvre bientôt en Martinique. Les visites ne sont pas encore proposées.");
+  await expect(ouverture.getByRole("link", { name: "En savoir plus" })).toHaveAttribute("href", "/mentions-legales");
+});
+
+test("V2-web motion : le héros s'anime (pause possible) et le tutoriel joue jusqu'au Kayé, puis « Revoir »", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  const hero = page.locator("figure.kd-scene");
+  await expect(hero).toHaveAttribute("data-play", "true");
+  const pause = page.getByRole("button", { name: "Mettre l'animation en pause" });
+  await pause.click();
+  await expect(pause).toHaveAttribute("aria-pressed", "true");
+  await expect(hero).toHaveAttribute("data-play", "false");
+  await pause.click();
+  await expect(hero).toHaveAttribute("data-play", "true");
+
+  const scene = page.getByTestId("tutoriel-scene");
+  await expect(scene).toHaveAttribute("data-stage", "0");
+  await scene.evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 80));
+  await expect(scene).toHaveAttribute("data-stage", "4", { timeout: 10_000 });
+  await expect(page.getByRole("listitem").filter({ hasText: "Vous recevez le Kayé" })).toHaveAttribute("aria-current", "step");
+  await expect(scene.getByText("2 preuves sur 3 · visite validée")).toBeVisible();
+  await page.getByRole("button", { name: /Revoir/ }).click();
+  await expect(scene).not.toHaveAttribute("data-stage", "4");
+  await expect(scene).toHaveAttribute("data-stage", "4", { timeout: 10_000 });
+});
+
+test("V2-web motion : « réduire les animations » donne une page figée et complète", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await expect(page.getByTestId("hero-kaye")).toContainText("Elle a bien mangé. Elle a ri en parlant du marché.");
+  await expect(page.getByRole("button", { name: "Mettre l'animation en pause" })).toHaveCount(0);
+  const scene = page.getByTestId("tutoriel-scene");
+  await expect(scene).not.toHaveAttribute("data-stage");
+  await expect(scene.getByText("2 preuves sur 3 · visite validée")).toBeVisible();
+  await expect(scene.getByText(/carnaval de 1962/)).toBeVisible();
+  await expect(page.getByRole("button", { name: /Revoir/ })).toHaveCount(0);
 });
 
 test("D3 : toutes les pages sont en noindex", async ({ page, request }) => {
@@ -37,7 +78,7 @@ test("D3 : toutes les pages sont en noindex", async ({ page, request }) => {
   expect(await (await request.get("/robots.txt")).text()).toContain("Disallow: /");
 });
 
-test("D4 : mentions légales, confidentialité et CGU de test", async ({ page }) => {
+test("D4 : mentions légales, confidentialité et CGU de la démo", async ({ page }) => {
   await page.goto("/mentions-legales");
   await expect(page.getByRole("heading", { level: 1, name: "Mentions légales" })).toBeVisible();
   await expect(page.getByText(/Vercel Inc\./)).toBeVisible();
@@ -50,7 +91,7 @@ test("D4 : mentions légales, confidentialité et CGU de test", async ({ page })
   await expect(app).toContainText("chiffrés");
   await expect(app).toContainText("Jamais le prénom de l'aîné");
   await page.goto("/cgu-test");
-  await expect(page.getByRole("heading", { level: 1, name: "Conditions d'utilisation du test" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Conditions d'utilisation de la démo" })).toBeVisible();
   await page.goto("/mentions");
   await expect(page).toHaveURL(/\/mentions-legales$/);
 });
@@ -120,8 +161,8 @@ test("inscription d'un accompagnant (code testeur, CGU, âge) puis orientation",
   await page.locator("#lastName").fill("Accompagnant");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Mot de passe").fill("motdepasse-e2e");
-  await page.getByLabel(/données fictives/).check();
-  await page.getByLabel(/conditions d'utilisation du test/).check();
+  await page.getByLabel(/données d'exemple/).check();
+  await page.getByLabel(/conditions d'utilisation de la démo/).check();
   await page.getByLabel("J'ai 18 ans ou plus.").check();
   // Code faux : refus, et la saisie reste en place.
   await page.getByLabel("Code testeur").fill("CODE-INCONNU");

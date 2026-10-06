@@ -55,7 +55,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
       />
       <div className="flex flex-col gap-4">
         <Alert tone="attention" title={OFFER_TEST_NOTICE}>
-          Version de test : le paiement est simulé. Aucune carte n&apos;est demandée, aucun argent n&apos;est prélevé.
+          Le paiement est simulé. Aucune carte n&apos;est demandée, aucun argent n&apos;est prélevé.
         </Alert>
 
         {aines.length > 1 ? (

@@ -59,7 +59,7 @@ export function StartSandboxForm({ defaultCode }: { defaultCode: string }) {
           }
         />
       </Fieldset>
-      <FormField label="Votre prénom dans le test (facultatif)" htmlFor="firstName" hint="Un prénom inventé convient très bien." errors={fe?.firstName}>
+      <FormField label="Votre prénom dans la démo (facultatif)" htmlFor="firstName" hint="Un autre prénom que le vôtre convient très bien." errors={fe?.firstName}>
         <Input {...fieldA11y("firstName", fe?.firstName, true)} maxLength={40} autoComplete="off" />
       </FormField>
       <div className="flex flex-col gap-3">
@@ -70,7 +70,7 @@ export function StartSandboxForm({ defaultCode }: { defaultCode: string }) {
             <>
               J&apos;accepte les{" "}
               <Link href="/cgu-test" target="_blank" className="font-semibold text-mer underline">
-                conditions d&apos;utilisation du test
+                conditions d&apos;utilisation de la démo
               </Link>
               .
             </>
@@ -83,13 +83,13 @@ export function StartSandboxForm({ defaultCode }: { defaultCode: string }) {
         <Checkbox
           id="acceptTest"
           name="acceptTest"
-          label="J'utilise uniquement des données fictives : pas de vrai nom d'aîné, pas d'information de santé."
+          label="J'utilise uniquement des données d'exemple : pas de vrai nom d'aîné, pas d'information de santé."
           required
         />
         {fe?.acceptTest ? <p className="text-sm font-semibold text-hibiscus">{fe.acceptTest.join(" ")}</p> : null}
       </div>
-      <PendingButton pending={pending} size="lg" className="w-full" pendingLabel="Création de votre test…">
-        Commencer le test
+      <PendingButton pending={pending} size="lg" className="w-full" pendingLabel="Création de votre démo…">
+        Commencer la démo
       </PendingButton>
     </form>
   );

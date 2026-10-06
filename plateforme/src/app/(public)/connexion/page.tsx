@@ -31,8 +31,8 @@ export default async function ConnexionPage({ searchParams }: { searchParams: Pr
       aside={
         <ReassuranceList
           items={[
-            { icon: <Sparkles strokeWidth={1.6} />, title: "Vous testez Koudmen ?", text: "Pas besoin de compte. Le test commence avec votre code." },
-            { icon: <ShieldCheck strokeWidth={1.6} />, title: "Données fictives", text: "Version de test : aucune visite réelle, aucun paiement." },
+            { icon: <Sparkles strokeWidth={1.6} />, title: "Vous découvrez Koudmen ?", text: "Pas besoin de compte. La démo commence avec votre code." },
+            { icon: <ShieldCheck strokeWidth={1.6} />, title: "Ouverture prochaine", text: "Les visites ne sont pas encore proposées. Aucun paiement." },
           ]}
         />
       }
@@ -43,9 +43,9 @@ export default async function ConnexionPage({ searchParams }: { searchParams: Pr
       </Card>
       <div className="flex flex-col gap-1 text-[15px]">
         <p>
-          Vous testez Koudmen ?{" "}
+          Vous avez un code d&apos;invitation ?{" "}
           <Link className="inline-flex min-h-11 items-center font-semibold text-mer underline underline-offset-4" href="/tester">
-            Tester Koudmen avec votre code
+            Essayer la démo avec votre code
           </Link>
         </p>
         {/* A10 / M1 : l'inscription libre existe seulement en mode démo. */}

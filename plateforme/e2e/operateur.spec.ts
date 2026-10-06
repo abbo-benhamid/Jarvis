@@ -88,7 +88,7 @@ test("O2/O3 — valider un accompagnant : revue de chaque vérification, motif o
   await decision2.getByRole("button", { name: "Enregistrer la décision" }).click();
   await expect(decision2.getByText(/Décision enregistrée : Validé/)).toBeVisible();
   await page.reload();
-  await expect(page.getByText("Validé (vérifications déclarées, test)", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Validé (vérifications déclarées)", { exact: true }).first()).toBeVisible();
 
   // Suspendre : motif obligatoire, puis le motif s'affiche sur la fiche.
   const decision3 = page.getByRole("region", { name: "Décision (revue humaine)" });

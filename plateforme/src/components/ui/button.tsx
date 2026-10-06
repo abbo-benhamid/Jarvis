@@ -38,7 +38,8 @@ export function buttonClasses(variant: ButtonVariant = "primary", size: ButtonSi
   const isLink = variant === "link" || variant === "ghost";
   return cn(
     "inline-flex items-center justify-center gap-2.5 font-semibold tracking-[.005em] no-underline",
-    "transition-[background-color,opacity] duration-[120ms] ease-out select-none",
+    // Pression : le bouton s'enfonce un peu (120 ms). Rien en mode réduit.
+    "transition-[background-color,opacity,transform] duration-[120ms] ease-out select-none motion-safe:active:scale-[.97]",
     "disabled:cursor-not-allowed disabled:opacity-45 aria-disabled:cursor-not-allowed aria-disabled:opacity-45",
     "[&_svg]:size-[18px] [&_svg]:shrink-0",
     // Le lien reste compact (zone 44 px). Le bouton discret fait 52 px (§ 10). Une seule classe de taille : pas de conflit.

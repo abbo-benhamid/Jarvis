@@ -5,7 +5,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 const LINKS = [
   { href: "/mentions-legales", label: "Mentions légales" },
   { href: "/confidentialite", label: "Confidentialité" },
-  { href: "/cgu-test", label: "CGU du test" },
+  { href: "/cgu-test", label: "CGU de la démo" },
 ];
 
 /** Pied de page commun : filet madras (séparateur de page), liens légaux, bascule clair / sombre. */
@@ -16,7 +16,13 @@ export function SiteFooter() {
         <MadrasLine />
       </div>
       <div className="mx-auto flex w-full max-w-[var(--content-max)] flex-col gap-4 px-5 py-6 text-[15px] text-muted lg:flex-row lg:items-center lg:justify-between lg:px-6">
-        <p className="max-w-prose">Koudmen — prototype de test. Personnages fictifs : toute ressemblance est fortuite.</p>
+        {/* Honnêteté légale minimale (remplace le bandeau « Version de test ») : une ligne, avec le lien vers les mentions légales. */}
+        <p className="max-w-prose" data-testid="ouverture">
+          Koudmen ouvre bientôt en Martinique. Les visites ne sont pas encore proposées.{" "}
+          <Link className="text-fg underline decoration-line-strong underline-offset-4 hover:text-mer" href="/mentions-legales">
+            En savoir plus
+          </Link>
+        </p>
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6">
           <nav aria-label="Liens légaux">
             <ul className="flex flex-wrap gap-x-5">

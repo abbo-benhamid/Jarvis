@@ -17,4 +17,4 @@ export function caregiverDisplayName(c: {
 }
 
 /** Mention des vérifications pendant le test (D5) : jamais « vérifié ». */
-export const VERIFICATIONS_TEST_LABEL = "Vérifications déclarées (test)";
+export const VERIFICATIONS_TEST_LABEL = "Vérifications déclarées";

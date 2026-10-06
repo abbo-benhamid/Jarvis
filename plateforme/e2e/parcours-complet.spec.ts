@@ -47,8 +47,8 @@ test("parcours complet : la famille demande, Koudmen propose, la famille choisit
   await page.getByLabel("Email").fill(familyEmail);
   await page.getByLabel("Mot de passe").fill(E2E_PASSWORD);
   await page.getByLabel("J'habite").selectOption("HEXAGONE");
-  await page.getByLabel(/données fictives/).check();
-  await page.getByLabel(/conditions d'utilisation du test/).check();
+  await page.getByLabel(/données d'exemple/).check();
+  await page.getByLabel(/conditions d'utilisation de la démo/).check();
   await page.getByLabel("J'ai 18 ans ou plus.").check();
   await page.getByRole("button", { name: "Créer mon compte" }).click();
   await expect(page).toHaveURL(/\/famille$/);
@@ -69,7 +69,7 @@ test("parcours complet : la famille demande, Koudmen propose, la famille choisit
   await page.getByLabel(/Niveau 1 — Lien/).check();
   await page.getByLabel("Une fois par semaine").check();
   await page.getByRole("checkbox", { name: "Mercredi, matin" }).check();
-  await page.getByLabel("Nom de l'employeur (fictif)").fill(`${aineFirstName} E2E`);
+  await page.getByLabel("Nom de l'employeur (exemple)").fill(`${aineFirstName} E2E`);
   await page.getByRole("button", { name: "Envoyer la demande" }).click();
   await expect(page).toHaveURL(/\/famille\/demandes\?envoyee=1$/);
   await expect(page.getByText("Demande envoyée.")).toBeVisible();

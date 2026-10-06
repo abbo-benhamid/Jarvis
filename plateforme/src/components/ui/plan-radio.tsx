@@ -24,7 +24,7 @@ export type PlanOption = {
 };
 
 /** Mention obligatoire à chaque affichage de prix (direction artistique § 10). */
-export const PLAN_NOTICE = "Offre en test, non commercialisée.";
+export const PLAN_NOTICE = "Tarifs de lancement · ouverture prochaine.";
 
 /**
  * Choix de formule (§ 10) : carte radio 20 px, bord 1,5 px `mer` quand choisie, radio pleine `mer`,

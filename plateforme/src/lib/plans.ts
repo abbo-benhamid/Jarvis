@@ -21,7 +21,7 @@ export type PlanInfo = {
 };
 
 /** Mention obligatoire sur chaque affichage des formules (T6). */
-export const OFFER_TEST_NOTICE = "Offre en test, non commercialisée. Prix et contenu à l'étude.";
+export const OFFER_TEST_NOTICE = "Tarifs de lancement · ouverture prochaine.";
 
 export const PLANS: readonly PlanInfo[] = [
   {

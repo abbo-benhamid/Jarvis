@@ -33,7 +33,7 @@ export function InviteForm({ aineId, aineFirstName }: { aineId: string; aineFirs
         <FormField
           label="Email de la personne (facultatif)"
           htmlFor="email"
-          hint="Si vous indiquez un email, Koudmen envoie le lien (envoi simulé en test). Sinon, copiez le lien vous-même."
+          hint="Si vous indiquez un email, Koudmen envoie le lien (envoi simulé dans la démo). Sinon, copiez le lien vous-même."
           errors={fe?.email}
         >
           <Input {...fieldA11y("email", fe?.email, true)} type="email" autoComplete="off" inputMode="email" />

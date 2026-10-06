@@ -233,11 +233,7 @@
   .kd-madras-ring {
     padding: 2px;
     background: var(--madras-ring);
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
+    /* Masque (anneau + angle de tracé) : voir « Motion » plus bas. */
   }
 
   /* Photo réelle ou illustration « photo » : adoucie en sombre. */
@@ -269,6 +265,289 @@ dialog::backdrop {
 @media (prefers-reduced-motion: no-preference) {
   .kd-breathe {
     animation: kd-breathe 3.2s ease-in-out infinite;
+  }
+}
+
+/*
+ * ─── Motion (sprint V2-web) ────────────────────────────────────────────────
+ * SVG + keyframes CSS. Règles :
+ * - Toute animation est déclarée DANS @media (prefers-reduced-motion: no-preference).
+ *   Sans elle, la page est complète et figée (état final).
+ * - Une scène porte data-play="false" quand elle sort de l'écran ou que la personne met en pause :
+ *   toutes ses animations s'arrêtent (batterie, calme).
+ * - Cycles lents (6 à 12 s), courbes douces, pas de rebond.
+ */
+
+/* Angle de l'anneau madras qui se dessine. 360deg par défaut : anneau complet sans animation. */
+@property --kd-ring-a {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 360deg;
+}
+
+/* Anneau partiel : le cône (angle) coupe l'anneau madras. Sans animation : anneau complet. */
+.kd-madras-ring {
+  -webkit-mask:
+    conic-gradient(#000 var(--kd-ring-a), #0000 0),
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: source-in, xor, source-over;
+  mask:
+    conic-gradient(#000 var(--kd-ring-a), #0000 0),
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: intersect, exclude, add;
+}
+
+/* Scène en pause (hors écran ou bouton pause). */
+[data-play="false"] *,
+[data-play="false"]::before,
+[data-play="false"]::after {
+  animation-play-state: paused !important;
+}
+
+/* Origines de transformation des éléments de l'illustration (coordonnées du viewBox). */
+.kd-sun,
+.kd-halo,
+.kd-palm,
+.kd-flower,
+.kd-swell {
+  transform-box: view-box;
+}
+.kd-halo {
+  transform-origin: 112px 104px;
+}
+.kd-palm {
+  transform-origin: 232px 112px;
+}
+.kd-flower {
+  transform-origin: 54px 208px;
+}
+.kd-wave {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes kd-sun-rise {
+  from {
+    transform: translateY(48px);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes kd-halo {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.38;
+  }
+  50% {
+    transform: scale(1.16);
+    opacity: 0.24;
+  }
+}
+@keyframes kd-glow {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+@keyframes kd-swell {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(1.8px);
+  }
+}
+/* Vague : elle glisse et son amplitude change (ondulation). */
+@keyframes kd-wave {
+  0%,
+  100% {
+    transform: translateX(-7px) scaleY(1);
+  }
+  50% {
+    transform: translateX(7px) scaleY(0.45);
+  }
+}
+@keyframes kd-sway {
+  0%,
+  100% {
+    transform: rotate(-1.3deg);
+  }
+  50% {
+    transform: rotate(1.5deg);
+  }
+}
+@keyframes kd-flower {
+  0%,
+  100% {
+    transform: rotate(-3.5deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+@keyframes kd-notif-in {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes kd-notif-out {
+  to {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+@keyframes kd-caret {
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes kd-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes kd-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+  70% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes kd-ring-draw {
+  from {
+    --kd-ring-a: 0deg;
+  }
+  to {
+    --kd-ring-a: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* 1. Lever de soleil : le soleil monte (2,8 s, partout). Dans une scène (.kd-scene, avec bouton pause) : le halo respire, la mer vit. */
+  .kd-sun {
+    animation: kd-sun-rise 2.8s var(--motion-ease) both;
+  }
+  .kd-scene .kd-halo {
+    animation: kd-halo 9s ease-in-out 2.8s infinite;
+  }
+  .kd-scene .kd-glint {
+    animation: kd-glow 7s ease-in-out infinite;
+  }
+  .kd-scene .kd-swell {
+    animation: kd-swell 10s ease-in-out infinite;
+  }
+  .kd-scene .kd-wave {
+    animation: kd-wave var(--kd-dur, 8s) ease-in-out var(--kd-delay, 0s) infinite;
+  }
+  .kd-scene .kd-palm {
+    animation: kd-sway 11s ease-in-out infinite;
+  }
+  .kd-scene .kd-flower {
+    animation: kd-flower 7s ease-in-out infinite;
+  }
+
+  /* 2. Kayé en notification sur l'illustration. */
+  .kd-notif {
+    animation: kd-notif-in 0.7s var(--motion-ease) var(--kd-notif-delay, 0s) both;
+  }
+  .kd-notif[data-leaving="true"] {
+    animation: kd-notif-out 0.38s ease-in both;
+  }
+  .kd-caret {
+    animation: kd-caret 1s steps(1) infinite;
+  }
+
+  /* Scène en pause : les entrées (soleil, carte) sautent à leur état final. La page reste complète. */
+  [data-play="false"] :is(.kd-sun, .kd-notif) {
+    animation: none !important;
+  }
+
+  /* 4. Micro-animations. */
+  .kd-appear {
+    animation: kd-rise var(--motion-slow) var(--motion-ease) both;
+  }
+  .kd-madras-ring {
+    animation: kd-ring-draw 0.9s var(--motion-ease) 0.15s both;
+  }
+  .kd-receipt [data-kd-check] {
+    animation: kd-pop 0.42s var(--motion-ease) calc(0.25s + var(--kd-i, 0) * 0.14s) both;
+  }
+  .kd-receipt [data-kd-verdict] {
+    animation: kd-rise 0.42s var(--motion-ease) 0.75s both;
+  }
+
+  /*
+   * 3. Tutoriel « Ce que vous recevez après une visite » : la scène porte data-stage (0 à 4).
+   * 0 rien · 1 arrivée · 2 preuves une à une · 3 verdict · 4 Kayé. Sans JS : pas de data-stage, tout est visible.
+   */
+  .kd-tuto [data-kd-check],
+  .kd-tuto [data-kd-verdict] {
+    animation: none;
+  }
+  .kd-tuto [data-kd-time],
+  .kd-tuto [data-kd-check],
+  .kd-tuto [data-kd-verdict],
+  .kd-tuto [data-kd-notif] {
+    transition:
+      opacity 0.5s var(--motion-ease),
+      transform 0.5s var(--motion-ease),
+      color 0.5s var(--motion-ease);
+  }
+  .kd-tuto[data-stage="0"] [data-kd-time],
+  .kd-tuto[data-stage="1"] [data-kd-time]:not([data-kd-time="0"]),
+  .kd-tuto[data-stage="2"] [data-kd-time]:not([data-kd-time="0"]) {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  .kd-tuto:is([data-stage="1"], [data-stage="2"]) [data-kd-time="0"] dd {
+    color: var(--mer);
+  }
+  .kd-tuto:is([data-stage="0"], [data-stage="1"]) [data-kd-check] {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+  .kd-tuto[data-stage="2"] [data-kd-proof]:nth-child(2) [data-kd-check] {
+    transition-delay: 0.7s;
+  }
+  .kd-tuto[data-stage="2"] [data-kd-proof]:nth-child(3) [data-kd-check] {
+    transition-delay: 1.4s;
+  }
+  .kd-tuto:is([data-stage="0"], [data-stage="1"], [data-stage="2"]) [data-kd-verdict] {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  .kd-tuto:is([data-stage="0"], [data-stage="1"], [data-stage="2"], [data-stage="3"]) [data-kd-notif] {
+    opacity: 0;
+    transform: translateY(24px) scale(0.98);
+  }
+  .kd-tuto [data-kd-step] {
+    transition:
+      background-color 0.4s var(--motion-ease),
+      color 0.4s var(--motion-ease);
   }
 }
 

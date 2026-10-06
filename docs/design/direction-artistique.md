@@ -227,6 +227,7 @@ Règles :
 - Mouvements autorisés : fondu + translation de 8 px max ; respiration du point « va bien » (3,2 s).
 - `prefers-reduced-motion: reduce` : aucune animation en boucle, transitions en fondu seul.
 - Pas de confettis, pas de rebond.
+- **Scènes illustrées (V2-web)** : SVG + keyframes CSS + IntersectionObserver, sans bibliothèque. Cycles lents (6 à 12 s). Accueil : soleil qui monte puis respire, vagues, palmier, hibiscus ; Kayé en notification (glisse depuis le bas, texte qui s'écrit, rotation ~8 s) ; tutoriel « après une visite » joué une fois à l'écran, bouton « Revoir ». Bouton pause sur toute boucle de plus de 5 s (WCAG 2.2.2). Pause hors écran. Page complète et figée en mode réduit. Code : `plateforme/src/app/globals.css` (« Motion »).
 
 ## 10. Composants clés
 
@@ -265,7 +266,7 @@ Rond, 32 / 44 / 56 px. Initiale Fraunces 42 % de la taille. Teinte par rôle : a
 Illustration au trait 120 px (ex. case + soleil), titre Fraunces 22 px, une phrase `muted`, un bouton. Ton rassurant, jamais culpabilisant. Exemple : « Pas encore de Kayé. Le premier arrive après la première visite. » + « Planifier une visite ».
 
 ### Autres
-- **Choix de formule** : carte radio 20 px, bord 1,5 px `mer` quand choisie, radio pleine `mer`, prix tabulaire à droite, badge « Conseillé » `soleil` à cheval sur le bord haut. Mention « Offre en test, non commercialisée » à chaque affichage de prix.
+- **Choix de formule** : carte radio 20 px, bord 1,5 px `mer` quand choisie, radio pleine `mer`, prix tabulaire à droite, badge « Conseillé » `soleil` à cheval sur le bord haut. Mention « Tarifs de lancement · ouverture prochaine » à chaque affichage de prix.
 - **Interrupteur** : 52 × 32, `mer` actif, `role="switch"`.
 - **Champ** : 56 px, rayon 16, bord intérieur 1,5 px `line-strong`, focus = anneau.
 

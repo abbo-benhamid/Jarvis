@@ -28,7 +28,7 @@ const startSchema = z.object({
     .max(40, "40 caractères maximum.")
     .optional()
     .transform((v) => v || undefined),
-  acceptCgu: z.literal("on", { message: "Acceptez les conditions d'utilisation du test." }),
+  acceptCgu: z.literal("on", { message: "Acceptez les conditions d'utilisation de la démo." }),
   adult: z.literal("on", { message: "Le test est réservé aux personnes de 18 ans ou plus." }),
   acceptTest: z.literal("on", { message: "Confirmez que vous utilisez uniquement des données fictives." }),
 });
@@ -81,7 +81,7 @@ async function sandboxTester() {
 /** « Simuler la suite » (D14) : les robots jouent l'étape suivante. */
 export async function simulateAction(_prev: ActionResult<SimulationResult>): Promise<ActionResult<SimulationResult>> {
   const tester = await sandboxTester();
-  if (!tester) return fail("La simulation existe seulement dans un bac à sable de test.");
+  if (!tester) return fail("La simulation existe seulement dans une démo.");
   // m2 : une seule simulation à la fois par bac à sable (double clic, deux onglets). Bail atomique de 60 s.
   const now = new Date();
   const lease = await db.sandbox.updateMany({

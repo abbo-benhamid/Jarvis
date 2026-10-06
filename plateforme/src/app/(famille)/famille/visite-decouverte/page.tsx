@@ -37,7 +37,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
             Nous avons effacé votre prénom et votre contact. Nous ne vous recontactons pas.
           </Alert>
         ) : envoye ? (
-          <Alert tone="succes" title="Merci ! Koudmen est en test : nous vous recontacterons.">
+          <Alert tone="succes" title="Merci ! Nous vous recontacterons à l'ouverture.">
             Aucune visite n&apos;est réservée. Aucun paiement n&apos;est demandé. L&apos;équipe vous écrit quand le service réel ouvre près de chez
             votre parent. Vous pouvez retirer votre accord à tout moment.
           </Alert>
@@ -47,7 +47,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
           </Alert>
         ) : (
           <>
-            <Alert tone="attention" title="Koudmen est en test.">
+            <Alert tone="attention" title="Koudmen ouvre bientôt.">
               Cette offre n&apos;est pas encore ouverte. Si vous êtes intéressé(e), laissez votre contact. Nous vous recontacterons. Rien
               n&apos;est payé, rien n&apos;est réservé.
             </Alert>
