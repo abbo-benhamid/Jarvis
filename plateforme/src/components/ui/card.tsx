@@ -10,7 +10,8 @@ const PADDING: Record<CardPadding, string> = { md: "p-5", dense: "p-4", none: "p
 
 /** Classes d'une carte coton : rayon 24 px, ombre unique, pas de bord en clair (filet blanc 4 % en sombre). */
 export function cardClasses(padding: CardPadding = "md", className?: string) {
-  return cn("rounded-card bg-surface text-fg shadow-card", PADDING[padding], className);
+  // kd-appear : apparition douce (fondu + 8 px, 320 ms), figée en mode réduit.
+  return cn("kd-appear rounded-card bg-surface text-fg shadow-card", PADDING[padding], className);
 }
 
 type CardProps = Omit<ComponentProps<"section">, "ref"> & {

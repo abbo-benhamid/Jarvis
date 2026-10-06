@@ -75,17 +75,51 @@ export function GardenIllustration({ shape = "wide", label, className }: { shape
   );
 }
 
-/** Lever de soleil sur la mer, case créole sur le morne (accueil public). */
+/** Ligne de vague douce : `w` est un multiple de 14 (une ondulation tous les 14 px). */
+function wavePath(x: number, y: number, w: number, amp = 1.8) {
+  return `M${x} ${y}q7 ${-amp} 14 0` + " t14 0".repeat(Math.max(0, Math.round(w / 14) - 1));
+}
+
+/** Lignes de vagues : position, largeur, durée et décalage du cycle (8 à 12 s, jamais en phase). */
+const WAVES = [
+  { x: 70, y: 126, w: 84, dur: 9, delay: 0 },
+  { x: 84, y: 136, w: 56, dur: 11, delay: -3 },
+  { x: 24, y: 150, w: 42, dur: 8, delay: -5 },
+  { x: 180, y: 146, w: 70, dur: 10, delay: -1.5 },
+  { x: 110, y: 160, w: 42, dur: 12, delay: -6 },
+  { x: 228, y: 176, w: 56, dur: 9.5, delay: -4 },
+  { x: 140, y: 192, w: 42, dur: 11.5, delay: -2 },
+];
+
+/**
+ * Lever de soleil sur la mer, case créole sur le morne (accueil public).
+ * Animé en CSS (globals.css, « Motion ») : le soleil monte puis son halo respire, les vagues glissent,
+ * le palmier et l'hibiscus se balancent. Avec « réduire les animations », l'image est figée et complète.
+ * Une scène parente avec data-play="false" met tout en pause.
+ */
 export function SunriseIllustration({ label, className }: { label?: string; className?: string }) {
   return (
     <div className={cn("photo-filter overflow-hidden", SKY, className)}>
       <svg viewBox="0 0 350 218" role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true} className="block h-auto w-full">
-        <circle cx={112} cy={104} r={40} style={{ fill: "var(--soleil)" }} opacity={0.38} />
-        <circle cx={112} cy={104} r={26} style={{ fill: "var(--soleil)" }} opacity={0.55} />
+        <g className="kd-sun">
+          <circle className="kd-halo" cx={112} cy={104} r={40} style={{ fill: "var(--soleil)" }} opacity={0.38} />
+          <circle cx={112} cy={104} r={26} style={{ fill: "var(--soleil)" }} opacity={0.55} />
+        </g>
         <rect y={112} width={350} height={106} style={{ fill: "var(--sea-2)" }} />
         <rect y={112} width={350} height={50} style={{ fill: "var(--sea-1)" }} opacity={0.7} />
-        <g style={{ stroke: "var(--surface)" }} strokeWidth={1.4} strokeLinecap="round" opacity={0.55} fill="none">
-          <path d="M70 126h84M84 136h56M24 150h40M180 146h70M110 160h40" />
+        {/* Reflet du soleil sur l'eau. */}
+        <g className="kd-glint" style={{ stroke: "var(--soleil)" }} strokeWidth={1.6} strokeLinecap="round" opacity={0.5} fill="none">
+          <path d="M98 119h28M104 123h16" />
+        </g>
+        <g className="kd-swell kd-wave-group" style={{ stroke: "var(--surface)" }} strokeWidth={1.4} strokeLinecap="round" opacity={0.55} fill="none">
+          {WAVES.map((w) => (
+            <path
+              key={`${w.x}-${w.y}`}
+              className="kd-wave"
+              d={wavePath(w.x, w.y, w.w)}
+              style={{ ["--kd-dur" as string]: `${w.dur}s`, ["--kd-delay" as string]: `${w.delay}s` }}
+            />
+          ))}
         </g>
         <path d="M196 113c26-30 58-44 92-44 26 0 46 10 62 24v20z" style={{ fill: "var(--hill)" }} />
         <g fill="none" style={{ stroke: "var(--stroke)" }} strokeWidth={1.3} strokeLinejoin="round" strokeLinecap="round" opacity={0.8}>
@@ -93,13 +127,17 @@ export function SunriseIllustration({ label, className }: { label?: string; clas
           <path d="M265 90v20h28V90" />
           <path d="M276 110v-10h6v10" />
           <path d="M268 96h5v5h-5zM285 96h5v5h-5z" />
-          <path d="M232 112c1-14 4-26 10-36" />
-          <path d="M242 76c-8-4-18-2-22 4M242 76c4-8 14-10 20-6M242 76c-2-8-10-12-16-10M242 76c8 0 14 6 14 12" />
+          <g className="kd-palm">
+            <path d="M232 112c1-14 4-26 10-36" />
+            <path d="M242 76c-8-4-18-2-22 4M242 76c4-8 14-10 20-6M242 76c-2-8-10-12-16-10M242 76c8 0 14 6 14 12" />
+          </g>
         </g>
-        <g transform="translate(36 166)">
-          <Hibiscus x={0} y={0} />
-          <circle r={3} style={{ fill: "var(--soleil)" }} />
-          <path d="M2 2c10 8 16 20 16 40" fill="none" style={{ stroke: "var(--leaf)" }} strokeWidth={2} strokeLinecap="round" />
+        <g className="kd-flower">
+          <g transform="translate(36 166)">
+            <Hibiscus x={0} y={0} />
+            <circle r={3} style={{ fill: "var(--soleil)" }} />
+            <path d="M2 2c10 8 16 20 16 40" fill="none" style={{ stroke: "var(--leaf)" }} strokeWidth={2} strokeLinecap="round" />
+          </g>
         </g>
       </svg>
     </div>

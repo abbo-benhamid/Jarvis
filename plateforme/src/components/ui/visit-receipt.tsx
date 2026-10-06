@@ -28,6 +28,8 @@ export function receiptVerdict(proofs: Pick<ReceiptProof, "obtained">[], require
  * Reçu de visite (§ 10) : filet madras 3 px en haut, code en mono, 3 heures tabulaires,
  * perforation pointillée avec encoches couleur `bg`, liste des preuves, verdict sur `feuille-soft`.
  * Il a la forme d'un ticket : on le comprend sans lire. Le texte dit tout (pas d'info par la couleur seule).
+ * Motion : à l'apparition, les preuves se cochent une à une puis le verdict monte (CSS, figé en mode réduit).
+ * Les attributs data-kd-* servent aussi au tutoriel de l'accueil (globals.css, « Motion »).
  */
 export function VisitReceipt({
   code,
@@ -57,15 +59,15 @@ export function VisitReceipt({
   const H = `h${headingLevel}` as "h2" | "h3" | "h4";
   const v = receiptVerdict(proofs, required);
   return (
-    <section aria-label={title} className={cn("relative overflow-hidden rounded-[22px] bg-surface text-fg shadow-card", className)}>
+    <section aria-label={title} className={cn("kd-receipt kd-appear relative overflow-hidden rounded-[22px] bg-surface text-fg shadow-card", className)}>
       <MadrasLine thick />
       <div className="flex items-center justify-between gap-3 px-5 pt-[18px] pb-3.5">
         <H className="m-0 font-sans text-[17px] leading-snug font-semibold tracking-normal">{title}</H>
         {code ? <code className="font-mono text-[12.5px] leading-none font-medium tracking-[.04em] text-muted">{code}</code> : null}
       </div>
       <dl className="num grid grid-cols-3 px-5 pb-4">
-        {times.map((t) => (
-          <div key={t.label} className="flex flex-col-reverse">
+        {times.map((t, i) => (
+          <div key={t.label} data-kd-time={i} className="flex flex-col-reverse">
             <dd className="m-0 text-xl leading-tight font-semibold">{t.value}</dd>
             <dt className="text-[13px] text-muted">{t.label}</dt>
           </div>
@@ -78,8 +80,10 @@ export function VisitReceipt({
       />
       <ul className="m-0 list-none px-5 pt-2 pb-1">
         {proofs.map((p, i) => (
-          <li key={i} className={cn("flex min-h-[52px] items-center gap-3 py-1.5 text-base", i > 0 && "border-t border-line")}>
+          <li key={i} data-kd-proof className={cn("flex min-h-[52px] items-center gap-3 py-1.5 text-base", i > 0 && "border-t border-line")}>
             <span
+              data-kd-check
+              style={{ ["--kd-i" as string]: i }}
               className={cn(
                 "grid size-7 shrink-0 place-items-center rounded-full [&_svg]:size-4",
                 p.obtained ? "bg-feuille-soft text-feuille" : "bg-surface-2 text-muted",
@@ -101,6 +105,7 @@ export function VisitReceipt({
         ))}
       </ul>
       <div
+        data-kd-verdict
         className={cn(
           "mx-3 mt-2 mb-3 flex items-center gap-3 rounded-md p-3.5 [&>svg]:size-6 [&>svg]:shrink-0",
           v.valid ? "bg-feuille-soft text-feuille" : "bg-soleil-soft text-soleil-ink",

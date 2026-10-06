@@ -2,11 +2,12 @@ import Link from "next/link";
 import { ArrowRight, MapPin, NotebookPen, ShieldCheck } from "lucide-react";
 import { LinkButton } from "@/components/ui/button";
 import { Eyebrow, Kreyol } from "@/components/ui/card";
-import { Avatar } from "@/components/ui/avatar";
 import { KayeCard } from "@/components/ui/kaye-card";
 import { VisitReceipt } from "@/components/ui/visit-receipt";
 import { ActionDock } from "@/components/ui/action-dock";
-import { GardenIllustration, SunriseIllustration } from "@/components/ui/illustrations";
+import { GardenIllustration } from "@/components/ui/illustrations";
+import { HeroScene } from "@/components/accueil/hero-scene";
+import { VisitTutorial } from "@/components/accueil/visit-tutorial";
 import { PLANS, OFFER_TEST_NOTICE } from "@/lib/plans";
 import { PROOF_FACTOR_LABELS } from "@/lib/labels";
 import { PlanCostExample } from "@/components/famille/plan-cost";
@@ -68,16 +69,7 @@ export default function HomePage() {
           </p>
         </div>
 
-        <figure className="relative m-0 overflow-hidden rounded-media shadow-card lg:rounded-hero">
-          <SunriseIllustration label="Illustration : lever de soleil sur la mer, une case créole sur le morne" />
-          <figcaption className="absolute inset-x-3.5 bottom-3.5 flex items-center gap-3 rounded-[18px] bg-[color-mix(in_srgb,var(--surface)_88%,transparent)] px-3.5 py-3 shadow-[0_8px_24px_-10px_rgb(0_0_0/.25)] backdrop-blur-[12px] lg:inset-x-5 lg:bottom-5">
-            <Avatar name="Léonie" role="aine" size={36} />
-            <span className="min-w-0 text-[14.5px] leading-[1.35]">
-              <b className="mb-0.5 block text-[13px] font-semibold text-muted">Kayé de Léonie · exemple fictif</b>
-              Elle a bien mangé. Elle a ri en parlant du marché.
-            </span>
-          </figcaption>
-        </figure>
+        <HeroScene label="Illustration : lever de soleil sur la mer, une case créole sur le morne" />
       </section>
 
       {/* 2. Trois promesses */}
@@ -106,45 +98,51 @@ export default function HomePage() {
         </ul>
       </section>
 
-      {/* 3. La preuve : un exemple de Kayé et de reçu (fictifs) */}
-      <section aria-labelledby="exemple-kaye" className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start lg:gap-14">
-        <div className="flex flex-col gap-3 lg:sticky lg:top-8">
-          <Eyebrow>Exemple fictif</Eyebrow>
-          <h2 id="exemple-kaye" className={H2}>
-            Ce que vous recevez après une visite
-          </h2>
-          <p className="max-w-prose text-muted">
-            Après chaque visite, vous lisez le <Term id="kaye">Kayé</Term> : un mot de l&apos;accompagnant et l&apos;humeur de votre parent. Le reçu
-            dit comment la visite est prouvée.
-          </p>
-          <p className="text-sm text-muted">Personnages inventés.</p>
-        </div>
-        <div className="flex flex-col gap-4">
-          <KayeCard
-            author="Josiane"
-            day="samedi, 16 h 10"
-            headingLevel={3}
-            thumbnail={<GardenIllustration shape="thumb" className="h-full w-full" />}
-            quote="« Léonie m'a raconté le carnaval de 1962. Elle a beaucoup ri. Elle demande des nouvelles de vos enfants. »"
-            translation="Humeur : très bien · Appétit : bon · Dominos sur la galerie, café, nouvelles du quartier."
-          />
-          <VisitReceipt
-            title="Reçu de la visite chez Léonie, 81 ans"
-            headingLevel={3}
-            code="EXEMPLE"
-            times={[
-              { label: "Arrivée", value: "14:02" },
-              { label: "Départ", value: "16:04" },
-              { label: "Durée", value: "2 h" },
-            ]}
-            proofs={[
-              { label: PROOF_FACTOR_LABELS.GPS, detail: "Position vérifiée", time: "14:02", obtained: true },
-              { label: PROOF_FACTOR_LABELS.CODE_DOMICILE, detail: "Code correct", time: "14:03", obtained: true },
-              { label: PROOF_FACTOR_LABELS.CONFIRMATION_AINE, detail: "Pas nécessaire cette fois", obtained: false },
-            ]}
-            verdictText="Deux preuves suffisent."
-          />
-        </div>
+      {/* 3. La preuve : tutoriel animé (arrivée, preuves, Kayé), joué une fois à l'arrivée à l'écran */}
+      <section aria-labelledby="exemple-kaye">
+        <VisitTutorial
+          intro={
+            <>
+              <Eyebrow>Exemple fictif</Eyebrow>
+              <h2 id="exemple-kaye" className={H2}>
+                Ce que vous recevez après une visite
+              </h2>
+              <p className="max-w-prose text-muted">
+                Après chaque visite, vous lisez le <Term id="kaye">Kayé</Term> : un mot de l&apos;accompagnant et l&apos;humeur de votre parent.
+                Le reçu dit comment la visite est prouvée.
+              </p>
+              <p className="text-sm text-muted">Personnages inventés.</p>
+            </>
+          }
+          receipt={
+            <VisitReceipt
+              title="Reçu de la visite chez Léonie, 81 ans"
+              headingLevel={3}
+              code="EXEMPLE"
+              times={[
+                { label: "Arrivée", value: "14:02" },
+                { label: "Départ", value: "16:04" },
+                { label: "Durée", value: "2 h" },
+              ]}
+              proofs={[
+                { label: PROOF_FACTOR_LABELS.GPS, detail: "Position vérifiée", time: "14:02", obtained: true },
+                { label: PROOF_FACTOR_LABELS.CODE_DOMICILE, detail: "Code correct", time: "14:03", obtained: true },
+                { label: PROOF_FACTOR_LABELS.CONFIRMATION_AINE, detail: "Pas nécessaire cette fois", obtained: false },
+              ]}
+              verdictText="Deux preuves suffisent."
+            />
+          }
+          kaye={
+            <KayeCard
+              author="Josiane"
+              day="samedi, 16 h 10"
+              headingLevel={3}
+              thumbnail={<GardenIllustration shape="thumb" className="h-full w-full" />}
+              quote="« Léonie m'a raconté le carnaval de 1962. Elle a beaucoup ri. Elle demande des nouvelles de vos enfants. »"
+              translation="Humeur : très bien · Appétit : bon · Dominos sur la galerie, café, nouvelles du quartier."
+            />
+          }
+        />
       </section>
 
       {/* 4. Le prix (A3) */}

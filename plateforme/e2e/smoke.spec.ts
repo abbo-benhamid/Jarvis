@@ -20,12 +20,49 @@ test("D13 + S1c : l'accueil vend la tranquillité, montre « Tester Koudmen » e
   await expect(cta).toHaveAccessibleName("Tester Koudmen");
   await expect(cta).toBeInViewport();
   await expect(main.getByText(/Prix en test/)).toBeVisible();
-  // Les seuls boutons du contenu sont les « ? » du glossaire (A11).
-  for (const b of await main.getByRole("button").all()) await expect(b).toHaveAccessibleName(/Qu'est-ce que/);
+  // Les seuls boutons du contenu sont les « ? » du glossaire (A11) et les commandes d'animation (pause, « Revoir »).
+  for (const b of await main.getByRole("button").all())
+    await expect(b).toHaveAccessibleName(/Qu'est-ce que|Mettre l'animation en pause|Revoir l'animation des étapes/);
   await expect(page.getByText(/Opérateur/)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Donner mon avis" })).toBeVisible();
   // T9 : bandeau de test présent.
   await expect(page.getByRole("note")).toContainText("Version de test");
+});
+
+test("V2-web motion : le héros s'anime (pause possible) et le tutoriel joue jusqu'au Kayé, puis « Revoir »", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  const hero = page.locator("figure.kd-scene");
+  await expect(hero).toHaveAttribute("data-play", "true");
+  const pause = page.getByRole("button", { name: "Mettre l'animation en pause" });
+  await pause.click();
+  await expect(pause).toHaveAttribute("aria-pressed", "true");
+  await expect(hero).toHaveAttribute("data-play", "false");
+  await pause.click();
+  await expect(hero).toHaveAttribute("data-play", "true");
+
+  const scene = page.getByTestId("tutoriel-scene");
+  await expect(scene).toHaveAttribute("data-stage", "0");
+  await scene.evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 80));
+  await expect(scene).toHaveAttribute("data-stage", "4", { timeout: 10_000 });
+  await expect(page.getByRole("listitem").filter({ hasText: "Vous recevez le Kayé" })).toHaveAttribute("aria-current", "step");
+  await expect(scene.getByText("2 preuves sur 3 · visite validée")).toBeVisible();
+  await page.getByRole("button", { name: /Revoir/ }).click();
+  await expect(scene).not.toHaveAttribute("data-stage", "4");
+  await expect(scene).toHaveAttribute("data-stage", "4", { timeout: 10_000 });
+});
+
+test("V2-web motion : « réduire les animations » donne une page figée et complète", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  await expect(page.getByTestId("hero-kaye")).toContainText("Elle a bien mangé. Elle a ri en parlant du marché.");
+  await expect(page.getByRole("button", { name: "Mettre l'animation en pause" })).toHaveCount(0);
+  const scene = page.getByTestId("tutoriel-scene");
+  await expect(scene).not.toHaveAttribute("data-stage");
+  await expect(scene.getByText("2 preuves sur 3 · visite validée")).toBeVisible();
+  await expect(scene.getByText(/carnaval de 1962/)).toBeVisible();
+  await expect(page.getByRole("button", { name: /Revoir/ })).toHaveCount(0);
 });
 
 test("D3 : toutes les pages sont en noindex", async ({ page, request }) => {
