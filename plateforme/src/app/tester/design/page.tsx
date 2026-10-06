@@ -98,7 +98,7 @@ export default function DesignPage() {
           Koudmen
         </span>
         <LinkButton href="/tester" variant="link">
-          Tester
+          Essayer la démo
         </LinkButton>
       </div>
       <Eyebrow className="mt-4">Système de design · v1</Eyebrow>
@@ -357,7 +357,7 @@ export default function DesignPage() {
           <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" strokeWidth={1.8} />
           Heures de visite payées à part à Josiane (CESU+), avec 50 % de crédit d&apos;impôt.
         </p>
-        <ActionDock position="static" className="-mx-5 mt-2" hint="Offre en test, non commercialisée.">
+        <ActionDock position="static" className="-mx-5 mt-2" hint="Tarifs de lancement · ouverture prochaine.">
           <Button size="lg" fullWidth icon={<Lock strokeWidth={1.6} />}>
             Payer <span className="num">49,67 €</span>
           </Button>
@@ -389,7 +389,7 @@ export default function DesignPage() {
           <ProofBadge status="conseille" />
           <ProofBadge status="a-faire" />
           <Badge tone="neutre">Neutre</Badge>
-          <Badge tone="mer">Mode test</Badge>
+          <Badge tone="mer">Démo</Badge>
           <Badge tone="hibiscus">Alerte</Badge>
         </div>
         <div className="mt-5 flex items-center gap-5">

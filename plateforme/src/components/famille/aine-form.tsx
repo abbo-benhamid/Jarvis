@@ -79,13 +79,13 @@ export function AineForm({ defaults }: { defaults?: AineFormDefaults }) {
             ))}
           </Select>
         </FormField>
-        <FormField label="Indication pour trouver la maison (facultatif)" htmlFor="addressHint" hint="Exemple : quartier, couleur du portail. Données fictives en test." errors={fe?.addressHint}>
+        <FormField label="Indication pour trouver la maison (facultatif)" htmlFor="addressHint" hint="Exemple : quartier, couleur du portail. Données d'exemple seulement." errors={fe?.addressHint}>
           <Input {...fieldA11y("addressHint", fe?.addressHint, true)} defaultValue={defaults?.addressHint ?? ""} autoComplete="off" maxLength={160} />
         </FormField>
         <FormField
           label="Téléphone de l'aîné (facultatif)"
           htmlFor="phone"
-          hint="Sert à l'appel de confirmation des visites. Numéro fictif en test."
+          hint="Sert à l'appel de confirmation des visites. Numéro d'exemple seulement."
           errors={fe?.phone}
         >
           <Input {...fieldA11y("phone", fe?.phone, true)} defaultValue={defaults?.phone ?? ""} type="tel" inputMode="tel" autoComplete="off" />

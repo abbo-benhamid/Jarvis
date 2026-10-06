@@ -198,7 +198,7 @@ export async function simulateGpsAction(_prev: ActionResult<CheckInData>, formDa
   try {
     const r = await checkInWithGps(me, { visitId: parsed.data.visitId, simulated: true });
     revalidatePath(`/accompagnant/visites/${parsed.data.visitId}`);
-    return { ok: true, data: r, message: "Position simulée enregistrée (mode test)." };
+    return { ok: true, data: r, message: "Position simulée enregistrée (démo)." };
   } catch (e) {
     return toFailure(e);
   }

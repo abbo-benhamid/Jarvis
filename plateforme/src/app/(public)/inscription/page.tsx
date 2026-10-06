@@ -25,9 +25,9 @@ export default async function InscriptionPage({ searchParams }: { searchParams: 
         <p>
           Vous voulez seulement découvrir Koudmen ?{" "}
           <Link className="font-semibold text-mer underline underline-offset-4" href="/tester">
-            Tester Koudmen
+            Essayer la démo
           </Link>{" "}
-          vous donne un bac à sable prêt à l&apos;emploi.
+          vous donne une démo prête à l&apos;emploi.
         </p>
       }
     >

@@ -11,7 +11,7 @@ export default function manifest(): MetadataRoute.Manifest {
     id: "/accompagnant",
     name: "Koudmen — le lakou numérique",
     short_name: "Koudmen",
-    description: "Vos visites pas à pas : arrivée prouvée, Kayé en 2 minutes. Prototype de test, données fictives.",
+    description: "Vos visites pas à pas : arrivée prouvée, Kayé en 2 minutes.",
     lang: "fr",
     dir: "ltr",
     start_url: "/accompagnant",

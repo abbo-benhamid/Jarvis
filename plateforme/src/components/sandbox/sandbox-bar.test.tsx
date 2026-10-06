@@ -57,32 +57,32 @@ describe("SandboxPanelFrame (UX V1 M2, X8)", () => {
     expect(isWorkScreen("/famille")).toBe(false);
   });
 
-  it("écran de travail : une pastille « Mode test · 6/9 » qui déplie le panneau ; libellé du panneau masqué", () => {
+  it("écran de travail : une pastille « Démo · 6/9 » qui déplie le panneau ; libellé du panneau masqué", () => {
     nav.pathname = "/accompagnant/visites/cmv1";
     render(
       <SandboxPanelFrame progress="6/9">
-        <section aria-label="Votre test">
-          <strong className="group-data-[compact=true]:hidden">Mode test</strong> 6/9
+        <section aria-label="Votre démo">
+          <strong className="group-data-[compact=true]:hidden">Démo</strong> 6/9
         </section>
       </SandboxPanelFrame>,
     );
-    const pill = screen.getByRole("button", { name: /^Mode test · 6\/9/ });
+    const pill = screen.getByRole("button", { name: /^Démo · 6\/9/ });
     expect(pill.getAttribute("aria-expanded")).toBe("false");
-    expect(screen.getByLabelText("Votre test").closest("[hidden]")).not.toBeNull();
+    expect(screen.getByLabelText("Votre démo").closest("[hidden]")).not.toBeNull();
     fireEvent.click(pill);
     expect(pill.getAttribute("aria-expanded")).toBe("true");
-    expect(screen.getByLabelText("Votre test").closest("[hidden]")).toBeNull();
-    expect(screen.getByLabelText("Votre test").closest("[data-compact='true']")).not.toBeNull();
+    expect(screen.getByLabelText("Votre démo").closest("[hidden]")).toBeNull();
+    expect(screen.getByLabelText("Votre démo").closest("[data-compact='true']")).not.toBeNull();
   });
 
   it("écran normal : le panneau complet, sans pastille", () => {
     nav.pathname = "/famille";
     render(
       <SandboxPanelFrame progress="1/10">
-        <section aria-label="Votre test">Panneau</section>
+        <section aria-label="Votre démo">Panneau</section>
       </SandboxPanelFrame>,
     );
-    expect(screen.queryByRole("button", { name: /Mode test/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Démo ·/ })).toBeNull();
     expect(screen.getByText("Panneau")).toBeTruthy();
   });
 });

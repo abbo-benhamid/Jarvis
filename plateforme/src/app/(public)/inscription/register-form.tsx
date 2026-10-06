@@ -22,7 +22,7 @@ export function RegisterForm({ defaultRole, next }: { defaultRole: RoleChoice; n
     <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
       {next ? <input type="hidden" name="next" value={next} /> : null}
       <FormMessage state={state} />
-      <FormField label="Code testeur" htmlFor="testerCode" hint="Koudmen est en test sur invitation. Saisissez le code reçu." errors={fe?.testerCode} required>
+      <FormField label="Code testeur" htmlFor="testerCode" hint="La démo est sur invitation. Saisissez le code reçu." errors={fe?.testerCode} required>
         <Input {...fieldA11y("testerCode", fe?.testerCode, true)} autoComplete="off" autoCapitalize="characters" required />
       </FormField>
       <Fieldset legend="Je crée un compte…" errors={fe?.role}>
@@ -81,7 +81,7 @@ export function RegisterForm({ defaultRole, next }: { defaultRole: RoleChoice; n
       <Checkbox
         id="acceptTest"
         name="acceptTest"
-        label="Je comprends que Koudmen est en test. J'utilise uniquement des données fictives (pas de vrais noms d'aînés, pas d'informations de santé)."
+        label="Je comprends que Koudmen n'est pas encore ouvert. J'utilise uniquement des données d'exemple (pas de vrais noms d'aînés, pas d'informations de santé)."
         required
       />
       {fe?.acceptTest ? (
@@ -96,7 +96,7 @@ export function RegisterForm({ defaultRole, next }: { defaultRole: RoleChoice; n
           <>
             J&apos;accepte les{" "}
             <Link href="/cgu-test" target="_blank" className="font-semibold text-mer underline">
-              conditions d&apos;utilisation du test
+              conditions d&apos;utilisation de la démo
             </Link>
             .
           </>

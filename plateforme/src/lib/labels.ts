@@ -85,7 +85,7 @@ export const EMPLOYER_TYPE_LABELS: Record<EmployerType, string> = {
 export const VALIDATION_LABELS: Record<CaregiverValidation, string> = {
   BROUILLON: "Profil incomplet",
   EN_ATTENTE: "En attente de vérification",
-  VALIDE: "Validé (vérifications déclarées, test)",
+  VALIDE: "Validé (vérifications déclarées)",
   REFUSE: "Refusé",
   SUSPENDU: "Suspendu",
 };

@@ -15,8 +15,8 @@ import { Term } from "@/components/ui/term";
 
 /**
  * Page d'accueil (D13, maquette conso écran a) : elle vend la TRANQUILLITÉ, dans cet ordre :
- * 1. la réponse + le bouton « Tester Koudmen » dans le premier écran (S1b-ux M1) + le prix (A3) ;
- * 2. trois promesses ; 3. un exemple de Kayé et de reçu (fictifs) ; 4. le prix détaillé ; 5. rappel du bouton.
+ * 1. la réponse + le bouton « Découvrir Koudmen » dans le premier écran (S1b-ux M1) + le prix (A3) ;
+ * 2. trois promesses ; 3. le tutoriel animé (arrivée, preuves, Kayé) ; 4. le prix détaillé ; 5. rappel du bouton.
  * Pas de bouton opérateur, pas de démo partagée (D1).
  * Mobile : le bouton est au pouce, dans un pied d'action collant. Bureau : il est dans le héros.
  */
@@ -55,13 +55,13 @@ export default function HomePage() {
             chaque visite, et vous dit ce qui s&apos;est vraiment passé.
           </p>
           <div className="mt-8 hidden items-center gap-5 lg:flex">
-            <LinkButton href="/tester" size="lg" data-testid="cta-premier-ecran" iconEnd={<ArrowRight strokeWidth={1.8} />}>
-              Tester Koudmen
+            <LinkButton href="/tester" size="lg" className="shrink-0 whitespace-nowrap" data-testid="cta-premier-ecran" iconEnd={<ArrowRight strokeWidth={1.8} />}>
+              Découvrir Koudmen
             </LinkButton>
-            <p className="max-w-[18rem] text-[15px] leading-snug text-muted">Gratuit, 10 minutes, sur invitation. Un monde fictif rien que pour vous.</p>
+            <p className="max-w-[18rem] text-[15px] leading-snug text-muted">Gratuit, 10 minutes, sur invitation. Une démo rien que pour vous.</p>
           </div>
           <p className="mt-6 max-w-xl text-[15px] leading-relaxed lg:mt-8">
-            <strong>Prix en test :</strong> formule Libre 0 €, Kozé 39 €, Sérénité dès 149 € par mois. Les heures de visite sont en plus, avec 50 %
+            <strong>Tarifs de lancement :</strong> formule Libre 0 €, Kozé 39 €, Sérénité dès 149 € par mois. Les heures de visite sont en plus, avec 50 %
             de crédit d&apos;impôt.{" "}
             <Link href="#prix" className="inline-flex min-h-11 items-center font-semibold text-mer underline underline-offset-4">
               Voir un exemple de prix
@@ -103,7 +103,7 @@ export default function HomePage() {
         <VisitTutorial
           intro={
             <>
-              <Eyebrow>Exemple fictif</Eyebrow>
+              <Eyebrow>Exemple</Eyebrow>
               <h2 id="exemple-kaye" className={H2}>
                 Ce que vous recevez après une visite
               </h2>
@@ -111,7 +111,6 @@ export default function HomePage() {
                 Après chaque visite, vous lisez le <Term id="kaye">Kayé</Term> : un mot de l&apos;accompagnant et l&apos;humeur de votre parent.
                 Le reçu dit comment la visite est prouvée.
               </p>
-              <p className="text-sm text-muted">Personnages inventés.</p>
             </>
           }
           receipt={
@@ -182,12 +181,12 @@ export default function HomePage() {
           <h2 id="tester" className={H2}>
             Voyez comment ça marche pour votre parent
           </h2>
-          <p>Test sur invitation. Un monde fictif rien que pour vous. 10 minutes. Gratuit.</p>
+          <p>Essayez la démo, sur invitation : 10 minutes, gratuit, rien que pour vous.</p>
           <LinkButton href="/tester" size="lg" className="mt-2 max-sm:w-full" iconEnd={<ArrowRight strokeWidth={1.8} />}>
-            Tester Koudmen
+            Essayer la démo
           </LinkButton>
           <p className="text-[15px] text-muted">
-            Vous voulez accompagner des aînés ? Le test vous propose aussi le rôle « Accompagnant ».{" "}
+            Vous voulez accompagner des aînés ? La démo vous propose aussi le rôle « Accompagnant ».{" "}
             <Link href="/connexion" className="inline-flex min-h-11 items-center font-semibold text-mer underline underline-offset-4">
               Déjà un compte : se connecter
             </Link>
@@ -196,15 +195,11 @@ export default function HomePage() {
         <GardenIllustration shape="wide" className="hidden rounded-media lg:block" />
       </section>
 
-      <p className="text-sm text-muted">
-        Koudmen est en test : aucune visite réelle, aucun paiement. Koudmen n&apos;est pas un service d&apos;aide à domicile autorisé.
-      </p>
-
       {/* Mobile : l'action principale au pouce (§ 2.5). Collante dans la page : elle ne cache jamais le pied de page. */}
       <div className="sticky bottom-0 z-30 -mx-5 -mt-16 lg:hidden">
         <ActionDock position="static" meta={{ start: "Gratuit · 10 minutes", end: "Sur invitation" }}>
           <LinkButton href="/tester" size="lg" fullWidth data-testid="cta-premier-ecran" iconEnd={<ArrowRight strokeWidth={1.8} />}>
-            Tester Koudmen
+            Découvrir Koudmen
           </LinkButton>
         </ActionDock>
       </div>

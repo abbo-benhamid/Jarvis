@@ -11,7 +11,7 @@ export function CopyResumeLink({ url }: { url: string }) {
       <input
         readOnly
         value={url}
-        aria-label="Lien de reprise de votre test"
+        aria-label="Lien de reprise de votre démo"
         onFocus={(e) => e.currentTarget.select()}
         className="min-h-11 min-w-0 flex-1 basis-48 rounded-field border-[1.5px] border-line-strong bg-surface px-3 font-mono text-xs"
       />
@@ -29,7 +29,7 @@ export function CopyResumeLink({ url }: { url: string }) {
       >
         {copied ? "Copié" : "Copier"}
       </button>
-      <span className="w-full text-muted">Gardez ce lien secret : il ouvre votre test sans mot de passe.</span>
+      <span className="w-full text-muted">Gardez ce lien secret : il ouvre votre démo sans mot de passe.</span>
     </div>
   );
 }

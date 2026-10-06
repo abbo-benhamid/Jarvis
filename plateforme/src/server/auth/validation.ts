@@ -27,7 +27,7 @@ export const registerSchema = z
     // D3 : accès sur code d'invitation testeur. La valeur est contrôlée côté serveur (TESTER_INVITE_CODES).
     testerCode: z.string().trim().min(1, "Saisissez votre code testeur.").max(40),
     // D4 / T4 : CGU de test et âge, deux cases distinctes.
-    acceptCgu: z.literal("on", { message: "Acceptez les conditions d'utilisation du test." }),
+    acceptCgu: z.literal("on", { message: "Acceptez les conditions d'utilisation de la démo." }),
     adult: z.literal("on", { message: "Le test est réservé aux personnes de 18 ans ou plus." }),
     next: z.string().optional(),
   })

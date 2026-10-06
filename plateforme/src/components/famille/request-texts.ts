@@ -12,7 +12,7 @@ export function requestAuthorText(
 ): string {
   if (r.createdById === viewer.id) return "Votre demande";
   const who = viewer.sandboxId
-    ? `${r.createdBy.firstName} (un proche, personnage du test)`
+    ? `${r.createdBy.firstName} (un proche, personnage de la démo)`
     : `${r.createdBy.firstName}, un proche du cercle de ${r.aine.firstName}`;
   return `Demande faite par ${who}`;
 }

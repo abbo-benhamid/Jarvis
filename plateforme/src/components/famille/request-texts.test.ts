@@ -4,11 +4,11 @@ import { employerSentence, requestAuthorText } from "./request-texts";
 const aine = { firstName: "Léonie" };
 
 describe("page Demandes (UX V1 M9)", () => {
-  it("« Demande de X » expliqué : la mienne, un proche du cercle, un personnage du test", () => {
+  it("« Demande de X » expliqué : la mienne, un proche du cercle, un personnage de la démo", () => {
     const r = { createdById: "u-fred", createdBy: { firstName: "Frédéric" }, aine };
     expect(requestAuthorText({ ...r, createdById: "u-nadia" }, { id: "u-nadia", sandboxId: null })).toBe("Votre demande");
     expect(requestAuthorText(r, { id: "u-nadia", sandboxId: null })).toBe("Demande faite par Frédéric, un proche du cercle de Léonie");
-    expect(requestAuthorText(r, { id: "u-nadia", sandboxId: "sb1" })).toBe("Demande faite par Frédéric (un proche, personnage du test)");
+    expect(requestAuthorText(r, { id: "u-nadia", sandboxId: "sb1" })).toBe("Demande faite par Frédéric (un proche, personnage de la démo)");
   });
 
   it("employeur : une seule phrase cohérente avec la ligne « Employeur »", () => {

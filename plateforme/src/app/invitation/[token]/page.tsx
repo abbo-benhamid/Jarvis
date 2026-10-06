@@ -32,8 +32,8 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
     <PublicShell>
       <div className="mx-auto flex max-w-xl flex-col gap-6 lg:pt-6">
         {otherWorld ? (
-          <Problem title="Ce lien appartient à un bac à sable de test.">
-            En test, un lien d&apos;invitation s&apos;ouvre seulement dans le bac à sable qui l&apos;a créé. Aucune vraie personne n&apos;est
+          <Problem title="Ce lien appartient à une autre démo.">
+            Dans la démo, un lien d&apos;invitation s&apos;ouvre seulement dans la démo qui l&apos;a créé. Aucune vraie personne n&apos;est
             invitée.
           </Problem>
         ) : !inv ? (

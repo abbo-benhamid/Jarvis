@@ -3,7 +3,7 @@ import Link from "next/link";
 import { editorInfo, testEndLabel } from "@/server/env";
 import { Field, LegalPage, LegalSection } from "@/components/legal/legal-page";
 
-export const metadata: Metadata = { title: "Conditions d'utilisation du test" };
+export const metadata: Metadata = { title: "Conditions d'utilisation de la démo" };
 export const dynamic = "force-dynamic";
 
 /** D4 (T4) : CGU de test, une page. Acceptées à l'entrée du bac à sable et à l'inscription. */
@@ -16,12 +16,12 @@ export default function CguTestPage() {
       body: "Aucune visite réelle n'a lieu. Aucun paiement réel n'est fait. Aucun message réel n'est envoyé. Aucun contrat ne se forme entre les testeurs, ni avec un accompagnant.",
     },
     {
-      title: "3. Données fictives obligatoires",
+      title: "3. Données d'exemple obligatoires",
       body: "N'écrivez pas le vrai nom d'un aîné. N'écrivez aucune information de santé. N'écrivez rien sur une autre personne réelle, ni sur une vraie situation sociale ou judiciaire.",
     },
     {
-      title: "4. Votre bac à sable",
-      body: "Chaque testeur reçoit un monde fictif, pour lui seul. Les autres personnes du monde sont des robots. Votre bac à sable est effacé 30 jours après sa création. Gardez votre lien de reprise secret.",
+      title: "4. Votre démo",
+      body: "Chaque testeur reçoit une démo avec des données d'exemple, pour lui seul. Les autres personnes de la démo sont des robots. Votre démo est effacée 30 jours après sa création. Gardez votre lien de reprise secret.",
     },
     {
       title: "5. Démonstration partagée",
@@ -40,17 +40,17 @@ export default function CguTestPage() {
       title: "7. Vos avis",
       body: "Koudmen utilise vos avis et vos réponses pour améliorer le produit. Koudmen ne les publie jamais avec votre nom.",
     },
-    { title: "8. Âge", body: "Le test est réservé aux personnes de 18 ans ou plus." },
+    { title: "8. Âge", body: "La démo est réservée aux personnes de 18 ans ou plus." },
     {
       title: "9. Disponibilité",
-      body: "Le test est fourni sans garantie. Koudmen peut modifier ou fermer le test à tout moment.",
+      body: "La démo est fournie sans garantie. Koudmen peut modifier ou fermer la démo à tout moment.",
     },
     {
-      title: "10. Fin du test",
+      title: "10. Fin de la démo",
       body: (
         <>
-          Date de fin prévue : <Field value={testEndLabel()} />. Votre bac à sable est effacé 30 jours après sa création. Les avis et la mesure
-          d&apos;usage sont effacés 6 mois après la fin du test.
+          Date de fin prévue : <Field value={testEndLabel()} />. Votre démo est effacée 30 jours après sa création. Les avis et la mesure
+          d&apos;usage sont effacés 6 mois après la fin de la démo.
         </>
       ),
     },
@@ -64,9 +64,9 @@ export default function CguTestPage() {
     },
   ];
   return (
-    <LegalPage title="Conditions d'utilisation du test" updated="4 octobre 2026">
+    <LegalPage title="Conditions d'utilisation de la démo" updated="4 octobre 2026">
       <p className="text-lg">
-        En entrant dans le test, vous acceptez ces conditions. Elles sont courtes. Lisez-les en entier.
+        En entrant dans la démo, vous acceptez ces conditions. Elles sont courtes. Lisez-les en entier.
       </p>
       {rules.map((r) => (
         <LegalSection key={r.title} title={r.title}>

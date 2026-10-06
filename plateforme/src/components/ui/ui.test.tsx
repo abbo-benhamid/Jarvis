@@ -146,7 +146,7 @@ describe("BottomNav", () => {
 });
 
 describe("PlanRadio", () => {
-  it("utilise des radios natives et affiche la mention d'offre en test", async () => {
+  it("utilise des radios natives et affiche la mention des tarifs de lancement", async () => {
     const onValueChange = vi.fn();
     render(
       <PlanRadio

@@ -14,7 +14,7 @@ export default function ConfidentialitePage() {
       <LegalSection title="En bref">
         <LegalList
           items={[
-            "Koudmen est en test. Les aînés, les familles et les accompagnants du test sont fictifs.",
+            "Koudmen n'est pas encore ouvert. Les aînés, les familles et les accompagnants de la démo sont des données d'exemple.",
             "Nous gardons peu de données réelles : votre code testeur, votre usage du site, vos avis.",
             "Votre contact réel est gardé seulement si vous cochez la case de l'offre « visite découverte ».",
             "Nous ne vendons aucune donnée. Nous n'utilisons aucun outil de publicité ni de mesure tiers.",
@@ -40,8 +40,8 @@ export default function ConfidentialitePage() {
             </thead>
             <tbody>
               <tr className="border-b border-line align-top">
-                <td className="py-2 pr-3">Bac à sable : code testeur, prénom choisi, actions dans le monde fictif</td>
-                <td className="py-2 pr-3">Faire fonctionner votre test</td>
+                <td className="py-2 pr-3">Démo : code testeur, prénom choisi, actions dans la démo</td>
+                <td className="py-2 pr-3">Faire fonctionner votre démo</td>
                 <td className="py-2">30 jours, puis effacement automatique</td>
               </tr>
               <tr className="border-b border-line align-top">
@@ -51,14 +51,14 @@ export default function ConfidentialitePage() {
                 </td>
                 <td className="py-2 pr-3">Améliorer le produit</td>
                 <td className="py-2">
-                  6 mois après la fin du test (<Field value={end} />)
+                  6 mois après la fin de la démo (<Field value={end} />)
                 </td>
               </tr>
               <tr className="border-b border-line align-top">
                 <td className="py-2 pr-3">Avis « Donner mon avis » : note, message, page, code testeur, type de navigateur (user-agent)</td>
                 <td className="py-2 pr-3">Améliorer le produit</td>
                 <td className="py-2">
-                  6 mois après la fin du test (<Field value={end} />)
+                  6 mois après la fin de la démo (<Field value={end} />)
                 </td>
               </tr>
               <tr className="border-b border-line align-top">
@@ -71,16 +71,16 @@ export default function ConfidentialitePage() {
               </tr>
               <tr className="border-b border-line align-top">
                 <td className="py-2 pr-3">Limite d&apos;essais : empreinte chiffrée (non réversible) de votre adresse IP ou de votre compte</td>
-                <td className="py-2 pr-3">Protéger le test contre les abus (essais de codes ou de mots de passe en masse)</td>
+                <td className="py-2 pr-3">Protéger la démo contre les abus (essais de codes ou de mots de passe en masse)</td>
                 <td className="py-2">Au plus 24 heures</td>
               </tr>
               <tr className="align-top">
                 <td className="py-2 pr-3">
-                  Compte créé par inscription (démonstrations seulement ; fermée pendant le test) : nom, email, mot de passe haché, connexions
+                  Compte créé par inscription (démonstrations seulement ; fermée pendant la phase de démo) : nom, email, mot de passe haché, connexions
                 </td>
                 <td className="py-2 pr-3">Accès à votre espace</td>
                 <td className="py-2">
-                  Fin du test (<Field value={end} />)
+                  Fin de la démo (<Field value={end} />)
                 </td>
               </tr>
             </tbody>
@@ -96,9 +96,9 @@ export default function ConfidentialitePage() {
       <LegalSection title="Qui reçoit les données">
         <LegalList
           items={[
-            "L'équipe Koudmen (opérateurs). Les autres testeurs ne voient jamais votre bac à sable.",
+            "L'équipe Koudmen (opérateurs). Les autres testeurs ne voient jamais votre démo.",
             "Nos sous-traitants techniques : Vercel Inc. (hébergement de l'application, région de Francfort, UE) et Neon Inc. (base de données PostgreSQL, région de Francfort, UE). Adresses : page Mentions légales.",
-            "Pour les notifications de l'application mobile (envois réels seulement, pas pendant le test) : Expo (650 Industries Inc., États-Unis), Apple et Google. Voir « Application mobile Koudmen ».",
+            "Pour les notifications de l'application mobile (envois réels seulement, pas pendant la démo) : Expo (650 Industries Inc., États-Unis), Apple et Google. Voir « Application mobile Koudmen ».",
             "L'application et la base tournent dans l'Union européenne. Vercel et Neon restent des sociétés américaines : le transfert possible repose sur le cadre UE–États-Unis (DPF) ou sur des clauses types. [À VÉRIFIER AVEC UN AVOCAT]",
           ]}
         />
@@ -108,7 +108,7 @@ export default function ConfidentialitePage() {
         <LegalList
           items={[
             "« koudmen_session » : garde votre connexion (7 jours ; 12 heures pour l'équipe Koudmen). Effacé à la déconnexion. Strictement nécessaire.",
-            "« koudmen_bac_a_sable » : permet de reprendre votre test sur cet appareil (30 jours). Effacé à la déconnexion. Strictement nécessaire.",
+            "« koudmen_bac_a_sable » : permet de reprendre votre démo sur cet appareil (30 jours). Effacé à la déconnexion. Strictement nécessaire.",
             "Aucun cookie de publicité ni de mesure d'audience. Aucun bandeau n'est donc nécessaire.",
           ]}
         />
@@ -117,7 +117,7 @@ export default function ConfidentialitePage() {
       <LegalSection title="Position (GPS)">
         <p>
           Dans le rôle « Accompagnant », le check-in peut lire UNE position, avec votre accord, au début de la visite. Il n&apos;y a jamais de
-          suivi continu. En test, utilisez plutôt le bouton « Simuler ma position ».
+          suivi continu. Dans la démo, utilisez plutôt le bouton « Simuler ma position ».
         </p>
       </LegalSection>
 
@@ -173,7 +173,7 @@ export default function ConfidentialitePage() {
         <LegalList
           items={[
             "Notifications : le titre est toujours générique (« Koudmen · Nouvelles de votre proche », « Koudmen · Nouvelle proposition »). Jamais le prénom de l'aîné, jamais l'humeur, jamais un point à surveiller. Le détail se lit dans l'app, après connexion.",
-            "Les notifications passent par Expo (650 Industries, États-Unis), puis par Apple (APNs) ou Google (Firebase Cloud Messaging). Pendant le test, aucune notification réelle n'est envoyée : elles sont simulées. Le passage aux envois réels attend l'accord de notre délégué à la protection des données (contrat avec Expo, transfert hors UE encadré). [À VÉRIFIER AVEC UN AVOCAT]",
+            "Les notifications passent par Expo (650 Industries, États-Unis), puis par Apple (APNs) ou Google (Firebase Cloud Messaging). Pendant la démo, aucune notification réelle n'est envoyée : elles sont simulées. Le passage aux envois réels attend l'accord de notre délégué à la protection des données (contrat avec Expo, transfert hors UE encadré). [À VÉRIFIER AVEC UN AVOCAT]",
             "Caméra : seulement pour lire le QR code du domicile. Aucune photo n'est prise ni gardée.",
             "Position : une seule lecture, au check-in, avec votre accord. Jamais en arrière-plan, jamais au départ.",
             "Vous pouvez couper les notifications dans les réglages du téléphone. La déconnexion efface les données de l'app sur le téléphone.",

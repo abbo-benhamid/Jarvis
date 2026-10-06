@@ -175,7 +175,7 @@ export function RequestForm({ aines, defaultAineId, today }: { aines: RequestAin
           ))}
         </Fieldset>
         <FormField
-          label="Nom de l'employeur (fictif)"
+          label="Nom de l'employeur (exemple)"
           htmlFor="employerName"
           hint={employerType === "AINE" ? "Exemple : le nom de l'aîné." : "Exemple : votre nom, si vous êtes le représentant."}
           errors={fe?.employerName}

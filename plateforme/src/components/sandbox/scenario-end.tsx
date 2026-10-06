@@ -67,7 +67,7 @@ export function ScenarioEndPrompt({ sandboxId, scenarios }: { sandboxId: string;
         }
       : {
           id: key("fin"),
-          title: "Test terminé : merci !",
+          title: "Démo terminée : merci !",
           question: "En une phrase, que fait Koudmen pour vous ?",
           pagePath: "/fin-de-scenario/fin",
         };

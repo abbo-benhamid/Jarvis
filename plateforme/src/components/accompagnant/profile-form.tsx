@@ -201,7 +201,7 @@ export function ProfileForm({
           </FormField>
         ) : null}
         {status === "AUTO_ENTREPRENEUR_SAP" ? (
-          <FormField label="Votre SIRET" htmlFor="siret" hint="14 chiffres. Données fictives seulement." errors={fe?.siret} required>
+          <FormField label="Votre SIRET" htmlFor="siret" hint="14 chiffres. Données d'exemple seulement." errors={fe?.siret} required>
             <Input {...fieldA11y("siret", fe?.siret, true)} {...text("siret")} inputMode="numeric" maxLength={20} />
           </FormField>
         ) : null}
