@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Linking, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { router } from 'expo-router';
-import { api, messageErreur, MOT_DE_PASSE_SIMULE } from '@/api';
+import { api, messageErreur, MOT_DE_PASSE_SIMULE, WEB_URL } from '@/api';
 import { useSession } from '@/session/SessionProvider';
 import { fonts, useTheme } from '@/theme';
 import { Badge, Button, CaseIllustration, Em, Field, Icon, Kreyol, Logo, MadrasLine, Screen, Text } from '@/ui';
@@ -127,6 +127,25 @@ export default function Connexion() {
           loading={envoi}
           accessibilityHint={pret ? undefined : 'Entrez d’abord votre e-mail et votre mot de passe.'}
         />
+        <View style={{ alignItems: 'center' }}>
+          <Button testID="lien-mot-de-passe-oublie" variant="link" label="Mot de passe oublié ?" onPress={() => router.push('/mot-de-passe-oublie')} />
+        </View>
+      </View>
+
+      {/* L1 (L5) : l'app est pour les accompagnants. Une famille va sur le site web (installable). */}
+      <View style={[styles.creer, { backgroundColor: c.surface, borderColor: c.line }]} testID="bloc-creer-compte">
+        <Text variant="bodyStrong">Pas encore de compte ?</Text>
+        <Text variant="body" tone="muted" style={{ fontSize: 16 }}>
+          Devenez accompagnant Koudmen. L’inscription est gratuite.
+        </Text>
+        <Button testID="bouton-creer-compte-accompagnant" variant="quiet" icon="user" label="Créer un compte accompagnant" onPress={() => router.push('/inscription')} />
+        <Button
+          testID="lien-famille"
+          variant="link"
+          label="Vous êtes une famille ? Allez sur le site Koudmen"
+          accessibilityHint="Ouvre le site web dans le navigateur"
+          onPress={() => void Linking.openURL(WEB_URL).catch(() => undefined)}
+        />
       </View>
 
       <View style={{ alignItems: 'center', marginTop: 16 }}>
@@ -151,4 +170,5 @@ const styles = StyleSheet.create({
   illus: { marginTop: 20, borderRadius: 28, alignItems: 'center', overflow: 'hidden' },
   avis: { flexDirection: 'row', gap: 10, marginTop: 20, padding: 14, borderRadius: 16, alignItems: 'flex-start' },
   note: { flexDirection: 'row', gap: 12, marginTop: 28, padding: 16, borderRadius: 20, borderWidth: 1 },
+  creer: { gap: 10, marginTop: 28, padding: 18, borderRadius: 24, borderWidth: 1 },
 });

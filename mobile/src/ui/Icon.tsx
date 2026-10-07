@@ -113,6 +113,15 @@ const shapes = {
       <Path d="m21 2-9.6 9.6M15.5 7.5l3 3L22 7l-3-3" />
     </>
   ),
+  // L1 : e-mail, carte, arrêt du trajet.
+  mail: (
+    <>
+      <Rect x={2} y={4} width={20} height={16} rx={2} />
+      <Path d="m22 7-10 6L2 7" />
+    </>
+  ),
+  map: <Path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2ZM9 4v14M15 6v14" />,
+  stop: <Rect x={6} y={6} width={12} height={12} rx={2} />,
 } as const;
 
 export type IconName = keyof typeof shapes;

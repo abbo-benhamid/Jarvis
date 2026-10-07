@@ -17,6 +17,7 @@ import { Figtree_600SemiBold } from '@expo-google-fonts/figtree/600SemiBold';
 import { Figtree_700Bold } from '@expo-google-fonts/figtree/700Bold';
 import { ThemeProvider, useTheme } from '@/theme';
 import { SessionProvider, useSession } from '@/session/SessionProvider';
+import { etatCompte } from '@/session/compte';
 import { usePush } from '@/push';
 import { BandeauHorsLigne } from '@/offline/BandeauHorsLigne';
 
@@ -54,6 +55,7 @@ export default function RootLayout() {
 function Navigation() {
   const { c, scheme } = useTheme();
   const { etat, session } = useSession();
+  const compte = session ? etatCompte(session) : null;
   // Lot N1 : jeton renvoyé à chaque ouverture, écran visé ouvert au toucher d'une notification.
   usePush(!!session);
 
@@ -79,8 +81,19 @@ function Navigation() {
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg }, animation: 'fade' }}>
           <Stack.Protected guard={!session}>
             <Stack.Screen name="connexion" />
+            {/* L1 : créer un compte, mot de passe oublié, vérification de l'e-mail. */}
+            <Stack.Screen name="inscription" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="mot-de-passe-oublie" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="verifier-email" />
           </Stack.Protected>
-          <Stack.Protected guard={!!session}>
+          {/* L1 : compte connecté, mais pas encore actif (profil en validation, service en préinscription). */}
+          <Stack.Protected guard={!!session && compte === 'validation'}>
+            <Stack.Screen name="compte-en-validation" />
+          </Stack.Protected>
+          <Stack.Protected guard={!!session && compte === 'preinscription'}>
+            <Stack.Screen name="bientot" />
+          </Stack.Protected>
+          <Stack.Protected guard={!!session && compte === 'actif'}>
             <Stack.Screen name="(onglets)" />
             <Stack.Screen name="visite/[id]" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="kaye/[id]" options={{ animation: 'slide_from_bottom' }} />
