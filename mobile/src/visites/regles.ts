@@ -22,6 +22,11 @@ export function estDuJour(v: Visite): boolean {
   return memeJour(v.debut, new Date());
 }
 
+/** L1 : « Je pars chez … » possible : visite du jour, arrivée pas encore faite, visite pas finie. */
+export function trajetPossible(v: Visite, maintenant = Date.now()): boolean {
+  return estDuJour(v) && !v.preuve.checkInA && Date.parse(v.fin) > maintenant;
+}
+
 export function aLaPreuve(v: Visite, f: FacteurPreuve): boolean {
   return v.preuve.facteursValides.includes(f);
 }

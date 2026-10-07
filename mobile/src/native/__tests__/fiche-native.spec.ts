@@ -60,7 +60,7 @@ test('QR : explication, permission, lecture, le champ est rempli, puis arrivée'
   expect((await journal(page)).lecturesPosition).toBe(0);
 });
 
-test('QR étranger ou futur jeton signé : message clair, saisie manuelle possible', async ({ page }) => {
+test('QR étranger ou jeton signé : message clair, saisie manuelle possible', async ({ page }) => {
   await ouvrirFiche(page, { camera: 'accordee', qr: 'https://exemple.com/promo' });
   await page.getByTestId('bouton-scanner').click();
   await page.getByTestId('lire-qr-simule').click();
@@ -75,7 +75,9 @@ test('QR étranger ou futur jeton signé : message clair, saisie manuelle possib
   await page.getByTestId('bouton-scanner').click();
   await page.getByTestId('autoriser-camera').click();
   await page.getByTestId('lire-qr-simule').click();
-  await expect(page.getByTestId('avis-qr')).toContainText('pas encore accepté');
+  // L1 (L9) : le jeton signé est accepté ; le code devient un secours facultatif.
+  await expect(page.getByTestId('avis-qr')).toContainText('Carte domicile lue');
+  await expect(page.getByTestId('qr-signe-lu')).toBeVisible();
 
   await page.getByTestId('champ-code-domicile').fill('kdm-482');
   await expect(page.getByTestId('champ-code-domicile')).toHaveValue('KDM482');

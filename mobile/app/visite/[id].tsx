@@ -9,11 +9,13 @@ import {
   messageErreur,
   type PositionPonctuelle,
   type ReponseVisite,
-  type ResultatEvenement,
+  type ControleCheckIn,
+  type ResultatEvenementL1,
 } from '@/api';
 import { heureTexte, libelleJour, NBSP, plageHoraire } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
-import { lireQrDomicile, MESSAGES_QR, natif, normaliserCode, type NumeroUrgence } from '@/native';
+import { lireControle, PREFIXE_QR_SIGNE } from '@/contrats-l1';
+import { lireQrDomicile, natif, normaliserCode, type NumeroUrgence } from '@/native';
 import { retourAuxVisites } from '@/session/navigation';
 import { fonts, radius, useTheme } from '@/theme';
 import {
@@ -34,7 +36,7 @@ import {
 } from '@/ui';
 import { CarteSurLaRoute } from '@/trajet/CarteSurLaRoute';
 import { useTrajet } from '@/trajet/TrajetProvider';
-import { aLaPreuve, estDuJour, estProuvee, libellePreuve, nbPreuves, ORDRE_PREUVES } from '@/visites/regles';
+import { aLaPreuve, estDuJour, trajetPossible, estProuvee, libellePreuve, nbPreuves, ORDRE_PREUVES } from '@/visites/regles';
 import { AineCarte } from '@/visites/VisiteResume';
 
 const FREQUENCES = {
@@ -115,7 +117,11 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
   const [erreur, setErreur] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [accordPosition, setAccordPosition] = useState(false);
-  const [retour, setRetour] = useState<ResultatEvenement | null>(null);
+  const [retour, setRetour] = useState<ResultatEvenementL1 | null>(null);
+  /** L1 : QR signé lu (`koudmen:domicile:s1:…`), en mémoire jusqu'à l'envoi. */
+  const [qrSigne, setQrSigne] = useState<string | null>(null);
+  /** L1 (L10) : résultat du contrôle du check-in (VALIDE, A_VERIFIER, REFUSE) et sa raison. */
+  const [controle, setControle] = useState<ControleCheckIn | null>(null);
   const [scanOuvert, setScanOuvert] = useState(false);
   const [avisQr, setAvisQr] = useState<{ ok: boolean; texte: string } | null>(null);
   // V1c (UX M8) : « Valider mon arrivée » reste actif ; au toucher sans preuve, on dit ce qui manque.
@@ -130,23 +136,35 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
   const prouveeAuMontage = useRef(prouvee);
   const gpsPossible = natif.position.disponible();
   // L1 : « Je pars chez … » tant que l'arrivée n'est pas faite, le jour de la visite.
-  const surLaRoute = duJour && !v.preuve.checkInA && new Date(v.fin).getTime() > Date.now();
+  const surLaRoute = trajetPossible(v);
   const trajet = useTrajet();
   const scanPossible = natif.scanner.disponible();
   const Scanner = natif.scanner.Vue;
 
-  // Le QR remplit le champ du code. L'accompagnant valide ensuite (une seule action principale).
+  // Le QR remplit le champ du code (ancien format) ou garde le jeton signé (L9, carte domicile).
+  // L'accompagnant valide ensuite (une seule action principale).
   const lireQr = (texte: string) => {
     setScanOuvert(false);
+    setControle(null);
     const r = lireQrDomicile(texte);
     if (r.ok && r.format === 'lisible') {
+      setQrSigne(null);
       setCode(r.code);
       setAvisQr({ ok: true, texte: `QR lu : code ${r.code}. Validez votre arrivée.` });
+    } else if (r.ok) {
+      // L9 : `koudmen:domicile:s1:<jeton>`. Le jeton reste en mémoire jusqu'à l'envoi, puis il est oublié.
+      setQrSigne(`${PREFIXE_QR_SIGNE}${r.jeton}`);
+      setAvisQr({
+        ok: true,
+        texte: accordPosition
+          ? 'Carte domicile lue. Validez votre arrivée.'
+          : 'Carte domicile lue. Validez votre arrivée. Avec votre position, la preuve est plus forte.',
+      });
     } else {
-      setAvisQr({ ok: false, texte: r.ok ? MESSAGES_QR.SIGNE_NON_PRIS_EN_CHARGE : r.message });
+      setAvisQr({ ok: false, texte: r.message });
     }
   };
-  const pretArrivee = code.trim().length >= 4 || accordPosition;
+  const pretArrivee = !!qrSigne || code.trim().length >= 4 || accordPosition;
 
   const arriver = async () => {
     if (envoi) return;
@@ -156,9 +174,11 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
       return;
     }
     setErreur(null);
+    setControle(null);
     setEnvoi('arrivee');
     retourHaptique('leger');
     try {
+      // La position est lue ICI, envoyée, puis oubliée : elle n'est jamais gardée dans l'état de l'écran.
       let position: PositionPonctuelle | undefined;
       let avisPosition: string | null = null;
       if (accordPosition) {
@@ -166,20 +186,27 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
           position = await natif.position.lireUneFois();
         } catch (e) {
           avisPosition = messageErreur(e);
-          if (!code.trim()) throw e;
+          if (!code.trim() && !qrSigne) throw e;
         }
       }
-      const r = await api.checkIn(v.id, { codeDomicile: code.trim() || undefined, position });
+      const r = await api.checkIn(v.id, { qr: qrSigne ?? undefined, codeDomicile: code.trim() || undefined, position });
+      // Seuls les messages restent à l'écran (statut, raison) : pas de coordonnées.
       setRetour(avisPosition ? { ...r, preuves: { ...r.preuves, position: { valide: false, message: avisPosition } } } : r);
+      setControle(lireControle(r));
       retourHaptique('succes');
       // L6 : le check-in arrête le partage du trajet (le serveur l'arrête aussi).
       if (trajet.etat.statut !== 'inactif' && trajet.etat.visiteId === v.id) trajet.arreter('check_in');
       setCode('');
+      setQrSigne(null);
       setAccordPosition(false);
       setAvisQr(null);
       recharger();
     } catch (e) {
-      setErreur(messageErreur(e));
+      // L10 : jeton faux ou révoqué → refus, avec la raison. Le code à 6 caractères reste possible.
+      if (qrSigne && e instanceof ApiError && (e.code === 'INVALIDE' || e.code === 'INTERDIT')) {
+        setQrSigne(null);
+        setControle({ statut: 'REFUSE', raison: e.message });
+      } else setErreur(messageErreur(e));
     } finally {
       setEnvoi(null);
     }
@@ -347,7 +374,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
           <Card style={{ gap: 16 }} testID="carte-arrivee">
             {/* Arbitrage X3 : UN seul code par domicile, écrit en clair ET en QR sur la même feuille. */}
             <Text variant="small" tone="muted" testID="explication-code">
-              Chez {v.aine.prenom}, la feuille du domicile montre un code, en clair et en QR. Scannez le QR ou saisissez le code : c’est le même.
+              Chez {v.aine.prenom}, la carte du domicile montre un QR et un code à 6 caractères. Scannez le QR. Sinon, saisissez le code.
             </Text>
             {scanOuvert ? (
               <Scanner onLecture={lireQr} onAnnuler={() => setScanOuvert(false)} />
@@ -391,10 +418,28 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
                 </Text>
               </View>
             ) : null}
+            {qrSigne ? (
+              <View style={[styles.qrLu, { borderColor: c.feuille, backgroundColor: c.surface }]} testID="qr-signe-lu">
+                <Icon name="shield" size={20} color={c.feuille} />
+                <Text variant="bodyStrong" style={{ flex: 1, fontSize: 16, color: c.feuille }}>
+                  Carte domicile lue
+                </Text>
+                <Button
+                  testID="effacer-qr"
+                  variant="link"
+                  label="Effacer"
+                  accessibilityLabel="Effacer la carte domicile lue"
+                  onPress={() => {
+                    setQrSigne(null);
+                    setAvisQr(null);
+                  }}
+                />
+              </View>
+            ) : null}
             <Field
               testID="champ-code-domicile"
               inputRef={champCode}
-              label="Code du domicile"
+              label={qrSigne ? 'Code de secours (facultatif)' : 'Code du domicile'}
               placeholder="Ex. : AB12CD"
               autoCapitalize="characters"
               autoCorrect={false}
@@ -431,6 +476,8 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
           </Card>
         </>
       ) : null}
+
+      {controle ? <ResultatControle controle={controle} /> : null}
 
       {retour?.preuves ? (
         <Apparition style={{ marginTop: 12, gap: 8 }}>
@@ -478,6 +525,56 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
         </Text>
       ) : null}
     </Screen>
+  );
+}
+
+/** Libellés du contrôle du check-in (L10). Le mot reste, la couleur aide seulement. */
+const CONTROLE: Record<ControleCheckIn['statut'], { titre: string; icone: 'check' | 'info' | 'minus' }> = {
+  VALIDE: { titre: 'Arrivée validée', icone: 'check' },
+  A_VERIFIER: { titre: 'Arrivée à vérifier', icone: 'info' },
+  REFUSE: { titre: 'Carte domicile refusée', icone: 'minus' },
+};
+
+/** Résultat du check-in : VALIDE, A_VERIFIER ou REFUSE, avec la raison du serveur en français simple. */
+function ResultatControle({ controle }: { controle: ControleCheckIn }) {
+  const { c } = useTheme();
+  const ton =
+    controle.statut === 'VALIDE'
+      ? { fond: c.feuilleSoft, encre: c.feuille }
+      : controle.statut === 'A_VERIFIER'
+        ? { fond: c.soleilSoft, encre: c.soleilInk }
+        : { fond: c.hibiscusSoft, encre: c.hibiscus };
+  const { titre, icone } = CONTROLE[controle.statut];
+  return (
+    <Apparition style={{ marginTop: 12 }}>
+      <View
+        style={[styles.bandeau, { marginTop: 0, backgroundColor: ton.fond }]}
+        testID={`controle-${controle.statut}`}
+        accessibilityLiveRegion="polite"
+        role={controle.statut === 'REFUSE' ? 'alert' : undefined}
+      >
+        <Icon name={icone} size={20} color={ton.encre} />
+        <View style={{ flex: 1 }}>
+          <Text variant="bodyStrong" style={{ fontSize: 16, color: ton.encre }}>
+            {titre}
+          </Text>
+          {controle.raison ? (
+            <Text variant="body" style={{ fontSize: 16, lineHeight: 22, color: ton.encre }} testID="raison-controle">
+              {controle.raison}
+            </Text>
+          ) : null}
+          {controle.statut === 'A_VERIFIER' ? (
+            <Text variant="body" style={{ fontSize: 16, lineHeight: 22, color: ton.encre }}>
+              Votre visite compte. L’équipe vérifie avec la famille.
+            </Text>
+          ) : controle.statut === 'REFUSE' ? (
+            <Text variant="body" style={{ fontSize: 16, lineHeight: 22, color: ton.encre }}>
+              Entrez le code à 6 caractères écrit sur la carte, puis validez.
+            </Text>
+          ) : null}
+        </View>
+      </View>
+    </Apparition>
   );
 }
 
@@ -584,6 +681,7 @@ const styles = StyleSheet.create({
   sosPanneau: { gap: 10, padding: 16, borderRadius: radius.field, borderWidth: 1.5, marginTop: 8, marginBottom: 4 },
   hint: { marginTop: 10, fontSize: 15 },
   choixCode: { flexDirection: 'row', gap: 10 },
+  qrLu: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 14, paddingRight: 4, minHeight: 52, borderRadius: radius.field, borderWidth: 1.5 },
   bandeau: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginTop: 12, padding: 14, borderRadius: 16 },
   stepRow: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 64, paddingVertical: 8 },
   st: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
