@@ -32,6 +32,8 @@ import {
   SwitchRow,
   Text,
 } from '@/ui';
+import { CarteSurLaRoute } from '@/trajet/CarteSurLaRoute';
+import { useTrajet } from '@/trajet/TrajetProvider';
 import { aLaPreuve, estDuJour, estProuvee, libellePreuve, nbPreuves, ORDRE_PREUVES } from '@/visites/regles';
 import { AineCarte } from '@/visites/VisiteResume';
 
@@ -127,6 +129,9 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
   const faitsAuMontage = useRef(new Set(ORDRE_PREUVES.filter((f) => aLaPreuve(v, f))));
   const prouveeAuMontage = useRef(prouvee);
   const gpsPossible = natif.position.disponible();
+  // L1 : « Je pars chez … » tant que l'arrivée n'est pas faite, le jour de la visite.
+  const surLaRoute = duJour && !v.preuve.checkInA && new Date(v.fin).getTime() > Date.now();
+  const trajet = useTrajet();
   const scanPossible = natif.scanner.disponible();
   const Scanner = natif.scanner.Vue;
 
@@ -167,6 +172,8 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
       const r = await api.checkIn(v.id, { codeDomicile: code.trim() || undefined, position });
       setRetour(avisPosition ? { ...r, preuves: { ...r.preuves, position: { valide: false, message: avisPosition } } } : r);
       retourHaptique('succes');
+      // L6 : le check-in arrête le partage du trajet (le serveur l'arrête aussi).
+      if (trajet.etat.statut !== 'inactif' && trajet.etat.visiteId === v.id) trajet.arreter('check_in');
       setCode('');
       setAccordPosition(false);
       setAvisQr(null);
@@ -331,6 +338,8 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
           Il faut 2 preuves sur 3 pour prouver la visite.
         </Text>
       ) : null}
+
+      {surLaRoute ? <CarteSurLaRoute v={v} /> : null}
 
       {v.actions.checkIn ? (
         <>

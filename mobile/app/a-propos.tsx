@@ -35,6 +35,15 @@ const DONNEES: Bloc[] = [
     lignes: ['Une seule lecture, quand vous validez votre arrivée, avec votre accord. Jamais en arrière-plan. Jamais au départ, au Kayé ni au SOS.'],
   },
   {
+    icone: 'nav',
+    titre: 'Trajet partagé (facultatif)',
+    lignes: [
+      'Si vous l’acceptez : une position arrondie à environ 100 m, toutes les 30 secondes, app ouverte.',
+      'Seulement la famille qui vous emploie et la personne choisie par l’aîné la voient. Arrêt à l’arrivée, après 60 minutes, ou quand vous voulez.',
+      'Pas d’historique. Refuser n’a aucun effet sur vos missions. Vous retirez l’accord dans Profil.',
+    ],
+  },
+  {
     icone: 'scan',
     titre: 'Caméra',
     lignes: ['Seulement pour lire le QR du domicile. Aucune photo n’est prise ni gardée. Le micro n’est jamais utilisé.'],

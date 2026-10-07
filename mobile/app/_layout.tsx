@@ -20,6 +20,8 @@ import { SessionProvider, useSession } from '@/session/SessionProvider';
 import { etatCompte } from '@/session/compte';
 import { usePush } from '@/push';
 import { BandeauHorsLigne } from '@/offline/BandeauHorsLigne';
+import { BandeauTrajet } from '@/trajet/BandeauTrajet';
+import { TrajetProvider } from '@/trajet/TrajetProvider';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -45,7 +47,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider>
         <SessionProvider>
-          <Navigation />
+          <TrajetProvider>
+            <Navigation />
+          </TrajetProvider>
         </SessionProvider>
       </ThemeProvider>
     </SafeAreaProvider>
@@ -78,6 +82,8 @@ function Navigation() {
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       {/* Lot M3 : « Hors ligne · 2 envois en attente », caché quand tout va bien. */}
       <BandeauHorsLigne>
+        {/* L1 : « Trajet partagé · Arrêter », visible sur tous les écrans tant que la position part. */}
+        <BandeauTrajet>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg }, animation: 'fade' }}>
           <Stack.Protected guard={!session}>
             <Stack.Screen name="connexion" />
@@ -98,10 +104,14 @@ function Navigation() {
             <Stack.Screen name="visite/[id]" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="kaye/[id]" options={{ animation: 'slide_from_bottom' }} />
             <Stack.Screen name="propositions" options={{ animation: 'slide_from_right' }} />
+            {/* L1 : accord avant le premier partage du trajet, puis carte de l'itinéraire. */}
+            <Stack.Screen name="accord-trajet" options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="trajet/[id]" options={{ animation: 'slide_from_right' }} />
           </Stack.Protected>
           {/* V1c (X7) : « À propos et confidentialité », lisible connecté ou non (Profil, écran de connexion). */}
           <Stack.Screen name="a-propos" options={{ animation: 'slide_from_right' }} />
         </Stack>
+        </BandeauTrajet>
       </BandeauHorsLigne>
     </>
   );
