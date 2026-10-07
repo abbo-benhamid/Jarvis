@@ -5,13 +5,13 @@
  * |----------------------------------|----------------------------------------------|
  * | `KDM482` (code seul)             | `lisible`, code `KDM482` (QR actuels)        |
  * | `koudmen:domicile:KDM482`        | `lisible` (format v1, à imprimer désormais)  |
- * | `koudmen:domicile:s1:<jeton>`    | `signe` (futur jeton signé, spec § 10.2)     |
+ * | `koudmen:domicile:s1:<jeton>`    | `signe` (carte domicile, JWS EdDSA, L1 L9)   |
  * | `koudmen:domicile:s2:…` et plus  | erreur `VERSION_INCONNUE` (app à mettre à jour) |
  * | autre chose                      | erreur `INCONNU`                             |
  *
- * [À VÉRIFIER] Le jeton signé n'existe pas encore côté serveur (api-v1 § 9.7) : l'app le reconnaît
- * mais ne l'envoie pas. Quand `codeDomicile` l'acceptera, il suffira de traiter `signe` dans l'écran.
- * Le code n'est jamais gardé sur le téléphone : il va dans le champ, puis dans l'événement CHECK_IN.
+ * L1 (§ 2.3) : le jeton signé part dans `qr` de l'événement CHECK_IN (contrat provisoire `src/contrats-l1`).
+ * Le serveur vérifie signature, version, aîné, fenêtre et distance (L10).
+ * Ni le code ni le jeton ne sont gardés sur le téléphone : ils restent en mémoire jusqu'à l'envoi.
  */
 
 export const PREFIXE_QR_DOMICILE = 'koudmen:domicile:';
@@ -30,7 +30,6 @@ export const MESSAGES_QR = {
   VIDE: 'Le QR code est vide. Entrez le code à la main.',
   INCONNU: 'Ce QR code n’est pas un code Koudmen. Entrez le code à la main.',
   VERSION_INCONNUE: 'Ce QR code vient d’une version plus récente. Mettez l’app à jour, ou entrez le code à la main.',
-  SIGNE_NON_PRIS_EN_CHARGE: 'Ce QR code n’est pas encore accepté. Entrez le code écrit sous le QR.',
 } as const;
 
 /** Normalise une saisie : majuscules, sans espace ni tiret (comme le champ de la fiche). */

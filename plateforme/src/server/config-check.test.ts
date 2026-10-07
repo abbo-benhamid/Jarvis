@@ -28,13 +28,19 @@ function prodEnv(over: Record<string, string | undefined> = {}) {
     CRON_SECRET: STRONG_B,
     TESTER_INVITE_CODES: `${generateTesterCode()},${generateTesterCode()}`,
     ...EDITOR,
+    // L1-B : clés de la carte domicile et de l'adresse (32 octets en base64).
+    QR_SIGNING_KEY: "jIFap7/9yWO0DJl/S2PvASG4xcd3hgd7q+0ccZQ+pow=",
+    ADDRESS_ENC_KEY: "Irx0YGksVDcEh69UBRXldm7oy3x0BJoXwJNYVvDPfBk=",
     ...over,
   };
 }
 
 /** Production en mode LANCEMENT (défaut sur Vercel production). */
+/** L1-B : clés de la carte domicile et de l'adresse (32 octets en base64). */
+const PRESENCE_KEYS = { QR_SIGNING_KEY: "jIFap7/9yWO0DJl/S2PvASG4xcd3hgd7q+0ccZQ+pow=", ADDRESS_ENC_KEY: "Irx0YGksVDcEh69UBRXldm7oy3x0BJoXwJNYVvDPfBk=" };
+
 function launchEnv(over: Record<string, string | undefined> = {}) {
-  return { VERCEL_ENV: "production", SESSION_SECRET: STRONG_A, CRON_SECRET: STRONG_B, ...EDITOR, ...over };
+  return { VERCEL_ENV: "production", SESSION_SECRET: STRONG_A, CRON_SECRET: STRONG_B, ...EDITOR, ...PRESENCE_KEYS, ...over };
 }
 
 describe("L1 : mode du site", () => {

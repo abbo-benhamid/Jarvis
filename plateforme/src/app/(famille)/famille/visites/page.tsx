@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { BookOpen, KeyRound, MapPin, PhoneCall } from "lucide-react";
+import { BookOpen, KeyRound, MapPin, Navigation, PhoneCall } from "lucide-react";
+import { VisitReviewForm } from "@/components/presence/visit-review-form";
+import { tripViewableAineIds } from "@/server/presence/queries";
 import { requireRole } from "@/server/auth/guards";
 import { MicroQuestion } from "@/components/sandbox/micro-question";
 import { getFamilyAines, getFamilyVisits } from "@/server/famille/queries";
@@ -20,7 +22,7 @@ type VisitRow = Awaited<ReturnType<typeof getFamilyVisits>>[number];
 
 /**
  * F7 : visites à venir et passées, preuve 2 sur 3.
- * A5 : la famille ne confirme JAMAIS une visite. Elle voit seulement le résultat de l'appel à l'aîné.
+ * L1-B (R7, remplace A5) : la famille EMPLOYEUR tranche une visite « À vérifier » (confirmer ou signaler).
  */
 export default async function Page({ searchParams }: { searchParams: Promise<{ aine?: string }> }) {
   const user = await requireRole("FAMILLE");
@@ -28,6 +30,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
   const aines = await getFamilyAines(user.id);
   const selected = aines.find((a) => a.id === aineFilter)?.id;
   const visits = await getFamilyVisits(user.id, selected);
+  const employerIds = new Set(aines.filter((a) => a.isPayer).map((a) => a.id));
+  const followIds = await tripViewableAineIds(user.id);
   const now = new Date();
   // Le statut est déjà à jour en base (sweepOverdueVisits, cohérent pour tous les espaces). Recalcul = filet de sécurité.
   const { upcoming, past } = splitVisits(
@@ -90,7 +94,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
             ) : (
               <ul className="m-0 flex list-none flex-col gap-3 p-0">
                 {upcoming.map((v) => (
-                  <VisitItem key={v.id} v={v} showAine={aines.length > 1} />
+                  <VisitItem key={v.id} v={v} showAine={aines.length > 1} employer={employerIds.has(v.aineId)} canFollow={followIds.has(v.aineId)} />
                 ))}
               </ul>
             )}
@@ -102,7 +106,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
             ) : (
               <ul className="m-0 flex list-none flex-col gap-3 p-0">
                 {past.map((v) => (
-                  <VisitItem key={v.id} v={v} showAine={aines.length > 1} />
+                  <VisitItem key={v.id} v={v} showAine={aines.length > 1} employer={employerIds.has(v.aineId)} canFollow={followIds.has(v.aineId)} />
                 ))}
               </ul>
             )}
@@ -113,7 +117,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
   );
 }
 
-function VisitItem({ v, showAine }: { v: VisitRow; showAine: boolean }) {
+function VisitItem({ v, showAine, employer, canFollow }: { v: VisitRow; showAine: boolean; employer: boolean; canFollow: boolean }) {
   return (
     <li>
       <Card as="article" aria-label={`Visite du ${dayLong(v.scheduledStart)}`} className="flex flex-col gap-3.5">
@@ -139,11 +143,21 @@ function VisitItem({ v, showAine }: { v: VisitRow; showAine: boolean }) {
             <ProofFactors proofs={v.proofs} finished={v.status !== "EN_COURS"} />
           </div>
         )}
-        {v.status === "A_VERIFIER" ? (
-          <p className="rounded-md bg-soleil-soft p-3.5 text-[15px] leading-[1.45]">
-            <strong>À vérifier :</strong> il manque une preuve. Koudmen appelle {v.aine.firstName} pour confirmer la visite, puis l&apos;équipe
-            Koudmen vérifie. Vous n&apos;avez rien à faire.
-          </p>
+        {/* L1-B (R7) : la famille employeur tranche une visite « À vérifier » ; les autres membres sont informés. */}
+        {v.status === "A_VERIFIER" && !v.proofs.some((p) => p.factor === "CONFIRMATION_AINE" && p.valid) ? (
+          employer ? (
+            <VisitReviewForm visitId={v.id} firstName={v.aine.firstName} caregiver={v.caregiver.user.firstName} />
+          ) : (
+            <p className="rounded-md bg-soleil-soft p-3.5 text-[15px] leading-[1.45]">
+              <strong>À vérifier :</strong> il manque une preuve. Le gestionnaire principal du profil confirme la visite.
+            </p>
+          )
+        ) : null}
+        {/* L1-B (L6, R4) : suivi du trajet, pour l'employeur et la personne désignée, le jour de la visite. */}
+        {canFollow && (v.status === "PREVUE" || v.status === "EN_COURS") && isSoon(v.scheduledStart) ? (
+          <LinkButton href={`/famille/visites/${v.id}/trajet`} variant="quiet" size="lg" fullWidth icon={<Navigation strokeWidth={1.6} />}>
+            Où en est la visite ?
+          </LinkButton>
         ) : null}
         {v.journal ? (
           <LinkButton href={`/famille/kaye/${v.journal.id}`} variant="quiet" size="lg" fullWidth icon={<BookOpen strokeWidth={1.6} />}>
@@ -155,11 +169,17 @@ function VisitItem({ v, showAine }: { v: VisitRow; showAine: boolean }) {
   );
 }
 
+/** Visite du jour : de 3 h avant le début à… la visite elle-même (le lien n'est utile que ce jour-là). */
+function isSoon(start: Date, now: Date = new Date()): boolean {
+  const diff = start.getTime() - now.getTime();
+  return diff < 3 * 3_600_000 && diff > -6 * 3_600_000;
+}
+
 /** Schéma de la preuve « 2 sur 3 ». Le testeur l'ouvre avant la question. */
 function ProofExplainer({ children }: { children?: React.ReactNode }) {
   const items = [
-    { icon: MapPin, title: "Position à l'arrivée", text: "L'accompagnant partage sa position une seule fois, à l'arrivée." },
-    { icon: KeyRound, title: "Code du domicile", text: "Il scanne le QR code ou saisit le code affiché chez l'aîné." },
+    { icon: MapPin, title: "Position à l'arrivée", text: "L'accompagnant donne sa position une seule fois, à l'arrivée." },
+    { icon: KeyRound, title: "Carte domicile", text: "Il scanne le QR code de la carte domicile, ou saisit son code de secours." },
     { icon: PhoneCall, title: "Confirmation de l'aîné", text: "Koudmen appelle l'aîné. Il tape 1 pour confirmer la visite (simulé dans la démo)." },
   ];
   return (
@@ -179,7 +199,7 @@ function ProofExplainer({ children }: { children?: React.ReactNode }) {
         ))}
       </ol>
       <p className="mb-4 rounded-md bg-feuille-soft p-3.5 text-[15px] text-fg">
-        <strong>2 preuves sur 3 = visite validée.</strong> Sinon, la visite passe « À vérifier » et l&apos;équipe Koudmen contrôle.
+        <strong>2 preuves sur 3 = visite validée.</strong> Sinon, la visite passe « À vérifier » : le gestionnaire principal du profil confirme la visite, ou signale un problème.
       </p>
       {children ? <div className="pb-4">{children}</div> : null}
     </details>

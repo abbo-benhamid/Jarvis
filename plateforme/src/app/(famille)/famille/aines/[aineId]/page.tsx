@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BookOpen, CalendarDays, HandHeart, HeartHandshake, Pencil, ShieldCheck, UserPlus, Users } from "lucide-react";
+import { BookOpen, CalendarDays, HandHeart, HeartHandshake, Navigation, Pencil, QrCode, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { requireRole } from "@/server/auth/guards";
 import { getAineForFamily } from "@/server/famille/queries";
 import { communeLabel } from "@/lib/communes";
@@ -13,9 +13,10 @@ import { Card, CardLink, CardTitle, Chip, SectionHeader } from "@/components/ui/
 import { LinkButton } from "@/components/ui/button";
 import { ProofSteps } from "@/components/ui/proof-steps";
 import { LevelBadge } from "@/components/status-badges";
-import { HomeCode } from "@/components/famille/home-code";
 import { CaregiverLinkForm } from "@/components/famille/caregiver-link-form";
 import { TopBar } from "@/components/famille/top-bar";
+import { readAddress } from "@/server/presence/address";
+import { TripViewerForm } from "@/components/presence/trip-viewer-form";
 
 export const metadata: Metadata = { title: "Fiche de l'aîné" };
 
@@ -31,6 +32,7 @@ export default async function Page({ params, searchParams }: Props) {
   const { aine, isPayer } = data;
   const payer = aine.members.find((m) => m.isPayer);
   const name = `${aine.firstName} ${initialWithDot(aine.lastInitial)}`.trim();
+  const address = readAddress(aine);
 
   return (
     <>
@@ -44,6 +46,13 @@ export default async function Page({ params, searchParams }: Props) {
             {communeLabel(aine.commune)}
             {aine.addressHint ? ` · ${aine.addressHint}` : ""}
           </p>
+          {/* L1-B (L8) : adresse exacte, lue par le cercle Lakou (déchiffrée côté serveur). */}
+          {address ? (
+            <p className="text-[15px] text-muted">
+              {address}
+              {aine.locationApproximate ? " · position approximative" : ""}
+            </p>
+          ) : null}
         </div>
       </header>
 
@@ -91,7 +100,20 @@ export default async function Page({ params, searchParams }: Props) {
 
       <SectionHeader title="Profil" />
       <div className="flex flex-col gap-3">
-        <HomeCode code={aine.homeCode} aineFirstName={aine.firstName} />
+        {/* L1-B (L9) : la carte domicile signée remplace l'affichage du code seul. */}
+        <CardLink href={`/famille/aines/${aine.id}/carte-domicile`}>
+          <span className="flex items-center gap-3.5">
+            <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-full bg-mer-soft text-mer [&_svg]:size-5 [&_svg]:[stroke-width:1.6]">
+              <QrCode />
+            </span>
+            <span className="min-w-0">
+              <b className="block font-semibold">Carte domicile</b>
+              <span className="block text-[15px] text-muted">
+                QR code et code de secours à imprimer · version {aine.homeCardVersion}
+              </span>
+            </span>
+          </span>
+        </CardLink>
 
         <Card className="flex flex-col gap-3">
           <CardTitle className="mb-0">Accompagnement</CardTitle>
@@ -138,6 +160,25 @@ export default async function Page({ params, searchParams }: Props) {
           <span className="block text-[15px] text-muted">Payeur : {payer ? fullName(payer.user) : "—"}</span>
           <span className="mt-1 block font-semibold text-mer">{isPayer ? "Changer de formule" : "Voir les formules"}</span>
         </CardLink>
+
+        {/* L1-B (R4) : qui voit le trajet en direct de l'accompagnant (payeur seulement). */}
+        {isPayer ? (
+          <Card className="flex flex-col gap-2">
+            <CardTitle className="mb-0 inline-flex items-center gap-2">
+              <Navigation aria-hidden="true" className="size-[18px] text-mer" strokeWidth={1.6} />
+              Suivi du trajet
+            </CardTitle>
+            <p className="text-[15px] leading-[1.45] text-muted">
+              Si l&apos;accompagnant partage son trajet, vous voyez où il en est. Personne d&apos;autre, sauf la personne désignée ci-dessous.
+            </p>
+            <TripViewerForm
+              aineId={aine.id}
+              firstName={aine.firstName}
+              current={aine.tripViewerId}
+              members={aine.members.filter((m) => !m.isPayer).map((m) => ({ userId: m.user.id, label: `${fullName(m.user)} (${m.relation})` }))}
+            />
+          </Card>
+        ) : null}
 
         {/* A6 (D7) : rattacher un proche aidant à cet aîné (payeur seulement). */}
         {isPayer ? (

@@ -11,6 +11,7 @@ import { enqueueNotification, notifyUser } from "@/server/outbox";
 import { appUrl } from "@/server/env";
 import { sameScope } from "@/server/scope";
 import { confirmElderSimulated, generateUniqueHomeCode } from "@/server/visits/service";
+import { addressRefusal, computeHomeLocation, readAddress } from "@/server/presence/address";
 import { cancelCareRequest, chooseProfile, MatchingError } from "@/server/matching/service";
 import { trackEvent } from "@/server/sandbox/events";
 import { getCommune } from "@/lib/communes";
@@ -61,6 +62,12 @@ export async function createAineAction(_prev: ActionResult, formData: FormData):
   const commune = getCommune(v.commune);
   if (!commune) return { ok: false, error: CHECK_FIELDS, fieldErrors: { commune: ["Choisissez une commune."] } };
 
+  // L1-B (L8, R1/R5) : adresse exacte seulement si les données réelles sont permises (l'accord est donné ici).
+  if (v.address) {
+    const refusal = addressRefusal({ consentGiven: true, sandboxId: user.sandboxId });
+    if (refusal) return { ok: false, error: CHECK_FIELDS, fieldErrors: { address: [refusal] } };
+  }
+  const home = await computeHomeLocation(v.address ?? null, v.commune);
   const homeCode = await generateUniqueHomeCode();
   const now = new Date();
   const aine = await db.$transaction(async (tx) => {
@@ -70,9 +77,12 @@ export async function createAineAction(_prev: ActionResult, formData: FormData):
         lastInitial: v.lastInitial ?? null,
         commune: v.commune,
         addressHint: v.addressHint ?? null,
-        // Minimisation : position = centre de la commune.
-        latitude: commune.lat,
-        longitude: commune.lng,
+        // L1-B (L8) : adresse chiffrée et géocodée ; sinon centre de la commune (position approximative).
+        addressEnc: home.addressEnc,
+        latitude: home.latitude,
+        longitude: home.longitude,
+        locationApproximate: home.locationApproximate,
+        geocodedAt: home.geocodedAt,
         phone: v.phone ?? null,
         needs: v.needs,
         activityLevel: v.activityLevel,
@@ -92,7 +102,7 @@ export async function createAineAction(_prev: ActionResult, formData: FormData):
       },
       select: { id: true },
     });
-    await logAudit({ actor: user, action: "aine.created", entityType: "Aine", entityId: created.id, metadata: { commune: v.commune, level: v.activityLevel } }, tx);
+    await logAudit({ actor: user, action: "aine.created", entityType: "Aine", entityId: created.id, metadata: { commune: v.commune, level: v.activityLevel, address: home.addressEnc !== null, approximate: home.locationApproximate } }, tx);
     await logAudit({ actor: user, action: "aine.consent", entityType: "Aine", entityId: created.id, metadata: { consentByType: v.consentByType } }, tx);
     return created;
   });
@@ -176,15 +186,32 @@ export async function updateAineAction(_prev: ActionResult, formData: FormData):
     consentByName: v.consentByName,
   };
   const changed = changedFields(before as unknown as Record<string, unknown>, next);
+  // L1-B (L8) : l'adresse est chiffrée en base ; on compare le texte en clair.
+  const newAddress = v.address ?? null;
+  const addressChanged = (readAddress(before) ?? null) !== newAddress;
+  if (addressChanged) changed.push("address");
   if (changed.length === 0) return { ok: true, message: "Aucune modification à enregistrer." };
   const consentChanged = changed.includes("consentByType") || changed.includes("consentByName");
+  if (addressChanged && newAddress) {
+    const refusal = addressRefusal(before);
+    if (refusal) return { ok: false, error: CHECK_FIELDS, fieldErrors: { address: [refusal] } };
+  }
+  const home = addressChanged || changed.includes("commune") ? await computeHomeLocation(newAddress, v.commune) : null;
 
   await db.$transaction(async (tx) => {
     await tx.aine.update({
       where: { id: v.aineId },
       data: {
         ...next,
-        ...(changed.includes("commune") ? { latitude: commune.lat, longitude: commune.lng } : {}),
+        ...(home
+          ? {
+              addressEnc: home.addressEnc,
+              latitude: home.latitude,
+              longitude: home.longitude,
+              locationApproximate: home.locationApproximate,
+              geocodedAt: home.geocodedAt,
+            }
+          : {}),
         ...(consentChanged ? { consentGiven: true, consentAt: new Date() } : {}),
       },
     });

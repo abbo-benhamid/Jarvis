@@ -231,6 +231,8 @@ model User {
   caregiverProfile CaregiverProfile?
 
   ownedAines          Aine[]             @relation("AineOwner")
+  /// L1-B (R4) : aînés dont ce compte est la « personne désignée » pour le trajet en direct.
+  tripViewerOf        Aine[]             @relation("AineTripViewer")
   lakouMemberships    LakouMember[]
   invitationsSent     Invitation[]       @relation("InvitationCreator")
   invitationsAccepted Invitation[]       @relation("InvitationAcceptor")
@@ -251,6 +253,8 @@ model User {
   kayeDrafts          KayeDraft[]
   /// Appareils qui reçoivent les notifications push (lot N1).
   pushDevices         PushDevice[]
+  /// L1-B (L6) : trajet en direct en cours (accompagnant).
+  visitTrips          VisitTrip[]
 
   // ── L1-A : comptes réels (vérification de l'e-mail, consentements) ──
   /// L3 : adresse e-mail confirmée (lien reçu, ou opérateur après un appel). Null = pas encore confirmée.
@@ -288,36 +292,54 @@ model FamilyProfile {
 // ─────────────────────────────── Aîné et cercle Lakou ───────────────────────────────
 
 model Aine {
-  id            String     @id @default(cuid())
-  firstName     String
+  id                  String     @id @default(cuid())
+  firstName           String
   /// Initiale du nom seulement (minimisation).
-  lastInitial   String?
+  lastInitial         String?
   /// Code commune (voir src/lib/communes.ts), ex. "FORT_DE_FRANCE".
-  commune       String
+  commune             String
   /// Indication d'adresse libre et fictive en test (pas d'adresse exacte obligatoire).
-  addressHint   String?
+  addressHint         String?
   /// Position approximative du domicile (centre de la commune par défaut). Sert au facteur GPS.
-  latitude      Float
-  longitude     Float
+  latitude            Float
+  longitude           Float
   /// Téléphone fixe ou mobile pour l'appel vocal simulé « tapez 1 ».
-  phone         String?
-  needs         NeedType[]
+  phone               String?
+  needs               NeedType[]
   /// Niveau d'activité 1 à 4 (1 Lien, 2 Coups de main, 3 Présence, 4 Aide renforcée).
-  activityLevel Int
-  consentGiven  Boolean
-  consentByType ConsentBy
+  activityLevel       Int
+  consentGiven        Boolean
+  consentByType       ConsentBy
   /// Nom de la personne qui consent (l'aîné ou son représentant).
-  consentByName String
-  consentAt     DateTime
-  /// Code domicile à 6 caractères (remplace le QR/NFC dans le MVP).
-  homeCode      String     @unique
+  consentByName       String
+  consentAt           DateTime
+  /// Code domicile à 6 caractères : saisie de secours sous le QR signé de la carte domicile (L9).
+  homeCode            String     @unique
+  /// L1-B (L8, R7) : adresse réelle du domicile, CHIFFRÉE (AES-256-GCM, clé ADDRESS_ENC_KEY, format « a1:… »).
+  /// Lue par le cercle Lakou et l'opérateur ; par l'accompagnant le jour de la visite seulement (lecture journalisée).
+  /// Jamais journalisée. Null = position au centre de la commune.
+  addressEnc          String?
+  /// L1-B (L8) : true si latitude/longitude ne sont PAS l'adresse exacte (centre de commune, géocodage peu sûr).
+  locationApproximate Boolean    @default(true)
+  /// L1-B (L8) : date du dernier géocodage réussi de l'adresse.
+  geocodedAt          DateTime?
+  /// L1-B (L9, R7) : identifiant ALÉATOIRE de la carte domicile, seul identifiant mis dans le QR signé
+  /// (jamais l'id de l'aîné). Nouveau à chaque régénération. Null tant que la carte n'est pas créée.
+  homeCardId          String?    @unique
+  /// L1-B (L9) : version de la carte domicile (QR signé + code). +1 à chaque régénération : l'ancienne est refusée.
+  homeCardVersion     Int        @default(1)
+  homeCardIssuedAt    DateTime   @default(now())
+  /// L1-B (R4) : « personne désignée » par l'aîné pour voir le trajet en direct (membre du cercle Lakou).
+  /// Null = l'employeur (le payeur du profil). Personne d'autre ne voit le trajet.
+  tripViewerId        String?
+  tripViewer          User?      @relation("AineTripViewer", fields: [tripViewerId], references: [id], onDelete: SetNull)
   /// Bac à sable du testeur (D2). Null = monde réel.
-  sandboxId     String?
-  sandbox       Sandbox?   @relation(fields: [sandboxId], references: [id])
-  ownerId       String
-  owner         User       @relation("AineOwner", fields: [ownerId], references: [id])
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  sandboxId           String?
+  sandbox             Sandbox?   @relation(fields: [sandboxId], references: [id])
+  ownerId             String
+  owner               User       @relation("AineOwner", fields: [ownerId], references: [id])
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
 
   // ── L1-A R5 (J5) : accord de l'aîné recueilli par un conseiller Koudmen, au téléphone ──
   /// État de l'accord. Demandes et visites seulement après ACCORD_RECUEILLI.
@@ -594,12 +616,17 @@ model Visit {
   /// Lot A2 : un événement de l'app a un écart d'horloge > 12 h. La visite reste « À vérifier »
   /// tant que l'aîné ne l'a pas confirmée (deriveVisitStatus).
   clockSkewAt    DateTime?
+  /// L1-B (L10, P1/P8) : check-in reçu plus de 30 min après l'heure de l'appareil. La visite reste
+  /// « À vérifier » tant que l'aîné ne l'a pas confirmée (deriveVisitStatus).
+  lateCheckInAt  DateTime?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
   proofs    VisitProof[]
   journal   JournalEntry?
   kayeDraft KayeDraft?
+  /// L1-B (L6) : trajet en direct en cours (au plus un, sans historique).
+  trip      VisitTrip?
 
   @@index([aineId, scheduledStart])
   @@index([caregiverId, scheduledStart])
@@ -990,4 +1017,34 @@ enum SituationJuridique {
   CURATELLE
   HABILITATION_FAMILIALE
   MANDAT_PROTECTION_FUTURE
+}
+
+/// L1-B (L6) : trajet en direct de l'accompagnant vers le domicile. UNE ligne par visite, AUCUN historique :
+/// seule la dernière position est gardée, ARRONDIE à ~110 m (R4). La ligne est EFFACÉE à la fin du trajet
+/// (check-in, arrêt, arrivée à moins de 150 m du domicile, 60 min) et par la purge nocturne.
+/// Jamais de position hors d'un trajet démarré par l'accompagnant lui-même. Jamais de coordonnées dans un journal.
+model VisitTrip {
+  id             String    @id @default(cuid())
+  visitId        String    @unique
+  visit          Visit     @relation(fields: [visitId], references: [id], onDelete: Cascade)
+  /// Compte de l'accompagnant qui partage sa position (effacé avec le compte).
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startedAt      DateTime  @default(now())
+  /// Fin automatique : démarrage + 60 min (R4).
+  expiresAt      DateTime
+  /// R4 : point de départ (arrondi à ~110 m), gardé seulement pour masquer le départ (< 500 m). Effacé avec la ligne.
+  startLatitude  Float?
+  startLongitude Float?
+  /// Dernière position (null tant qu'aucune position n'est reçue).
+  latitude       Float?
+  longitude      Float?
+  accuracyMeters Float?
+  /// Heure de la position sur l'appareil (jamais dans le futur du serveur).
+  positionAt     DateTime?
+  /// Heure de réception de la dernière position (limite : 1 envoi / 10 s).
+  receivedAt     DateTime?
+
+  @@index([expiresAt])
+  @@index([userId])
 }

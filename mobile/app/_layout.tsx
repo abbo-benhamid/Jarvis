@@ -17,8 +17,11 @@ import { Figtree_600SemiBold } from '@expo-google-fonts/figtree/600SemiBold';
 import { Figtree_700Bold } from '@expo-google-fonts/figtree/700Bold';
 import { ThemeProvider, useTheme } from '@/theme';
 import { SessionProvider, useSession } from '@/session/SessionProvider';
+import { etatCompte } from '@/session/compte';
 import { usePush } from '@/push';
 import { BandeauHorsLigne } from '@/offline/BandeauHorsLigne';
+import { BandeauTrajet } from '@/trajet/BandeauTrajet';
+import { TrajetProvider } from '@/trajet/TrajetProvider';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -44,7 +47,9 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider>
         <SessionProvider>
-          <Navigation />
+          <TrajetProvider>
+            <Navigation />
+          </TrajetProvider>
         </SessionProvider>
       </ThemeProvider>
     </SafeAreaProvider>
@@ -54,6 +59,7 @@ export default function RootLayout() {
 function Navigation() {
   const { c, scheme } = useTheme();
   const { etat, session } = useSession();
+  const compte = session ? etatCompte(session) : null;
   // Lot N1 : jeton renvoyé à chaque ouverture, écran visé ouvert au toucher d'une notification.
   usePush(!!session);
 
@@ -76,19 +82,36 @@ function Navigation() {
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       {/* Lot M3 : « Hors ligne · 2 envois en attente », caché quand tout va bien. */}
       <BandeauHorsLigne>
+        {/* L1 : « Trajet partagé · Arrêter », visible sur tous les écrans tant que la position part. */}
+        <BandeauTrajet>
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg }, animation: 'fade' }}>
           <Stack.Protected guard={!session}>
             <Stack.Screen name="connexion" />
+            {/* L1 : créer un compte, mot de passe oublié, vérification de l'e-mail. */}
+            <Stack.Screen name="inscription" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="mot-de-passe-oublie" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="verifier-email" />
           </Stack.Protected>
-          <Stack.Protected guard={!!session}>
+          {/* L1 : compte connecté, mais pas encore actif (profil en validation, service en préinscription). */}
+          <Stack.Protected guard={!!session && compte === 'validation'}>
+            <Stack.Screen name="compte-en-validation" />
+          </Stack.Protected>
+          <Stack.Protected guard={!!session && compte === 'preinscription'}>
+            <Stack.Screen name="bientot" />
+          </Stack.Protected>
+          <Stack.Protected guard={!!session && compte === 'actif'}>
             <Stack.Screen name="(onglets)" />
             <Stack.Screen name="visite/[id]" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="kaye/[id]" options={{ animation: 'slide_from_bottom' }} />
             <Stack.Screen name="propositions" options={{ animation: 'slide_from_right' }} />
+            {/* L1 : accord avant le premier partage du trajet, puis carte de l'itinéraire. */}
+            <Stack.Screen name="accord-trajet" options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="trajet/[id]" options={{ animation: 'slide_from_right' }} />
           </Stack.Protected>
           {/* V1c (X7) : « À propos et confidentialité », lisible connecté ou non (Profil, écran de connexion). */}
           <Stack.Screen name="a-propos" options={{ animation: 'slide_from_right' }} />
         </Stack>
+        </BandeauTrajet>
       </BandeauHorsLigne>
     </>
   );

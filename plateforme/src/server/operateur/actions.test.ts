@@ -202,6 +202,16 @@ describe("decideCaregiverAction", () => {
 
 describe("confirmElderAction", () => {
   const VISIT = "ckvisit00000000000000001";
+  it("L1-B (R7) : désactivée par défaut, la famille employeur tranche", async () => {
+    delete process.env.KOUDMEN_OPERATEUR_CONFIRME;
+    db.visit.findUnique.mockResolvedValue({ id: VISIT, aineId: "a1", status: "A_VERIFIER", proofs: [] });
+    const res = await confirmElderAction(initialActionState, form({ visitId: VISIT }));
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toMatch(/famille employeur/);
+    expect(confirmElderSimulated).not.toHaveBeenCalled();
+    // Les tests suivants vérifient l'ancien chemin (retour arrière possible par variable).
+    process.env.KOUDMEN_OPERATEUR_CONFIRME = "true";
+  });
   it("refuse une visite prévue (pas encore commencée)", async () => {
     db.visit.findUnique.mockResolvedValue({ id: VISIT, aineId: "a1", status: "PREVUE", proofs: [] });
     const res = await confirmElderAction(initialActionState, form({ visitId: VISIT }));

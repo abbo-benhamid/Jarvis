@@ -14,8 +14,9 @@ type SessionValue = {
   /** Le compte connecté, ou `null`. */
   session: Moi | null;
   connecter: (email: string, motDePasse: string) => Promise<void>;
-  connecterDemo: () => Promise<void>;
   deconnecter: () => Promise<void>;
+  /** L1 : relit le compte (GET /me), par ex. sur l'écran « Profil en cours de validation ». */
+  rafraichir: () => Promise<void>;
   /** Relance la reprise de connexion (après une coupure réseau au démarrage). */
   reprendre: () => Promise<void>;
 };
@@ -53,11 +54,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setEtat({ statut: 'connecte', moi });
   }, []);
 
-  const connecterDemo = useCallback(async () => {
-    const moi = await api.connecterDemo();
-    setEtat({ statut: 'connecte', moi });
-  }, []);
-
   const deconnecter = useCallback(async () => {
     // Lot N1 : retirer l'appareil AVANT de fermer la connexion (le jeton d'accès sert encore).
     await retirerAppareilPush();
@@ -65,9 +61,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setEtat({ statut: 'deconnecte', message: null, reprisePossible: false });
   }, []);
 
+  const rafraichir = useCallback(async () => {
+    const moi = await api.moi();
+    setEtat({ statut: 'connecte', moi });
+  }, []);
+
   const value = useMemo<SessionValue>(
-    () => ({ etat, session: etat.statut === 'connecte' ? etat.moi : null, connecter, connecterDemo, deconnecter, reprendre }),
-    [etat, connecter, connecterDemo, deconnecter, reprendre],
+    () => ({ etat, session: etat.statut === 'connecte' ? etat.moi : null, connecter, deconnecter, reprendre, rafraichir }),
+    [etat, connecter, deconnecter, reprendre, rafraichir],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

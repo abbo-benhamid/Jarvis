@@ -1,3 +1,15 @@
+import {
+  ageEnAnnees,
+  AGE_MIN_ACCOMPAGNANT,
+  demandeInscriptionSchema,
+  DISTANCE_ARRIVEE_M,
+  DUREE_MAX_TRAJET_MIN,
+  PREFIXE_QR_SIGNE,
+  type ControleCheckIn,
+  type DomicileTrajet,
+} from '@/contrats-l1';
+import { trouverCommune } from '@/lib/communes';
+import { distanceMetres } from '@/lib/geo';
 import type { KoudmenApi } from './client';
 import { MESSAGES } from './messages';
 import { nouvelIdEvenement } from './pkce';
@@ -10,22 +22,51 @@ import {
   type Proposition,
   type ReponseVisite,
   type ResultatEvenement,
+  type ResultatEvenementL1,
   type Visite,
 } from './types';
 
 /**
- * Implémentation SIMULÉE (démo hors ligne, `EXPO_PUBLIC_API_MODE=simule`).
+ * Implémentation SIMULÉE (tests hors ligne, `EXPO_PUBLIC_API_MODE=simule`).
  * Mêmes formes que l'API v1 (contrats Zod). Données en mémoire, perdues au redémarrage.
+ * L1 : plus de « compte de démonstration ». Tout e-mail valide + le mot de passe simulé ouvre une session.
  */
 
-export const EMAIL_DEMO = 'accompagnant@demo.koudmen.test';
-export const MOT_DE_PASSE_DEMO = 'koudmen';
+/** Mot de passe accepté par l'API simulée (tests seulement, jamais affiché en mode réel). */
+export const MOT_DE_PASSE_SIMULE = 'koudmen';
 /**
- * Code du domicile de Léonie (fictif), le MÊME que dans les données de démo du site
- * (plateforme/prisma/seed.ts, `homeCode: "LKW7Q3"`). Arbitrage V1 X3 : un seul code par domicile,
+ * Code du domicile de Léonie dans les données simulées, le MÊME que dans les données d'exemple du site
+ * (plateforme/prisma/seed.ts, `homeCode: "LKW7Q3"`, aligné P14). Arbitrage V1 X3 : un seul code par domicile,
  * écrit en clair et en QR sur la même feuille ; l'app le scanne OU le saisit.
  */
-export const CODE_DOMICILE_DEMO = 'LKW7Q3';
+export const CODE_DOMICILE_SIMULE = 'LKW7Q3';
+
+/**
+ * QR signé SIMULÉ de la carte domicile de Léonie (L9 : `koudmen:domicile:s1:<jeton>`).
+ * L'API simulée accepte tout jeton bien formé, sauf s'il contient « revoque » (carte régénérée : refus).
+ */
+export const QR_SIGNE_SIMULE = `${PREFIXE_QR_SIGNE}eyJhIjoiYWluZV9sZW9uaWUiLCJ2IjoxfQ.c2lnbmF0dXJlLXNpbXVsZWU`;
+
+/** Domicile simulé de Léonie (Terres-Sainville, Fort-de-France). Position précise : `approximatif: false`. */
+export const DOMICILE_SIMULE: DomicileTrajet = { latitude: 14.6085, longitude: -61.068, approximatif: false };
+
+/**
+ * Journal de l'API simulée, lu par les tests e2e (`globalThis.__KOUDMEN_API_JOURNAL__`).
+ * Aucun mot de passe. Positions du trajet telles qu'envoyées (déjà arrondies par l'app).
+ */
+export type JournalApiSimulee = {
+  inscriptions: { email: string; commune: string; dateNaissance: string }[];
+  motsDePasseOublies: string[];
+  trajets: { visiteId: string; action: 'DEMARRER' | 'ARRETER' }[];
+  positions: { visiteId: string; latitude: number; longitude: number; precisionMetres: number; simulee: boolean }[];
+  checkIns: { visiteId: string; qr: boolean; code: boolean; position: boolean; simulee: boolean }[];
+};
+
+function journalApi(): JournalApiSimulee {
+  const g = globalThis as { __KOUDMEN_API_JOURNAL__?: JournalApiSimulee };
+  g.__KOUDMEN_API_JOURNAL__ ??= { inscriptions: [], motsDePasseOublies: [], trajets: [], positions: [], checkIns: [] };
+  return g.__KOUDMEN_API_JOURNAL__;
+}
 
 const attendre = (ms = 280) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -44,9 +85,22 @@ const MOI: Moi = {
   role: 'ACCOMPAGNANT',
   prenom: 'Josiane',
   nom: 'Mathurin',
-  email: EMAIL_DEMO,
-  demo: true,
+  email: 'josiane.mathurin@exemple.fr',
+  demo: false,
   bacASable: false,
+  emailVerifie: true,
+  profilValide: true,
+  preinscription: false,
+};
+
+/**
+ * Comptes particuliers pour les tests (e-mail → état du compte). Tout autre e-mail ouvre le compte de Josiane.
+ * Un compte créé par `inscrire` a l'e-mail non vérifié et le profil en validation.
+ */
+const COMPTES_TEST: Record<string, Partial<Moi>> = {
+  'en-validation@exemple.fr': { prenom: 'Marius', nom: 'Rosette', emailVerifie: true, profilValide: false },
+  'email-a-verifier@exemple.fr': { emailVerifie: false },
+  'preinscription@exemple.fr': { preinscription: true },
 };
 
 function visite(id: string, debut: string, finMin: number, aine: Partial<Visite['aine']>, consignes: string, checkIn: boolean): Visite {
@@ -121,6 +175,15 @@ export function creerApiSimulee(): KoudmenApi {
   let visites = donneesInitiales();
   let propositions = propositionsInitiales();
   const brouillons = new Map<string, BrouillonKaye>();
+  /** Comptes créés par `inscrire` (mémoire). */
+  const comptes = new Map<string, { motDePasse: string; moi: Moi }>();
+  /** Trajets en cours : visite → fin automatique (ms). Aucune position gardée (L6 : pas d'historique). */
+  const trajets = new Map<string, number>();
+  const domicileDe = (v: Visite): DomicileTrajet | null => {
+    if (v.id === 'vis_leonie_j0') return DOMICILE_SIMULE;
+    const c = trouverCommune(v.aine.commune);
+    return c ? { latitude: c.lat, longitude: c.lng, approximatif: true } : null;
+  };
 
   const exigerSession = () => {
     if (!session) throw new ApiError('NON_AUTHENTIFIE', MESSAGES.NON_AUTHENTIFIE, 401);
@@ -149,27 +212,58 @@ export function creerApiSimulee(): KoudmenApi {
 
     async connecter(email, motDePasse) {
       await attendre();
-      if (!email.includes('@') || motDePasse !== MOT_DE_PASSE_DEMO) {
+      const e = email.trim().toLowerCase();
+      const compte = comptes.get(e);
+      if (!e.includes('@') || (compte ? compte.motDePasse !== motDePasse : motDePasse !== MOT_DE_PASSE_SIMULE)) {
         throw new ApiError('IDENTIFIANTS_INVALIDES', MESSAGES.IDENTIFIANTS_INVALIDES, 401);
       }
-      session = MOI;
+      session = compte ? compte.moi : { ...MOI, ...(COMPTES_TEST[e] ?? {}), email: e };
       return session;
     },
-    async connecterDemo() {
-      await attendre();
-      session = MOI;
-      return session;
+
+    async inscrire(demande) {
+      await attendre(400);
+      const ok = demandeInscriptionSchema.safeParse({ role: 'ACCOMPAGNANT', ...demande });
+      if (!ok.success) throw new ApiError('REQUETE_INVALIDE', ok.error.issues[0]?.message ?? MESSAGES.REQUETE_INVALIDE, 400);
+      if (ageEnAnnees(ok.data.dateNaissance) < AGE_MIN_ACCOMPAGNANT) {
+        throw new ApiError('REQUETE_INVALIDE', 'Il faut avoir 18 ans ou plus pour devenir accompagnant.', 400);
+      }
+      if (/^(motdepasse|koudmen123|azerty|0123456789)/i.test(ok.data.motDePasse)) {
+        throw new ApiError('REQUETE_INVALIDE', 'Ce mot de passe est trop courant. Choisissez-en un autre.', 400);
+      }
+      journalApi().inscriptions.push({ email: ok.data.email, commune: ok.data.commune, dateNaissance: ok.data.dateNaissance });
+      // Même réponse si l'e-mail existe déjà (pas de fuite) : le compte existant ne change pas.
+      if (!comptes.has(ok.data.email)) {
+        comptes.set(ok.data.email, {
+          motDePasse: ok.data.motDePasse,
+          moi: {
+            id: `acc_${comptes.size + 1}`,
+            role: 'ACCOMPAGNANT',
+            prenom: ok.data.prenom,
+            nom: ok.data.nom,
+            email: ok.data.email,
+            emailVerifie: false,
+            profilValide: false,
+            preinscription: false,
+          },
+        });
+      }
+    },
+    async motDePasseOublie(email) {
+      await attendre(300);
+      journalApi().motsDePasseOublies.push(email.trim().toLowerCase());
     },
     async restaurer() {
       return session;
     },
     async moi() {
       exigerSession();
-      return MOI;
+      return session as Moi;
     },
     async deconnecter() {
       await attendre(120);
       session = null;
+      trajets.clear();
       visites = donneesInitiales();
       propositions = propositionsInitiales();
       brouillons.clear();
@@ -188,27 +282,54 @@ export function creerApiSimulee(): KoudmenApi {
       return { ...v, brouillonKaye: v.kayePublie ? null : (brouillons.get(id) ?? null) };
     },
 
-    async checkIn(visiteId, { codeDomicile, position }) {
+    async checkIn(visiteId, { qr, codeDomicile, position }) {
       await attendre(450);
       exigerSession();
       const v = trouver(visiteId);
+      journalApi().checkIns.push({ visiteId, qr: !!qr, code: !!codeDomicile, position: !!position, simulee: position?.simulee === true });
       if (!v.actions.checkIn) throw new ApiError('CONFLIT', 'L’arrivée est déjà enregistrée, ou la visite n’est pas ouverte.');
-      const codeOk = codeDomicile ? codeDomicile.trim().toUpperCase() === CODE_DOMICILE_DEMO : undefined;
-      if (!position && codeOk === false) throw new ApiError('INVALIDE', 'Ce code ne correspond pas au domicile.');
-      const facteurs: FacteurPreuve[] = [...(position ? (['GPS'] as const) : []), ...(codeOk ? (['CODE_DOMICILE'] as const) : [])];
-      const maintenant = new Date().toISOString();
+      // L10 : jeton faux ou révoqué → l'événement est refusé (motif INVALIDE).
+      if (qr && /revoque/i.test(qr)) {
+        throw new ApiError('INVALIDE', 'Cette carte domicile n’est plus valable : la famille en a imprimé une nouvelle. Entrez le code écrit sous le QR.');
+      }
+      const codeOk = codeDomicile ? codeDomicile.trim().toUpperCase() === CODE_DOMICILE_SIMULE : undefined;
+      if (!qr && !position && codeOk === false) throw new ApiError('INVALIDE', 'Ce code ne correspond pas au domicile.');
+
+      // L10 : distance au domicile (≤ 150 m, précision prise en compte) et refus d'une position simulée.
+      const domicile = domicileDe(v);
+      let positionOk = false;
+      let raisonPosition: string | null = null;
+      if (position) {
+        if (position.simulee) raisonPosition = 'Le téléphone signale une position simulée. La preuve est à vérifier.';
+        else if (domicile) {
+          const d = distanceMetres(position, domicile);
+          positionOk = d <= DISTANCE_ARRIVEE_M + Math.min(position.precisionMetres ?? 0, 100);
+          raisonPosition = positionOk ? null : `Position à environ ${Math.round(d / 10) * 10} m du domicile. La preuve est à vérifier.`;
+        }
+      }
+      const facteurs: FacteurPreuve[] = [...(positionOk ? (['GPS'] as const) : []), ...(qr || codeOk ? (['CODE_DOMICILE'] as const) : [])];
+      const controle: ControleCheckIn | undefined = qr
+        ? position && !positionOk
+          ? { statut: 'A_VERIFIER', raison: raisonPosition }
+          : { statut: 'VALIDE', raison: positionOk ? 'Carte domicile reconnue et position à moins de 150 m.' : 'Carte domicile reconnue.' }
+        : undefined;
       const nv = remplacer({
         ...v,
-        statut: facteurs.length >= SEUIL_PREUVE ? 'VALIDEE' : 'EN_COURS',
-        preuve: { ...v.preuve, score: facteurs.length, facteursValides: facteurs, checkInA: maintenant },
+        statut: controle?.statut === 'A_VERIFIER' ? 'A_VERIFIER' : facteurs.length >= SEUIL_PREUVE ? 'VALIDEE' : 'EN_COURS',
+        preuve: { ...v.preuve, score: facteurs.length, facteursValides: facteurs, checkInA: new Date().toISOString() },
         actions: { checkIn: false, checkOut: true, kaye: true },
       });
-      return resultat('CHECK_IN', nv, {
+      // L6 : le check-in arrête le trajet. Aucune position n'est gardée.
+      trajets.delete(visiteId);
+      const r: ResultatEvenementL1 = {
+        ...resultat('CHECK_IN', nv),
+        ...(controle ? { controle } : {}),
         preuves: {
-          ...(codeDomicile ? { code: { valide: !!codeOk, message: codeOk ? null : 'Ce code ne correspond pas au domicile.' } } : {}),
-          ...(position ? { position: { valide: true, message: 'Position lue à environ 20 m du domicile.' } } : {}),
+          ...(codeDomicile && !qr ? { code: { valide: !!codeOk, message: codeOk ? null : 'Ce code ne correspond pas au domicile.' } } : {}),
+          ...(position ? { position: { valide: positionOk, message: positionOk ? 'Position lue à moins de 150 m du domicile.' : raisonPosition } } : {}),
         },
-      });
+      };
+      return r;
     },
     async checkOut(visiteId) {
       await attendre(300);
@@ -239,6 +360,34 @@ export function creerApiSimulee(): KoudmenApi {
       return resultat('SOS', visiteId ? trouver(visiteId) : undefined, {
         consigne: 'Si une personne est en danger, appelez le 15 (SAMU) ou le 112 maintenant. L’équipe Koudmen est prévenue.',
       });
+    },
+
+    async demarrerTrajet(visiteId) {
+      await attendre(300);
+      exigerSession();
+      const v = trouver(visiteId);
+      if (v.preuve.checkInA) throw new ApiError('CONFLIT', 'Votre arrivée est déjà enregistrée.', 409);
+      const fin = Date.now() + DUREE_MAX_TRAJET_MIN * 60_000;
+      trajets.set(visiteId, fin);
+      journalApi().trajets.push({ visiteId, action: 'DEMARRER' });
+      return { etat: 'EN_COURS', expireA: new Date(fin).toISOString(), domicile: domicileDe(v) };
+    },
+    async arreterTrajet(visiteId) {
+      await attendre(150);
+      exigerSession();
+      trajets.delete(visiteId);
+      journalApi().trajets.push({ visiteId, action: 'ARRETER' });
+      return { etat: 'ARRETE', expireA: null, domicile: null };
+    },
+    async envoyerPosition(visiteId, p) {
+      await attendre(120);
+      exigerSession();
+      const fin = trajets.get(visiteId);
+      if (!fin || fin < Date.now()) {
+        trajets.delete(visiteId);
+        throw new ApiError('CONFLIT', 'Le partage du trajet est terminé.', 409);
+      }
+      journalApi().positions.push({ visiteId, latitude: p.latitude, longitude: p.longitude, precisionMetres: p.precisionMetres, simulee: p.simulee === true });
     },
 
     async listerPropositions() {

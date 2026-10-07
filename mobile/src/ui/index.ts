@@ -2,6 +2,7 @@ export * from './Avatar';
 export * from './Badge';
 export * from './Button';
 export * from './Card';
+export * from './CaseACocher';
 export * from './Choice';
 export * from './Field';
 export * from './Icon';

@@ -20,6 +20,8 @@ process.env.E2E_MAIL_CAPTURE_FILE = MAIL_CAPTURE_FILE;
 // Les e2e créent beaucoup de comptes et de bacs à sable depuis la même adresse : limites de débit coupées
 // (jamais en production : config-check refuse RATE_LIMIT_DISABLED). Tests des limites : rate-limit.db.test.ts.
 const RATE = { RATE_LIMIT_DISABLED: process.env.RATE_LIMIT_DISABLED ?? "true" };
+// L1-B : géocodage simulé (aucun appel réseau à api-adresse.data.gouv.fr pendant les e2e).
+const GEO = { ADAPTER_GEOCODAGE: process.env.ADAPTER_GEOCODAGE ?? "simule" };
 
 export default defineConfig({
   testDir: "./e2e",
@@ -47,14 +49,14 @@ export default defineConfig({
     : [
         {
           command: `pnpm exec next start -p ${PORT}`,
-          env: { ...RATE, KOUDMEN_MODE: "essai" },
+          env: { ...RATE, ...GEO, KOUDMEN_MODE: "essai" },
           url: baseURL,
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,
         },
         {
           command: `pnpm exec next start -p ${LAUNCH_PORT}`,
-          env: { ...RATE, KOUDMEN_MODE: "lancement", MAIL_CAPTURE_FILE, BREVO_API_KEY: "" },
+          env: { ...RATE, ...GEO, KOUDMEN_MODE: "lancement", MAIL_CAPTURE_FILE, BREVO_API_KEY: "" },
           url: launchURL,
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,

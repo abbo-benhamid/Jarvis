@@ -3,6 +3,7 @@ import { db } from "@/server/db";
 import { purgeRefreshTokens } from "@/server/auth/token-service";
 import { purgeAppEvents } from "@/server/visits/app-service";
 import { purgePushDevices } from "@/server/notifications/push/service";
+import { purgeTrips } from "@/server/presence/trajet";
 
 /**
  * V1c (code M8, sécurité PM4, arbitrage X9) : durées de conservation des données de l'app,
@@ -28,7 +29,7 @@ export async function purgeKayeDrafts(now: Date = new Date(), keepDays = KAYE_DR
   return r.count;
 }
 
-export type AppRetentionResult = { refreshTokens: number; appEvents: number; kayeDrafts: number; pushDevices: number };
+export type AppRetentionResult = { refreshTokens: number; appEvents: number; kayeDrafts: number; pushDevices: number; trips: number };
 
 /** Applique toutes les durées de conservation de l'app. Aucune donnée personnelle dans le résultat (des nombres). */
 export async function purgeAppData(now: Date = new Date()): Promise<AppRetentionResult> {
@@ -37,5 +38,7 @@ export async function purgeAppData(now: Date = new Date()): Promise<AppRetention
     appEvents: await purgeAppEvents(now),
     kayeDrafts: await purgeKayeDrafts(now),
     pushDevices: await purgePushDevices(now),
+    // L1-B (L6) : trajets en direct expirés ou dont la visite a commencé (la dernière position est effacée).
+    trips: await purgeTrips(now),
   };
 }

@@ -218,10 +218,15 @@ export async function proposeCaregiverAction(_prev: ActionResult, formData: Form
 
 const visitSchema = z.object({ visitId: z.string().cuid() });
 
+/** L1-B (R7) : l'opérateur ne tranche plus une visite. La famille employeur le fait dans son espace. */
+const OPERATOR_CONFIRM_DISABLED = "Une visite à vérifier est tranchée par la famille employeur, dans son espace. L'opérateur ne la confirme pas.";
+
 export async function confirmElderAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireRole("OPERATEUR");
   const parsed = visitSchema.safeParse(formToObject(formData));
   if (!parsed.success) return fail("Visite invalide.");
+  // L1-B (R7) : désactivé. Le code ci-dessous reste pour un retour arrière décidé par l'orchestrateur.
+  if (process.env.KOUDMEN_OPERATEUR_CONFIRME !== "true") return fail(OPERATOR_CONFIRM_DISABLED);
   const visit = await db.visit.findUnique({
     where: { id: parsed.data.visitId },
     select: { id: true, aineId: true, status: true, aine: { select: { sandboxId: true } }, proofs: { select: { factor: true, valid: true } } },

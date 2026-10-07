@@ -4,6 +4,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { api, messageErreur, type Visite } from '@/api';
 import { dateLongue, heureCourte, plageHoraire, pluriel } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
+import { emailAVerifier } from '@/session/compte';
 import { useSession } from '@/session/SessionProvider';
 import { fonts, radius, useTheme } from '@/theme';
 import { Apparition, Avatar, Button, Card, CaseIllustration, Icon, Kreyol, Screen, SectionHeader, TabBarSpace, Text } from '@/ui';
@@ -51,6 +52,21 @@ export default function Visites() {
         </View>
         <Avatar initiale={prenom.charAt(0)} teinte="mer" size={44} />
       </View>
+
+      {/* L1 : rappel tant que l'e-mail n'est pas vérifié (GET /me `emailVerifie: false`). */}
+      {session && emailAVerifier(session) ? (
+        <View style={[styles.rappelEmail, { backgroundColor: c.soleilSoft }]} testID="rappel-email" accessibilityLiveRegion="polite">
+          <Icon name="mail" size={20} color={c.soleilInk} />
+          <View style={{ flex: 1 }}>
+            <Text variant="bodyStrong" style={{ color: c.soleilInk, fontSize: 16 }}>
+              Vérifiez votre e-mail
+            </Text>
+            <Text variant="body" style={{ color: c.soleilInk, fontSize: 16, lineHeight: 22 }}>
+              Ouvrez le lien envoyé à {session.email}. Koudmen peut ainsi vous écrire en cas de besoin.
+            </Text>
+          </View>
+        </View>
+      ) : null}
 
       {nbPropositions > 0 ? (
         <Pressable
@@ -191,6 +207,7 @@ export default function Visites() {
 }
 
 const styles = StyleSheet.create({
+  rappelEmail: { flexDirection: 'row', gap: 12, marginTop: 16, padding: 16, borderRadius: 20, alignItems: 'flex-start' },
   greet: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 10 },
   propositions: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16, padding: 14, borderRadius: radius.field, minHeight: 64 },
   timeline: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 },

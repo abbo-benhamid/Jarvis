@@ -67,6 +67,8 @@ export const aineSchema = z.object({
   lastInitial: lastInitialField,
   commune: z.enum(COMMUNE_CODES, { message: "Choisissez une commune." }),
   addressHint: optionalText(160, "160 caractères maximum."),
+  // L1-B (L8) : adresse exacte (facultative), chiffrée en base, géocodée. Vide = centre de la commune.
+  address: optionalText(200, "200 caractères maximum."),
   phone: phoneField,
   needs: z.array(z.enum(NEED_VALUES), { message: "Choisissez au moins un besoin." }).min(1, "Choisissez au moins un besoin."),
   activityLevel: levelField,

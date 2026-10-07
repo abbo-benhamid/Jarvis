@@ -560,3 +560,52 @@ dialog::backdrop {
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * ─── L1-B : carte domicile imprimable ──────────────────────────────────────
+ * À l'impression, seule la carte (.kd-print-card) sort, en noir sur blanc, sans navigation.
+ */
+@media print {
+  @page {
+    size: A5 portrait;
+    margin: 12mm;
+  }
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .kd-print-card,
+  .kd-print-card * {
+    visibility: visible;
+  }
+  .kd-print-card {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    box-shadow: none !important;
+    border: 1.5pt solid #000000 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  .kd-print-card .kd-no-print {
+    display: none !important;
+  }
+  .kd-print-card [data-print-muted] {
+    color: #333333 !important;
+  }
+}
+
+/* L1-B : carte du trajet en direct (MapLibre). Hauteur fixe, coins arrondis, jamais d'animation imposée. */
+.kd-map {
+  height: 320px;
+  border-radius: var(--radius-card, 20px);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.kd-map .maplibregl-ctrl-attrib {
+  font-size: 11px;
+}

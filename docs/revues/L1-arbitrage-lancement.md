@@ -86,3 +86,16 @@ Règles communes : chaque agent commite après chaque étape, garde les suites v
 ## 4. Hors périmètre L1 (attend les comptes du fondateur)
 
 Stripe (paiement réel), Twilio (appel « tapez 1 », SMS), push Expo réel (DPA + DPO), domaine `koudmen.fr` [À VÉRIFIER], hébergement HDS.
+
+## 5. Arbitrage après la critique juridique (`L1-juridique.md`)
+
+| # | Point | Décision de l'orchestrateur |
+|---|---|---|
+| R1 | J1 Données réelles hors HDS | Drapeau `DONNEES_REELLES_AUTORISEES` (défaut `false`). À `false` : mode **préinscription** en production (comptes ouverts, pas de fiche aîné réelle, d'adresse, de QR, de Kayé ni de trajet). Passage à `true` refusé par config-check sans `HEBERGEUR_HDS`, `AIPD_DATE` et `DPO_CONTACT`. Le parcours complet reste testable hors production (préproduction) |
+| R2 | J2 Cadre juridique | Politique de confidentialité, CGU et conditions accompagnants de lancement (brouillons [À VÉRIFIER AVEC UN AVOCAT]). Config-check refuse la production si un champ éditeur est vide |
+| R3 | J3 Carte opérateur | **Retirée.** L'opérateur voit « trajet partagé : oui / non ». Exception : SOS, accès journalisé |
+| R4 | J4 + MAJEURS L6 | Écran d'information et accord actif avant le premier partage. Une position / 30 s, app ouverte seulement. Coordonnées arrondies (~110 m), départ masqué (500 m). Arrêt à 60 min ou à moins de 150 m du domicile. Vue réservée à l'employeur et à une personne désignée par l'aîné. Jamais de « non partagé » visible par la famille, jamais dans le tri des profils. Durée réelle des sauvegardes écrite |
+| R5 | J5 Accord de l'aîné | État `EN_ATTENTE_ACCORD` ; un conseiller enregistre l'accord après appel ; champ `situationJuridique`. Adresse, QR et trajet seulement après l'accord |
+| R6 | J6 + L2-L3 | B3 : « vu le … » sans texte libre. Réponses d'orientation effacées à la validation. Âge ≥ 18 ans (21 ans niveau 3). Confidentialité = lien, CGU = case. Inscription gratuite pour l'accompagnant |
+| R7 | L8-L10 | QR : identifiant aléatoire de carte, pas d'`aineId`. Check-in : on garde le résultat et la distance arrondie, pas les coordonnées brutes. « À vérifier » : la famille tranche. Adresse visible le jour de la visite, lectures journalisées |
+| R8 | L4 | Aucun encaissement. Prix sur deux lignes, mention crédit d'impôt exacte, Sérénité sans promesse de remplacement |

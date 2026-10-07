@@ -11,7 +11,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "fr.koudmen.app",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Koudmen lit votre position une seule fois, quand vous validez votre arrivée chez la personne. Koudmen ne vous suit pas.",
+        "NSLocationWhenInUseUsageDescription": "Koudmen lit votre position quand vous validez votre arrivée, et pendant un trajet que vous choisissez de partager, app ouverte. Jamais en arrière-plan.",
         "NSCameraUsageDescription": "Koudmen utilise la caméra pour lire le QR code affiché au domicile. Aucune photo n’est gardée."
       }
     },
@@ -65,7 +65,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Koudmen lit votre position une seule fois, quand vous validez votre arrivée chez la personne. Koudmen ne vous suit pas.",
+          "locationWhenInUsePermission": "Koudmen lit votre position quand vous validez votre arrivée, et pendant un trajet que vous choisissez de partager, app ouverte. Jamais en arrière-plan.",
           "locationAlwaysPermission": false,
           "locationAlwaysAndWhenInUsePermission": false,
           "motionUsagePermission": false,

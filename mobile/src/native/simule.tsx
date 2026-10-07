@@ -22,9 +22,19 @@ export type ScenarioNatif = {
   camera?: 'a-demander' | 'accordee' | 'bloquee';
   /** Texte du QR lu par « Simuler la lecture ». Défaut : `koudmen:domicile:LKW7Q3`. */
   qr?: string;
+  /** L1 : le téléphone signale une position simulée (`mocked`). Défaut : `false`. */
+  mocked?: boolean;
+  /** L1 : position lue au check-in. `loin` : à environ 800 m du domicile. Défaut : `proche` (≈ 60 m). */
+  distance?: 'proche' | 'loin';
+  /** L1 : réponse à la permission du suivi de trajet. Défaut : `accordee`. */
+  suivi?: 'accordee' | 'refusee';
+  /** L1 : écart entre deux lectures du trajet simulé (ms). Défaut : 2 000. */
+  intervalleSuiviMs?: number;
+  /** L1 : écart minimum entre deux envois (ms). Défaut : 30 000 (comme en vrai). Les tests le raccourcissent. */
+  ecartEnvoiMs?: number;
 };
 
-export type JournalNatif = { lecturesPosition: number; appels: NumeroUrgence[] };
+export type JournalNatif = { lecturesPosition: number; appels: NumeroUrgence[]; suivisDemarres: number; suivisArretes: number };
 
 type Global = { __KOUDMEN_NATIF__?: ScenarioNatif; __KOUDMEN_NATIF_JOURNAL__?: JournalNatif };
 
@@ -34,15 +44,22 @@ function scenario(): ScenarioNatif {
 
 function journal(): JournalNatif {
   const g = globalThis as Global;
-  g.__KOUDMEN_NATIF_JOURNAL__ ??= { lecturesPosition: 0, appels: [] };
+  g.__KOUDMEN_NATIF_JOURNAL__ ??= { lecturesPosition: 0, appels: [], suivisDemarres: 0, suivisArretes: 0 };
   return g.__KOUDMEN_NATIF_JOURNAL__;
 }
 
-/** Code de démo de `src/api/simule.ts` (CODE_DOMICILE_DEMO). */
-const QR_DEMO = contenuQrDomicile('LKW7Q3');
+/** Code du domicile simulé de `src/api/simule.ts` (CODE_DOMICILE_SIMULE, LKW7Q3, aligné P14). */
+const QR_SIMULE = contenuQrDomicile('LKW7Q3');
 
-/** Fort-de-France, à titre d'exemple. */
-const POSITION_DEMO: PositionPonctuelle = { latitude: 14.6037, longitude: -61.0731, precisionMetres: 18 };
+/** Domicile simulé de Léonie (`DOMICILE_SIMULE` de `src/api/simule.ts`). */
+const DOMICILE = { latitude: 14.6085, longitude: -61.068 };
+/** Position au check-in : ≈ 60 m du domicile (proche) ou ≈ 800 m (loin). */
+const POSITION_PROCHE: PositionPonctuelle = { latitude: 14.609, longitude: -61.0677, precisionMetres: 18 };
+const POSITION_LOIN: PositionPonctuelle = { latitude: 14.6037, longitude: -61.0731, precisionMetres: 18 };
+/** Départ du trajet simulé : ≈ 1,6 km du domicile (Fort-de-France, vers la Savane). */
+const DEPART_TRAJET = { latitude: 14.5985, longitude: -61.0775 };
+/** Part du chemin faite à chaque lecture du trajet simulé (on arrive à moins de 150 m en une dizaine de lectures). */
+const PAS_TRAJET = 0.2;
 
 const MESSAGES_POSITION = {
   refusee: 'Vous avez refusé l’accès à la position. Utilisez le code du domicile.',
@@ -67,7 +84,7 @@ function VueScannerSimulee({ onLecture, onAnnuler }: ProprietesScanner) {
   return (
     <CadreScanner
       onAnnuler={onAnnuler}
-      pied={<Button testID="lire-qr-simule" variant="ink" icon="scan" label="Simuler la lecture du QR" onPress={() => onLecture(scenario().qr ?? QR_DEMO)} />}
+      pied={<Button testID="lire-qr-simule" variant="ink" icon="scan" label="Simuler la lecture du QR" onPress={() => onLecture(scenario().qr ?? QR_SIMULE)} />}
     >
       <View style={{ alignItems: 'center', gap: 6 }}>
         <View style={{ width: 84, height: 84, borderRadius: 6, backgroundColor: '#FFFFFF', padding: 8, flexDirection: 'row', flexWrap: 'wrap' }}>
@@ -93,7 +110,36 @@ export function creerNatifSimule(): Natif {
         journal().lecturesPosition += 1;
         const reponse = scenario().position ?? 'accordee';
         if (reponse !== 'accordee') throw new ApiError('POSITION_INDISPONIBLE', MESSAGES_POSITION[reponse]);
-        return POSITION_DEMO;
+        return { ...(scenario().distance === 'loin' ? POSITION_LOIN : POSITION_PROCHE), simulee: scenario().mocked === true };
+      },
+    },
+    suivi: {
+      disponible: () => true,
+      ecartEnvoiMs: () => scenario().ecartEnvoiMs ?? 30_000,
+      async suivre(surLecture) {
+        await new Promise((r) => setTimeout(r, 200));
+        if (scenario().suivi === 'refusee') {
+          throw new ApiError('POSITION_INDISPONIBLE', 'Vous avez refusé l’accès à la position. Le trajet n’est pas partagé. Vous pouvez venir quand même.');
+        }
+        journal().suivisDemarres += 1;
+        // Trajet simulé : de la Savane vers le domicile, une lecture toutes les `intervalleSuiviMs`.
+        let p = { ...DEPART_TRAJET };
+        const lire = () =>
+          surLecture({ ...p, precisionMetres: 12, simulee: scenario().mocked === true, lueA: Date.now() });
+        lire();
+        const id = setInterval(() => {
+          p = {
+            latitude: p.latitude + (DOMICILE.latitude - p.latitude) * PAS_TRAJET,
+            longitude: p.longitude + (DOMICILE.longitude - p.longitude) * PAS_TRAJET,
+          };
+          lire();
+        }, scenario().intervalleSuiviMs ?? 2_000);
+        return {
+          arreter: () => {
+            clearInterval(id);
+            journal().suivisArretes += 1;
+          },
+        };
       },
     },
     scanner: { disponible: () => true, Vue: VueScannerSimulee },
