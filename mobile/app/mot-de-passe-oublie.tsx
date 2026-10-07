@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { router } from 'expo-router';
+import { retourConnexion } from '@/session/navigation';
 import { api, messageErreur } from '@/api';
 import { EnTeteRetour } from '@/compte/EnTete';
 import { useTheme } from '@/theme';
@@ -49,7 +49,7 @@ export default function MotDePasseOublie() {
           <Text variant="body" tone="muted" style={{ fontSize: 16 }}>
             Pas d’e-mail dans 5 minutes ? Regardez dans les courriers indésirables, puis recommencez.
           </Text>
-          <Button testID="bouton-retour-connexion" label="Retour à la connexion" icon="left" onPress={() => router.replace('/connexion')} />
+          <Button testID="bouton-retour-connexion" label="Retour à la connexion" icon="left" onPress={retourConnexion} />
         </View>
       ) : (
         <View style={{ marginTop: 16, gap: 18 }}>

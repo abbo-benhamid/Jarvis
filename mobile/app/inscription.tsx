@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Linking, StyleSheet, View, type TextInput } from 'react-native';
 import { router } from 'expo-router';
+import { retourConnexion } from '@/session/navigation';
 import { api, messageErreur, WEB_URL } from '@/api';
 import { ChoixCommune } from '@/compte/ChoixCommune';
 import { EnTeteRetour } from '@/compte/EnTete';
@@ -198,7 +199,7 @@ export default function Inscription() {
         ) : null}
         <Button testID="bouton-creer-compte" large label="Créer mon compte" icon="user" loading={envoi} onPress={() => void envoyer()} />
         <View style={{ alignItems: 'center' }}>
-          <Button testID="lien-deja-compte" variant="link" label="J’ai déjà un compte : me connecter" onPress={() => router.replace('/connexion')} />
+          <Button testID="lien-deja-compte" variant="link" label="J’ai déjà un compte : me connecter" onPress={retourConnexion} />
         </View>
       </View>
     </Screen>

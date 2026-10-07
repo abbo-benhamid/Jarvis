@@ -59,7 +59,7 @@ export default function FicheVisite() {
 
   const header = (
     <View style={styles.topbar}>
-      <IconButton icon="left" accessibilityLabel="Retour aux visites" onPress={() => (router.canGoBack() ? router.back() : retourAuxVisites())} />
+      <IconButton icon="left" testID="bouton-retour-fiche" accessibilityLabel="Retour aux visites" onPress={() => (router.canGoBack() ? router.back() : retourAuxVisites())} />
       <Text variant="title" numberOfLines={1} style={{ flex: 1, textAlign: 'center' }}>
         {visite.donnees ? `Chez ${visite.donnees.aine.prenom}` : 'Visite'}
       </Text>

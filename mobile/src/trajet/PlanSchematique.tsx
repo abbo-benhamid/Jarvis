@@ -33,6 +33,7 @@ export function PlanSchematique({ domicile, position, prenom, testID = 'plan-sch
 
   return (
     <View style={[styles.cadre, { backgroundColor: c.sea1 }]} testID={testID} accessible accessibilityRole="image" accessibilityLabel={`Plan simplifié. ${libelle}`}>
+      <View style={styles.dessin}>
       <Svg width="100%" height="100%" viewBox={`0 0 ${L} ${H}`} preserveAspectRatio="xMidYMid slice">
         <Rect x={0} y={0} width={L} height={H} fill={c.sea1} />
         <Path d={`M0 ${H * 0.2} C ${L * 0.3} ${H * 0.05}, ${L * 0.6} ${H * 0.35}, ${L} ${H * 0.1} L ${L} ${H} L 0 ${H} Z`} fill={c.hill} opacity={0.9} />
@@ -52,6 +53,7 @@ export function PlanSchematique({ domicile, position, prenom, testID = 'plan-sch
           </>
         ) : null}
       </Svg>
+      </View>
       <View style={[styles.legende, { backgroundColor: c.surface }]}>
         <Text variant="body" style={{ fontSize: 16, lineHeight: 21 }} num>
           {d !== null ? `${texteDistance(d)} du domicile` : domicile ? `Domicile de ${prenom}` : 'Position du domicile inconnue'}
@@ -67,6 +69,7 @@ export function PlanSchematique({ domicile, position, prenom, testID = 'plan-sch
 }
 
 const styles = StyleSheet.create({
-  cadre: { height: 240, borderRadius: radius.image, overflow: 'hidden' },
-  legende: { position: 'absolute', left: 12, bottom: 12, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12 },
+  cadre: { borderRadius: radius.image, overflow: 'hidden' },
+  dessin: { height: 200 },
+  legende: { paddingHorizontal: 16, paddingVertical: 10, minHeight: 44, justifyContent: 'center' },
 });

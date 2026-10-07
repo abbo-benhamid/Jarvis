@@ -43,7 +43,6 @@ export function BandeauTrajet({ children }: { children: ReactNode }) {
                     ? 'Trajet partagé · pas de réseau'
                     : `Trajet partagé · vers ${etat.prenom}`}
               </Text>
-              {etat.statut === 'en_cours' ? <Icon name="map" size={18} color={c.onMer} /> : null}
             </Pressable>
             {etat.statut === 'en_cours' ? (
               <Pressable

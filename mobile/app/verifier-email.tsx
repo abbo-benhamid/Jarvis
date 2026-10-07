@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { router } from 'expo-router';
+import { retourConnexion } from '@/session/navigation';
 import { EnTeteRetour } from '@/compte/EnTete';
 import { Etapes } from '@/compte/Etapes';
 import { useTheme } from '@/theme';
@@ -12,7 +12,7 @@ export default function VerifierEmail() {
     <Screen
       header={<EnTeteRetour titre="Compte créé" />}
       testID="ecran-verifier-email"
-      dock={<Button testID="bouton-aller-connexion" large label="Me connecter" icon="lock" onPress={() => router.replace('/connexion')} />}
+      dock={<Button testID="bouton-aller-connexion" large label="Me connecter" icon="lock" onPress={retourConnexion} />}
     >
       <View style={[styles.rond, { backgroundColor: c.merSoft }]}>
         <Icon name="mail" size={24} color={c.mer} />
