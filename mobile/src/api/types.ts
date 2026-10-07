@@ -8,6 +8,7 @@
  * pas de code du domicile, pas d'historique de Kayé, pas de donnée de santé.
  */
 import type { CodeErreur, MotifRefus } from '@/contracts';
+import type { DomicileTrajet as Domicile } from '@/contrats-l1';
 
 export type {
   BrouillonKaye,
@@ -15,7 +16,6 @@ export type {
   KayePublie,
   Proposition,
   ReponseAcceptation,
-  ReponseMoi as Moi,
   ReponseRefus,
   ReponseVisite,
   ResultatEvenement,
@@ -23,12 +23,36 @@ export type {
   Visite,
 } from '@/contracts';
 export { SEUIL_PREUVE } from '@/contracts';
+// L1 : contrats PROVISOIRES (src/contrats-l1), en attendant les contrats serveur des agents A et B.
+export type {
+  ControleCheckIn,
+  DemandeInscription,
+  DomicileTrajet,
+  MoiL1 as Moi,
+  ResultatEvenementL1,
+  StatutControle,
+} from '@/contrats-l1';
 
 /** Deux facteurs de preuve sur trois valident une visite. */
 export { SEUIL_PREUVE as PREUVES_REQUISES } from '@/contracts';
 
 /** Position ponctuelle lue au check-in, avec l'accord explicite de l'accompagnant. */
-export type PositionPonctuelle = { latitude: number; longitude: number; precisionMetres?: number };
+export type PositionPonctuelle = {
+  latitude: number;
+  longitude: number;
+  precisionMetres?: number;
+  /** L1 (L10) : position simulée détectée par le téléphone (`mocked`, Android). Le serveur la refuse. */
+  simulee?: boolean;
+};
+
+/** L1 : état du trajet renvoyé par le serveur (POST /visites/{id}/trajet). */
+export type EtatTrajetServeur = {
+  etat: 'EN_COURS' | 'ARRETE';
+  /** Fin automatique (60 min). `null` si le serveur ne la donne pas. */
+  expireA: string | null;
+  /** Domicile pour la carte, si le serveur le donne. */
+  domicile: Domicile | null;
+};
 
 /** Codes d'erreur de l'app : codes de l'API, motifs de refus d'un événement, erreurs locales. */
 export type CodeErreurApp =

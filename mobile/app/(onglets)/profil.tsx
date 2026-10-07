@@ -5,6 +5,7 @@ import Constants from 'expo-constants';
 import { api } from '@/api';
 import { useEtatHorsLigne } from '@/offline/BandeauHorsLigne';
 import { useSession } from '@/session/SessionProvider';
+import { useTrajet } from '@/trajet/TrajetProvider';
 import { radius, useTheme, type ThemePreference } from '@/theme';
 import { Avatar, Button, Card, Choice, Icon, type IconName, MadrasLine, Screen, SectionHeader, TabBarSpace, Text } from '@/ui';
 
@@ -18,6 +19,7 @@ export default function Profil() {
   const { c, preference, setPreference } = useTheme();
   const { session, deconnecter } = useSession();
   const etatFile = useEtatHorsLigne();
+  const trajet = useTrajet();
   // V1c (X5) : déconnexion avec des envois en attente → avertir, jamais d'effacement silencieux.
   const [avertir, setAvertir] = useState(false);
   const [envoiAvant, setEnvoiAvant] = useState(false);
@@ -87,7 +89,31 @@ export default function Profil() {
 
       <SectionHeader title="Vie privée" />
       <Card padding={0} style={{ paddingHorizontal: 18 }}>
-        <Ligne icon="pin" titre="Position" detail="Une seule lecture à l’arrivée, avec votre accord. Jamais en arrière-plan." />
+        <Ligne icon="pin" titre="Position à l’arrivée" detail="Une seule lecture, avec votre accord. Jamais en arrière-plan." />
+        {/* L1 : accord du partage de trajet, révocable ici (décision de l'orchestrateur). */}
+        {trajet.accord ? (
+          <Ligne
+            icon="nav"
+            titre="Partage du trajet"
+            valeur="Accepté"
+            detail={`Accord donné le ${new Date(trajet.accord.donneLe).toLocaleDateString('fr-FR')}. Retirer l’accord n’a aucun effet sur vos missions.`}
+            separe
+            onPress={() => void trajet.retirerAccord()}
+            action="Retirer mon accord"
+            testID="retirer-accord-trajet"
+          />
+        ) : (
+          <Ligne
+            icon="nav"
+            titre="Partage du trajet"
+            valeur="Non"
+            detail="Facultatif. Vous choisissez avant votre premier trajet partagé."
+            separe
+            onPress={() => router.push('/accord-trajet')}
+            action="Lire ce qui est partagé"
+            testID="lire-accord-trajet"
+          />
+        )}
         <Ligne icon="lock" titre="Données sur ce téléphone" detail="Le minimum pour vos visites. Tout est effacé à la déconnexion." separe />
       </Card>
 

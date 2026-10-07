@@ -101,7 +101,8 @@ test.describe('V1c : fiche visite', () => {
         await expect(fiche.getByTestId('etape-GPS')).toContainText('Position à l’arrivée');
         await expect(fiche.getByTestId('etape-CODE_DOMICILE')).toContainText('Code du domicile');
         await expect(fiche.getByTestId('etape-CONFIRMATION_AINE')).toContainText('Confirmation de l’aîné');
-        await expect(fiche.getByTestId('explication-code')).toContainText('c’est le même');
+        // L1 (L9) : la carte domicile porte un QR signé ET un code à 6 caractères (secours).
+        await expect(fiche.getByTestId('explication-code')).toContainText('Sinon, saisissez le code');
         await expect(fiche.getByTestId('bouton-scanner')).toBeVisible();
         await expect(fiche.getByTestId('bouton-saisir')).toBeVisible();
         await capture(page, `fiche-${largeur}-${theme}`);

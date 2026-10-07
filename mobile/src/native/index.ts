@@ -1,6 +1,6 @@
 import { Linking, Platform } from 'react-native';
 import { API_MODE } from '@/api/config';
-import { positionPlateforme } from './position';
+import { positionPlateforme, suiviPlateforme } from './position';
 import { creerNatifSimule } from './simule';
 import type { Natif } from './types';
 import { scannerPlateforme } from './VueScanner';
@@ -28,6 +28,7 @@ export const natif: Natif = simule
   : {
       mode: Platform.OS === 'web' ? 'web' : 'natif',
       position: positionPlateforme,
+      suivi: suiviPlateforme,
       scanner: scannerPlateforme,
       appel: {
         async appeler(numero) {
