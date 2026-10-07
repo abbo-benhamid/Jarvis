@@ -187,10 +187,15 @@ export const positionPonctuelleSchema = z
     precisionMetres: z.number().min(0).max(100_000).optional(),
     /** L'accompagnant a accepté cette lecture unique. Obligatoire. */
     consentement: z.literal(true),
+    /** L1-B (L10) : le téléphone signale une position simulée (`mocked` Android). Refusée : preuve « À vérifier ». */
+    simulee: z.boolean().optional(),
   })
   .strict();
 
-/** Check-in : code du domicile et/ou position ponctuelle (au moins un des deux). */
+/** L1-B (L9) : contenu du QR signé de la carte domicile (`koudmen:domicile:s1:<jeton>`) ou le jeton seul. */
+export const QR_DOMICILE_MAX = 2000;
+
+/** Check-in : QR signé, code du domicile et/ou position ponctuelle (au moins un des trois). */
 export const evenementCheckInSchema = z
   .object({
     ...evenementBase,
@@ -198,6 +203,8 @@ export const evenementCheckInSchema = z
     visiteId: identifiantSchema,
     /** Code affiché au domicile (6 caractères), ou lu dans le QR. Jamais enregistré ni journalisé. */
     codeDomicile: z.string().trim().min(1).max(12).optional(),
+    /** L1-B (L9) : QR signé de la carte domicile. Prioritaire sur `codeDomicile`. Jamais enregistré ni journalisé. */
+    qr: z.string().trim().min(1).max(QR_DOMICILE_MAX).optional(),
     position: positionPonctuelleSchema.optional(),
   })
   .strict();
@@ -238,8 +245,8 @@ export const demandeEvenementsSchema = z
   .strict()
   .superRefine((v, ctx) => {
     v.evenements.forEach((e, i) => {
-      if (e.type === "CHECK_IN" && !e.codeDomicile && !e.position) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["evenements", i, "codeDomicile"], message: "Code du domicile ou position obligatoire." });
+      if (e.type === "CHECK_IN" && !e.codeDomicile && !e.qr && !e.position) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["evenements", i, "codeDomicile"], message: "QR, code du domicile ou position obligatoire." });
       }
       if (e.type === "KAYE_PUBLICATION" && e.kaye.aSurveiller && !e.kaye.noteSurveillance) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["evenements", i, "kaye", "noteSurveillance"], message: "Dites ce qu'il faut surveiller." });
@@ -265,6 +272,21 @@ export const motifRefusSchema = z.enum([
   "INVALIDE",
 ]);
 export type MotifRefus = z.infer<typeof motifRefusSchema>;
+
+/** L1-B (§ 2.3) : statut de la preuve de présence après un CHECK_IN. */
+export const statutPreuveCheckInSchema = z.enum(["VALIDE", "A_VERIFIER", "REFUSE"]);
+export type StatutPreuveCheckIn = z.infer<typeof statutPreuveCheckInSchema>;
+/** L1-B (§ 2.3) : contrôle du check-in, même forme que `controleCheckInSchema` de l'app (L1-C). */
+export const controleCheckInSchema = z
+  .object({
+    statut: statutPreuveCheckInSchema,
+    /** Raison en français simple, affichable telle quelle. */
+    raison: z.string().max(300).nullable().optional(),
+  })
+  .strict();
+export type ControleCheckIn = z.infer<typeof controleCheckInSchema>;
+/** L1-B (P1/P8) : écart réception − survenue au-delà duquel un check-in passe « À vérifier » (minutes). */
+export const ECART_RECEPTION_CHECKIN_MAX_MIN = 30;
 
 /** Résultat d'un facteur de preuve au check-in. */
 export const resultatPreuveSchema = z
@@ -297,6 +319,12 @@ export const resultatEvenementSchema = z
       .optional(),
     /** SOS : consigne à afficher tout de suite. */
     consigne: z.string().optional(),
+    /**
+     * L1-B (§ 2.3, L10) : CHECK_IN seulement. VALIDE : présence prouvée. A_VERIFIER : check-in accepté, mais la
+     * famille employeur doit confirmer (position absente, refusée, simulée, reçue en retard…). REFUSE : QR faux ou
+     * révoqué, code faux, hors délai.
+     */
+    controle: controleCheckInSchema.optional(),
   })
   .strict();
 export type ResultatEvenement = z.infer<typeof resultatEvenementSchema>;

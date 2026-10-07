@@ -40,7 +40,7 @@ export async function getFamilyHome(userId: string, now: Date = new Date()) {
             where: { scheduledStart: { gte: now }, status: { in: ["PREVUE", "EN_COURS"] } },
             orderBy: { scheduledStart: "asc" },
             take: 1,
-            select: { scheduledStart: true, caregiver: { select: { user: { select: { firstName: true } } } } },
+            select: { id: true, scheduledStart: true, caregiver: { select: { user: { select: { firstName: true } } } } },
           },
           journal: {
             orderBy: { createdAt: "desc" },

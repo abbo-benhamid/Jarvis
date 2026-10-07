@@ -32,7 +32,8 @@ export default defineConfig({
         command: `pnpm exec next start -p ${PORT}`,
         // Les e2e créent beaucoup de bacs à sable depuis la même adresse : limites de débit coupées
         // (jamais en production : config-check refuse RATE_LIMIT_DISABLED). Tests des limites : rate-limit.db.test.ts.
-        env: { RATE_LIMIT_DISABLED: process.env.RATE_LIMIT_DISABLED ?? "true" },
+        // L1-B : géocodage simulé (aucun appel réseau à api-adresse.data.gouv.fr pendant les e2e).
+        env: { RATE_LIMIT_DISABLED: process.env.RATE_LIMIT_DISABLED ?? "true", ADAPTER_GEOCODAGE: process.env.ADAPTER_GEOCODAGE ?? "simule" },
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,

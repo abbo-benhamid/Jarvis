@@ -7,6 +7,8 @@
  * est une valeur d'exemple (dépôt public), une valeur de CI, ou une valeur trop courte.
  */
 
+import { presenceConfigProblems } from "./presence/config";
+
 type Env = Record<string, string | undefined>;
 
 /**
@@ -111,6 +113,8 @@ export function productionConfigProblems(env: Env = process.env): string[] {
     out.push("TRUST_PROXY doit valoir vercel, clevercloud ou aucun.");
   }
   if (env.TEST_END_DATE && !/^\d{4}-\d{2}-\d{2}$/.test(env.TEST_END_DATE.trim())) out.push("TEST_END_DATE n'est pas une date (format AAAA-MM-JJ).");
+  // L1-B (L9, R7) : clé de signature des cartes domicile et clé de chiffrement des adresses (src/server/presence/config.ts).
+  out.push(...presenceConfigProblems(env));
   return out;
 }
 

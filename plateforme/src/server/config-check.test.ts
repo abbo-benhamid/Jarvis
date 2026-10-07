@@ -17,6 +17,9 @@ function prodEnv(over: Record<string, string | undefined> = {}) {
     SESSION_SECRET: STRONG_A,
     CRON_SECRET: STRONG_B,
     TESTER_INVITE_CODES: `${generateTesterCode()},${generateTesterCode()}`,
+    // L1-B : clés de la carte domicile et de l'adresse (32 octets en base64).
+    QR_SIGNING_KEY: "jIFap7/9yWO0DJl/S2PvASG4xcd3hgd7q+0ccZQ+pow=",
+    ADDRESS_ENC_KEY: "Irx0YGksVDcEh69UBRXldm7oy3x0BJoXwJNYVvDPfBk=",
     ...over,
   };
 }

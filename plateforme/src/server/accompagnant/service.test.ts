@@ -51,6 +51,8 @@ vi.mock("@/server/outbox", () => ({ notifyLakou: m.notifyLakou }));
 vi.mock("@/server/env", () => ({ isDemoMode: m.isDemoMode }));
 vi.mock("@/server/visits/service", () => ({ recordProof: m.recordProof, refreshVisitStatus: m.refreshVisitStatus }));
 vi.mock("@/server/matching/locks", () => ({ lockCareRequests: vi.fn(async () => undefined) }));
+// L1-B : le trajet en direct (arrêté au check-in) est testé à part (trajet.db.test.ts).
+vi.mock("@/server/presence/trajet", () => ({ endTripForVisit: vi.fn(async () => false) }));
 vi.mock("@/server/matching/service", () => ({
   inTransaction: async (client: unknown, fn: (t: unknown) => unknown) => (client ? fn(client) : m.db.$transaction(fn as never)),
 }));
@@ -281,7 +283,7 @@ function visitFixture(
     scheduledEnd: new Date("2026-10-05T17:00:00Z"),
     checkInAt: over.checkInAt ?? null,
     checkOutAt: over.checkOutAt ?? null,
-    aine: { id: "aine-leonie", firstName: "Léonie", latitude: 14.6173, longitude: -61.0597, homeCode: "LKW7Q3" },
+    aine: { id: "aine-leonie", firstName: "Léonie", latitude: 14.6173, longitude: -61.0597, locationApproximate: false, homeCode: "LKW7Q3" },
     proofs: over.proofs ?? [],
     journal: over.journal ?? null,
     caregiver: { validation: over.validation ?? "VALIDE" },
@@ -365,7 +367,8 @@ describe("check-in", () => {
     expect(r.valid).toBe(true);
     expect(m.recordProof).toHaveBeenCalledWith(
       "visit-1",
-      expect.objectContaining({ factor: "GPS", valid: true, simulated: false, accuracyMeters: 20 }),
+      // R7 : aucune coordonnée brute ni précision gardée ; distance arrondie à la dizaine.
+      expect.objectContaining({ factor: "GPS", valid: true, simulated: false, latitude: null, longitude: null, accuracyMeters: null, distanceMeters: 20 }),
       josiane,
     );
   });

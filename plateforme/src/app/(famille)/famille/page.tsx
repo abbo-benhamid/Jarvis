@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Eye, HandHeart, NotebookPen, Plus, Search, UserPlus } from "lucide-react";
+import { Eye, HandHeart, Navigation, NotebookPen, Plus, Search, UserPlus } from "lucide-react";
+import { tripViewableAineIds } from "@/server/presence/queries";
 import { requireRole } from "@/server/auth/guards";
 import { countRecentSignals, getFamilyHome, getKayeFeed } from "@/server/famille/queries";
 import { communeLabel } from "@/lib/communes";
@@ -29,6 +30,8 @@ export default async function Page() {
   ]);
   const now = new Date();
   const several = memberships.length > 1;
+  // L1-B (R4) : suivi du trajet, pour l'employeur et la personne désignée seulement.
+  const followIds = await tripViewableAineIds(user.id);
 
   return (
     <>
@@ -69,7 +72,7 @@ export default async function Page() {
       ) : (
         <div className="flex flex-col gap-10">
           {memberships.map((m) => (
-            <AineBlock key={m.aine.id} m={m} kaye={feed.find((k) => k.aine.id === m.aine.id) ?? null} several={several} now={now} />
+            <AineBlock key={m.aine.id} m={m} kaye={feed.find((k) => k.aine.id === m.aine.id) ?? null} several={several} now={now} canFollow={followIds.has(m.aine.id)} />
           ))}
           <LinkButton href="/famille/aines/nouveau" variant="quiet" size="lg" fullWidth icon={<Plus strokeWidth={1.6} />}>
             Ajouter un aîné
@@ -80,7 +83,7 @@ export default async function Page() {
   );
 }
 
-function AineBlock({ m, kaye, several, now }: { m: Membership; kaye: KayeRow | null; several: boolean; now: Date }) {
+function AineBlock({ m, kaye, several, now, canFollow }: { m: Membership; kaye: KayeRow | null; several: boolean; now: Date; canFollow: boolean }) {
   const { aine } = m;
   const name = `${aine.firstName} ${initialWithDot(aine.lastInitial)}`.trim();
   const plan = aine.subscription ? `Formule ${PLAN_LABELS[aine.subscription.plan]}` : null;
@@ -138,7 +141,14 @@ function AineBlock({ m, kaye, several, now }: { m: Membership; kaye: KayeRow | n
             </span>
           </span>
         </CardLink>
-      ) : aine.requests.length > 0 ? (
+      ) : null}
+      {/* L1-B (L6) : lien vers « Où en est la visite », dans les 3 heures avant la visite. */}
+      {next && canFollow && next.scheduledStart.getTime() - now.getTime() < 3 * 3_600_000 ? (
+        <LinkButton href={`/famille/visites/${next.id}/trajet`} variant="quiet" size="lg" fullWidth className="mt-3" icon={<Navigation strokeWidth={1.6} />}>
+          Où en est la visite ?
+        </LinkButton>
+      ) : null}
+      {next ? null : aine.requests.length > 0 ? (
         <CardLink href="/famille/demandes">
           <span className="flex items-center gap-4">
             <span aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-md bg-surface-2 text-mer">

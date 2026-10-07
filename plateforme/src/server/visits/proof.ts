@@ -1,15 +1,21 @@
 /**
  * Preuve de visite « 2 facteurs sur 3 » (docs/00, docs/05). Fonctions PURES.
  *  (a) GPS : UNE position au check-in, consentie. Jamais de suivi continu.
- *  (b) Code domicile : 6 caractères affichés sur la fiche aîné (remplace QR/NFC).
- *  (c) Confirmation de l'aîné : appel vocal « tapez 1 » (simulé dans le MVP).
+ *  (b) Code domicile : QR signé de la carte domicile (L9), ou code de 6 caractères en secours.
+ *  (c) Confirmation de l'aîné : appel vocal « tapez 1 » (simulé dans le MVP), ou décision de la famille employeur (R7).
  */
 import type { ProofFactor, VisitStatus } from "@prisma/client";
 
-/** Rayon autour du domicile pour valider le GPS. [À VÉRIFIER] avec le terrain (relief, précision). */
-export const GPS_RADIUS_METERS = 300;
-/** Au-delà de cette précision, la position n'est pas fiable. */
-export const GPS_MAX_ACCURACY_METERS = 500;
+/** L10 : rayon autour du domicile pour valider le GPS. [À VÉRIFIER] avec le terrain (relief, précision). */
+export const GPS_RADIUS_METERS = 150;
+/** L10 : la précision annoncée s'ajoute au rayon, dans cette limite (une position à 180 m ± 40 m passe). */
+export const GPS_ACCURACY_TOLERANCE_METERS = 50;
+/** L10 : au-delà de cette précision, la position n'est pas fiable (« À vérifier »). */
+export const GPS_MAX_ACCURACY_METERS = 150;
+/** R7 : la distance gardée dans la preuve est arrondie à la dizaine de mètres. */
+export function roundDistance(meters: number): number {
+  return Math.round(meters / 10) * 10;
+}
 /** Délai après la fin prévue avant de passer « À vérifier » sans check-out. */
 export const VISIT_GRACE_MINUTES = 120;
 export const PROOF_THRESHOLD = 2;
@@ -44,6 +50,8 @@ export type VisitTiming = {
   scheduledEnd: Date;
   /** Lot A2 : écart d'horloge > 12 h détecté sur un événement de l'app (null ou absent sinon). */
   clockSkewAt?: Date | null;
+  /** L1-B (P1/P8) : check-in reçu plus de 30 min après l'heure de l'appareil (null ou absent sinon). */
+  lateCheckInAt?: Date | null;
 };
 
 /**
@@ -57,7 +65,7 @@ export type VisitTiming = {
  * (le GPS et le code viennent de l'appareil, dont l'heure n'est pas fiable).
  */
 export function deriveVisitStatus(timing: VisitTiming, proof: VisitProofSummary, now: Date = new Date()): VisitStatus {
-  if (timing.clockSkewAt && !proof.validFactors.includes("CONFIRMATION_AINE")) return "A_VERIFIER";
+  if ((timing.clockSkewAt || timing.lateCheckInAt) && !proof.validFactors.includes("CONFIRMATION_AINE")) return "A_VERIFIER";
   if (proof.isProven) return "VALIDEE";
   const overdue = now.getTime() > timing.scheduledEnd.getTime() + VISIT_GRACE_MINUTES * 60_000;
   if (timing.checkOutAt) return "A_VERIFIER";
@@ -75,17 +83,38 @@ export function haversineMeters(a: { lat: number; lng: number }, b: { lat: numbe
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
-export type GpsEvaluation = { valid: boolean; distanceMeters: number; reason?: "TROP_LOIN" | "PRECISION_FAIBLE" };
+export type GpsFailure = "TROP_LOIN" | "PRECISION_FAIBLE" | "SIMULEE" | "DOMICILE_APPROXIMATIF";
+export type GpsEvaluation = { valid: boolean; distanceMeters: number; reason?: GpsFailure };
 
+/** Raison d'un échec de position, en français simple (affichée à l'accompagnant et à la famille). */
+export const GPS_FAILURE_MESSAGES: Record<GpsFailure, string> = {
+  TROP_LOIN: "Position trop loin du domicile.",
+  PRECISION_FAIBLE: "Position trop imprécise.",
+  SIMULEE: "Position simulée par le téléphone : elle n'est pas acceptée.",
+  DOMICILE_APPROXIMATIF: "L'adresse du domicile est approximative : la position ne peut pas être comparée.",
+};
+
+/**
+ * L10 : position du check-in comparée au domicile.
+ * - position simulée (`mocked` Android) → refusée ;
+ * - domicile approximatif (centre de commune) → non comparable ;
+ * - précision > 150 m → trop imprécise ;
+ * - distance ≤ 150 m + min(précision, 50 m) → valide.
+ * Distance renvoyée ARRONDIE à la dizaine de mètres (R7).
+ */
 export function evaluateGps(
-  position: { lat: number; lng: number; accuracy?: number | null },
-  home: { lat: number; lng: number },
+  position: { lat: number; lng: number; accuracy?: number | null; mocked?: boolean },
+  home: { lat: number; lng: number; approximate?: boolean },
 ): GpsEvaluation {
-  const distanceMeters = Math.round(haversineMeters(position, home));
+  const raw = haversineMeters(position, home);
+  const distanceMeters = roundDistance(raw);
+  if (position.mocked) return { valid: false, distanceMeters, reason: "SIMULEE" };
+  if (home.approximate) return { valid: false, distanceMeters, reason: "DOMICILE_APPROXIMATIF" };
   if (position.accuracy != null && position.accuracy > GPS_MAX_ACCURACY_METERS) {
     return { valid: false, distanceMeters, reason: "PRECISION_FAIBLE" };
   }
-  if (distanceMeters > GPS_RADIUS_METERS) return { valid: false, distanceMeters, reason: "TROP_LOIN" };
+  const tolerance = Math.min(position.accuracy ?? 0, GPS_ACCURACY_TOLERANCE_METERS);
+  if (raw > GPS_RADIUS_METERS + tolerance) return { valid: false, distanceMeters, reason: "TROP_LOIN" };
   return { valid: true, distanceMeters };
 }
 

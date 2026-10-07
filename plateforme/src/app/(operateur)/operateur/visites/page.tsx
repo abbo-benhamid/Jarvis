@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { VisitStatusBadge } from "@/components/status-badges";
 import { ProofFactors } from "@/components/operateur/display";
 import { FilterForm, pickEnum } from "@/components/operateur/filter-form";
-import { ConfirmElderForm } from "@/components/operateur/forms";
+import Link from "next/link";
+import { visitsWithActiveTrip } from "@/server/presence/trajet";
 import { VISIT_STATUS_LABELS, proofCountLabel } from "@/lib/labels";
 import { communeLabel } from "@/lib/communes";
 import { formatDate, formatTime } from "@/lib/format";
@@ -31,13 +32,14 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
     visitStatusCounts(),
     confirmedId ? getVisitSummary(confirmedId) : null,
   ]);
+  const sharing = await visitsWithActiveTrip(visits.map((v) => v.id));
 
   return (
     <>
       <PageHeader
         eyebrow="Opérateur"
         title="Visites"
-        description="Une visite est validée avec 2 preuves sur 3. Pour une visite à vérifier, appelez l'aîné ou la famille."
+        description="Une visite est validée avec 2 preuves sur 3. Une visite à vérifier est tranchée par la famille employeur."
       />
       {confirmed ? (
         <Alert tone={confirmed.status === "VALIDEE" ? "succes" : "attention"} title="Appel simulé enregistré" className="mb-6">
@@ -106,8 +108,23 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
                         <p className="mt-1 text-sm text-muted">{v.journal ? "Kayé écrit." : "Kayé pas encore écrit."}</p>
                       ) : null}
                     </div>
-                    {canConfirm ? <ConfirmElderForm visitId={v.id} /> : null}
+                    {/* L1-B (R7) : une visite « À vérifier » est tranchée par la famille employeur, pas par l'opérateur. */}
+                    {canConfirm && v.status === "A_VERIFIER" ? (
+                      <p className="text-sm text-muted">La famille employeur confirme ou signale cette visite.</p>
+                    ) : null}
                   </div>
+                  <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                    {/* L1-B (R3) : l'opérateur voit seulement « trajet partagé : oui/non ». */}
+                    <span>Trajet partagé : {sharing.has(v.id) ? "oui" : "non"}</span>
+                    {sharing.has(v.id) ? (
+                      <Link href={`/operateur/visites/${v.id}/sos`} className="font-semibold text-mer underline underline-offset-4">
+                        Position (SOS seulement)
+                      </Link>
+                    ) : null}
+                    <Link href={`/operateur/aines/${v.aine.id}/carte-domicile`} className="font-semibold text-mer underline underline-offset-4">
+                      Carte domicile
+                    </Link>
+                  </p>
                 </article>
               </li>
             );

@@ -8,6 +8,7 @@ import { communeLabel } from "@/lib/communes";
 import {
   AccompagnantError,
   checkInWithCode,
+  checkInWithQr,
   checkInWithGps,
   checkOut,
   createKaye,
@@ -20,8 +21,10 @@ import {
 import { getPendingProposals } from "@/server/accompagnant/queries";
 import { refreshVisitStatus, sweepOverdueVisits } from "./service";
 import { APP_VISIT_SELECT, effectiveEventTime, isClockSkewed, motifFromServiceCode, toVisiteDto } from "./app-rules";
+import { GPS_FAILURE_MESSAGES } from "./proof";
 import {
   brouillonKayeSchema,
+  ECART_RECEPTION_CHECKIN_MAX_MIN,
   type Evenement,
   type ReponseVisite,
   type ResultatEvenement,
@@ -94,6 +97,7 @@ export async function processAppEvents(user: AppUser, events: Evenement[], recei
   const profile = await db.caregiverProfile.findUnique({ where: { userId: user.id }, select: { validation: true } });
   const active = profile?.validation === "VALIDE";
   const skewedVisits = new Set<string>();
+  const lateVisits = new Set<string>();
   const results: ResultatEvenement[] = [];
 
   for (const e of events) {
@@ -120,11 +124,24 @@ export async function processAppEvents(user: AppUser, events: Evenement[], recei
 
     let result: ResultatEvenement;
     try {
-      const outcome = await handleEvent(actor, user, e, active, effectiveEventTime(occurredAt, receivedAt), skew);
+      // L1-B (P1/P8) : check-in reçu plus de 30 min après l'heure de l'appareil (l'écart > 12 h est déjà traité à part).
+      const late = e.type === "CHECK_IN" && !skew && isLateCheckIn(occurredAt, receivedAt);
+      const outcome = await handleEvent(actor, user, e, active, effectiveEventTime(occurredAt, receivedAt), skew, late);
       const visite = visitId ? await visitState(user.id, visitId) : undefined;
       // Code m3 : seule une PREUVE acceptée (check-in, check-out) à l'horloge suspecte marque la visite.
       // Un SOS, un brouillon ou un refus garde l'écart dans AppEvent sans bloquer la visite.
       if (skew && visite && outcome.statut === "ACCEPTE" && (e.type === "CHECK_IN" || e.type === "CHECK_OUT")) skewedVisits.add(visite.id);
+      if (late && visite && outcome.statut === "ACCEPTE") lateVisits.add(visite.id);
+      // La visite peut être prouvée par un facteur reçu avant (ex. code, puis position) : VALIDE.
+      if (e.type === "CHECK_IN" && outcome.statut === "ACCEPTE" && !late && !skew && visite?.statut === "VALIDEE" && outcome.controle?.statut === "A_VERIFIER") {
+        outcome.controle = { statut: "VALIDE", raison: "Présence confirmée : deux preuves sur trois." };
+      }
+      if (skew && outcome.controle?.statut === "VALIDE") {
+        outcome.controle = {
+          statut: "A_VERIFIER",
+          raison: "L'heure du téléphone est très différente de l'heure réelle. La famille employeur confirmera la visite.",
+        };
+      }
       result = { clientEventId: e.clientEventId, type: e.type, horlogeSuspecte: skew, ...outcome, ...(visite ? { visite } : {}) };
       // Sécurité m1 : on garde l'id de visite seulement s'il appartient à ce compte (sinon null).
       await db.appEvent.update({
@@ -138,10 +155,11 @@ export async function processAppEvents(user: AppUser, events: Evenement[], recei
     results.push(result);
   }
 
-  if (skewedVisits.size > 0) {
+  if (skewedVisits.size > 0 || lateVisits.size > 0) {
     for (const id of skewedVisits) await flagClockSkew(actor, id, receivedAt);
+    for (const id of lateVisits) await flagLateCheckIn(actor, id, receivedAt);
     for (const r of results) {
-      if (r.visite && skewedVisits.has(r.visite.id) && r.statut !== "DOUBLON") {
+      if (r.visite && (skewedVisits.has(r.visite.id) || lateVisits.has(r.visite.id)) && r.statut !== "DOUBLON") {
         r.visite = (await visitState(user.id, r.visite.id)) ?? r.visite;
       }
     }
@@ -188,7 +206,7 @@ async function visitState(userId: string, visitId: string) {
   return v ? { id: v.id, statut: v.status, score: v.proofScore } : undefined;
 }
 
-async function handleEvent(actor: Actor, user: AppUser, e: Evenement, active: boolean, at: Date, skew: boolean): Promise<Outcome> {
+async function handleEvent(actor: Actor, user: AppUser, e: Evenement, active: boolean, at: Date, skew: boolean, late = false): Promise<Outcome> {
   // Sécurité avant tout : le SOS passe toujours, même pour un profil inactif.
   if (e.type === "SOS") return sos(actor, user, e.visiteId ?? null, at, skew);
   if (!active) {
@@ -201,7 +219,7 @@ async function handleEvent(actor: Actor, user: AppUser, e: Evenement, active: bo
   try {
     switch (e.type) {
       case "CHECK_IN":
-        return await checkIn(actor, e, at);
+        return await checkIn(actor, e, at, late);
       case "CHECK_OUT": {
         await checkOut(actor, e.visiteId, at);
         return { statut: "ACCEPTE" };
@@ -255,41 +273,77 @@ async function keepRefusedKayeAsDraft(actor: Actor, e: Extract<Evenement, { type
   }
 }
 
-/** Check-in : le code d'abord (facteur le plus sûr), puis la position ponctuelle. Au moins un facteur doit passer. */
-async function checkIn(actor: Actor, e: Extract<Evenement, { type: "CHECK_IN" }>, at: Date): Promise<Outcome> {
+/**
+ * Check-in (L10, § 2.3). Ordre : QR signé (ou code de secours), puis position ponctuelle.
+ * - QR faux ou révoqué, code faux → le facteur est refusé. Sans autre facteur accepté : événement REFUSE.
+ * - Échec de position (trop loin, imprécise, simulée, domicile approximatif) → ne bloque pas : « À vérifier ».
+ * - Reçu plus de 30 min après l'heure de l'appareil (`late`) → « À vérifier » (P1/P8).
+ * Le résultat porte `controle: { statut (VALIDE, A_VERIFIER, REFUSE), raison }` en français simple (contrat de l'app L1-C).
+ */
+async function checkIn(actor: Actor, e: Extract<Evenement, { type: "CHECK_IN" }>, at: Date, late: boolean): Promise<Outcome> {
   const preuves: NonNullable<Outcome["preuves"]> = {};
   let firstError: AccompagnantError | null = null;
+  let codeOk = false;
+  let positionOk = false;
   let recorded = false;
+  const raisons: string[] = [];
 
-  if (e.codeDomicile) {
+  if (e.qr || e.codeDomicile) {
     try {
-      const r = await checkInWithCode(actor, e.visiteId, e.codeDomicile, at);
+      const r = e.qr ? await checkInWithQr(actor, e.visiteId, e.qr, at) : await checkInWithCode(actor, e.visiteId, e.codeDomicile!, at);
       preuves.code = { valide: true, message: r.alreadyDone ? "Le code était déjà validé." : null };
+      codeOk = true;
       recorded = true;
     } catch (err) {
       if (!(err instanceof AccompagnantError)) throw err;
-      if (err.code === "INTROUVABLE") return refused(err);
+      if (err.code === "INTROUVABLE") return { ...refused(err), controle: { statut: "REFUSE", raison: err.message } };
       preuves.code = { valide: false, message: err.message };
       firstError = err;
     }
   }
   if (e.position) {
     try {
-      const ev = await checkInWithGps(actor, { visitId: e.visiteId, latitude: e.position.latitude, longitude: e.position.longitude, accuracy: e.position.precisionMetres }, at);
-      preuves.position = {
-        valide: ev.valid,
-        message: ev.valid ? null : ev.reason === "PRECISION_FAIBLE" ? "Position trop imprécise." : "Position trop loin du domicile.",
-      };
+      const ev = await checkInWithGps(
+        actor,
+        { visitId: e.visiteId, latitude: e.position.latitude, longitude: e.position.longitude, accuracy: e.position.precisionMetres, mocked: e.position.simulee === true },
+        at,
+      );
+      preuves.position = { valide: ev.valid, message: ev.valid ? null : ev.reason ? GPS_FAILURE_MESSAGES[ev.reason] : null };
+      positionOk = ev.valid;
       recorded = true;
+      if (!ev.valid && ev.reason) raisons.push(GPS_FAILURE_MESSAGES[ev.reason]);
     } catch (err) {
       if (!(err instanceof AccompagnantError)) throw err;
-      if (err.code === "INTROUVABLE") return refused(err);
+      if (err.code === "INTROUVABLE") return { ...refused(err), controle: { statut: "REFUSE", raison: err.message } };
       preuves.position = { valide: false, message: err.message };
       firstError ??= err;
+      raisons.push(err.message);
     }
+  } else if (codeOk) {
+    raisons.push("Position non envoyée.");
   }
-  if (!recorded && firstError) return { ...refused(firstError), preuves };
-  return { statut: "ACCEPTE", preuves };
+  if (!recorded && firstError) return { ...refused(firstError), preuves, controle: { statut: "REFUSE", raison: firstError.message } };
+  if (!codeOk) raisons.unshift(preuves.code?.message ?? "Carte du domicile non scannée.");
+  if (late) raisons.push(`Check-in reçu plus de ${ECART_RECEPTION_CHECKIN_MAX_MIN} minutes après l'heure du téléphone.`);
+  if (codeOk && positionOk && !late) {
+    return { statut: "ACCEPTE", preuves, controle: { statut: "VALIDE", raison: "Présence confirmée : carte du domicile et position." } };
+  }
+  const raison = `${raisons.join(" ")} La famille employeur confirmera la visite.`.slice(0, 300);
+  return { statut: "ACCEPTE", preuves, controle: { statut: "A_VERIFIER", raison } };
+}
+
+/** P1/P8 : un check-in reçu plus de 30 min après l'heure de l'appareil. */
+export function isLateCheckIn(occurredAt: Date, receivedAt: Date): boolean {
+  return receivedAt.getTime() - occurredAt.getTime() > ECART_RECEPTION_CHECKIN_MAX_MIN * 60_000;
+}
+
+/** P1/P8 : check-in en retard → la visite passe « À vérifier » (une seule fois), puis le statut est recalculé. */
+async function flagLateCheckIn(actor: Actor, visitId: string, now: Date) {
+  const r = await db.visit.updateMany({ where: { id: visitId, lateCheckInAt: null }, data: { lateCheckInAt: now } });
+  if (r.count === 1) {
+    await logAudit({ actor, action: "visit.late_checkin", entityType: "Visit", entityId: visitId, metadata: { thresholdMinutes: ECART_RECEPTION_CHECKIN_MAX_MIN } });
+  }
+  await refreshVisitStatus(visitId, now);
 }
 
 /** Brouillon de Kayé : le plus récent (heure de l'appareil) gagne. Pas de journal d'audit (pas une action sensible). */
