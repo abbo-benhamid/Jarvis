@@ -1,6 +1,8 @@
 import type { HorsLigneVue } from '@/offline';
 import type {
   BrouillonKaye,
+  DemandeInscription,
+  EtatTrajetServeur,
   KayePublie,
   Moi,
   PositionPonctuelle,
@@ -9,8 +11,15 @@ import type {
   ReponseRefus,
   ReponseVisite,
   ResultatEvenement,
+  ResultatEvenementL1,
   Visite,
 } from './types';
+
+/** L1 : preuve d'arrivée. QR signé et/ou code (secours) et/ou position unique avec accord. */
+export type PreuveArrivee = { qr?: string; codeDomicile?: string; position?: PositionPonctuelle };
+
+/** L1 : une position du trajet (déjà arrondie par l'app). */
+export type PositionTrajet = { latitude: number; longitude: number; precisionMetres: number; survenuA: string; simulee?: boolean };
 
 /**
  * Interface unique entre les écrans et le serveur.
@@ -21,6 +30,8 @@ import type {
  *
  * | Méthode              | Route v1                                       |
  * |----------------------|------------------------------------------------|
+ * | inscrire             | POST /auth/inscription (L1, sans connexion)    |
+ * | motDePasseOublie     | POST /auth/mot-de-passe-oublie (L1)            |
  * | connecter            | POST /auth/code (PKCE S256) puis /auth/token   |
  * | restaurer            | POST /auth/refresh (jeton du stockage sûr)     |
  * | moi                  | GET  /me                                       |
@@ -28,6 +39,8 @@ import type {
  * | listerVisites        | GET  /visites?jours=7                          |
  * | lireVisite           | GET  /visites/{id}                             |
  * | checkIn … sos        | POST /evenements (un `clientEventId` unique)   |
+ * | demarrer/arreterTrajet | POST /visites/{id}/trajet (L1)               |
+ * | envoyerPosition      | POST /visites/{id}/position (L1, hors file)    |
  * | listerPropositions   | GET  /propositions                             |
  * | accepter / refuser   | POST /propositions/{id}/accepter / refuser     |
  * | enregistrerAppareil  | POST /appareils (lot N1, push)                 |
@@ -42,6 +55,14 @@ export interface KoudmenApi {
    * Absent en mode simulé (pas de réseau à attendre).
    */
   readonly horsLigne?: HorsLigneVue;
+
+  /**
+   * L1 : crée un compte accompagnant. Réponse identique si l'e-mail existe déjà (pas de fuite).
+   * L'accompagnant reçoit un lien de vérification par e-mail.
+   */
+  inscrire(demande: Omit<DemandeInscription, 'role'>): Promise<void>;
+  /** L1 : envoie un lien de nouveau mot de passe (1 h). Répond toujours pareil. */
+  motDePasseOublie(email: string): Promise<void>;
 
   /** E-mail et mot de passe. Les jetons vont dans le stockage sûr de l'appareil. */
   connecter(email: string, motDePasse: string): Promise<Moi>;
@@ -64,13 +85,26 @@ export interface KoudmenApi {
    * Lot M3 (les 5 actions ci-dessous) : l'événement passe par la file hors ligne.
    * Sans réseau : `ApiError('EN_ATTENTE')`, l'événement reste gardé et part au retour du réseau.
    */
-  checkIn(visiteId: string, preuve: { codeDomicile?: string; position?: PositionPonctuelle }): Promise<ResultatEvenement>;
+  checkIn(visiteId: string, preuve: PreuveArrivee): Promise<ResultatEvenementL1>;
   /** Check-out : aucune position. */
   checkOut(visiteId: string): Promise<ResultatEvenement>;
   enregistrerBrouillonKaye(visiteId: string, brouillon: BrouillonKaye): Promise<ResultatEvenement>;
   publierKaye(visiteId: string, kaye: KayePublie): Promise<ResultatEvenement>;
   /** Alerte l'équipe Koudmen. Aucune position. Le résultat porte la `consigne` à afficher. */
   sos(visiteId?: string): Promise<ResultatEvenement>;
+
+  /**
+   * L1 (L6) : l'accompagnant démarre LUI-MÊME le partage du trajet, après son accord.
+   * Fin : arrivée (check-in), arrêt, 60 min, ou moins de 150 m du domicile.
+   */
+  demarrerTrajet(visiteId: string): Promise<EtatTrajetServeur>;
+  arreterTrajet(visiteId: string): Promise<EtatTrajetServeur>;
+  /**
+   * L1 : une position du trajet. JAMAIS mise en file hors ligne (seule la dernière compte) :
+   * sans réseau, l'appel échoue (`RESEAU`) et l'app attend la position suivante.
+   * `CONFLIT` (409) : plus de trajet en cours côté serveur.
+   */
+  envoyerPosition(visiteId: string, position: PositionTrajet): Promise<void>;
 
   listerPropositions(): Promise<Proposition[]>;
   accepterProposition(id: string): Promise<ReponseAcceptation>;

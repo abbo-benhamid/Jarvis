@@ -30,3 +30,15 @@ export const SITE_URL = (
 
 export const API_MODE: 'http' | 'simule' =
   (process.env.EXPO_PUBLIC_API_MODE || extra.apiMode) === 'simule' ? 'simule' : 'http';
+
+/**
+ * L1 : site web Koudmen pour les FAMILLES (lien « Vous êtes une famille ? ») et les pages CGU / confidentialité.
+ * `EXPO_PUBLIC_WEB_URL`, sinon `SITE_URL`.
+ */
+export const WEB_URL = (process.env.EXPO_PUBLIC_WEB_URL || SITE_URL).replace(/\/+$/, '');
+
+/**
+ * L1 : contact de l'équipe Koudmen (écran « Profil en cours de validation »).
+ * [À VÉRIFIER] adresse définitive (domaine koudmen.fr pas encore acquis, L1 § 4).
+ */
+export const EMAIL_CONTACT = process.env.EXPO_PUBLIC_EMAIL_CONTACT || 'contact@koudmen.fr';

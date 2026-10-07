@@ -1,13 +1,10 @@
 import type { z } from 'zod';
 import {
-  demandeEvenementsSchema,
   reponseAcceptationSchema,
   reponseAppareilSchema,
   reponseCodeSchema,
   reponseErreurSchema,
-  reponseEvenementsSchema,
   reponseJetonsSchema,
-  reponseMoiSchema,
   reponsePropositionsSchema,
   reponseRefusSchema,
   reponseVisiteSchema,
@@ -17,12 +14,24 @@ import {
   type ReponseVisite,
   type ResultatEvenement as Resultat,
 } from '@/contracts';
+import {
+  demandeEvenementsL1Schema,
+  demandeInscriptionSchema,
+  demandeMotDePasseOublieSchema,
+  demandePositionTrajetSchema,
+  reponseEvenementsL1Schema,
+  reponseInscriptionSchema,
+  reponseMoiL1Schema as reponseMoiSchema,
+  reponseTrajetSchema,
+  type EvenementL1,
+  type ResultatEvenementL1,
+} from '@/contrats-l1';
 import { creerHorsLigne, type HorsLigne } from '@/offline';
 import type { KoudmenApi } from './client';
 import { MESSAGES } from './messages';
 import { calculerDefi, creerVerificateur, nouvelIdEvenement } from './pkce';
 import { creerStockageJeton, type StockageJeton } from './stockage';
-import { ApiError, type Moi, type ResultatEvenement } from './types';
+import { ApiError, type EtatTrajetServeur, type Moi } from './types';
 
 /**
  * Implémentation HTTP (lot M2) : routes `/api/v1` de `plateforme/` (docs/tech/api-v1.md).
@@ -246,11 +255,11 @@ export function creerApiHttp(
 
   // ─────────────── Événements ───────────────
 
-  type SansEnveloppe<E> = E extends Evenement ? Omit<E, 'clientEventId' | 'survenuA'> : never;
+  type SansEnveloppe<E> = E extends EvenementL1 ? Omit<E, 'clientEventId' | 'survenuA'> : never;
 
   /** Transport de la file (lot M3) : POST /evenements avec UN événement. */
   async function transporter(evenement: Evenement): Promise<Resultat> {
-    const reponse = await appelerAuth('/evenements', reponseEvenementsSchema, { methode: 'POST', corps: { evenements: [evenement] } });
+    const reponse = await appelerAuth('/evenements', reponseEvenementsL1Schema, { methode: 'POST', corps: { evenements: [evenement] } });
     const r = reponse.resultats[0];
     if (!r || r.clientEventId !== evenement.clientEventId) throw new ApiError('REPONSE_INVALIDE', MESSAGES.REPONSE_INVALIDE);
     return r;
@@ -262,14 +271,28 @@ export function creerApiHttp(
    * - Refus métier : `ApiError` avec le motif et le message du serveur.
    * - Pas de réseau : `ApiError('EN_ATTENTE')`. La file le renvoie plus tard avec le MÊME identifiant.
    */
-  async function envoyer(e: SansEnveloppe<Evenement>): Promise<ResultatEvenement> {
+  async function envoyer(e: SansEnveloppe<EvenementL1>): Promise<ResultatEvenementL1> {
     const evenement = { ...e, clientEventId: nouvelIdEvenement(), survenuA: new Date().toISOString() };
-    const corps = demandeEvenementsSchema.safeParse({ evenements: [evenement] });
+    const corps = demandeEvenementsL1Schema.safeParse({ evenements: [evenement] });
     const valide = corps.success ? corps.data.evenements[0] : undefined;
     if (!corps.success || !valide) {
       throw new ApiError('REQUETE_INVALIDE', (corps.success ? null : corps.error.issues[0]?.message) ?? MESSAGES.REQUETE_INVALIDE, 400);
     }
-    return horsLigne.file.soumettre(valide);
+    // L1 : le transport lit la réponse avec le contrat L1 (`controle`) ; la file la rend telle quelle.
+    // Un CHECK_IN avec `qr` est un `Evenement` élargi (contrat provisoire, § 2.3).
+    return (await horsLigne.file.soumettre(valide as Evenement)) as ResultatEvenementL1;
+  }
+
+  /** L1 : réponse du trajet → état pour l'écran. */
+  function etatTrajet(r: { trajet: { etat: 'EN_COURS' | 'ARRETE'; expireA?: string | null }; domicile?: EtatTrajetServeur['domicile'] }): EtatTrajetServeur {
+    return { etat: r.trajet.etat, expireA: r.trajet.expireA ?? null, domicile: r.domicile ?? null };
+  }
+
+  /** L1 : appel public (sans jeton) avec un corps vérifié avant l'envoi. */
+  async function appelerPublic<S extends z.ZodTypeAny>(chemin: string, schemaDemande: z.ZodTypeAny, corps: unknown, schemaReponse: S | null) {
+    const ok = schemaDemande.safeParse(corps);
+    if (!ok.success) throw new ApiError('REQUETE_INVALIDE', ok.error.issues[0]?.message ?? MESSAGES.REQUETE_INVALIDE, 400);
+    return appeler(chemin, schemaReponse, { methode: 'POST', corps: ok.data });
   }
 
   /** Remet dans la fiche le Kayé encore dans la file (le texte écrit hors ligne n'est pas perdu à l'écran). */
@@ -294,6 +317,13 @@ export function creerApiHttp(
     mode: 'http',
     url: baseUrl,
     horsLigne,
+
+    async inscrire(demande) {
+      await appelerPublic('/auth/inscription', demandeInscriptionSchema, { role: 'ACCOMPAGNANT', ...demande }, reponseInscriptionSchema);
+    },
+    async motDePasseOublie(email) {
+      await appelerPublic('/auth/mot-de-passe-oublie', demandeMotDePasseOublieSchema, { email }, null);
+    },
 
     connecter: (email, motDePasse) => ouvrirSession({ methode: 'mot_de_passe', email: email.trim(), motDePasse }),
 
@@ -367,17 +397,43 @@ export function creerApiHttp(
       }
     },
 
-    checkIn: (visiteId, { codeDomicile, position }) =>
+    checkIn: (visiteId, { qr, codeDomicile, position }) =>
       envoyer({
         type: 'CHECK_IN',
         visiteId,
+        ...(qr ? { qr } : {}),
         ...(codeDomicile ? { codeDomicile } : {}),
-        ...(position ? { position: { ...position, consentement: true as const } } : {}),
+        ...(position
+          ? {
+              position: {
+                latitude: position.latitude,
+                longitude: position.longitude,
+                ...(position.precisionMetres !== undefined ? { precisionMetres: position.precisionMetres } : {}),
+                consentement: true as const,
+                simulee: position.simulee === true,
+              },
+            }
+          : {}),
       }),
     checkOut: (visiteId) => envoyer({ type: 'CHECK_OUT', visiteId }),
     enregistrerBrouillonKaye: (visiteId, kaye) => envoyer({ type: 'KAYE_BROUILLON', visiteId, kaye }),
     publierKaye: (visiteId, kaye) => envoyer({ type: 'KAYE_PUBLICATION', visiteId, kaye }),
     sos: (visiteId) => envoyer({ type: 'SOS', ...(visiteId ? { visiteId } : {}) }),
+
+    async demarrerTrajet(visiteId) {
+      const r = await appelerAuth(`/visites/${encodeURIComponent(visiteId)}/trajet`, reponseTrajetSchema, { methode: 'POST', corps: { action: 'DEMARRER' } });
+      return etatTrajet(r);
+    },
+    async arreterTrajet(visiteId) {
+      const r = await appelerAuth(`/visites/${encodeURIComponent(visiteId)}/trajet`, reponseTrajetSchema, { methode: 'POST', corps: { action: 'ARRETER' } });
+      return etatTrajet(r);
+    },
+    async envoyerPosition(visiteId, position) {
+      const ok = demandePositionTrajetSchema.safeParse(position);
+      if (!ok.success) throw new ApiError('REQUETE_INVALIDE', MESSAGES.REQUETE_INVALIDE, 400);
+      // Hors file : une position perdue n'est pas renvoyée (seule la dernière compte, L6).
+      await appelerAuth(`/visites/${encodeURIComponent(visiteId)}/position`, null, { methode: 'POST', corps: ok.data });
+    },
 
     async listerPropositions() {
       return (await appelerAuth('/propositions', reponsePropositionsSchema)).propositions;
