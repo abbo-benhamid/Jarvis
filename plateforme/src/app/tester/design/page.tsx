@@ -318,7 +318,7 @@ export default function DesignPage() {
               priceSuffix: "/ mois",
               tag: "Conseillé pour Léonie",
               description: "Une visite chaque semaine, prouvée.",
-              features: ["Tout Kozé, plus une visite par semaine", "Un reçu de visite à chaque passage", "Aide pour trouver une remplaçante"],
+              features: ["Tout Kozé, plus un conseiller dédié", "Un reçu de visite à chaque passage", "Un point avec vous chaque mois"],
             },
           ]}
         />

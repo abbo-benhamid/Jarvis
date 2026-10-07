@@ -14,7 +14,10 @@ export function PlanCostExample({ plan }: { plan: PlanInfo }) {
       <p className="font-semibold">Exemple : {plan.example.label.toLowerCase()}</p>
       <dl className="mt-1 flex flex-col gap-0.5">
         <div className="flex flex-wrap justify-between gap-x-2">
-          <dt>Formule {plan.name}</dt>
+          <dt>
+            Abonnement {plan.name}
+            {plan.priceCents > 0 ? <span className="block text-muted">non éligible au crédit d&apos;impôt</span> : null}
+          </dt>
           <dd>{formatEuros(c.subscriptionCents)}</dd>
         </div>
         <div className="flex flex-wrap justify-between gap-x-2">
@@ -25,7 +28,7 @@ export function PlanCostExample({ plan }: { plan: PlanInfo }) {
           <dd>{formatEuros(c.hoursCostCents)}</dd>
         </div>
         <div className="flex flex-wrap justify-between gap-x-2">
-          <dt>Crédit d&apos;impôt de {rate} % sur les heures</dt>
+          <dt>Crédit d&apos;impôt de {rate} % sur les heures, si les conditions sont remplies</dt>
           <dd>− {formatEuros(c.taxCreditCents)}</dd>
         </div>
         <div className="mt-1 flex flex-wrap justify-between gap-x-2 border-t border-line pt-1 text-base font-bold">

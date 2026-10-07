@@ -5,7 +5,7 @@ import { Lock } from "lucide-react";
 import type { Plan } from "@prisma/client";
 import { changePlanAction } from "@/server/famille/actions";
 import { initialActionState } from "@/lib/action-result";
-import { OFFER_TEST_NOTICE, PLANS, type PlanInfo } from "@/lib/plans";
+import { NO_PAYMENT_NOTICE, OFFER_TEST_NOTICE, PLANS, type PlanInfo } from "@/lib/plans";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FormMessage } from "@/components/ui/form-message";
@@ -35,7 +35,9 @@ function toOption(p: PlanInfo, current: Plan | null, locked: boolean): PlanOptio
  * F9 (maquette, écran e) : les 3 formules en cartes radio. Seul le payeur choisit (sinon lecture seule).
  * Un choix demande une confirmation (erreur de doigt sur mobile). Paiement simulé.
  */
-export function PlanChooser({ aineId, current, canChange }: { aineId: string; current: Plan | null; canChange: boolean }) {
+export function PlanChooser({ aineId, current, canChange, launch = false }: { aineId: string; current: Plan | null; canChange: boolean; launch?: boolean }) {
+  // L4 / R8 : en lancement, une formule payante = demande de rappel par un conseiller (aucun paiement).
+  const callback = (p: PlanInfo) => launch && p.priceCents > 0;
   const [state, action, pending] = useActionState(changePlanAction, initialActionState);
   const [selected, setSelected] = useState<Plan>(current ?? "LAKOU");
   const [confirming, setConfirming] = useState(false);
@@ -70,10 +72,16 @@ export function PlanChooser({ aineId, current, canChange }: { aineId: string; cu
         ) : confirming ? (
           <div className="flex flex-col gap-2 rounded-lg bg-surface p-4 shadow-card">
             <p className="text-[17px] font-semibold">
-              Vous choisissez {plan.name}, {plan.priceLabel}. Paiement simulé. Confirmer{" "}?
+              {callback(plan) ? (
+                <>Un conseiller Koudmen vous appelle pour la formule {plan.name}. {NO_PAYMENT_NOTICE}</>
+              ) : launch ? (
+                <>Vous choisissez {plan.name}, gratuite. Confirmer{"\u202f"}?</>
+              ) : (
+                <>Vous choisissez {plan.name}, {plan.priceLabel}. Paiement simulé. Confirmer{"\u202f"}?</>
+              )}
             </p>
             <Button type="submit" size="lg" fullWidth disabled={pending} aria-busy={pending} icon={<Lock strokeWidth={1.6} />}>
-              {pending ? "Activation…" : "Confirmer"}
+              {pending ? "Envoi…" : callback(plan) ? "Être appelé" : "Confirmer"}
             </Button>
             <Button variant="link" fullWidth onClick={() => setConfirming(false)} disabled={pending}>
               Annuler
@@ -81,7 +89,7 @@ export function PlanChooser({ aineId, current, canChange }: { aineId: string; cu
           </div>
         ) : (
           <Button size="lg" fullWidth onClick={() => setConfirming(true)}>
-            Choisir {plan.name}
+            {callback(plan) ? `Être appelé pour ${plan.name}` : `Choisir ${plan.name}`}
           </Button>
         )
       ) : null}

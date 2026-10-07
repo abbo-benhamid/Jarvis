@@ -14,12 +14,16 @@ import { confirmElderSimulated, generateUniqueHomeCode } from "@/server/visits/s
 import { cancelCareRequest, chooseProfile, MatchingError } from "@/server/matching/service";
 import { trackEvent } from "@/server/sandbox/events";
 import { getCommune } from "@/lib/communes";
-import { getPlan } from "@/lib/plans";
+import { getPlan, NO_PAYMENT_NOTICE } from "@/lib/plans";
+import { isLaunchMode, assertRealDataAllowed, RealDataClosedError } from "@/server/launch";
+import { ActivationError, requestActivation } from "@/server/offre/activation";
 import { formatEuros } from "@/lib/format";
 import type { ActionResult } from "@/lib/action-result";
 import {
   caregiverLinkSchema,
   aineCreateSchema,
+  aineLaunchCreateSchema,
+  aineLaunchUpdateSchema,
   aineUpdateSchema,
   cancelRequestSchema,
   careRequestSchema,
@@ -35,12 +39,22 @@ import { canCancelRequest, canConfirmElder, changedFields, displayVisitStatus, i
 
 const CHECK_FIELDS = "Vérifiez les champs en rouge.";
 const NOT_FOUND = "Nous ne trouvons pas cet élément dans votre cercle Lakou.";
+/** R5 : message tant que l'accord de l'aîné manque. */
+const ACCORD_MISSING = "Un conseiller Koudmen doit d'abord appeler l'aîné pour recueillir son accord. Vous pourrez ensuite faire une demande.";
 
 // ─────────────────────────────── F2 / F3 : profil de l'aîné ───────────────────────────────
 
 /** F2 : crée le profil de l'aîné + consentement + cercle Lakou (payeur) + formule Lakou. */
 export async function createAineAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireRole("FAMILLE");
+  // R1 : en préinscription, aucune fiche aîné réelle.
+  try {
+    assertRealDataAllowed();
+  } catch (e) {
+    if (e instanceof RealDataClosedError) return { ok: false, error: e.message };
+    throw e;
+  }
+  if (isLaunchMode()) return createAineForConsent(user, formData);
   const parsed = aineCreateSchema.safeParse(formDataToObject(formData, ["needs"]));
   if (!parsed.success) return { ok: false, error: CHECK_FIELDS, fieldErrors: parsed.error.flatten().fieldErrors };
   const v = parsed.data;
@@ -66,6 +80,9 @@ export async function createAineAction(_prev: ActionResult, formData: FormData):
         consentByType: v.consentByType,
         consentByName: v.consentByName,
         consentAt: now,
+        // Mode essai : données d'exemple, accord déclaré par la famille (R5 s'applique en lancement).
+        accordEtat: "ACCORD_RECUEILLI",
+        accordAt: now,
         homeCode,
         // Le profil appartient au même monde que la famille (bac à sable ou monde réel).
         sandboxId: user.sandboxId,
@@ -83,12 +100,63 @@ export async function createAineAction(_prev: ActionResult, formData: FormData):
   redirect(`/famille/aines/${aine.id}?cree=1`);
 }
 
+/**
+ * R5 (J5), mode lancement : fiche MINIMALE (prénom, commune, téléphone) à l'état EN_ATTENTE_ACCORD.
+ * Pas de besoin, pas d'adresse, pas d'accord saisi par la famille : un conseiller appelle l'aîné.
+ */
+async function createAineForConsent(user: Awaited<ReturnType<typeof requireRole>>, formData: FormData): Promise<ActionResult> {
+  const parsed = aineLaunchCreateSchema.safeParse(formDataToObject(formData));
+  if (!parsed.success) return { ok: false, error: CHECK_FIELDS, fieldErrors: parsed.error.flatten().fieldErrors };
+  const v = parsed.data;
+  const commune = getCommune(v.commune);
+  if (!commune) return { ok: false, error: CHECK_FIELDS, fieldErrors: { commune: ["Choisissez une commune."] } };
+  const homeCode = await generateUniqueHomeCode();
+  const now = new Date();
+  const aine = await db.$transaction(async (tx) => {
+    const created = await tx.aine.create({
+      data: {
+        firstName: v.firstName,
+        commune: v.commune,
+        latitude: commune.lat,
+        longitude: commune.lng,
+        phone: v.phone,
+        needs: [],
+        activityLevel: 1,
+        // L'accord n'est PAS donné : le conseiller l'enregistre après l'appel.
+        consentGiven: false,
+        consentByType: "AINE",
+        consentByName: "",
+        consentAt: now,
+        accordEtat: "EN_ATTENTE_ACCORD",
+        homeCode,
+        ownerId: user.id,
+        members: { create: { userId: user.id, relation: v.myRelation, isPayer: true } },
+        subscription: { create: { payerId: user.id, plan: "LAKOU", priceCents: 0 } },
+      },
+      select: { id: true },
+    });
+    await logAudit({ actor: user, action: "aine.created", entityType: "Aine", entityId: created.id, metadata: { commune: v.commune, accordEtat: "EN_ATTENTE_ACCORD" } }, tx);
+    return created;
+  });
+  revalidatePath("/famille");
+  redirect(`/famille/aines/${aine.id}?cree=1`);
+}
+
 /** F3 : modifie le profil. Seul le payeur (gestionnaire principal) modifie. */
 export async function updateAineAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireRole("FAMILLE");
-  const parsed = aineUpdateSchema.safeParse(formDataToObject(formData, ["needs"]));
+  try {
+    assertRealDataAllowed();
+  } catch (e) {
+    if (e instanceof RealDataClosedError) return { ok: false, error: e.message };
+    throw e;
+  }
+  const launch = isLaunchMode();
+  const parsed = (launch ? aineLaunchUpdateSchema : aineUpdateSchema).safeParse(formDataToObject(formData, ["needs"]));
   if (!parsed.success) return { ok: false, error: CHECK_FIELDS, fieldErrors: parsed.error.flatten().fieldErrors };
-  const v = parsed.data;
+  // R5 : en lancement, l'accord vient du conseiller ; la famille ne le modifie jamais.
+  const current = launch ? await db.aine.findUnique({ where: { id: parsed.data.aineId }, select: { consentByType: true, consentByName: true } }) : null;
+  const v = { consentByType: current?.consentByType ?? "AINE", consentByName: current?.consentByName ?? "", ...parsed.data };
   const member = await db.lakouMember.findUnique({ where: { aineId_userId: { aineId: v.aineId, userId: user.id } } });
   if (!member) return { ok: false, error: NOT_FOUND };
   if (!member.isPayer) return { ok: false, error: "Seul le gestionnaire principal du profil peut le modifier." };
@@ -254,6 +322,11 @@ export async function createRequestAction(_prev: ActionResult, formData: FormDat
   if (!parsed.success) return { ok: false, error: CHECK_FIELDS, fieldErrors: parsed.error.flatten().fieldErrors };
   const v = parsed.data;
   if (!(await canAccessAine(user, v.aineId))) return { ok: false, error: NOT_FOUND, fieldErrors: { aineId: ["Choisissez un aîné de votre cercle."] } };
+  // R5 (J5) : aucune demande tant que l'aîné n'a pas donné son accord au conseiller.
+  const accord = await db.aine.findUnique({ where: { id: v.aineId }, select: { accordEtat: true } });
+  if (accord && accord.accordEtat !== "ACCORD_RECUEILLI") {
+    return { ok: false, error: ACCORD_MISSING, fieldErrors: { aineId: [ACCORD_MISSING] } };
+  }
 
   // Créneaux uniques (contrainte @@unique).
   const slots = [...new Map(v.slots.map((s) => [`${s.dayOfWeek}-${s.slot}`, s])).values()];
@@ -371,6 +444,31 @@ export async function changePlanAction(_prev: ActionResult, formData: FormData):
   const plan = getPlan(v.plan);
   const aine = await db.aine.findUniqueOrThrow({ where: { id: v.aineId }, select: { firstName: true, subscription: { select: { plan: true } } } });
   if (aine.subscription?.plan === v.plan) return { ok: true, message: `La formule ${plan.name} est déjà active.` };
+
+  // L4 / R8 : en lancement, aucun paiement (ni réel, ni simulé). Formule payante = demande de rappel.
+  if (isLaunchMode()) {
+    if (v.plan !== "LAKOU") {
+      try {
+        const r = await requestActivation(user, { plan: v.plan, aineId: v.aineId });
+        revalidatePath("/famille/formule");
+        return { ok: true, message: r.created ? `Demande envoyée. Un conseiller Koudmen vous appelle pour la formule ${plan.name}. ${NO_PAYMENT_NOTICE}` : `Votre demande est déjà envoyée. Un conseiller Koudmen vous appelle.` };
+      } catch (e) {
+        if (e instanceof ActivationError) return { ok: false, error: e.message };
+        throw e;
+      }
+    }
+    await db.$transaction(async (tx) => {
+      const sub = await tx.subscription.upsert({
+        where: { aineId: v.aineId },
+        create: { aineId: v.aineId, payerId: user.id, plan: "LAKOU", priceCents: 0 },
+        update: { plan: "LAKOU", priceCents: 0, payerId: user.id, status: "ACTIVE", startedAt: new Date(), endedAt: null },
+        select: { id: true },
+      });
+      await logAudit({ actor: user, action: "plan.changed", entityType: "Subscription", entityId: sub.id, metadata: { aineId: v.aineId, from: aine.subscription?.plan ?? null, to: "LAKOU" } }, tx);
+    });
+    revalidatePath("/famille/formule");
+    return { ok: true, message: `Formule ${plan.name} activée pour ${aine.firstName}. Elle est gratuite.` };
+  }
 
   await db.$transaction(async (tx) => {
     const sub = await tx.subscription.upsert({

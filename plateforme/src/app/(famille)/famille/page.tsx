@@ -7,6 +7,8 @@ import { deName, initialWithDot } from "@/lib/format";
 import { PLAN_LABELS } from "@/lib/labels";
 import { CardLink, DateBox, SectionHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { PreinscriptionNotice } from "@/components/account/preinscription";
+import { realDataAllowed } from "@/server/launch";
 import { LinkButton } from "@/components/ui/button";
 import { StatusCard } from "@/components/ui/status-card";
 import { Avatar } from "@/components/ui/avatar";
@@ -219,6 +221,8 @@ const STEPS = [
 ] as const;
 
 function EmptyHome() {
+  // R1 : en préinscription, aucune fiche aîné. On propose l'appel d'un conseiller.
+  if (!realDataAllowed()) return <PreinscriptionNotice />;
   return (
     <EmptyState
       titleAs="h2"

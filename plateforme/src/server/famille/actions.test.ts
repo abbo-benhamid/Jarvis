@@ -48,6 +48,20 @@ vi.mock("@/server/visits/service", () => ({
   generateUniqueHomeCode: () => generateUniqueHomeCode(),
 }));
 vi.mock("@/server/env", () => ({ appUrl: () => "https://koudmen.test" }));
+// L1 / R1 : mode du site contrôlé par le test (essai par défaut).
+const launch = vi.hoisted(() => ({ on: false, realData: true }));
+vi.mock("@/server/launch", () => {
+  class RealDataClosedError extends Error {}
+  return {
+    isLaunchMode: () => launch.on,
+    RealDataClosedError,
+    assertRealDataAllowed: () => {
+      if (!launch.realData) throw new RealDataClosedError("Koudmen ouvre bientôt. Nous vous contactons dès l'ouverture.");
+    },
+  };
+});
+const requestActivation = vi.fn(async (..._a: unknown[]) => ({ created: true, id: "req1" }));
+vi.mock("@/server/offre/activation", () => ({ requestActivation: (...a: unknown[]) => requestActivation(...a), ActivationError: class extends Error {} }));
 const cancelCareRequest = vi.fn(async (..._a: unknown[]) => ({ cancelledProposals: 2 }));
 const chooseProfile = vi.fn(async (..._a: unknown[]) => ({ caregiverFirstName: "Josiane" }));
 class MatchingError extends Error {}
@@ -388,5 +402,61 @@ describe("changePlanAction", () => {
     const r = await actions.changePlanAction(empty, fd({ aineId: AINE, plan: "KOZE" }));
     expect(r.ok).toBe(true);
     expect(db.simulatedPayment.create).not.toHaveBeenCalled();
+  });
+
+  it("L4 / R8 (lancement) : formule payante = demande de rappel, AUCUN paiement simulé", async () => {
+    launch.on = true;
+    try {
+      db.lakouMember.findUnique.mockResolvedValue({ isPayer: true });
+      db.aine.findUniqueOrThrow.mockResolvedValue({ firstName: "Léonie", subscription: { plan: "LAKOU" } });
+      const r = await actions.changePlanAction(empty, fd({ aineId: AINE, plan: "SERENITE" }));
+      expect(r).toMatchObject({ ok: true });
+      expect(r.ok && r.message).toContain("Aucun paiement");
+      expect(requestActivation).toHaveBeenCalledWith(user, { plan: "SERENITE", aineId: AINE });
+      expect(db.simulatedPayment.create).not.toHaveBeenCalled();
+      expect(db.subscription.upsert).not.toHaveBeenCalled();
+      expect(notifyUser).not.toHaveBeenCalled();
+    } finally {
+      launch.on = false;
+    }
+  });
+});
+
+describe("R1 / R5 : préinscription et accord de l'aîné", () => {
+  it("préinscription : aucune fiche aîné créée", async () => {
+    launch.realData = false;
+    try {
+      const r = await actions.createAineAction(empty, fd({ firstName: "Léonie", commune: "FORT_DE_FRANCE", phone: "+596 596 00 00 00", myRelation: "fille" }));
+      expect(r).toEqual({ ok: false, error: "Koudmen ouvre bientôt. Nous vous contactons dès l'ouverture." });
+      expect(db.aine.create).not.toHaveBeenCalled();
+    } finally {
+      launch.realData = true;
+    }
+  });
+
+  it("lancement (données réelles ouvertes) : fiche minimale EN_ATTENTE_ACCORD, accord non saisi par la famille", async () => {
+    launch.on = true;
+    try {
+      db.aine.create.mockResolvedValue({ id: AINE });
+      await expect(
+        actions.createAineAction(empty, fd({ firstName: "Léonie", commune: "FORT_DE_FRANCE", phone: "+596 596 00 00 00", myRelation: "fille", needs: ["COMPAGNIE"] })),
+      ).rejects.toThrow(`REDIRECT:/famille/aines/${AINE}?cree=1`);
+      const data = (db.aine.create.mock.calls[0] as unknown as [{ data: Record<string, unknown> }])[0].data;
+      expect(data).toMatchObject({ accordEtat: "EN_ATTENTE_ACCORD", consentGiven: false, needs: [], phone: "+596 596 00 00 00" });
+      expect(data.addressHint).toBeUndefined();
+    } finally {
+      launch.on = false;
+    }
+  });
+
+  it("aucune demande tant que l'accord manque", async () => {
+    db.aine.findUnique.mockResolvedValue({ accordEtat: "EN_ATTENTE_ACCORD" });
+    const r = await actions.createRequestAction(
+      empty,
+      fd({ aineId: AINE, level: "1", frequency: "HEBDOMADAIRE", durationMinutes: "120", employerType: "AINE", slots: ["0-MATIN"] }),
+    );
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.error).toContain("accord");
+    expect(db.careRequest.create).not.toHaveBeenCalled();
   });
 });

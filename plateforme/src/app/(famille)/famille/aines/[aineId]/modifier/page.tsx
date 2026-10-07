@@ -7,6 +7,7 @@ import { Alert } from "@/components/ui/alert";
 import { TopBar } from "@/components/famille/top-bar";
 import { deName } from "@/lib/format";
 import { AineForm } from "@/components/famille/aine-form";
+import { isLaunchMode } from "@/server/launch";
 
 export const metadata: Metadata = { title: "Modifier le profil de l'aîné" };
 
@@ -23,6 +24,7 @@ export default async function Page({ params }: { params: Promise<{ aineId: strin
       <TopBar title={`Modifier le profil ${deName(aine.firstName)}`} backHref={`/famille/aines/${aine.id}`} backLabel={`Retour à la fiche ${deName(aine.firstName)}`} />
       {isPayer ? (
         <AineForm
+          launch={isLaunchMode()}
           defaults={{
             aineId: aine.id,
             firstName: aine.firstName,

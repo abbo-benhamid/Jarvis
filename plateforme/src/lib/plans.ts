@@ -23,6 +23,23 @@ export type PlanInfo = {
 /** Mention obligatoire sur chaque affichage des formules (T6). */
 export const OFFER_TEST_NOTICE = "Tarifs de lancement · ouverture prochaine.";
 
+/**
+ * R8 (J32) : aucun paiement en ligne. Une formule payante = une demande de RAPPEL par un conseiller.
+ * Texte de la critique juridique § 5.5.
+ */
+export const NO_PAYMENT_NOTICE = "Aucun paiement n'est demandé aujourd'hui. Un conseiller vous appelle pour vous expliquer. Vous ne vous engagez à rien.";
+
+/** R8 (J33) : deux lignes de prix, mention fiscale exacte. [À VÉRIFIER par rescrit] éligibilité de l'abonnement. */
+export function priceLines(plan: PlanInfo): { subscription: string; hours: string } {
+  return {
+    subscription:
+      plan.priceCents === 0
+        ? "Abonnement Koudmen : 0 €. Services numériques."
+        : `Abonnement Koudmen : ${plan.priceLabel.replace("par mois", "TTC par mois")}. Services numériques. Non éligible au crédit d'impôt.`,
+    hours: "Heures d'accompagnement : payées à part à l'accompagnant. Crédit d'impôt de 50 % si les conditions sont remplies.",
+  };
+}
+
 export const PLANS: readonly PlanInfo[] = [
   {
     plan: "LAKOU",
@@ -50,13 +67,14 @@ export const PLANS: readonly PlanInfo[] = [
     // [À VÉRIFIER] Modèle réel de Sérénité (S1-arbitrage, « reporté avant le pilote »).
     priceCents: 14900,
     priceLabel: "dès 149 € par mois",
-    audience: "Des visites régulières, avec preuve",
-    meaning: "Koudmen organise une visite chaque semaine et la prouve.",
+    audience: "Un suivi renforcé, avec preuve",
+    // R8 (J34) : aucun volume de visites promis, aucune garantie de remplacement. Koudmen met en relation.
+    meaning: "Koudmen suit de près les visites que vous organisez avec l'accompagnant choisi, et vous montre la preuve de chaque visite.",
     features: [
       "Tout Kozé",
-      "Une visite organisée chaque semaine (heures payées à part)",
+      "Un conseiller Koudmen dédié",
       "Une preuve à chaque visite (2 preuves sur 3)",
-      "De l'aide pour trouver un remplaçant (sans garantie)",
+      "Un point avec vous chaque mois",
     ],
     example: { label: "Avec 4 visites de 2 h par mois", cost: monthlyCostExample(14900, 4) },
   },

@@ -8,7 +8,7 @@ import { ActionDock } from "@/components/ui/action-dock";
 import { GardenIllustration } from "@/components/ui/illustrations";
 import { HeroScene } from "@/components/accueil/hero-scene";
 import { VisitTutorial } from "@/components/accueil/visit-tutorial";
-import { PLANS, OFFER_TEST_NOTICE } from "@/lib/plans";
+import { PLANS, OFFER_TEST_NOTICE, NO_PAYMENT_NOTICE, priceLines } from "@/lib/plans";
 import { PROOF_FACTOR_LABELS } from "@/lib/labels";
 import { PlanCostExample } from "@/components/famille/plan-cost";
 import { Term } from "@/components/ui/term";
@@ -87,8 +87,8 @@ export default function HomePage() {
             <p className="max-w-[18rem] text-[15px] leading-snug text-muted">{cta.meta}</p>
           </div>
           <p className="mt-6 max-w-xl text-[15px] leading-relaxed lg:mt-8">
-            <strong>Tarifs de lancement :</strong> formule Libre 0 €, Kozé 39 €, Sérénité dès 149 € par mois. Les heures de visite sont en plus, avec 50 %
-            de crédit d&apos;impôt.{" "}
+            <strong>Tarifs de lancement :</strong> formule Libre 0 €, Kozé 39 €, Sérénité dès 149 € par mois (non éligibles au crédit
+            d&apos;impôt). Les heures d&apos;accompagnement sont en plus : crédit d&apos;impôt de 50 % si les conditions sont remplies.{" "}
             <Link href="#prix" className="inline-flex min-h-11 items-center font-semibold text-mer underline underline-offset-4">
               Voir un exemple de prix
             </Link>
@@ -177,8 +177,8 @@ export default function HomePage() {
             Combien ça coûte ?
           </h2>
           <p className="text-muted">
-            Vous payez une formule à Koudmen. Les heures de visite se paient à part, à l&apos;accompagnant. Pour ces heures, l&apos;État vous rend 50 %
-            en crédit d&apos;impôt. {OFFER_TEST_NOTICE}
+            L&apos;abonnement Koudmen paie des services numériques : il n&apos;ouvre pas de crédit d&apos;impôt. Les heures d&apos;accompagnement se
+            paient à part, à l&apos;accompagnant : crédit d&apos;impôt de 50 % si les conditions sont remplies. {OFFER_TEST_NOTICE} {NO_PAYMENT_NOTICE}
           </p>
         </div>
         <ul className="m-0 grid list-none gap-4 p-0 md:grid-cols-3 lg:gap-5">
@@ -190,6 +190,11 @@ export default function HomePage() {
                 <span className="num text-[17px] font-semibold text-mer">{p.priceLabel}</span>
               </p>
               <p className="text-[15px] leading-snug text-muted">{p.meaning}</p>
+              {/* R8 (J33) : deux lignes de prix. */}
+              <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm">
+                <li>{priceLines(p).subscription}</li>
+                <li>{priceLines(p).hours}</li>
+              </ul>
               <div className="mt-auto">
                 <PlanCostExample plan={p} />
               </div>

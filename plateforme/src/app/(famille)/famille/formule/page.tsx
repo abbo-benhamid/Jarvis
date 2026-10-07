@@ -13,14 +13,54 @@ import { MicroQuestion } from "@/components/sandbox/micro-question";
 import { OFFER_TEST_NOTICE } from "@/lib/plans";
 import { Term } from "@/components/ui/term";
 import { DISCOVERY_PRICE_LABEL } from "@/lib/measure";
+import { NO_PAYMENT_NOTICE, PLANS, priceLines } from "@/lib/plans";
+import { isLaunchMode } from "@/server/launch";
+import { openActivationsFor } from "@/server/offre/activation";
+import { CallbackRequest } from "@/components/famille/callback-request";
 
 export const metadata: Metadata = { title: "Formule" };
 
-/** F9 : formules (paiement simulé). Seul le payeur change la formule (RM-14). */
+/**
+ * F9 : formules. Seul le payeur change la formule (RM-14).
+ * L4 / R8 : en lancement, aucun paiement (ni réel, ni simulé) ; une formule payante = demande de rappel
+ * (« Activation par un conseiller Koudmen »). Sans fiche aîné (préinscription), la demande se fait sans aîné.
+ */
 export default async function Page({ searchParams }: { searchParams: Promise<{ aine?: string }> }) {
   const user = await requireRole("FAMILLE");
   const { aine: aineParam } = await searchParams;
   const aines = await getFamilyAines(user.id);
+  const launch = isLaunchMode();
+  const requested = launch ? await openActivationsFor(user.id) : [];
+
+  if (launch && aines.length === 0) {
+    return (
+      <>
+        <PageHeader eyebrow="Formule" title="Les formules" description="Activation par un conseiller Koudmen." />
+        <div className="flex flex-col gap-4">
+          <Alert tone="info" title="Aucun paiement aujourd'hui">
+            {NO_PAYMENT_NOTICE}
+          </Alert>
+          {PLANS.map((p) => (
+            <Card key={p.plan} className="flex flex-col gap-3">
+              <CardTitle className="mb-0">
+                {p.name} · {p.priceLabel}
+              </CardTitle>
+              <p className="text-[15px] leading-[1.45] text-muted">{p.meaning}</p>
+              <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm">
+                <li>{priceLines(p).subscription}</li>
+                <li>{priceLines(p).hours}</li>
+              </ul>
+              {p.plan === "LAKOU" ? (
+                <p className="text-sm text-muted">Gratuite. Elle s&apos;active seule avec le profil de l&apos;aîné.</p>
+              ) : (
+                <CallbackRequest plan={p.plan} planName={p.name} pending={requested.some((r) => r.plan === p.plan && r.aineId === null)} />
+              )}
+            </Card>
+          ))}
+        </div>
+      </>
+    );
+  }
 
   if (aines.length === 0) {
     return (
@@ -54,9 +94,16 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
         description="Choisissez le niveau de veille. Vous pouvez changer à tout moment."
       />
       <div className="flex flex-col gap-4">
-        <Alert tone="attention" title={OFFER_TEST_NOTICE}>
-          Le paiement est simulé. Aucune carte n&apos;est demandée, aucun argent n&apos;est prélevé.
-        </Alert>
+        {launch ? (
+          <Alert tone="info" title="Activation par un conseiller Koudmen">
+            {NO_PAYMENT_NOTICE}
+            {requested.some((r) => r.aineId === aine.id) ? <p className="mt-1 font-semibold">Votre demande est envoyée. Un conseiller vous appelle.</p> : null}
+          </Alert>
+        ) : (
+          <Alert tone="attention" title={OFFER_TEST_NOTICE}>
+            Le paiement est simulé. Aucune carte n&apos;est demandée, aucun argent n&apos;est prélevé.
+          </Alert>
+        )}
 
         {aines.length > 1 ? (
           <FilterTabs
@@ -71,7 +118,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
           </Alert>
         ) : null}
 
-        <PlanChooser aineId={aine.id} current={aine.subscription?.plan ?? null} canChange={isPayer} />
+        <PlanChooser aineId={aine.id} current={aine.subscription?.plan ?? null} canChange={isPayer} launch={launch} />
 
         <Alert tone="info" title="Comment se calcule le prix ?">
           <ul className="mt-1 flex list-disc flex-col gap-1 pl-5">
@@ -79,22 +126,22 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
             <li>
               Vous payez les heures de visite à part, à l&apos;accompagnant. Vous le déclarez vous-même avec le <Term id="cesu" />.
             </li>
-            <li>Pour ces heures, l&apos;État vous rend 50 % en crédit d&apos;impôt.</li>
+            <li>Pour ces heures, crédit d&apos;impôt de 50 % si les conditions sont remplies. L&apos;abonnement Koudmen n&apos;y ouvre pas droit.</li>
           </ul>
           <p className="mt-1 text-sm">Chaque formule montre un exemple de total par mois. Ces chiffres sont des estimations.</p>
         </Alert>
 
-        <MicroQuestion user={user} questionKey="PRIX_TROP_CHER" path="/famille/formule" />
+        {launch ? null : <MicroQuestion user={user} questionKey="PRIX_TROP_CHER" path="/famille/formule" />}
 
-        <Card className="flex flex-col gap-3">
+        {launch ? null : <Card className="flex flex-col gap-3">
           <CardTitle className="mb-0">Une vraie visite découverte ({DISCOVERY_PRICE_LABEL})</CardTitle>
           <p className="text-[15px] leading-[1.45] text-muted">Vous voulez essayer pour de vrai, avec votre parent ? Dites-le nous : nous vous recontacterons.</p>
           <LinkButton href="/famille/visite-decouverte" variant="quiet" size="lg" fullWidth>
             Réserver une vraie visite découverte
           </LinkButton>
-        </Card>
+        </Card>}
 
-        {isPayer ? (
+        {isPayer && !launch ? (
           <Card>
             <CardTitle>Paiements simulés</CardTitle>
             {payments.length === 0 ? (

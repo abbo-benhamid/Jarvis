@@ -54,6 +54,17 @@ export default async function Page({ params, searchParams }: Props) {
           </Alert>
         ) : null}
         {sp.modifie ? <Alert tone="succes">Modifications enregistrées.</Alert> : null}
+        {/* R5 (J5) : état de l'accord de l'aîné, recueilli par un conseiller au téléphone. */}
+        {aine.accordEtat === "EN_ATTENTE_ACCORD" ? (
+          <Alert tone="info" title="En attente de l'accord de l'aîné">
+            Un conseiller Koudmen appelle {aine.firstName} au numéro donné. Il lui lit une notice simple et lui demande son accord. Les demandes
+            d&apos;accompagnement s&apos;ouvrent après son accord.
+          </Alert>
+        ) : aine.accordEtat === "ACCORD_REFUSE" || aine.accordEtat === "ACCORD_RETIRE" ? (
+          <Alert tone="attention" title={`${aine.firstName} n'a pas donné son accord`}>
+            Koudmen respecte ce choix. Aucune visite n&apos;est organisée. Pour en parler, écrivez à l&apos;équipe Koudmen.
+          </Alert>
+        ) : null}
         {sp.bienvenue ? (
           <Alert tone="succes" title={`Bienvenue dans le cercle Lakou de ${aine.firstName}.`}>
             Vous recevez maintenant les nouvelles des visites et le Kayé.

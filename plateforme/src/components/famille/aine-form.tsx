@@ -27,9 +27,14 @@ export type AineFormDefaults = {
   consentByName: string;
 };
 
-/** F2 (création) et modification du profil de l'aîné. Garde la saisie en cas d'erreur. */
-export function AineForm({ defaults }: { defaults?: AineFormDefaults }) {
+/**
+ * F2 (création) et modification du profil de l'aîné. Garde la saisie en cas d'erreur.
+ * R5 (J5) `launch` : création MINIMALE (prénom, commune, téléphone) ; l'accord est recueilli par un conseiller
+ * au téléphone, jamais saisi par la famille.
+ */
+export function AineForm({ defaults, launch = false }: { defaults?: AineFormDefaults; launch?: boolean }) {
   const editing = Boolean(defaults);
+  const minimal = launch && !editing;
   const { state, onSubmit, pending } = useFormAction(editing ? updateAineAction : createAineAction, initialActionState);
   const [consentBy, setConsentBy] = useState<ConsentBy>(defaults?.consentByType ?? "AINE");
   const fe = !state.ok ? state.fieldErrors : undefined;
@@ -41,12 +46,16 @@ export function AineForm({ defaults }: { defaults?: AineFormDefaults }) {
 
       <Card className="flex flex-col gap-4">
         <h2 className="font-display text-[22px] leading-[1.2] font-normal tracking-[-.015em] text-balance">1. Qui est l&apos;aîné{"\u202f"}?</h2>
-        <p className="text-sm text-muted">Koudmen demande le minimum : le prénom et l&apos;initiale du nom suffisent.</p>
+        <p className="text-sm text-muted">
+          {minimal
+            ? "Koudmen demande le minimum : le prénom, la commune et un numéro de téléphone. Un conseiller appelle l'aîné pour lui demander son accord."
+            : "Koudmen demande le minimum : le prénom et l'initiale du nom suffisent."}
+        </p>
         <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
           <FormField label="Prénom" htmlFor="firstName" errors={fe?.firstName} required>
             <Input {...fieldA11y("firstName", fe?.firstName)} defaultValue={defaults?.firstName} autoComplete="off" required maxLength={60} />
           </FormField>
-          <FormField label="Initiale du nom" htmlFor="lastInitial" hint="Une lettre." errors={fe?.lastInitial}>
+          {minimal ? null : <FormField label="Initiale du nom" htmlFor="lastInitial" hint="Une lettre." errors={fe?.lastInitial}>
             <Input
               {...fieldA11y("lastInitial", fe?.lastInitial, true)}
               defaultValue={defaults?.lastInitial?.replace(".", "") ?? ""}
@@ -54,7 +63,7 @@ export function AineForm({ defaults }: { defaults?: AineFormDefaults }) {
               maxLength={2}
               className="max-w-24"
             />
-          </FormField>
+          </FormField>}
         </div>
         {!editing ? (
           <FormField label="Votre lien avec l'aîné" htmlFor="myRelation" hint="Exemple : fille, neveu, voisine." errors={fe?.myRelation} required>
@@ -79,20 +88,21 @@ export function AineForm({ defaults }: { defaults?: AineFormDefaults }) {
             ))}
           </Select>
         </FormField>
-        <FormField label="Indication pour trouver la maison (facultatif)" htmlFor="addressHint" hint="Exemple : quartier, couleur du portail. Données d'exemple seulement." errors={fe?.addressHint}>
+        {minimal ? null : <FormField label="Indication pour trouver la maison (facultatif)" htmlFor="addressHint" hint="Exemple : quartier, couleur du portail. Données d'exemple seulement." errors={fe?.addressHint}>
           <Input {...fieldA11y("addressHint", fe?.addressHint, true)} defaultValue={defaults?.addressHint ?? ""} autoComplete="off" maxLength={160} />
-        </FormField>
+        </FormField>}
         <FormField
-          label="Téléphone de l'aîné (facultatif)"
+          label={minimal ? "Téléphone de l'aîné" : "Téléphone de l'aîné (facultatif)"}
           htmlFor="phone"
-          hint="Sert à l'appel de confirmation des visites. Numéro d'exemple seulement."
+          hint={minimal ? "Le conseiller Koudmen appelle l'aîné à ce numéro." : "Sert à l'appel de confirmation des visites."}
           errors={fe?.phone}
+          required={minimal}
         >
           <Input {...fieldA11y("phone", fe?.phone, true)} defaultValue={defaults?.phone ?? ""} type="tel" inputMode="tel" autoComplete="off" />
         </FormField>
       </Card>
 
-      <Card className="flex flex-col gap-4">
+      {minimal ? null : <Card className="flex flex-col gap-4">
         <h2 className="font-display text-[22px] leading-[1.2] font-normal tracking-[-.015em] text-balance">2. De quoi a-t-il besoin{"\u202f"}?</h2>
         <Alert tone="info">N&apos;écrivez aucune information médicale. Koudmen ne demande pas de diagnostic ni de traitement.</Alert>
         <Fieldset legend="Besoins (un ou plusieurs)" errors={fe?.needs}>
@@ -119,9 +129,14 @@ export function AineForm({ defaults }: { defaults?: AineFormDefaults }) {
             />
           ))}
         </Fieldset>
-      </Card>
+      </Card>}
 
-      <Card className="flex flex-col gap-4">
+      {launch ? (
+        <Alert tone="info" title="L'accord de l'aîné">
+          Un conseiller Koudmen appelle l&apos;aîné. Il lui lit une notice simple et lui demande son accord. L&apos;aîné peut dire non, ou arrêter
+          plus tard. Vous pourrez faire une demande de visite après son accord.
+        </Alert>
+      ) : <Card className="flex flex-col gap-4">
         <h2 className="font-display text-[22px] leading-[1.2] font-normal tracking-[-.015em] text-balance">3. Son accord</h2>
         <p className="text-sm text-muted">
           L&apos;aîné doit être d&apos;accord pour être accompagné. S&apos;il ne peut pas répondre, son représentant (tuteur, mandataire) donne l&apos;accord.
@@ -168,7 +183,7 @@ export function AineForm({ defaults }: { defaults?: AineFormDefaults }) {
             </p>
           ) : null}
         </div>
-      </Card>
+      </Card>}
 
       <PendingButton pending={pending} size="lg" pendingLabel="Enregistrement…" className="w-full">
         {editing ? "Enregistrer les modifications" : "Créer le profil"}

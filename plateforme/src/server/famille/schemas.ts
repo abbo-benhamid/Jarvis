@@ -91,6 +91,20 @@ export const aineCreateSchema = aineSchema.extend({
 
 export const aineUpdateSchema = aineSchema.extend({ aineId: id });
 
+/**
+ * R5 (J5) : en mode lancement, la famille crée l'aîné avec le MINIMUM (prénom, commune, téléphone).
+ * Rien d'autre tant que l'aîné n'a pas donné son accord au conseiller Koudmen (appel + notice FALC).
+ */
+export const aineLaunchCreateSchema = z.object({
+  firstName: aineSchema.shape.firstName,
+  commune: aineSchema.shape.commune,
+  phone: z.string({ message: "Le conseiller appelle l'aîné à ce numéro." }).trim().regex(/^\+?[0-9 .-]{6,20}$/, "Saisissez un numéro valide (exemple : +596 596 00 00 00)."),
+  myRelation: aineCreateSchema.shape.myRelation,
+});
+
+/** R5 : en lancement, l'accord n'est jamais saisi par la famille (le conseiller l'enregistre). */
+export const aineLaunchUpdateSchema = aineSchema.omit({ consentGiven: true, consentByType: true, consentByName: true }).extend({ aineId: id });
+
 export const invitationSchema = z.object({
   aineId: id,
   relation: z.string({ message: "Indiquez le lien avec l'aîné." }).trim().min(2, "Indiquez le lien avec l'aîné.").max(60, "60 caractères maximum."),
