@@ -1,6 +1,6 @@
-# API v1 — référence (lots A1, A2 et N1)
+# API v1 — référence (lots A1, A2, N1 et L1-B)
 
-- **Statut :** livré. A1 (ADR 0008) : socle et authentification par jeton (§ 1 à 8). A2 : visites, événements, propositions (§ 9). N1 : appareils et notifications push (§ 10).
+- **Statut :** livré. A1 (ADR 0008) : socle et authentification par jeton (§ 1 à 8). A2 : visites, événements, propositions (§ 9). N1 : appareils et notifications push (§ 10). L1-B : QR signé, check-in contrôlé, trajet en direct (§ 11).
 - **Code :** `plateforme/src/app/api/v1/**`, contrats `plateforme/src/contracts/v1/**`, services `plateforme/src/server/auth/token*.ts` (A1) et `plateforme/src/server/visits/app-*.ts` (A2).
 - **Public :** app Expo accompagnant (`mobile/`). Le web garde le cookie de session (ADR 0002).
 
@@ -228,7 +228,7 @@ pnpm build:local && E2E_PORT=3713 pnpm e2e e2e/api-v1-visites.spec.ts           
 ### 9.7 Limites connues (A2)
 
 - [À VÉRIFIER] `aine.interets` est toujours vide : le schéma n'a pas encore de champ « centres d'intérêt ». À ajouter côté famille (formulaire aîné), puis à remplir ici.
-- Le QR « jeton signé du domicile » (spec § 10.2, point 5) n'existe pas encore : `codeDomicile` accepte le code lisible à 6 caractères.
+- Le QR « jeton signé du domicile » existe depuis le lot L1-B (§ 11.1, champ `qr`). `codeDomicile` reste la saisie de secours.
 - SOS : pas encore d'incident P1 ni d'appel d'astreinte (lot VX). L'alerte part dans la boîte d'envoi simulée des opérateurs.
 - Une visite à l'horloge suspecte refuse ensuite un nouveau facteur (statut `A_VERIFIER`). La famille ou l'opérateur confirme par l'appel « tapez 1 ».
 - Les contrats ont changé (`erreurs.ts` : `CONFLIT`, `ACTION_IMPOSSIBLE`) : relancer `mobile/scripts/sync-contracts.mjs` (lot M2).
@@ -302,4 +302,93 @@ Le journal du serveur montre alors :
 
 ```
 [push:console] ANDROID …5e70 | ecran=kaye:cm…
+```
+
+## 11. Lot L1-B — QR signé, check-in contrôlé, trajet en direct
+
+Décisions : L6 à L10, puis R1, R3, R4, R5, R7 (`docs/revues/L1-arbitrage-lancement.md` § 5). Notes : [`L1-B-notes.md`](L1-B-notes.md).
+Contrats : `src/contracts/v1/visits.ts` (check-in) et `src/contracts/v1/trajet.ts`. Services : `src/server/presence/**`.
+
+### 11.1 Check-in par QR signé (§ 2.3, L10) — `POST /api/v1/evenements`, `type: "CHECK_IN"`
+
+Champs en plus (tous facultatifs, au moins un de `qr`, `codeDomicile`, `position`) :
+
+| Champ | Forme | Effet |
+|---|---|---|
+| `qr` | `koudmen:domicile:s1:<jeton>` (ou le jeton seul), 2000 car. au plus | Prioritaire sur `codeDomicile`. Jeton JWS EdDSA `{ c: id aléatoire de carte, v: version }`. Jamais gardé ni journalisé |
+| `codeDomicile` | 6 caractères | Saisie de secours (même facteur « code du domicile ») |
+| `position.simulee` | booléen | `true` (`mocked` Android) → position refusée, preuve « À vérifier » |
+
+Résultat : en plus de `preuves`, le champ **`controle: { statut: "VALIDE" | "A_VERIFIER" | "REFUSE", raison }`** (même forme que l'app L1-C).
+
+```mermaid
+flowchart TD
+  E[CHECK_IN] --> W{Fenêtre<br/>début − 2 h → fin + 2 h ?}
+  W -->|non| RF[REFUSE]
+  W -->|oui| Q{QR ou code}
+  Q -->|jeton faux, révoqué,<br/>autre domicile, code faux| X{Position<br/>enregistrée ?}
+  X -->|non| RF
+  X -->|oui| AV
+  Q -->|valable| P{Position}
+  P -->|absente, simulée, > 150 m + min(précision, 50),<br/>précision > 150 m, domicile approximatif| AV[A_VERIFIER]
+  P -->|valide| L{Reçu > 30 min<br/>après survenuA ?}
+  L -->|oui| AV
+  L -->|non| V[VALIDE]
+  AV --> F[La famille employeur<br/>confirme ou signale]
+```
+
+Règles :
+1. **R7** : `VisitProof` ne garde **aucune** coordonnée brute ni précision. Seulement le résultat et la distance arrondie à la dizaine de mètres.
+2. QR refusé = un essai de code (`visit.code.failed`, `metadata.method = "QR"`) : 5 essais au plus par visite.
+3. Retard > 30 min (P1/P8) : `Visit.lateCheckInAt` ; la visite reste « À vérifier » tant que la famille employeur n'a pas confirmé.
+4. Un check-in pose la fin du trajet en direct (la dernière position est effacée).
+5. « À vérifier » est tranché par la **famille employeur** (payeur du profil) dans `/famille/visites` : « Oui, la visite a eu lieu » (facteur confirmation) ou « Non, je signale un problème » (`VISITE_SIGNALEE` aux opérateurs). L'opérateur ne tranche plus (R7).
+
+### 11.2 Trajet en direct (§ 2.2, L6, R4)
+
+| Méthode | Route | Auth | Corps | Réponse |
+|---|---|---|---|---|
+| POST | `/api/v1/visites/{id}/trajet` | Bearer accompagnant | `{ action: "DEMARRER" \| "ARRETER" }` | `200 { trajet: { etat: "EN_COURS" \| "ARRETE", expireA \| null }, domicile? }` |
+| POST | `/api/v1/visites/{id}/position` | Bearer accompagnant | `{ latitude, longitude, precisionMetres, survenuA, simulee? }` | `204` ; `409 CONFLIT` sans trajet ; `429` (+ `Retry-After: 30`) |
+| GET | `/api/famille/visites/{id}/trajet` | cookie famille (employeur ou personne désignée) | — | `200 { etat, heurePrevue, accompagnant: { prenom }, position?, domicile, distanceMetres?, minutesEstimees? }` ; `404` sinon |
+
+- `domicile` (DEMARRER) : `{ latitude, longitude, approximatif }` arrondi à 3 décimales, pour la carte d'itinéraire de l'app.
+- `etat` famille : `EN_ROUTE`, `PREVUE` (hors trajet **ou départ masqué** : l'heure prévue seulement, jamais « non partagé »), `COMMENCEE`, `TERMINEE`.
+- **Retiré (R3)** : `GET /api/operateur/trajets`. L'opérateur voit « Trajet partagé : oui / non » ; la position seulement pendant un SOS actif (60 min), page `/operateur/visites/{id}/sos`, accès journalisé `trip.position.viewed_sos`.
+
+```mermaid
+stateDiagram-v2
+  [*] --> EnCours: DEMARRER (début − 2 h → fin, avant le check-in)
+  EnCours --> EnCours: position (≤ 1 / 30 s, arrondie, dernière seulement)
+  EnCours --> [*]: ARRETER
+  EnCours --> [*]: check-in
+  EnCours --> [*]: < 150 m du domicile (ARRIVEE)
+  EnCours --> [*]: 60 min (EXPIRATION, purge nocturne)
+  note right of EnCours: fin = ligne VisitTrip effacée (aucun historique)
+```
+
+Règles :
+1. Une ligne `VisitTrip` par visite, **sans historique**. Fin = ligne effacée.
+2. Coordonnées arrondies à 3 décimales (~110 m) **avant** l'écriture. Précision renvoyée ≥ 110 m.
+3. Départ masqué : rien n'est montré à moins de 500 m du point de départ (gardé dans la ligne, effacé avec elle).
+4. Position simulée (`simulee: true`) ou plus vieille que 5 min : reçue (204), jamais gardée.
+5. Vue : l'employeur (payeur) et la **personne désignée** (`Aine.tripViewerId`, choisie par le payeur sur la fiche de l'aîné). Pas le reste du cercle.
+6. Le partage n'entre **jamais** dans le matching ni le tri des profils (test `trajet.test.ts`).
+7. Journal : `trip.started`, `trip.stopped { reason }`, `trip.position.viewed_sos`. **Aucune coordonnée.**
+8. Refusé si `presenceRefusal()` (production sans `DONNEES_REELLES_AUTORISEES=true`, ou accord de l'aîné absent).
+
+### 11.3 Limites de débit
+
+| Route | Règle | Sujet |
+|---|---|---|
+| `/visites/{id}/trajet` | `evenement:ip` | `api-v1-trajet:<IP>` |
+| `/visites/{id}/position` | `evenement:ip` + 1 / 30 s / visite (en base, atomique) | `api-v1-position:<IP>` |
+
+### 11.4 Tester
+
+```bash
+cd plateforme
+pnpm vitest run src/server/presence src/server/geocodage src/app/api/v1/visites            # unitaires + contrats
+KOUDMEN_DB_TESTS=1 pnpm vitest run src/server/presence/presence.db.test.ts                # base réelle
+pnpm build:local && RATE_LIMIT_DISABLED=true E2E_PORT=3717 pnpm e2e e2e/presence.spec.ts  # e2e
 ```
