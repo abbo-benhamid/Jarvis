@@ -1,8 +1,8 @@
 import "server-only";
 import { parseTestEndDate } from "./sandbox/purge";
-import { isStrictProduction, normalizeTesterCode, parseTesterCodes, secretProblem, testerCodeProblem } from "./config-check";
+import { isLaunchMode, isStrictProduction, normalizeTesterCode, parseMailFrom, parseTesterCodes, secretProblem, testerCodeProblem } from "./config-check";
 
-export { normalizeTesterCode, isStrictProduction };
+export { normalizeTesterCode, isStrictProduction, isLaunchMode };
 
 /**
  * Lecture centralisée des variables d'environnement serveur.
@@ -22,14 +22,17 @@ export function getSessionSecret(): Uint8Array {
   return new TextEncoder().encode(secret);
 }
 
-/** Mode démo (comptes partagés seedés). D1 : les comptes démo sont refusés si DEMO_MODE != "true". */
+/**
+ * Mode démo (comptes partagés seedés). D1 : les comptes démo sont refusés si DEMO_MODE != "true".
+ * L1 : jamais en mode lancement, même avec DEMO_MODE="true".
+ */
 export function isDemoMode(): boolean {
-  return process.env.DEMO_MODE === "true";
+  return process.env.DEMO_MODE === "true" && !isLaunchMode();
 }
 
-/** A10 / M1 : l'inscription libre (comptes du monde réel) existe seulement en mode démo. */
-export function registrationOpen(): boolean {
-  return isDemoMode();
+/** Expéditeur des e-mails (MAIL_FROM). Défaut : Koudmen <ne-pas-repondre@koudmen.fr> [À VÉRIFIER] domaine. */
+export function mailFrom(): { name: string; email: string } {
+  return parseMailFrom(process.env.MAIL_FROM) ?? { name: "Koudmen", email: "ne-pas-repondre@koudmen.fr" };
 }
 
 /**

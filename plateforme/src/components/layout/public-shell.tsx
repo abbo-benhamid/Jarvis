@@ -3,6 +3,7 @@ import { SiteFooter } from "./site-footer";
 import { getCurrentUser } from "@/server/auth/guards";
 import { ROLE_HOME } from "@/lib/labels";
 import { LinkButton } from "@/components/ui/button";
+import { isLaunchMode } from "@/server/launch";
 
 /**
  * Coque des pages publiques (maquette conso, écran a) : barre haute légère sur le sable,
@@ -23,9 +24,16 @@ export async function PublicShell({ children }: { children: React.ReactNode }) {
               <LinkButton href="/connexion" variant="link">
                 Se connecter
               </LinkButton>
-              <LinkButton href="/tester" className="max-sm:hidden">
-                Essayer la démo
-              </LinkButton>
+              {/* L1 : en lancement, l'action principale est « Créer un compte » (pas de démo). */}
+              {isLaunchMode() ? (
+                <LinkButton href="/inscription" className="max-sm:hidden">
+                  Créer un compte
+                </LinkButton>
+              ) : (
+                <LinkButton href="/tester" className="max-sm:hidden">
+                  Essayer la démo
+                </LinkButton>
+              )}
             </>
           )}
         </nav>

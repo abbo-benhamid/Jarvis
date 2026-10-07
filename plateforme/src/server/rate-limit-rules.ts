@@ -20,6 +20,15 @@ export const RATE_RULES = {
   "decouverte:ip": { limit: 10, windowSeconds: 24 * 60 * 60 },
   /** Retrait du consentement par lien : par IP (le jeton est long, mais on limite l'essai en masse). */
   "retrait:ip": { limit: 20, windowSeconds: 60 * 60 },
+  /** L1 (contrat § 2.1) : inscription, 5 essais par heure et par IP (web et API). */
+  "inscription:ip": { limit: 5, windowSeconds: 60 * 60 },
+  /** L1 (contrat § 2.1) : « mot de passe oublié », 3 par heure et par e-mail ; garde-fou par IP. */
+  "mdp-oublie:compte": { limit: 3, windowSeconds: 60 * 60 },
+  "mdp-oublie:ip": { limit: 20, windowSeconds: 60 * 60 },
+  /** L3 : renvoi du lien de vérification, par compte. */
+  "verif-email:compte": { limit: 3, windowSeconds: 60 * 60 },
+  /** L3 : essais de jetons reçus par e-mail (lien de vérification, nouveau mot de passe), par IP. */
+  "jeton-email:ip": { limit: 30, windowSeconds: 60 * 60 },
 } as const satisfies Record<string, { limit: number; windowSeconds: number }>;
 
 export type RateRuleName = keyof typeof RATE_RULES;

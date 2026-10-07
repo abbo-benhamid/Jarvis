@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { MadrasLine } from "@/components/ui/card";
 import { SandboxPanel } from "@/components/sandbox/sandbox-panel";
 import { OperatorNav } from "./operator-nav";
+import { isLaunchMode } from "@/server/launch";
 
 /**
  * Coque du back-office (bureau d'abord, 1280 px) : barre latérale sobre de 248 px, contenu aéré jusqu'à 1120 px.
@@ -15,6 +16,7 @@ import { OperatorNav } from "./operator-nav";
  * Sobre : neutres sable, un seul accent (mer) pour l'onglet actif et les actions.
  */
 export function OperatorShell({ user, children }: { user: CurrentUser; children: React.ReactNode }) {
+  const launch = isLaunchMode();
   const logout = (
     <form action={logoutAction}>
       <button
@@ -42,7 +44,7 @@ export function OperatorShell({ user, children }: { user: CurrentUser; children:
             <p className="px-0.5 text-[13px] font-semibold tracking-[.12em] text-muted uppercase">Back-office</p>
           </div>
           <nav aria-label="Navigation principale">
-            <OperatorNav layout="sidebar" />
+            <OperatorNav layout="sidebar" launch={launch} />
           </nav>
           <div className="mt-auto flex flex-col gap-2 border-t border-line pt-4">
             <div className="flex items-center gap-3 px-1">
@@ -69,7 +71,7 @@ export function OperatorShell({ user, children }: { user: CurrentUser; children:
             </div>
           </div>
           <nav aria-label="Navigation principale" className="px-5 pb-3">
-            <OperatorNav layout="chips" />
+            <OperatorNav layout="chips" launch={launch} />
           </nav>
           <MadrasLine />
         </header>

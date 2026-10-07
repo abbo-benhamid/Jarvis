@@ -2,7 +2,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { Prisma, type Role } from "@prisma/client";
 import { db } from "@/server/db";
-import { getSessionSecret, isDemoMode } from "@/server/env";
+import { getSessionSecret, isDemoMode, isLaunchMode } from "@/server/env";
 import { logAudit } from "@/server/audit";
 import { DEMO_ACCOUNTS, type DemoRole } from "./demo";
 import { verifyPassword, verifyPasswordForUnknownAccount } from "./password";
@@ -61,14 +61,23 @@ const userSelect = {
   isDemo: true,
   sandboxId: true,
   sessionVersion: true,
+  /** L1 : GET /me → emailVerifie et profilValide. */
+  emailVerifiedAt: true,
+  caregiverProfile: { select: { validation: true } },
 } satisfies Prisma.UserSelect;
 
 export type ApiUser = Prisma.UserGetPayload<{ select: typeof userSelect }>;
 
 /** Raison du refus d'un compte sur l'API, ou null s'il est accepté. */
-export function apiAccessProblem(user: Pick<ApiUser, "role" | "isDemo">, demoMode: boolean = isDemoMode()): string | null {
+export function apiAccessProblem(
+  user: Pick<ApiUser, "role" | "isDemo"> & { sandboxId?: string | null },
+  demoMode: boolean = isDemoMode(),
+  launch: boolean = isLaunchMode(),
+): string | null {
   if (user.role === "OPERATEUR") return "L'espace opérateur s'ouvre seulement sur le site web.";
   if (user.isDemo && !demoMode) return "Les comptes de démonstration sont désactivés sur cette version.";
+  // L1 : aucun compte de bac à sable en mode lancement.
+  if (user.sandboxId && launch) return "Ce compte n'existe plus.";
   return null;
 }
 
@@ -89,6 +98,7 @@ const BAD_CREDENTIALS = "E-mail ou mot de passe incorrect.";
 export async function requestAuthCode(req: CodeRequest, now: Date = new Date()): Promise<Result<ReponseCode>> {
   let user: ApiUser | null;
   if (req.methode === "demo") {
+    // L1 : en lancement, isDemoMode() est toujours faux → « demo » refusé (ACCES_REFUSE).
     if (!isDemoMode()) return fail("ACCES_REFUSE", "Le mode démonstration est désactivé sur cette version.");
     user = await db.user.findUnique({ where: { email: DEMO_ACCOUNTS[req.role].email }, select: userSelect });
     if (!user || !user.isDemo || user.role !== req.role) return fail("INTROUVABLE", "Le compte de démonstration n'existe pas sur cette version.");

@@ -48,7 +48,7 @@ const m = vi.hoisted(() => {
 vi.mock("@/server/db", () => ({ db: m.db }));
 vi.mock("@/server/audit", () => ({ logAudit: m.logAudit }));
 vi.mock("@/server/outbox", () => ({ notifyLakou: m.notifyLakou }));
-vi.mock("@/server/env", () => ({ isDemoMode: m.isDemoMode }));
+vi.mock("@/server/env", () => ({ isDemoMode: m.isDemoMode, isLaunchMode: () => false }));
 vi.mock("@/server/visits/service", () => ({ recordProof: m.recordProof, refreshVisitStatus: m.refreshVisitStatus }));
 vi.mock("@/server/matching/locks", () => ({ lockCareRequests: vi.fn(async () => undefined) }));
 vi.mock("@/server/matching/service", () => ({

@@ -104,6 +104,8 @@ describe("GET /api/v1/me", () => {
         isDemo: true,
         sandboxId: null,
         sessionVersion: 4,
+        emailVerifiedAt: new Date("2026-10-07T10:00:00Z"),
+        caregiverProfile: { validation: "EN_ATTENTE" },
         // Champs qui ne doivent JAMAIS sortir, même si le service les lisait un jour.
         passwordHash: "$2a$…",
         phone: "+596 696 00 00 00",
@@ -120,8 +122,20 @@ describe("GET /api/v1/me", () => {
       email: "josiane@exemple.test",
       demo: true,
       bacASable: false,
+      emailVerifie: true,
+      // L2 : accompagnant pas encore validé → « Profil en cours de validation ».
+      profilValide: false,
     });
-    expect(Object.keys(body).sort()).toEqual(["bacASable", "demo", "email", "id", "nom", "prenom", "role"]);
+    expect(Object.keys(body).sort()).toEqual(["bacASable", "demo", "email", "emailVerifie", "id", "nom", "prenom", "profilValide", "role"]);
+  });
+
+  it("L1 : famille → profilValide vrai ; e-mail non confirmé → emailVerifie faux", async () => {
+    auth.principal = {
+      familyId: "f1",
+      user: { id: "u2", role: "FAMILLE", email: "f@exemple.test", firstName: "F", lastName: "G", isDemo: false, sandboxId: null, sessionVersion: 0, emailVerifiedAt: null, caregiverProfile: null },
+    };
+    const body = await (await meRoute.GET(get({ authorization: "Bearer bon-jeton" }))).json();
+    expect(body).toMatchObject({ emailVerifie: false, profilValide: true });
   });
 
   it("429 avec Retry-After au-delà de la limite", async () => {

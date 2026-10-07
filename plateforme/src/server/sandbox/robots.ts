@@ -443,6 +443,7 @@ async function familyRobotChoosesTester(
           consentByName: "Patrick B. (personnage fictif)",
           consentAt: now,
           homeCode,
+          accordEtat: "ACCORD_RECUEILLI",
           sandboxId: sid,
           ownerId: patrick.id,
           members: { create: { userId: patrick.id, relation: "fils", isPayer: true } },

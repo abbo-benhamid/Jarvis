@@ -11,6 +11,10 @@ import {
   reponseErreurSchema,
   reponseJetonsSchema,
   reponseMoiSchema,
+  demandeInscriptionSchema,
+  demandeMotDePasseOublieSchema,
+  reponseInscriptionSchema,
+  reponseMotDePasseOublieSchema,
 } from "./index";
 
 const CHALLENGE = "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"; // RFC 7636, annexe B
@@ -86,7 +90,7 @@ describe("contrats v1 : authentification", () => {
 });
 
 describe("contrats v1 : /me", () => {
-  const moi = { id: "u1", role: "ACCOMPAGNANT", prenom: "Josiane", nom: "R.", email: "j@exemple.test", demo: true, bacASable: false };
+  const moi = { id: "u1", role: "ACCOMPAGNANT", prenom: "Josiane", nom: "R.", email: "j@exemple.test", demo: true, bacASable: false, emailVerifie: true, profilValide: true };
 
   it("accepte le profil minimal", () => {
     expect(reponseMoiSchema.safeParse(moi).success).toBe(true);
@@ -96,5 +100,49 @@ describe("contrats v1 : /me", () => {
     for (const extra of [{ besoins: ["MEMOIRE"] }, { phone: "+596…" }, { passwordHash: "x" }, { aines: [] }]) {
       expect(reponseMoiSchema.safeParse({ ...moi, ...extra }).success).toBe(false);
     }
+  });
+
+  it("exige emailVerifie et profilValide (L1)", () => {
+    const { emailVerifie: _e, ...sans } = moi;
+    expect(reponseMoiSchema.safeParse(sans).success).toBe(false);
+  });
+});
+
+describe("contrats v1 : inscription et mot de passe oublié (L1-A, R6)", () => {
+  const ok = {
+    role: "ACCOMPAGNANT",
+    prenom: "Rose",
+    nom: "Lafleur",
+    email: "Rose@Exemple.test",
+    telephone: "+596 696 12 34 56",
+    motDePasse: "Zebre-Lagon-2026",
+    commune: "FORT_DE_FRANCE",
+    dateNaissance: "1990-04-02",
+    accepteCgu: true,
+  };
+
+  it("accepte une demande complète et normalise l'e-mail", () => {
+    const r = demandeInscriptionSchema.safeParse(ok);
+    expect(r.success && r.data.email).toBe("rose@exemple.test");
+    expect(demandeInscriptionSchema.safeParse({ ...ok, accepteInfos: true }).success).toBe(true);
+  });
+
+  it("refuse : famille (le web seulement), CGU non acceptées, mot de passe court, champ en plus", () => {
+    expect(demandeInscriptionSchema.safeParse({ ...ok, role: "FAMILLE" }).success).toBe(false);
+    expect(demandeInscriptionSchema.safeParse({ ...ok, accepteCgu: false }).success).toBe(false);
+    expect(demandeInscriptionSchema.safeParse({ ...ok, motDePasse: "court-123" }).success).toBe(false);
+    // R6 (J25) : la confidentialité est un lien, pas une case.
+    expect(demandeInscriptionSchema.safeParse({ ...ok, accepteConfidentialite: true }).success).toBe(false);
+    expect(demandeInscriptionSchema.safeParse({ ...ok, dateNaissance: undefined }).success).toBe(false);
+    expect(demandeInscriptionSchema.safeParse({ ...ok, dateNaissance: "02/04/1990" }).success).toBe(false);
+  });
+
+  it("réponses fixes (aucune fuite d'existence de compte)", () => {
+    expect(reponseInscriptionSchema.safeParse({ etat: "VERIFICATION_EMAIL_ENVOYEE" }).success).toBe(true);
+    expect(reponseInscriptionSchema.safeParse({ etat: "COMPTE_EXISTANT" }).success).toBe(false);
+    expect(reponseMotDePasseOublieSchema.safeParse({}).success).toBe(true);
+    expect(reponseMotDePasseOublieSchema.safeParse({ envoye: true }).success).toBe(false);
+    expect(demandeMotDePasseOublieSchema.safeParse({ email: "a@b.test" }).success).toBe(true);
+    expect(demandeMotDePasseOublieSchema.safeParse({ email: "a@b.test", role: "x" }).success).toBe(false);
   });
 });

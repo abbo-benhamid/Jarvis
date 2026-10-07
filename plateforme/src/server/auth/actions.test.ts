@@ -26,8 +26,18 @@ vi.mock("@/server/rate-limit", () => ({
   retryMessage: () => "Trop d'essais. Réessayez dans 10 minutes.",
 }));
 
+const registerAccount = vi.fn();
+const requestPasswordReset = vi.fn();
+vi.mock("./registration", () => ({
+  registerAccount: (...a: unknown[]) => registerAccount(...a),
+  requestPasswordReset: (...a: unknown[]) => requestPasswordReset(...a),
+  resendVerification: vi.fn(),
+  resetPassword: vi.fn(),
+  verifyEmailToken: vi.fn(),
+}));
+
 process.env.SESSION_SECRET = "un-secret-de-test-assez-long-pour-hs256-0123456789";
-const { logoutAction, registerAction, loginAction } = await import("./actions");
+const { logoutAction, registerAction, loginAction, forgotPasswordAction } = await import("./actions");
 const { signSessionToken, SESSION_COOKIE } = await import("./session-token");
 const { RESUME_COOKIE } = await import("./session");
 const { initialActionState } = await import("@/lib/action-result");
@@ -67,13 +77,63 @@ describe("déconnexion d'un compte démo partagé (X6, sécurité D1)", () => {
   });
 });
 
-describe("inscription libre (A10, M1)", () => {
-  it("est fermée si DEMO_MODE n'est pas true : renvoi vers /tester, aucun compte créé", async () => {
+describe("inscription ouverte (L2)", () => {
+  const famille = {
+    role: "FAMILLE",
+    firstName: "Line",
+    lastName: "Test",
+    email: "line@exemple.test",
+    password: "Zebre-Lagon-2026",
+    location: "HEXAGONE",
+    acceptCgu: "on",
+    adult: "on",
+  };
+
+  it("n'est plus fermée hors du mode démo : champs vides → erreurs, pas de renvoi vers /tester", async () => {
     process.env.DEMO_MODE = "false";
-    await expect(registerAction(initialActionState, form({}))).rejects.toThrow("REDIRECT:/tester");
-    expect(db.user.create).not.toHaveBeenCalled();
+    const r = await registerAction(initialActionState, form({}));
+    expect(r.ok).toBe(false);
+    expect(registerAccount).not.toHaveBeenCalled();
     delete process.env.DEMO_MODE;
-    await expect(registerAction(initialActionState, form({}))).rejects.toThrow("REDIRECT:/tester");
+  });
+
+  it("crée le compte par le service, puis « Vérifiez votre boîte mail » (pas de connexion automatique)", async () => {
+    registerAccount.mockResolvedValue({ ok: true });
+    await expect(registerAction(initialActionState, form({ ...famille, next: "/invitation/abc" }))).rejects.toThrow(
+      "REDIRECT:/inscription/envoye?role=FAMILLE&next=%2Finvitation%2Fabc",
+    );
+    expect(registerAccount.mock.calls[0]![0]).toMatchObject({ role: "FAMILLE", email: "line@exemple.test", location: "HEXAGONE", via: "web", newsOptIn: false });
+    expect(hitRateLimit).toHaveBeenCalledWith("inscription:ip", "203.0.113.7");
+    expect(cookieStore.set).not.toHaveBeenCalled();
+  });
+
+  it("5 inscriptions par heure et par IP : au-delà, refus sans appel au service", async () => {
+    hitRateLimit.mockResolvedValue({ allowed: false, count: 6, retryAfterSeconds: 600 });
+    const r = await registerAction(initialActionState, form(famille));
+    expect(r).toEqual({ ok: false, error: "Trop d'essais. Réessayez dans 10 minutes." });
+    expect(registerAccount).not.toHaveBeenCalled();
+  });
+
+  it("mot de passe trop courant : erreur sur le champ", async () => {
+    registerAccount.mockResolvedValue({ ok: false, field: "password", message: "Ce mot de passe est trop courant. Choisissez-en un autre." });
+    const r = await registerAction(initialActionState, form({ ...famille, password: "motdepasse123" }));
+    expect(r).toMatchObject({ ok: false, fieldErrors: { password: ["Ce mot de passe est trop courant. Choisissez-en un autre."] } });
+  });
+});
+
+describe("mot de passe oublié (L3)", () => {
+  it("même message que le compte existe ou non ; limite par IP et par e-mail", async () => {
+    const r = await forgotPasswordAction(initialActionState, form({ email: "Inconnu@Exemple.test" }));
+    expect(r).toMatchObject({ ok: true });
+    expect(requestPasswordReset).toHaveBeenCalledWith("inconnu@exemple.test");
+    expect(hitRateLimits.mock.calls[0]![0]).toEqual([
+      ["mdp-oublie:ip", "203.0.113.7"],
+      ["mdp-oublie:compte", "inconnu@exemple.test"],
+    ]);
+    hitRateLimits.mockResolvedValue({ allowed: false, count: 4, retryAfterSeconds: 600 });
+    const r2 = await forgotPasswordAction(initialActionState, form({ email: "inconnu@exemple.test" }));
+    expect(r2).toEqual(r);
+    expect(requestPasswordReset).toHaveBeenCalledTimes(1);
   });
 });
 

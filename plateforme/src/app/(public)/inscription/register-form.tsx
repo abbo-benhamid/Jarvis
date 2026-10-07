@@ -9,22 +9,32 @@ import { Checkbox, Input, Radio, Select } from "@/components/ui/input";
 import { PendingButton, useFormAction } from "@/components/ui/use-form-action";
 import { FormMessage } from "@/components/ui/form-message";
 import { FAMILY_LOCATION_LABELS } from "@/lib/labels";
+import { COMMUNES } from "@/lib/communes";
 
 type RoleChoice = "FAMILLE" | "ACCOMPAGNANT";
 
+/**
+ * L2 / R6 : création de compte, famille ou accompagnant.
+ * - CGU : case obligatoire. Confidentialité : lien à lire (pas une case de consentement, J25).
+ * - E-mails d'information : case facultative et séparée.
+ * - Accompagnant : téléphone, commune, date de naissance (18 ans minimum). Inscription gratuite.
+ */
 export function RegisterForm({ defaultRole, next }: { defaultRole: RoleChoice; next?: string }) {
   // Hook du socle : la saisie reste en place après une erreur (pas de remise à zéro par React 19).
   const { state, onSubmit, pending } = useFormAction(registerAction, initialActionState);
   const [role, setRole] = useState<RoleChoice>(defaultRole);
   const fe = !state.ok ? state.fieldErrors : undefined;
+  const fieldError = (k: string) =>
+    fe?.[k] ? (
+      <p className="text-sm font-semibold text-hibiscus" role="alert">
+        {fe[k]!.join(" ")}
+      </p>
+    ) : null;
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
       {next ? <input type="hidden" name="next" value={next} /> : null}
       <FormMessage state={state} />
-      <FormField label="Code testeur" htmlFor="testerCode" hint="La démo est sur invitation. Saisissez le code reçu." errors={fe?.testerCode} required>
-        <Input {...fieldA11y("testerCode", fe?.testerCode, true)} autoComplete="off" autoCapitalize="characters" required />
-      </FormField>
       <Fieldset legend="Je crée un compte…" errors={fe?.role}>
         <Radio
           id="role-famille"
@@ -42,7 +52,7 @@ export function RegisterForm({ defaultRole, next }: { defaultRole: RoleChoice; n
           value="ACCOMPAGNANT"
           checked={role === "ACCOMPAGNANT"}
           onChange={() => setRole("ACCOMPAGNANT")}
-          label={<><strong>Accompagnant</strong> — je veux accompagner des aînés.</>}
+          label={<><strong>Accompagnant</strong> — je veux accompagner des aînés. C&apos;est gratuit pour moi.</>}
         />
       </Fieldset>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -56,8 +66,17 @@ export function RegisterForm({ defaultRole, next }: { defaultRole: RoleChoice; n
       <FormField label="Email" htmlFor="email" errors={fe?.email} required>
         <Input {...fieldA11y("email", fe?.email)} type="email" autoComplete="email" required />
       </FormField>
-      <FormField label="Mot de passe" htmlFor="password" hint="8 caractères minimum." errors={fe?.password} required>
-        <Input {...fieldA11y("password", fe?.password, true)} type="password" autoComplete="new-password" minLength={8} required />
+      <FormField
+        label={role === "ACCOMPAGNANT" ? "Téléphone" : "Téléphone (facultatif)"}
+        htmlFor="phone"
+        hint="L'équipe Koudmen vous appelle à ce numéro."
+        errors={fe?.phone}
+        required={role === "ACCOMPAGNANT"}
+      >
+        <Input {...fieldA11y("phone", fe?.phone, true)} type="tel" autoComplete="tel" inputMode="tel" required={role === "ACCOMPAGNANT"} />
+      </FormField>
+      <FormField label="Mot de passe" htmlFor="password" hint="10 caractères minimum. Évitez un mot de passe courant." errors={fe?.password} required>
+        <Input {...fieldA11y("password", fe?.password, true)} type="password" autoComplete="new-password" minLength={10} required />
       </FormField>
       {role === "FAMILLE" ? (
         <div className="grid gap-4 sm:grid-cols-2">
@@ -77,43 +96,62 @@ export function RegisterForm({ defaultRole, next }: { defaultRole: RoleChoice; n
             <Input {...fieldA11y("city", fe?.city)} autoComplete="address-level2" />
           </FormField>
         </div>
-      ) : null}
-      <Checkbox
-        id="acceptTest"
-        name="acceptTest"
-        label="Je comprends que Koudmen n'est pas encore ouvert. J'utilise uniquement des données d'exemple (pas de vrais noms d'aînés, pas d'informations de santé)."
-        required
-      />
-      {fe?.acceptTest ? (
-        <p className="text-sm font-semibold text-hibiscus" role="alert">
-          {fe.acceptTest.join(" ")}
-        </p>
-      ) : null}
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField label="Ma commune" htmlFor="commune" errors={fe?.commune} required>
+            <Select {...fieldA11y("commune", fe?.commune)} defaultValue="" required>
+              <option value="" disabled>
+                Choisir…
+              </option>
+              {COMMUNES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.label}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label="Date de naissance" htmlFor="birthDate" hint="18 ans minimum." errors={fe?.birthDate} required>
+            <Input {...fieldA11y("birthDate", fe?.birthDate, true)} type="date" autoComplete="bday" required />
+          </FormField>
+        </div>
+      )}
       <Checkbox
         id="acceptCgu"
         name="acceptCgu"
         label={
           <>
             J&apos;accepte les{" "}
-            <Link href="/cgu-test" target="_blank" className="font-semibold text-mer underline">
-              conditions d&apos;utilisation de la démo
+            <Link href="/cgu" target="_blank" className="font-semibold text-mer underline">
+              conditions d&apos;utilisation
             </Link>
+            {role === "ACCOMPAGNANT" ? (
+              <>
+                {" "}et les{" "}
+                <Link href="/conditions-accompagnants" target="_blank" className="font-semibold text-mer underline">
+                  conditions des accompagnants
+                </Link>
+              </>
+            ) : null}
             .
           </>
         }
         required
       />
-      {fe?.acceptCgu ? (
-        <p className="text-sm font-semibold text-hibiscus" role="alert">
-          {fe.acceptCgu.join(" ")}
-        </p>
+      {fieldError("acceptCgu")}
+      {role === "FAMILLE" ? (
+        <>
+          <Checkbox id="adult" name="adult" label="J'ai 18 ans ou plus." required />
+          {fieldError("adult")}
+        </>
       ) : null}
-      <Checkbox id="adult" name="adult" label="J'ai 18 ans ou plus." required />
-      {fe?.adult ? (
-        <p className="text-sm font-semibold text-hibiscus" role="alert">
-          {fe.adult.join(" ")}
-        </p>
-      ) : null}
+      <Checkbox id="newsOptIn" name="newsOptIn" label="Je veux recevoir les nouvelles de Koudmen par e-mail (facultatif)." />
+      <p className="text-[15px] text-muted">
+        Pour savoir ce que Koudmen fait de vos données, lisez la{" "}
+        <Link href="/confidentialite" target="_blank" className="font-semibold text-mer underline">
+          politique de confidentialité
+        </Link>
+        .
+      </p>
       <PendingButton pending={pending} size="lg" className="w-full" pendingLabel="Création…">
         Créer mon compte
       </PendingButton>

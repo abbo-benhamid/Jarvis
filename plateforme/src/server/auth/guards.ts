@@ -5,7 +5,7 @@ import type { Role } from "@prisma/client";
 import { db } from "@/server/db";
 import { readSession } from "./session";
 import { ROLE_HOME } from "@/lib/labels";
-import { isDemoMode } from "@/server/env";
+import { isDemoMode, isLaunchMode } from "@/server/env";
 
 /** Champs sûrs de l'utilisateur courant (jamais le hash du mot de passe). */
 export type CurrentUser = {
@@ -33,6 +33,8 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   });
   if (!user || user.sessionVersion !== session.sv) return null;
   if (user.isDemo && !isDemoMode()) return null;
+  // L1 : un compte de bac à sable n'existe pas en mode lancement (session déjà ouverte comprise).
+  if (user.sandboxId && isLaunchMode()) return null;
   const { sessionVersion: _sv, ...safe } = user;
   return safe;
 });

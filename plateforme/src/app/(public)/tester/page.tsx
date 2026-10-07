@@ -1,3 +1,4 @@
+import { requireTrialMode } from "@/server/launch";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
@@ -20,6 +21,7 @@ export const dynamic = "force-dynamic";
  * Si l'appareil a déjà un bac à sable valide, on propose de le reprendre.
  */
 export default async function TesterPage({ searchParams }: { searchParams: Promise<{ code?: string; erreur?: string }> }) {
+  requireTrialMode(); // L1 : page du mode essai, 404 en lancement.
   const user = await getCurrentUser();
   if (user?.sandboxId) redirect(ROLE_HOME[user.role]);
   const { code, erreur } = await searchParams;

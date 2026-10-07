@@ -4,6 +4,7 @@ import { logoutAction } from "@/server/auth/actions";
 import { ArrivalFocus } from "@/components/layout/arrival-focus";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SandboxPanel } from "@/components/sandbox/sandbox-panel";
+import { AccountStatus } from "@/components/account/account-status";
 import { Badge } from "@/components/ui/badge";
 import { BrandMark } from "@/components/ui/illustrations";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -42,6 +43,7 @@ export function AccompagnantShell({ user, children }: { user: CurrentUser; child
 
       <main id="contenu" className="mx-auto w-full max-w-[var(--app-column)] px-5 pt-3 pb-10 max-[359px]:px-4">
         {user.sandboxId ? <SandboxPanel user={user} /> : null}
+        <AccountStatus user={user} />
         {children}
         <div className="mt-12 flex justify-center">
           <ThemeToggle />

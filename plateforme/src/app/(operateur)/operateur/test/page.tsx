@@ -1,3 +1,4 @@
+import { requireTrialMode } from "@/server/launch";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireRole } from "@/server/auth/guards";
@@ -20,6 +21,7 @@ export const dynamic = "force-dynamic";
  * offre factice « visite découverte ». Vrais opérateurs seulement.
  */
 export default async function Page() {
+  requireTrialMode(); // L1 : page du mode essai, 404 en lancement.
   const user = await requireRole("OPERATEUR");
   const m = await getTestMeasure();
   // Les contacts réels de l'offre découverte sont lus : la lecture est journalisée.

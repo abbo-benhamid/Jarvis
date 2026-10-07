@@ -181,6 +181,7 @@ async function main() {
       consentByName: "Léonie Joseph",
       consentAt: mqDate(-60, 10),
       homeCode: "LKW7Q3",
+      accordEtat: "ACCORD_RECUEILLI",
       ownerId: sandrine.id,
       members: {
         create: [
@@ -205,6 +206,7 @@ async function main() {
       consentByName: "Patrick Bellance (fils, mandataire)",
       consentAt: mqDate(-30, 9),
       homeCode: "BRN4X8",
+      accordEtat: "ACCORD_RECUEILLI",
       ownerId: patrick.id,
       members: { create: [{ userId: patrick.id, relation: "fils", isPayer: true }] },
     },
@@ -224,6 +226,7 @@ async function main() {
       consentByName: "Yvette Rosemond",
       consentAt: mqDate(-10, 15),
       homeCode: "RSM9T2",
+      accordEtat: "ACCORD_RECUEILLI",
       ownerId: marieClaire.id,
       members: { create: [{ userId: marieClaire.id, relation: "fille", isPayer: true }] },
     },

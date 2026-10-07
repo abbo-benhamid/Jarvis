@@ -2,11 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { db } from "@/server/db";
-import { hashPassword, verifyPassword, verifyPasswordForUnknownAccount } from "./password";
+import { verifyPassword, verifyPasswordForUnknownAccount } from "./password";
 import { createSession, destroySession, readSession } from "./session";
-import { loginSchema, registerSchema, safeNextPath } from "./validation";
+import { forgotPasswordSchema, loginSchema, newPasswordSchema, registerSchema, safeNextPath } from "./validation";
 import { DEMO_ACCOUNTS, type DemoRole } from "./demo";
-import { isDemoMode, registrationOpen, validTesterCode } from "@/server/env";
+import { registerAccount, requestPasswordReset, resendVerification, resetPassword, verifyEmailToken } from "./registration";
+import { isDemoMode, isLaunchMode } from "@/server/env";
 import { logAudit } from "@/server/audit";
 import { clientIp, hitRateLimit, hitRateLimits, retryMessage } from "@/server/rate-limit";
 import { ROLE_HOME } from "@/lib/labels";
@@ -19,50 +20,89 @@ function formToObject(formData: FormData): Record<string, string> {
 }
 
 /**
- * Inscription libre (comptes du monde réel). A10 / M1 : FERMÉE si DEMO_MODE n'est pas "true".
- * Les testeurs entrent seulement par le bac à sable (/tester).
+ * L2 : inscription OUVERTE (famille ou accompagnant), dans tous les modes.
+ * Aucune fuite d'existence de compte : e-mail connu ou non, la page suivante est la même
+ * (« Vérifiez votre boîte mail ») et un e-mail part dans les deux cas. Pas de connexion automatique :
+ * la personne se connecte avec son mot de passe (elle peut le faire tout de suite, avant la vérification).
  */
 export async function registerAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
-  if (!registrationOpen()) redirect("/tester");
   const parsed = registerSchema.safeParse(formToObject(formData));
   if (!parsed.success) {
     return { ok: false, error: "Vérifiez les champs en rouge.", fieldErrors: parsed.error.flatten().fieldErrors };
   }
   const v = parsed.data;
-  const limited = await hitRateLimit("code-testeur:ip", await clientIp());
+  const limited = await hitRateLimit("inscription:ip", await clientIp());
+  if (!limited.allowed) {
+    await logAudit({ action: "auth.register_rate_limited", entityType: "User" });
+    return { ok: false, error: retryMessage(limited.retryAfterSeconds) };
+  }
+  const r = await registerAccount({
+    role: v.role,
+    firstName: v.firstName,
+    lastName: v.lastName,
+    email: v.email,
+    password: v.password,
+    phone: v.phone ?? null,
+    commune: v.role === "ACCOMPAGNANT" ? (v.commune ?? null) : null,
+    location: v.role === "FAMILLE" ? (v.location ?? null) : null,
+    city: v.role === "FAMILLE" ? (v.city ?? null) : null,
+    birthDate: v.role === "ACCOMPAGNANT" ? (v.birthDate ?? null) : null,
+    newsOptIn: v.newsOptIn === "on",
+    via: "web",
+  });
+  if (!r.ok) return { ok: false, error: "Vérifiez les champs en rouge.", fieldErrors: { [r.field]: [r.message] } };
+  const next = safeNextPath(v.next);
+  redirect(`/inscription/envoye?role=${v.role}${next ? `&next=${encodeURIComponent(next)}` : ""}`);
+}
+
+/** L3 : « mot de passe oublié » (web). Toujours le même message (aucune fuite d'existence de compte). */
+export async function forgotPasswordAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const parsed = forgotPasswordSchema.safeParse(formToObject(formData));
+  if (!parsed.success) return { ok: false, error: "Vérifiez votre adresse e-mail.", fieldErrors: parsed.error.flatten().fieldErrors };
+  const limited = await hitRateLimits([
+    ["mdp-oublie:ip", await clientIp()],
+    ["mdp-oublie:compte", parsed.data.email],
+  ]);
+  if (limited.allowed) await requestPasswordReset(parsed.data.email);
+  else await logAudit({ action: "auth.password_reset_rate_limited", entityType: "User" });
+  return { ok: true, message: FORGOT_SENT };
+}
+
+/** Message unique après « mot de passe oublié ». */
+const FORGOT_SENT =
+  "Si un compte existe avec cette adresse, un e-mail part dans quelques minutes. Le lien marche pendant 1 heure. Regardez aussi dans les courriers indésirables.";
+
+/** L3 : nouveau mot de passe par lien. Toutes les sessions sont fermées (sessionVersion). */
+export async function resetPasswordAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const parsed = newPasswordSchema.safeParse(formToObject(formData));
+  if (!parsed.success) return { ok: false, error: "Vérifiez les champs en rouge.", fieldErrors: parsed.error.flatten().fieldErrors };
+  const limited = await hitRateLimit("jeton-email:ip", await clientIp());
   if (!limited.allowed) return { ok: false, error: retryMessage(limited.retryAfterSeconds) };
-  // D3 : l'inscription demande un code d'invitation testeur valide.
-  const testerCode = validTesterCode(v.testerCode);
-  if (!testerCode) {
-    return { ok: false, error: "Ce code testeur n'est pas valide.", fieldErrors: { testerCode: ["Code testeur inconnu. Vérifiez le code reçu."] } };
-  }
-  const existing = await db.user.findUnique({ where: { email: v.email } });
-  if (existing) {
-    return { ok: false, error: "Un compte existe déjà avec cet email.", fieldErrors: { email: ["Email déjà utilisé."] } };
-  }
-  const user = await db.user.create({
-    data: {
-      email: v.email,
-      passwordHash: await hashPassword(v.password),
-      role: v.role,
-      firstName: v.firstName,
-      lastName: v.lastName,
-      lastLoginAt: new Date(),
-      ...(v.role === "FAMILLE"
-        ? { familyProfile: { create: { location: v.location ?? "MARTINIQUE", city: v.city || null } } }
-        : { caregiverProfile: { create: { allowedLevels: [], communes: [] } } }),
-    },
-  });
-  await logAudit({
-    actor: { id: user.id, role: user.role },
-    action: "auth.register",
-    entityType: "User",
-    entityId: user.id,
-    metadata: { testerCode, cguAccepted: true },
-  });
-  await createSession({ sub: user.id, role: user.role, name: user.firstName, demo: false, sv: user.sessionVersion });
-  // `next` (ex. lien d'invitation Lakou) : chemin interne seulement.
-  redirect(safeNextPath(v.next) ?? (user.role === "ACCOMPAGNANT" ? "/accompagnant/orientation" : ROLE_HOME[user.role]));
+  const r = await resetPassword(parsed.data.token, parsed.data.password);
+  if (!r.ok) return r.reason === "MOT_DE_PASSE" ? { ok: false, error: r.message, fieldErrors: { password: [r.message] } } : { ok: false, error: r.message };
+  await destroySession();
+  redirect("/connexion?info=mot-de-passe-change");
+}
+
+/** L3 : confirmation de l'e-mail (bouton sur la page du lien : un robot de messagerie ne consomme pas le lien). */
+export async function verifyEmailAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const token = String(formData.get("token") ?? "");
+  const limited = await hitRateLimit("jeton-email:ip", await clientIp());
+  if (!limited.allowed) return { ok: false, error: retryMessage(limited.retryAfterSeconds) };
+  const ok = await verifyEmailToken(token);
+  if (!ok) return { ok: false, error: "Ce lien ne marche plus. Connectez-vous, puis demandez un nouveau lien." };
+  const session = await readSession();
+  redirect(session ? ROLE_HOME[session.role] : "/connexion?info=email-verifie");
+}
+
+/** L3 : renvoie le lien de vérification au compte connecté. */
+export async function resendVerificationAction(_prev: ActionResult): Promise<ActionResult> {
+  const session = await readSession();
+  if (!session) return { ok: false, error: "Connectez-vous d'abord." };
+  const limited = await hitRateLimit("verif-email:compte", session.sub);
+  if (!limited.allowed) return { ok: false, error: retryMessage(limited.retryAfterSeconds) };
+  await resendVerification(session.sub);
+  return { ok: true, message: "Un nouveau lien part dans quelques minutes. Regardez aussi dans les courriers indésirables." };
 }
 
 export async function loginAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
@@ -91,7 +131,7 @@ export async function loginAction(_prev: ActionResult, formData: FormData): Prom
   // D1 : les comptes démo partagés sont refusés hors du mode démo.
   if (user.isDemo && !isDemoMode()) return { ok: false, error: "Les comptes de démonstration sont désactivés sur cette version." };
   // D2 : un compte de bac à sable s'ouvre seulement par son lien de reprise.
-  if (user.sandboxId) return { ok: false, error: "Ce compte de test s'ouvre avec votre lien de reprise." };
+  if (user.sandboxId) return { ok: false, error: isLaunchMode() ? "Email ou mot de passe incorrect." : "Ce compte de test s'ouvre avec votre lien de reprise." };
   await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
   await logAudit({ actor: { id: user.id, role: user.role }, action: "auth.login", entityType: "User", entityId: user.id });
   await createSession({ sub: user.id, role: user.role, name: user.firstName, demo: user.isDemo, sv: user.sessionVersion });

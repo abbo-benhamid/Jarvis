@@ -17,6 +17,91 @@ export function isStrictProduction(env: Env = process.env): boolean {
   return env.VERCEL_ENV === "production" || env.KOUDMEN_STRICT_CONFIG === "true";
 }
 
+// ─────────────── L1 : mode du site et données réelles ───────────────
+
+/** Mode du site (L1). « lancement » : site réel, sans démo. « essai » : démo, bac à sable, robots (développement, tests). */
+export type SiteMode = "lancement" | "essai";
+
+/**
+ * L1 : UNE seule règle décide du mode. `KOUDMEN_MODE` (lancement | essai) gagne.
+ * Sans valeur : « lancement » en production (Vercel production ou NODE_ENV=production), « essai » sinon.
+ */
+export function siteMode(env: Env = process.env): SiteMode {
+  const v = env.KOUDMEN_MODE?.trim().toLowerCase();
+  if (v === "lancement" || v === "essai") return v;
+  return env.VERCEL_ENV === "production" || env.NODE_ENV === "production" ? "lancement" : "essai";
+}
+
+export function isLaunchMode(env: Env = process.env): boolean {
+  return siteMode(env) === "lancement";
+}
+
+/**
+ * L1 : pages du mode essai (démo, bac à sable, offre factice, mesure du test) et leur page de remplacement
+ * en mode lancement (redirection du middleware). Les pages appellent AUSSI `requireTrialMode()` (404).
+ */
+const TRIAL_ONLY: [prefix: string, target: string][] = [
+  ["/tester", "/inscription"],
+  ["/cgu-test", "/cgu"],
+  ["/famille/visite-decouverte", "/famille/formule"],
+  ["/operateur/test", "/operateur"],
+];
+
+export function launchRedirect(pathname: string): string | null {
+  for (const [prefix, target] of TRIAL_ONLY) {
+    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) return target;
+  }
+  return null;
+}
+
+/** R1 : variables obligatoires pour autoriser les données réelles des aînés (HDS, AIPD, DPO). */
+export const REAL_DATA_REQUIREMENTS = ["HEBERGEUR_HDS", "AIPD_DATE", "DPO_CONTACT"] as const;
+
+/**
+ * R1 (critique juridique J1) : données réelles des aînés (fiche, adresse, QR, Kayé, trajet).
+ * - Mode essai : données d'exemple seulement → autorisé (bac à sable, développement, tests).
+ * - Mode lancement : `DONNEES_REELLES_AUTORISEES="true"` ET hébergeur HDS, date d'AIPD et contact DPO renseignés.
+ *   Sinon : mode PRÉINSCRIPTION (comptes ouverts, aucune donnée d'aîné).
+ */
+export function realDataAllowedFrom(env: Env = process.env): boolean {
+  if (!isLaunchMode(env)) return true;
+  if (env.DONNEES_REELLES_AUTORISEES?.trim().toLowerCase() !== "true") return false;
+  return REAL_DATA_REQUIREMENTS.every((k) => Boolean(env[k]?.trim()));
+}
+
+/** R2 : identité de l'éditeur, obligatoire en production (LCEN). */
+export const EDITOR_FIELDS = ["EDITEUR_NOM", "EDITEUR_ADRESSE", "EDITEUR_EMAIL", "DIRECTEUR_PUBLICATION"] as const;
+
+/** Expéditeur des e-mails : « Nom <adresse> » ou « adresse ». Null si invalide. */
+export function parseMailFrom(raw: string | undefined): { name: string; email: string } | null {
+  const v = raw?.trim();
+  if (!v) return null;
+  const m = v.match(/^(?:"?([^"<>]*?)"?\s*<([^<>\s]+@[^<>\s]+\.[^<>\s]+)>|([^<>\s]+@[^<>\s]+\.[^<>\s]+))$/);
+  if (!m) return null;
+  return { name: (m[1] ?? "").trim() || "Koudmen", email: (m[2] ?? m[3])! };
+}
+
+/**
+ * Avertissements (L3, L12) : la configuration est acceptée, mais un point demande une action.
+ * Affichés dans /api/sante (pas de page 503). Jamais de valeur secrète.
+ */
+export function configWarnings(env: Env = process.env): string[] {
+  const out: string[] = [];
+  const launch = isLaunchMode(env);
+  if (launch && !env.BREVO_API_KEY?.trim()) {
+    out.push("BREVO_API_KEY absente : aucun e-mail ne part. L'opérateur valide les e-mails à la main (page Comptes).");
+  }
+  if (launch && env.BREVO_API_KEY?.trim() && !env.MAIL_FROM?.trim()) out.push("MAIL_FROM absente : l'expéditeur par défaut est utilisé.");
+  if (launch && !realDataAllowedFrom(env)) {
+    out.push("Mode préinscription : les données réelles des aînés sont fermées (hébergement HDS, AIPD et DPO manquants ou DONNEES_REELLES_AUTORISEES absente).");
+  }
+  if (launch && realDataAllowedFrom(env)) {
+    out.push("Données réelles des aînés ouvertes : gardez à jour le contrat HDS, l'AIPD et l'avis de l'avocat.");
+  }
+  if (!launch && isStrictProduction(env)) out.push("Mode essai en production : la démo et le bac à sable sont ouverts.");
+  return out;
+}
+
 /** Longueur minimale des secrets en production (openssl rand -base64 48 donne 64 caractères). */
 export const MIN_SECRET_LENGTH = 32;
 /** Longueur minimale d'un code testeur en production (ex. T-7K4Q-9XWM-3HPA). */
@@ -94,12 +179,28 @@ export function productionConfigProblems(env: Env = process.env): string[] {
     if (p) out.push(p);
   }
   if (env.SESSION_SECRET && env.SESSION_SECRET === env.CRON_SECRET) out.push("SESSION_SECRET et CRON_SECRET doivent être différents.");
-  const codes = parseTesterCodes(env.TESTER_INVITE_CODES);
-  if (codes.length === 0) out.push("TESTER_INVITE_CODES est vide.");
-  for (const c of codes) {
-    const p = testerCodeProblem(c);
-    if (p) out.push(`TESTER_INVITE_CODES : ${p}. Générez des codes avec : pnpm ops:generate-codes`);
+  const mode = env.KOUDMEN_MODE?.trim().toLowerCase();
+  if (mode && mode !== "lancement" && mode !== "essai") out.push("KOUDMEN_MODE doit valoir lancement ou essai.");
+  // L1 : les codes testeurs servent seulement au bac à sable (mode essai).
+  if (!isLaunchMode(env)) {
+    const codes = parseTesterCodes(env.TESTER_INVITE_CODES);
+    if (codes.length === 0) out.push("TESTER_INVITE_CODES est vide.");
+    for (const c of codes) {
+      const p = testerCodeProblem(c);
+      if (p) out.push(`TESTER_INVITE_CODES : ${p}. Générez des codes avec : pnpm ops:generate-codes`);
+    }
   }
+  // R2 : mentions légales complètes (éditeur, directeur de la publication).
+  for (const name of EDITOR_FIELDS) {
+    if (!env[name]?.trim()) out.push(`${name} est vide (mentions légales obligatoires).`);
+  }
+  // R1 : données réelles des aînés seulement avec hébergeur HDS, AIPD et DPO.
+  if (env.DONNEES_REELLES_AUTORISEES?.trim().toLowerCase() === "true") {
+    for (const name of REAL_DATA_REQUIREMENTS) {
+      if (!env[name]?.trim()) out.push(`DONNEES_REELLES_AUTORISEES=true exige ${name}.`);
+    }
+  }
+  if (env.MAIL_FROM?.trim() && !parseMailFrom(env.MAIL_FROM)) out.push("MAIL_FROM n'est pas une adresse valide (exemple : Koudmen <bonjour@exemple.fr>).");
   if (env.RATE_LIMIT_DISABLED === "true") out.push("RATE_LIMIT_DISABLED est interdit en production.");
   // X2 (sécurité PB1) et PM3 : push réel par Expo (États-Unis) seulement après la validation du DPO.
   if (env.ADAPTER_PUSH?.trim().toLowerCase() === "expo") {

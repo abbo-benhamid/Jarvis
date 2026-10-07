@@ -3,7 +3,6 @@ import Link from "next/link";
 import { PublicShell } from "@/components/layout/public-shell";
 import { getCurrentUser } from "@/server/auth/guards";
 import { sameScope } from "@/server/scope";
-import { registrationOpen } from "@/server/env";
 import { getInvitationByToken, isLakouMember } from "@/server/famille/queries";
 import { tokenSchema } from "@/server/famille/schemas";
 import { formatDate } from "@/lib/format";
@@ -72,15 +71,11 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
                   <LinkButton href={`/connexion?next=${next}`} size="lg">
                     J&apos;ai déjà un compte : me connecter
                   </LinkButton>
-                  {/* A10 / M1 : l'inscription libre existe seulement en mode démo. */}
-                  {registrationOpen() ? (
-                    <>
-                      <LinkButton href={`/inscription?role=FAMILLE&next=${next}`} variant="quiet" size="lg">
-                        Créer un compte Famille
-                      </LinkButton>
-                      <p className="text-sm text-muted">Après la création du compte, vous revenez sur cette page pour rejoindre le cercle.</p>
-                    </>
-                  ) : null}
+                  {/* L2 : l'inscription est ouverte. */}
+                  <LinkButton href={`/inscription?role=FAMILLE&next=${next}`} variant="quiet" size="lg">
+                    Créer un compte Famille
+                  </LinkButton>
+                  <p className="text-sm text-muted">Après la création du compte, connectez-vous : vous revenez sur cette page pour rejoindre le cercle.</p>
                 </>
               ) : user.role !== "FAMILLE" ? (
                 <Alert tone="attention" title="Ce lien est réservé à un compte Famille.">

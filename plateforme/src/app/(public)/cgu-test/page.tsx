@@ -1,3 +1,4 @@
+import { requireTrialMode } from "@/server/launch";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { editorInfo, testEndLabel } from "@/server/env";
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 /** D4 (T4) : CGU de test, une page. Acceptées à l'entrée du bac à sable et à l'inscription. */
 export default function CguTestPage() {
+  requireTrialMode(); // L1 : page du mode essai, 404 en lancement.
   const e = editorInfo();
   const rules: { title: string; body: React.ReactNode }[] = [
     { title: "1. Objet", body: "Koudmen est un prototype. Il sert à recueillir des avis. Koudmen ne rend aucun service réel." },

@@ -252,7 +252,28 @@ model User {
   /// Appareils qui reçoivent les notifications push (lot N1).
   pushDevices         PushDevice[]
 
+  // ── L1-A : comptes réels (vérification de l'e-mail, consentements) ──
+  /// L3 : adresse e-mail confirmée (lien reçu, ou opérateur après un appel). Null = pas encore confirmée.
+  emailVerifiedAt     DateTime?
+  /// L3 : comment l'e-mail est confirmé : "LIEN" ou "OPERATEUR" (qui et quand : AuditLog).
+  emailVerifiedVia    String?
+  /// J25 : acceptation des CGU (case obligatoire). La politique de confidentialité est un lien, pas une case.
+  cguAcceptedAt       DateTime?
+  /// J25 : version des CGU acceptée (ex. "2026-10-07").
+  cguVersion          String?
+  /// J25 : e-mails d'information de Koudmen (case facultative, séparée).
+  newsOptInAt         DateTime?
+  /// L3 : jetons de vérification de l'e-mail et de mot de passe oublié (empreintes seulement).
+  accountTokens       AccountToken[]
+  /// L4 : demandes de rappel pour une formule payante.
+  activationRequests  PlanActivationRequest[] @relation("ActivationRequester")
+  activationsHandled  PlanActivationRequest[] @relation("ActivationHandler")
+  /// R5 : accords d'aînés enregistrés par ce conseiller.
+  ainesAccordRecorded Aine[]                  @relation("AineAccordRecorder")
+
   @@index([sandboxId])
+  /// L11 : purge des comptes jamais confirmés (J29) et liste opérateur « e-mails à valider ».
+  @@index([emailVerifiedAt, createdAt])
 }
 
 model FamilyProfile {
@@ -298,6 +319,25 @@ model Aine {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
+  // ── L1-A R5 (J5) : accord de l'aîné recueilli par un conseiller Koudmen, au téléphone ──
+  /// État de l'accord. Demandes et visites seulement après ACCORD_RECUEILLI.
+  accordEtat          AccordAine              @default(EN_ATTENTE_ACCORD)
+  /// Date et heure de l'appel où l'accord (ou le refus) est donné.
+  accordAt            DateTime?
+  /// Conseiller qui a appelé et enregistré la réponse.
+  accordRecordedById  String?
+  accordRecordedBy    User?                   @relation("AineAccordRecorder", fields: [accordRecordedById], references: [id], onDelete: SetNull)
+  /// Langue de l'appel : "FR" ou "GCF" (créole).
+  accordLangue        String?
+  /// Version de la notice FALC lue à l'aîné (ex. "FALC-2026-10").
+  accordNoticeVersion String?
+  /// Mesure de protection juridique de l'aîné.
+  situationJuridique  SituationJuridique?
+  /// Jugement ou mandat vu le … (aucune copie conservée).
+  justificatifVuLe    DateTime?               @db.Date
+  /// L4 : demandes de rappel liées à cet aîné.
+  activationRequests  PlanActivationRequest[]
+
   members      LakouMember[]
   invitations  Invitation[]
   subscription Subscription?
@@ -308,6 +348,8 @@ model Aine {
 
   @@index([ownerId])
   @@index([sandboxId])
+  /// R5 : liste opérateur « aînés à appeler ».
+  @@index([accordEtat, createdAt])
 }
 
 model LakouMember {
@@ -399,6 +441,8 @@ model CaregiverProfile {
   siret              String?
   /// Proche aidant APA : l'aîné de SA famille. Il n'est proposé qu'à cet aîné (D7).
   linkedAineId       String?
+  /// R6 (J26) : date de naissance, donnée à l'inscription. 18 ans minimum ; niveau 3 à partir de 21 ans.
+  birthDate          DateTime?           @db.Date
   validation         CaregiverValidation @default(BROUILLON)
   /// Motif obligatoire si REFUSE ou SUSPENDU (revue humaine).
   validationReason   String?
@@ -439,6 +483,8 @@ model VerificationItem {
   reviewedBy   User?              @relation(fields: [reviewedById], references: [id])
   reviewedAt   DateTime?
   reviewNote   String?
+  /// R6 (J6) : casier B3 « vu le … » par l'opérateur. Aucun texte libre, aucune copie.
+  seenOn       DateTime?          @db.Date
 
   @@unique([caregiverId, type])
 }
@@ -867,4 +913,81 @@ model PushDevice {
 
   @@index([userId])
   @@index([familyId])
+}
+
+// ─────────────────────────────── L1-A : comptes réels, offre, accord de l'aîné ───────────────────────────────
+
+/// L3 : usage d'un jeton envoyé par e-mail.
+enum AccountTokenPurpose {
+  /// Lien « Confirmer mon adresse e-mail » : 24 h, usage unique.
+  VERIFICATION_EMAIL
+  /// Lien « Choisir un nouveau mot de passe » : 1 h, usage unique.
+  MOT_DE_PASSE
+}
+
+/// L3 : jeton à usage unique envoyé par e-mail.
+/// - Stocké en EMPREINTE (SHA-256), jamais en clair.
+/// - Un nouveau jeton du même usage annule les anciens.
+/// - Effacé avec le compte ; purge nocturne des jetons expirés ou utilisés.
+model AccountToken {
+  id        String              @id @default(cuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose   AccountTokenPurpose
+  /// Empreinte SHA-256 (hex) du jeton.
+  tokenHash String              @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  @@index([userId, purpose])
+  @@index([expiresAt])
+}
+
+/// L4 / R8 : état d'une demande de rappel pour une formule payante. Aucun encaissement.
+enum ActivationStatus {
+  /// La famille attend l'appel d'un conseiller.
+  NOUVELLE
+  /// Le conseiller a appelé la famille.
+  RAPPELEE
+  /// Demande close (sans suite, ou famille plus intéressée).
+  CLOSE
+}
+
+/// L4 (J32) : demande de RAPPEL, pas une commande. Le conseiller n'encaisse rien tant que les CGV ne sont pas publiées.
+/// J35 : effacée 3 mois après la dernière action si elle reste sans suite.
+model PlanActivationRequest {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation("ActivationRequester", fields: [userId], references: [id], onDelete: Cascade)
+  /// Aîné concerné (null en préinscription : pas de fiche aîné).
+  aineId      String?
+  aine        Aine?            @relation(fields: [aineId], references: [id], onDelete: SetNull)
+  plan        Plan
+  status      ActivationStatus @default(NOUVELLE)
+  handledById String?
+  handledBy   User?            @relation("ActivationHandler", fields: [handledById], references: [id], onDelete: SetNull)
+  handledAt   DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([status, createdAt])
+  @@index([userId])
+}
+
+/// R5 (J5) : accord de l'aîné, recueilli par un conseiller au téléphone (notice FALC).
+enum AccordAine {
+  EN_ATTENTE_ACCORD
+  ACCORD_RECUEILLI
+  ACCORD_REFUSE
+  ACCORD_RETIRE
+}
+
+/// R5 (J5) : mesure de protection juridique de l'aîné.
+enum SituationJuridique {
+  AUCUNE
+  TUTELLE
+  CURATELLE
+  HABILITATION_FAMILIALE
+  MANDAT_PROTECTION_FUTURE
 }

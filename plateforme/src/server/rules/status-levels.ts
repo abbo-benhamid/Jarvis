@@ -32,7 +32,22 @@ const BASE_LEVELS: Record<CaregiverStatus, readonly Level[]> = {
 export type LevelOptions = {
   /** Diplôme DEAES / ADVF VALIDÉ par l'opérateur. */
   hasDiploma?: boolean;
+  /** R6 (J26) : âge de l'accompagnant, en années. Inconnu → pas de restriction d'âge (anciens profils). */
+  age?: number | null;
 };
+
+/** R6 (J26, docs/08 § 4.2) : âge minimum pour accompagner. */
+export const MIN_CAREGIVER_AGE = 18;
+/** R6 : âge minimum pour le niveau 3 « Présence » (docs/08 niveau 2, proposition 21 ans). */
+export const MIN_AGE_LEVEL_3 = 21;
+
+/** Âge en années révolues à la date `now` (dates en UTC, comme `@db.Date`). */
+export function ageInYears(birthDate: Date, now: Date = new Date()): number {
+  let age = now.getUTCFullYear() - birthDate.getUTCFullYear();
+  const m = now.getUTCMonth() - birthDate.getUTCMonth();
+  if (m < 0 || (m === 0 && now.getUTCDate() < birthDate.getUTCDate())) age -= 1;
+  return age;
+}
 
 /** Liste triée des niveaux qu'un statut peut exercer. */
 export function allowedLevelsFor(status: CaregiverStatus, opts: LevelOptions = {}): Level[] {
@@ -40,6 +55,8 @@ export function allowedLevelsFor(status: CaregiverStatus, opts: LevelOptions = {
   if (opts.hasDiploma && (status === "SALARIE_FAMILLE_CESU" || status === "PROCHE_AIDANT_APA")) {
     base.add(4);
   }
+  // R6 : niveau 3 bloqué sous 21 ans (règle serveur).
+  if (opts.age != null && opts.age < MIN_AGE_LEVEL_3) base.delete(3);
   return [...base].sort((a, b) => a - b);
 }
 

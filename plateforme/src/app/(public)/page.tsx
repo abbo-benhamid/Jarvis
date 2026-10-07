@@ -12,6 +12,7 @@ import { PLANS, OFFER_TEST_NOTICE } from "@/lib/plans";
 import { PROOF_FACTOR_LABELS } from "@/lib/labels";
 import { PlanCostExample } from "@/components/famille/plan-cost";
 import { Term } from "@/components/ui/term";
+import { isLaunchMode } from "@/server/launch";
 
 /**
  * Page d'accueil (D13, maquette conso écran a) : elle vend la TRANQUILLITÉ, dans cet ordre :
@@ -40,7 +41,32 @@ const PROMISES = [
 
 const H2 = "font-display text-[28px] leading-[1.1] font-normal tracking-[-.02em] lg:text-[36px]";
 
+/** L1 : en lancement, l'action principale est « Créer un compte ». En essai : la démo sur invitation. */
+const CTA = {
+  lancement: {
+    href: "/inscription",
+    label: "Créer un compte",
+    meta: "Gratuit, sans engagement. Aucun paiement aujourd'hui.",
+    dock: { start: "Gratuit", end: "Sans engagement" },
+    title: "Préparez la venue de Koudmen chez votre parent",
+    text: "Créez votre compte famille. Un conseiller Koudmen vous appelle pour la suite. Aucun paiement aujourd'hui.",
+    secondary: "Vous voulez accompagner des aînés ? Créez un compte accompagnant. L'inscription est gratuite pour vous.",
+    secondaryLabel: "Créer un compte",
+  },
+  essai: {
+    href: "/tester",
+    label: "Découvrir Koudmen",
+    meta: "Gratuit, 10 minutes, sur invitation. Une démo rien que pour vous.",
+    dock: { start: "Gratuit · 10 minutes", end: "Sur invitation" },
+    title: "Voyez comment ça marche pour votre parent",
+    text: "Essayez la démo, sur invitation : 10 minutes, gratuit, rien que pour vous.",
+    secondary: "Vous voulez accompagner des aînés ? La démo vous propose aussi le rôle « Accompagnant ».",
+    secondaryLabel: "Essayer la démo",
+  },
+} as const;
+
 export default function HomePage() {
+  const cta = CTA[isLaunchMode() ? "lancement" : "essai"];
   return (
     <div className="flex flex-col gap-16 lg:gap-24">
       {/* 1. La réponse, le bouton et le prix : tout dans le premier écran */}
@@ -55,10 +81,10 @@ export default function HomePage() {
             chaque visite, et vous dit ce qui s&apos;est vraiment passé.
           </p>
           <div className="mt-8 hidden items-center gap-5 lg:flex">
-            <LinkButton href="/tester" size="lg" className="shrink-0 whitespace-nowrap" data-testid="cta-premier-ecran" iconEnd={<ArrowRight strokeWidth={1.8} />}>
-              Découvrir Koudmen
+            <LinkButton href={cta.href} size="lg" className="shrink-0 whitespace-nowrap" data-testid="cta-premier-ecran" iconEnd={<ArrowRight strokeWidth={1.8} />}>
+              {cta.label}
             </LinkButton>
-            <p className="max-w-[18rem] text-[15px] leading-snug text-muted">Gratuit, 10 minutes, sur invitation. Une démo rien que pour vous.</p>
+            <p className="max-w-[18rem] text-[15px] leading-snug text-muted">{cta.meta}</p>
           </div>
           <p className="mt-6 max-w-xl text-[15px] leading-relaxed lg:mt-8">
             <strong>Tarifs de lancement :</strong> formule Libre 0 €, Kozé 39 €, Sérénité dès 149 € par mois. Les heures de visite sont en plus, avec 50 %
@@ -179,14 +205,14 @@ export default function HomePage() {
       >
         <div className="flex flex-col items-start gap-3">
           <h2 id="tester" className={H2}>
-            Voyez comment ça marche pour votre parent
+            {cta.title}
           </h2>
-          <p>Essayez la démo, sur invitation : 10 minutes, gratuit, rien que pour vous.</p>
-          <LinkButton href="/tester" size="lg" className="mt-2 max-sm:w-full" iconEnd={<ArrowRight strokeWidth={1.8} />}>
-            Essayer la démo
+          <p>{cta.text}</p>
+          <LinkButton href={cta.href} size="lg" className="mt-2 max-sm:w-full" iconEnd={<ArrowRight strokeWidth={1.8} />}>
+            {cta.secondaryLabel}
           </LinkButton>
           <p className="text-[15px] text-muted">
-            Vous voulez accompagner des aînés ? La démo vous propose aussi le rôle « Accompagnant ».{" "}
+            {cta.secondary}{" "}
             <Link href="/connexion" className="inline-flex min-h-11 items-center font-semibold text-mer underline underline-offset-4">
               Déjà un compte : se connecter
             </Link>
@@ -197,9 +223,9 @@ export default function HomePage() {
 
       {/* Mobile : l'action principale au pouce (§ 2.5). Collante dans la page : elle ne cache jamais le pied de page. */}
       <div className="sticky bottom-0 z-30 -mx-5 -mt-16 lg:hidden">
-        <ActionDock position="static" meta={{ start: "Gratuit · 10 minutes", end: "Sur invitation" }}>
-          <LinkButton href="/tester" size="lg" fullWidth data-testid="cta-premier-ecran" iconEnd={<ArrowRight strokeWidth={1.8} />}>
-            Découvrir Koudmen
+        <ActionDock position="static" meta={cta.dock}>
+          <LinkButton href={cta.href} size="lg" fullWidth data-testid="cta-premier-ecran" iconEnd={<ArrowRight strokeWidth={1.8} />}>
+            {cta.label}
           </LinkButton>
         </ActionDock>
       </div>

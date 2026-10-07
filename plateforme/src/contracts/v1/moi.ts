@@ -19,6 +19,13 @@ export const reponseMoiSchema = z
     demo: z.boolean(),
     /** Compte de test isolé (bac à sable). L'app affiche le bandeau « Version de test ». */
     bacASable: z.boolean(),
+    /** L1 : adresse e-mail confirmée (lien reçu, ou opérateur). */
+    emailVerifie: z.boolean(),
+    /**
+     * L2 : profil validé par l'opérateur. Accompagnant : validation « Validé ». Famille et opérateur : toujours vrai.
+     * Faux → l'app affiche « Profil en cours de validation ».
+     */
+    profilValide: z.boolean(),
   })
   .strict();
 export type ReponseMoi = z.infer<typeof reponseMoiSchema>;

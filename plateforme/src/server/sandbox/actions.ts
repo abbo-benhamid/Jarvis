@@ -6,7 +6,10 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/server/db";
 import { getCurrentUser, requireRole } from "@/server/auth/guards";
-import { validTesterCode } from "@/server/env";
+import { isLaunchMode, validTesterCode } from "@/server/env";
+
+/** L1 : en mode lancement, la démo, les robots et l'offre factice n'existent pas. */
+const TRIAL_CLOSED = "Cette fonction n'existe pas sur ce site.";
 import { logAudit } from "@/server/audit";
 import { clientIp, hitRateLimit, hitRateLimits, retryMessage } from "@/server/rate-limit";
 import { fail, type ActionResult } from "@/lib/action-result";
@@ -48,6 +51,7 @@ function formToObject(formData: FormData): Record<string, string> {
 
 /** « Tester Koudmen » : code valide + CGU de test → un bac à sable neuf pour CE testeur. */
 export async function startSandboxAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  if (isLaunchMode()) return fail(TRIAL_CLOSED);
   const parsed = startSchema.safeParse(formToObject(formData));
   if (!parsed.success) return fail("Vérifiez les champs en rouge.", parsed.error.flatten().fieldErrors);
   // B1 : limite d'essais par IP (codes devinés en masse, bacs à sable créés en masse).
@@ -80,6 +84,7 @@ async function sandboxTester() {
 
 /** « Simuler la suite » (D14) : les robots jouent l'étape suivante. */
 export async function simulateAction(_prev: ActionResult<SimulationResult>): Promise<ActionResult<SimulationResult>> {
+  if (isLaunchMode()) return fail(TRIAL_CLOSED);
   const tester = await sandboxTester();
   if (!tester) return fail("La simulation existe seulement dans une démo.");
   // m2 : une seule simulation à la fois par bac à sable (double clic, deux onglets). Bail atomique de 60 s.
@@ -105,6 +110,7 @@ const microSchema = z.object({ questionKey: z.string().max(40), answer: z.string
 
 /** Micro-question (D15) : une réponse par compte et par question. */
 export async function microAnswerAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  if (isLaunchMode()) return fail(TRIAL_CLOSED);
   const user = await getCurrentUser();
   if (!user) return fail("Connectez-vous pour répondre.");
   const parsed = microSchema.safeParse(formToObject(formData));
@@ -137,6 +143,7 @@ const discoverySchema = z.object({
  * Contact RÉEL du testeur, recueilli SEULEMENT avec son consentement explicite. Aucune donnée sur l'aîné.
  */
 export async function requestDiscoveryAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  if (isLaunchMode()) return fail(TRIAL_CLOSED);
   const user = await requireRole("FAMILLE");
   const parsed = discoverySchema.safeParse(formToObject(formData));
   if (!parsed.success) return fail("Vérifiez les champs en rouge.", parsed.error.flatten().fieldErrors);
@@ -208,6 +215,7 @@ export async function withdrawMyDiscoveryAction(): Promise<void> {
 
 /** « Non, pas maintenant » : la réponse compte aussi (mesure de la volonté de payer). */
 export async function declineDiscoveryAction(): Promise<void> {
+  if (isLaunchMode()) redirect("/famille/formule");
   const user = await requireRole("FAMILLE");
   await trackEvent(user, "discovery.declined");
   revalidatePath("/", "layout");

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySessionToken } from "@/server/auth/session-token";
-import { isStrictProduction, productionConfigProblems, secretProblem } from "@/server/config-check";
+import { isLaunchMode, isStrictProduction, launchRedirect, productionConfigProblems, secretProblem } from "@/server/config-check";
 
 /**
  * Première barrière (edge) : sans session valide, pas d'accès aux espaces privés.
@@ -20,6 +20,14 @@ export async function middleware(req: NextRequest) {
   // B1, B3 : configuration de production refusée → toutes les pages expliquent pourquoi.
   const problems = productionConfigProblems();
   if (problems.length > 0) return configErrorPage(problems);
+  // L1 : en lancement, la démo, le bac à sable et l'offre factice n'existent pas.
+  const trialOnly = isLaunchMode() ? launchRedirect(req.nextUrl.pathname) : null;
+  if (trialOnly) {
+    const url = req.nextUrl.clone();
+    url.pathname = trialOnly;
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
   if (!PRIVATE_PREFIXES.some((p) => req.nextUrl.pathname === p || req.nextUrl.pathname.startsWith(`${p}/`))) {
     return NextResponse.next();
   }

@@ -1,3 +1,4 @@
+import { requireTrialMode } from "@/server/launch";
 import type { Metadata } from "next";
 import {
   ArrowRight,
@@ -89,6 +90,7 @@ function DemoSection({ id, title, children }: { id: string; title: string; child
 }
 
 export default function DesignPage() {
+  requireTrialMode(); // L1 : page du mode essai, 404 en lancement.
   return (
     <main id="contenu" className="mx-auto w-full max-w-[var(--app-column)] px-5 pt-4 pb-10 max-[359px]:px-4">
       {/* En-tête de la démo */}

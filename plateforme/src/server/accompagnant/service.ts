@@ -5,7 +5,7 @@ import { logAudit } from "@/server/audit";
 import { notifyLakou } from "@/server/outbox";
 import { schedulePushFlush } from "@/server/notifications/push/service";
 import { sameScope } from "@/server/scope";
-import { isDemoMode } from "@/server/env";
+import { isDemoMode, isLaunchMode } from "@/server/env";
 import { orientCaregiver, type OrientationAnswers, type OrientationResult } from "@/server/rules/orientation";
 import { allowedLevelsFor, canStatusDoLevel, statusIsPaid } from "@/server/rules/status-levels";
 import { evaluateGps, verifyHomeCode } from "@/server/visits/proof";
@@ -57,6 +57,8 @@ export class AccompagnantError extends Error {
  * Actif PAR DÉFAUT pendant la phase de test (T9) ; désactivé seulement par NEXT_PUBLIC_TEST_MODE="false".
  */
 export function isTestMode(): boolean {
+  // L1 : jamais de position simulée en mode lancement.
+  if (isLaunchMode()) return false;
   return process.env.NEXT_PUBLIC_TEST_MODE !== "false" || isDemoMode();
 }
 

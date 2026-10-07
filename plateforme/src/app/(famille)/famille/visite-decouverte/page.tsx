@@ -1,3 +1,4 @@
+import { requireTrialMode } from "@/server/launch";
 import type { Metadata } from "next";
 import { requireRole } from "@/server/auth/guards";
 import { declineDiscoveryAction, withdrawMyDiscoveryAction } from "@/server/sandbox/actions";
@@ -19,6 +20,7 @@ export const metadata: Metadata = { title: "Visite découverte" };
  * Message honnête : Koudmen est en test, rien n'est réservé.
  */
 export default async function Page({ searchParams }: { searchParams: Promise<{ envoye?: string; refus?: string; retrait?: string; retire?: string }> }) {
+  requireTrialMode(); // L1 : page du mode essai, 404 en lancement.
   const user = await requireRole("FAMILLE");
   const { envoye, refus, retrait, retire } = await searchParams;
   // M6 : lien de retrait du consentement (affiché une fois) et retrait depuis l'espace.

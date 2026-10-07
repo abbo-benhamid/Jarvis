@@ -243,6 +243,7 @@ export async function buildFamilyWorld(sandboxId: string, tester: { firstName: s
           consentByName: "Léonie J. (personnage fictif)",
           consentAt: new Date(now.getTime() - 60 * DAY),
           homeCode,
+          accordEtat: "ACCORD_RECUEILLI",
           sandboxId,
           ownerId: me.id,
           members: {

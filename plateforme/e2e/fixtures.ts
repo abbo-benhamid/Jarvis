@@ -128,6 +128,7 @@ export async function createFamilyWithAine(p: { aineFirstName: string; commune: 
       consentByName: `${p.aineFirstName} E2E`,
       consentAt: new Date(),
       homeCode,
+      accordEtat: "ACCORD_RECUEILLI",
       ownerId: user.id,
       members: { create: [{ userId: user.id, relation: "fille", isPayer: true }] },
       subscription: { create: { payerId: user.id, plan: "LAKOU", priceCents: 0 } },

@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/v1/me — le compte connecté (jeton d'accès obligatoire).
  * RGPD : liste fermée de champs, vérifiée par le contrat. Aucune donnée de santé, aucun téléphone, aucun aîné.
+ * L1 : `emailVerifie` (e-mail confirmé) et `profilValide` (accompagnant validé par l'opérateur ; vrai pour les autres rôles).
  */
 export const GET = route(async (req: NextRequest) => {
   await enforceRateLimits([["evenement:ip", `api-v1-me:${ipOf(req)}`]]);
@@ -19,6 +20,8 @@ export const GET = route(async (req: NextRequest) => {
     email: user.email,
     demo: user.isDemo,
     bacASable: user.sandboxId !== null,
+    emailVerifie: user.emailVerifiedAt !== null,
+    profilValide: user.role !== "ACCOMPAGNANT" || user.caregiverProfile?.validation === "VALIDE",
   });
   return json(body);
 });
