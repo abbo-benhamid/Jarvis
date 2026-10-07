@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
@@ -144,6 +145,18 @@ describe("decideCaregiverAction", () => {
     });
     expect(notifyUser).toHaveBeenCalledWith("u-cg", "ACCOMPAGNANT_VALIDE", { prenom: "Steeve" }, expect.anything(), tx);
     expect(logAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "caregiver.validate" }), tx);
+  });
+
+  it("R6 : la validation efface les réponses d'orientation ; sous 21 ans, pas de niveau 3", async () => {
+    const birth = new Date();
+    birth.setUTCFullYear(birth.getUTCFullYear() - 19);
+    db.caregiverProfile.findUnique = vi.fn().mockResolvedValue({ ...pending, birthDate: birth, verifications: [{ type: "IDENTITE", status: "VALIDE" }] });
+    tx.caregiverProfile.updateMany.mockResolvedValue({ count: 1 });
+    const res = await decideCaregiverAction(initialActionState, form({ caregiverId: CG, decision: "VALIDER" }));
+    expect(res.ok).toBe(true);
+    const data = (tx.caregiverProfile.updateMany.mock.calls.at(-1) as unknown as [{ data: Record<string, unknown> }])[0].data;
+    expect(data.allowedLevels).toEqual([1, 2]);
+    expect(data.orientationAnswers).toBe(Prisma.DbNull);
   });
 
   it("A1 : suspend avec motif → libère l'accompagnant (propositions, missions, visites) DANS la transaction", async () => {

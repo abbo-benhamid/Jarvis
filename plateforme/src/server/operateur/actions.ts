@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
+import { ageInYears } from "@/server/rules/status-levels";
 import { requireRole } from "@/server/auth/guards";
 import { assertAineAccess } from "@/server/access";
 import { db } from "@/server/db";
@@ -23,6 +25,7 @@ import {
   FEEDBACK_STATUS_LABELS,
   proposalSchema,
   recomputeLevels,
+  reviewProblem,
   validationBlockers,
   verificationReviewSchema,
 } from "./rules";
@@ -71,7 +74,7 @@ export async function decideCaregiverAction(_prev: ActionResult, formData: FormD
   }
 
   const to = DECISION_RESULT[decision];
-  const levels = recomputeLevels(cg.status, cg.verifications);
+  const levels = recomputeLevels(cg.status, cg.verifications, cg.birthDate ? ageInYears(cg.birthDate) : null);
   try {
     await db.$transaction(async (tx) => {
       // Garde de concurrence : un autre opérateur a peut-être déjà décidé.
@@ -84,6 +87,8 @@ export async function decideCaregiverAction(_prev: ActionResult, formData: FormD
           reviewedAt: new Date(),
           hasDiploma: levels.hasDiploma,
           allowedLevels: levels.allowedLevels,
+          // R6 (J6) : à la validation, les réponses brutes de l'orientation sont effacées (seul le statut déduit reste).
+          ...(to === "VALIDE" ? { orientationAnswers: Prisma.DbNull } : {}),
         },
       });
       if (res.count !== 1) throw new BusinessError("Le profil a changé entre-temps. Rechargez la page.");
@@ -133,28 +138,39 @@ export async function reviewVerificationAction(_prev: ActionResult, formData: Fo
   const user = await requireRole("OPERATEUR");
   const parsed = verificationReviewSchema.safeParse(formToObject(formData));
   if (!parsed.success) return fail("Vérifiez votre revue.", parsed.error.flatten().fieldErrors);
-  const { verificationId, verdict, note } = parsed.data;
+  const { verificationId, verdict, seenOn } = parsed.data;
 
   const item = await db.verificationItem.findUnique({
     where: { id: verificationId },
     include: {
       caregiver: {
-        select: { id: true, status: true, user: { select: { sandboxId: true } }, verifications: { select: { id: true, type: true, status: true } } },
+        select: { id: true, status: true, birthDate: true, user: { select: { sandboxId: true } }, verifications: { select: { id: true, type: true, status: true } } },
       },
     },
   });
   if (!item || !sameScope(item.caregiver.user?.sandboxId, REAL_WORLD)) return fail("Vérification introuvable.");
   if (item.status === "A_FOURNIR") return fail("L'accompagnant n'a pas encore déclaré cette pièce.");
+  const problem = reviewProblem(item.type, parsed.data);
+  if (problem) return fail(problem.message, { [problem.field]: [problem.message] });
+  // R6 (J6) : casier B3 → aucun texte libre, seulement la date « vu le » et le verdict.
+  const b3 = item.type === "CASIER_B3";
+  const note = b3 ? null : parsed.data.note || null;
 
   await db.$transaction(async (tx) => {
     await tx.verificationItem.update({
       where: { id: item.id },
-      data: { status: verdict, reviewNote: note || null, reviewedById: user.id, reviewedAt: new Date() },
+      data: {
+        status: verdict,
+        reviewNote: note,
+        reviewedById: user.id,
+        reviewedAt: new Date(),
+        ...(b3 ? { seenOn: new Date(`${seenOn}T00:00:00Z`), declaration: null } : {}),
+      },
     });
     // Le diplôme VALIDÉ ouvre le niveau 4 (salarié famille, proche aidant). Niveaux recalculés côté serveur.
     if (item.type === "DIPLOME") {
       const after = item.caregiver.verifications.map((v) => (v.id === item.id ? { ...v, status: verdict } : v));
-      const levels = recomputeLevels(item.caregiver.status, after);
+      const levels = recomputeLevels(item.caregiver.status, after, item.caregiver.birthDate ? ageInYears(item.caregiver.birthDate) : null);
       await tx.caregiverProfile.update({ where: { id: item.caregiver.id }, data: levels });
     }
     await logAudit(

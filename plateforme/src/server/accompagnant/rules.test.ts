@@ -5,6 +5,8 @@ import {
   canWriteKaye,
   centsToEurosInput,
   checkInWindow,
+  declarationProblem,
+  declarationSchema,
   formDataToObject,
   kayeSchema,
   missingProfileItems,
@@ -15,6 +17,15 @@ import {
 } from "./rules";
 
 const VISIT_ID = "ckvisit0000000000000000001";
+
+describe("R6 (J6) : déclarations de vérification", () => {
+  it("casier B3 : aucun texte exigé ; autres pièces : 3 caractères minimum", () => {
+    expect(declarationProblem("CASIER_B3", "")).toBeNull();
+    expect(declarationProblem("IDENTITE", "")).not.toBeNull();
+    expect(declarationProblem("IDENTITE", "CNI 2031")).toBeNull();
+    expect(declarationSchema.safeParse({ itemId: VISIT_ID }).success).toBe(true);
+  });
+});
 
 describe("tarif horaire libre", () => {
   it("lit les formats français", () => {

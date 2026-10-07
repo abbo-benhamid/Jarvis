@@ -108,24 +108,35 @@ export function validationBlockers(p: {
 export function recomputeLevels(
   status: CaregiverStatus | null,
   verifications: { type: VerificationType; status: VerificationStatus }[],
+  /** R6 (J26) : âge de l'accompagnant ; sous 21 ans, pas de niveau 3. Inconnu → pas de restriction. */
+  age: number | null = null,
 ): { hasDiploma: boolean; allowedLevels: Level[] } {
   const hasDiploma = verifications.some((v) => v.type === "DIPLOME" && v.status === "VALIDE");
-  return { hasDiploma, allowedLevels: status ? allowedLevelsFor(status, { hasDiploma }) : [] };
+  return { hasDiploma, allowedLevels: status ? allowedLevelsFor(status, { hasDiploma, age }) : [] };
 }
 
 // ─────────────── Revue d'une vérification ───────────────
 
-export const verificationReviewSchema = z
-  .object({
-    verificationId: z.string().cuid(),
-    verdict: z.enum(["VALIDE", "REFUSE"], { errorMap: () => ({ message: "Choisissez Valider ou Refuser." }) }),
-    note: z.string().trim().max(500, "500 caractères maximum.").default(""),
-  })
-  .superRefine((v, ctx) => {
-    if (v.verdict === "REFUSE" && v.note.length < 5) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["note"], message: "Écrivez pourquoi vous refusez cette vérification." });
-    }
-  });
+/**
+ * Revue d'une vérification. R6 (J6) : pour le casier B3, AUCUN texte libre : seulement « vu le … »
+ * (date) et le verdict (conforme / non conforme). Ce contrôle dépend du type : il est dans l'action.
+ */
+export const verificationReviewSchema = z.object({
+  verificationId: z.string().cuid(),
+  verdict: z.enum(["VALIDE", "REFUSE"], { errorMap: () => ({ message: "Choisissez Valider ou Refuser." }) }),
+  note: z.string().trim().max(500, "500 caractères maximum.").default(""),
+  seenOn: z.preprocess((v) => (v === "" ? undefined : v), z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date invalide.").optional()),
+});
+
+/** Problème de la revue selon le type de vérification (null si correcte). */
+export function reviewProblem(type: VerificationType, v: { verdict: "VALIDE" | "REFUSE"; note: string; seenOn?: string }): { field: "note" | "seenOn"; message: string } | null {
+  if (type === "CASIER_B3") {
+    if (!v.seenOn) return { field: "seenOn", message: "Indiquez la date où vous avez vu l'extrait B3." };
+    return null;
+  }
+  if (v.verdict === "REFUSE" && v.note.length < 5) return { field: "note", message: "Écrivez pourquoi vous refusez cette vérification." };
+  return null;
+}
 
 // ─────────────── Proposition (matching manuel) ───────────────
 

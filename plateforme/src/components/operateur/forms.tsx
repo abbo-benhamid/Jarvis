@@ -64,16 +64,24 @@ export function DecisionForm({ caregiverId, decisions }: { caregiverId: string; 
 }
 
 /** Revue d'une vérification déclarée (aucune pièce stockée dans le MVP). */
-export function VerificationReviewForm({ verificationId }: { verificationId: string }) {
+export function VerificationReviewForm({ verificationId, b3 = false }: { verificationId: string; b3?: boolean }) {
   const [state, action] = useActionState(reviewVerificationAction, initialActionState);
   const fe = !state.ok ? state.fieldErrors : undefined;
   const id = `note-${verificationId}`;
+  const seenId = `vu-${verificationId}`;
   return (
     <form action={action} className="flex flex-col gap-2">
       <input type="hidden" name="verificationId" value={verificationId} />
-      <FormField label="Note de revue" htmlFor={id} hint="Obligatoire pour refuser." errors={fe?.note}>
-        <Textarea id={id} name="note" rows={2} maxLength={500} aria-describedby={`${id}-hint`} />
-      </FormField>
+      {/* R6 (J6) : casier B3 = « vu le … » seulement. Aucun texte, aucune copie. */}
+      {b3 ? (
+        <FormField label="Extrait B3 vu le" htmlFor={seenId} hint="Valider = conforme. Refuser = non conforme. N'écrivez rien d'autre." errors={fe?.seenOn} required>
+          <input id={seenId} name="seenOn" type="date" required aria-describedby={`${seenId}-hint`} className="min-h-11 rounded-field border-[1.5px] border-line-strong bg-surface px-3" />
+        </FormField>
+      ) : (
+        <FormField label="Note de revue" htmlFor={id} hint="Obligatoire pour refuser." errors={fe?.note}>
+          <Textarea id={id} name="note" rows={2} maxLength={500} aria-describedby={`${id}-hint`} />
+        </FormField>
+      )}
       <FormMessage state={state} />
       <div className="flex flex-wrap gap-2">
         <SubmitButton name="verdict" value="VALIDE" variant="primary" pendingLabel="Envoi…">

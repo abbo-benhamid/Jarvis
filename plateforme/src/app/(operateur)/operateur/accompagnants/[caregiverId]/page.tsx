@@ -158,7 +158,7 @@ export default async function Page({ params }: { params: Promise<{ caregiverId: 
                     {v.reviewNote ? ` — « ${v.reviewNote} »` : ""}
                   </p>
                 ) : null}
-                {v.status !== "A_FOURNIR" ? <VerificationReviewForm verificationId={v.id} /> : null}
+                {v.status !== "A_FOURNIR" ? <VerificationReviewForm verificationId={v.id} b3={v.type === "CASIER_B3"} /> : null}
               </Card>
             ))}
           </div>

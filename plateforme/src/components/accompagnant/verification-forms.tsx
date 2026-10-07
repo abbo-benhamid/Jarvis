@@ -63,7 +63,13 @@ export function VerificationRow({ item }: { item: VerificationRowData }) {
         <form onSubmit={onSubmit} className="flex flex-col gap-3">
           <input type="hidden" name="itemId" value={item.id} />
           <FormMessage state={state} />
-          {/* M11 : un libellé unique par champ. */}
+          {/* R6 (J6) : casier B3 = aucun texte. L'extrait est montré au rendez-vous ; l'équipe note seulement la date. */}
+          {item.type === "CASIER_B3" ? (
+            <p className="text-[15px]">
+              Montrez votre extrait de casier judiciaire (bulletin n° 3) à l&apos;équipe Koudmen, au rendez-vous. Koudmen ne garde aucune copie. L&apos;équipe note
+              seulement la date.
+            </p>
+          ) : (
           <FormField label={`Votre déclaration — ${VERIFICATION_TYPE_LABELS[item.type]}`} htmlFor={id} hint={EXAMPLES[item.type]} errors={fe?.declaration}>
             <Textarea
               {...fieldA11y(id, fe?.declaration, true)}
@@ -74,8 +80,9 @@ export function VerificationRow({ item }: { item: VerificationRowData }) {
               onChange={(e) => setText(e.target.value)}
             />
           </FormField>
+          )}
           <PendingButton pending={pending} variant={item.status === "DECLARE" ? "quiet" : "primary"} size="lg" pendingLabel="Enregistrement…" className="w-full">
-            {item.status === "DECLARE" ? "Modifier ma déclaration" : "J'ai fourni"}
+            {item.type === "CASIER_B3" ? (item.status === "DECLARE" ? "C'est noté" : "Je montrerai mon extrait B3") : item.status === "DECLARE" ? "Modifier ma déclaration" : "J'ai fourni"}
           </PendingButton>
         </form>
       )}

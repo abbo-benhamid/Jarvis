@@ -10,6 +10,7 @@ import {
   sortCandidates,
   validationBlockers,
   verificationReviewSchema,
+  reviewProblem,
 } from "./rules";
 
 const CUID = "ckv9x1y2z0000abcd1234efgh";
@@ -45,11 +46,28 @@ describe("decisionSchema (motif obligatoire, RM-07)", () => {
   });
 });
 
-describe("verificationReviewSchema", () => {
-  it("exige une note pour refuser", () => {
-    expect(verificationReviewSchema.safeParse({ verificationId: CUID, verdict: "REFUSE", note: "" }).success).toBe(false);
-    expect(verificationReviewSchema.safeParse({ verificationId: CUID, verdict: "REFUSE", note: "Pièce illisible" }).success).toBe(true);
-    expect(verificationReviewSchema.safeParse({ verificationId: CUID, verdict: "VALIDE" }).success).toBe(true);
+describe("verificationReviewSchema et reviewProblem", () => {
+  it("exige une note pour refuser (hors casier B3)", () => {
+    const parse = (o: object) => verificationReviewSchema.parse({ verificationId: CUID, ...o });
+    expect(reviewProblem("IDENTITE", parse({ verdict: "REFUSE", note: "" }))).toMatchObject({ field: "note" });
+    expect(reviewProblem("IDENTITE", parse({ verdict: "REFUSE", note: "Pièce illisible" }))).toBeNull();
+    expect(reviewProblem("IDENTITE", parse({ verdict: "VALIDE" }))).toBeNull();
+  });
+
+  it("R6 (J6) : casier B3 = date « vu le » obligatoire, sans texte", () => {
+    const parse = (o: object) => verificationReviewSchema.parse({ verificationId: CUID, ...o });
+    expect(reviewProblem("CASIER_B3", parse({ verdict: "VALIDE" }))).toMatchObject({ field: "seenOn" });
+    expect(reviewProblem("CASIER_B3", parse({ verdict: "REFUSE", seenOn: "2026-10-07" }))).toBeNull();
+    expect(verificationReviewSchema.safeParse({ verificationId: CUID, verdict: "VALIDE", seenOn: "07/10/2026" }).success).toBe(false);
+  });
+});
+
+describe("R6 (J26) : niveaux selon l'âge", () => {
+  it("niveau 3 fermé sous 21 ans ; âge inconnu = pas de restriction", () => {
+    expect(recomputeLevels("SALARIE_FAMILLE_CESU", [], 19).allowedLevels).toEqual([1, 2]);
+    expect(recomputeLevels("SALARIE_FAMILLE_CESU", [], 21).allowedLevels).toEqual([1, 2, 3]);
+    expect(recomputeLevels("SALARIE_FAMILLE_CESU", []).allowedLevels).toEqual([1, 2, 3]);
+    expect(recomputeLevels("SALARIE_FAMILLE_CESU", [{ type: "DIPLOME", status: "VALIDE" }], 20).allowedLevels).toEqual([1, 2, 4]);
   });
 });
 

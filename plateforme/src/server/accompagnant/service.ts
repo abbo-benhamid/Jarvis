@@ -7,7 +7,8 @@ import { schedulePushFlush } from "@/server/notifications/push/service";
 import { sameScope } from "@/server/scope";
 import { isDemoMode, isLaunchMode } from "@/server/env";
 import { orientCaregiver, type OrientationAnswers, type OrientationResult } from "@/server/rules/orientation";
-import { allowedLevelsFor, canStatusDoLevel, statusIsPaid } from "@/server/rules/status-levels";
+import { PREINSCRIPTION_MESSAGE, realDataAllowed } from "@/server/launch";
+import { ageInYears, allowedLevelsFor, canStatusDoLevel, statusIsPaid } from "@/server/rules/status-levels";
 import { evaluateGps, verifyHomeCode } from "@/server/visits/proof";
 import { recordProof, refreshVisitStatus } from "@/server/visits/service";
 import { formatTime } from "@/lib/format";
@@ -19,6 +20,7 @@ import {
   MAX_CODE_ATTEMPTS,
   PLANCHER_SALARIE_CENTS,
   canDeclare,
+  declarationProblem,
   canRedoOrientation,
   canSubmitForReview,
   canWriteKaye,
@@ -125,7 +127,9 @@ export async function saveOrientation(actor: Actor, answers: OrientationAnswers)
   const result = orientCaregiver(answers);
   const status = result.status;
   // RM-03 : niveaux TOUJOURS recalculés côté serveur.
-  const allowedLevels = status ? allowedLevelsFor(status, { hasDiploma: profile.hasDiploma }) : [];
+  // R6 (J26) : niveau 3 fermé sous 21 ans (date de naissance donnée à l'inscription).
+  const age = profile.birthDate ? ageInYears(profile.birthDate) : null;
+  const allowedLevels = status ? allowedLevelsFor(status, { hasDiploma: profile.hasDiploma, age }) : [];
   const required = result.requiredVerifications;
   // D10 (M1) : un nouveau statut salarié n'hérite jamais d'un tarif sous le plancher. Le tarif est effacé :
   // le profil redevient incomplet, l'accompagnant fixe un nouveau tarif.
@@ -229,9 +233,12 @@ export async function declareVerification(actor: Actor, itemId: string, declarat
   const item = await db.verificationItem.findFirst({ where: { id: itemId, caregiver: { userId: actor.id } } });
   if (!item) throw new AccompagnantError("Vérification introuvable.", "INTROUVABLE");
   if (!canDeclare(item.status)) throw new AccompagnantError("Cette vérification est déjà validée.", "CONFLIT");
+  const problem = declarationProblem(item.type, declaration);
+  if (problem) throw new AccompagnantError(problem, "INVALIDE");
   await db.verificationItem.update({
     where: { id: item.id },
-    data: { status: "DECLARE", declaration, declaredAt: new Date() },
+    // R6 (J6) : casier B3 → aucun texte stocké. L'accompagnant montre l'extrait au rendez-vous ; l'opérateur note « vu le ».
+    data: { status: "DECLARE", declaration: item.type === "CASIER_B3" ? null : declaration, declaredAt: new Date() },
   });
   await logAudit({
     actor,
@@ -602,6 +609,8 @@ export async function checkOut(actor: Actor, visitId: string, now: Date = new Da
 
 /** Un Kayé par visite, après le check-in. Notifie le cercle Lakou (sans donnée de santé). */
 export async function createKaye(actor: Actor, input: KayeInput) {
+  // R1 : pas de Kayé réel en préinscription (données réelles des aînés fermées).
+  if (!realDataAllowed()) throw new AccompagnantError(PREINSCRIPTION_MESSAGE, "INTERDIT");
   const visit = await loadOwnedVisit(actor.id, input.visitId);
   assertActiveCaregiver(visit);
   if (visit.journal) throw new AccompagnantError("Le Kayé de cette visite existe déjà.", "CONFLIT");

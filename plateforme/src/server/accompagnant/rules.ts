@@ -188,12 +188,15 @@ export function canRedoOrientation(validation: CaregiverValidation): boolean {
 
 export const declarationSchema = z.object({
   itemId: z.string().cuid(),
-  declaration: z
-    .string()
-    .trim()
-    .min(3, "Écrivez une courte déclaration (3 caractères minimum).")
-    .max(300, "300 caractères maximum."),
+  // R6 (J6) : facultative ici ; obligatoire (3 caractères) pour tout sauf le casier B3 (contrôle dans le service).
+  declaration: z.string().trim().max(300, "300 caractères maximum.").default(""),
 });
+
+/** R6 (J6) : le casier B3 n'accepte AUCUN texte libre. Autres pièces : 3 caractères minimum. */
+export function declarationProblem(type: string, declaration: string): string | null {
+  if (type === "CASIER_B3") return null;
+  return declaration.length < 3 ? "Écrivez une courte déclaration (3 caractères minimum)." : null;
+}
 
 export function canDeclare(status: VerificationStatus): boolean {
   return status !== "VALIDE";
