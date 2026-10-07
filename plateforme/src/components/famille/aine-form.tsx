@@ -20,6 +20,9 @@ export type AineFormDefaults = {
   lastInitial: string | null;
   commune: string;
   addressHint: string | null;
+  /** L1-B (L8) : adresse exacte (déchiffrée pour le gestionnaire). */
+  address?: string | null;
+  locationApproximate?: boolean;
   phone: string | null;
   needs: NeedType[];
   activityLevel: number;
@@ -64,7 +67,7 @@ export function AineForm({ defaults }: { defaults?: AineFormDefaults }) {
         <FormField
           label="Commune"
           htmlFor="commune"
-          hint="Koudmen place le domicile au centre de la commune. Aucune adresse exacte n'est demandée."
+          hint="Sans adresse exacte, Koudmen place le domicile au centre de la commune."
           errors={fe?.commune}
           required
         >
@@ -79,6 +82,17 @@ export function AineForm({ defaults }: { defaults?: AineFormDefaults }) {
             ))}
           </Select>
         </FormField>
+        <FormField
+          label="Adresse du domicile (facultatif)"
+          htmlFor="address"
+          hint="Numéro et rue, ou lieu-dit. Elle sert à la carte du trajet et à la preuve de présence. Elle est chiffrée. L'accompagnant la voit seulement le jour de la visite."
+          errors={fe?.address}
+        >
+          <Input {...fieldA11y("address", fe?.address, true)} defaultValue={defaults?.address ?? ""} autoComplete="street-address" maxLength={200} />
+        </FormField>
+        {editing && defaults?.address && defaults.locationApproximate ? (
+          <Alert tone="attention">Cette adresse n&apos;a pas été trouvée exactement. Koudmen utilise une position approximative. Vérifiez le numéro et la rue.</Alert>
+        ) : null}
         <FormField label="Indication pour trouver la maison (facultatif)" htmlFor="addressHint" hint="Exemple : quartier, couleur du portail. Données d'exemple seulement." errors={fe?.addressHint}>
           <Input {...fieldA11y("addressHint", fe?.addressHint, true)} defaultValue={defaults?.addressHint ?? ""} autoComplete="off" maxLength={160} />
         </FormField>

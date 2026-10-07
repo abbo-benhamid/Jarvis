@@ -7,6 +7,7 @@ import { Alert } from "@/components/ui/alert";
 import { TopBar } from "@/components/famille/top-bar";
 import { deName } from "@/lib/format";
 import { AineForm } from "@/components/famille/aine-form";
+import { readAddress } from "@/server/presence/address";
 
 export const metadata: Metadata = { title: "Modifier le profil de l'aîné" };
 
@@ -29,6 +30,8 @@ export default async function Page({ params }: { params: Promise<{ aineId: strin
             lastInitial: aine.lastInitial,
             commune: aine.commune,
             addressHint: aine.addressHint,
+            address: readAddress(aine),
+            locationApproximate: aine.locationApproximate,
             phone: aine.phone,
             needs: aine.needs,
             activityLevel: aine.activityLevel,

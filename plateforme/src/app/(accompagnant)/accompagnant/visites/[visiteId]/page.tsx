@@ -15,6 +15,7 @@ import { VisitMap } from "@/components/accompagnant/visit-map";
 import { aineShortName, hourRange } from "@/components/accompagnant/visit-display";
 import { communeLabel } from "@/lib/communes";
 import { db } from "@/server/db";
+import { readAddressForCaregiver } from "@/server/presence/address";
 
 export const metadata: Metadata = { title: "Visite" };
 
@@ -27,6 +28,7 @@ export default async function Page({ params }: { params: Promise<{ visiteId: str
   if (!visit) notFound();
 
   const testMode = isTestMode();
+  const address = await readAddressForCaregiver(user, visit.id);
   const now = new Date();
   const win = checkInWindow(visit, now, testMode);
   const canAddProof = visitAcceptsProof(visit) && win === "OUVERT";
@@ -59,6 +61,12 @@ export default async function Page({ params }: { params: Promise<{ visiteId: str
               </p>
             </div>
           </div>
+          {/* L1-B (R7) : adresse exacte le jour de la visite seulement ; chaque lecture est journalisée. */}
+          {address ? (
+            <p className="mt-3 rounded-md bg-surface-2 px-3.5 py-2.5 text-[15px]">
+              <span className="font-semibold">Adresse :</span> {address}
+            </p>
+          ) : null}
           {visit.aine.addressHint ? (
             <p className="mt-3 rounded-md bg-surface-2 px-3.5 py-2.5 text-[15px]">
               <span className="font-semibold">Repère :</span> {visit.aine.addressHint}

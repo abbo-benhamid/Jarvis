@@ -200,6 +200,30 @@ describe.runIf(enabled)("Lot L1-B (présence) sur une vraie base", async () => {
     expect((await db.visit.findUniqueOrThrow({ where: { id: v.id } })).lateCheckInAt).not.toBeNull();
   });
 
+  // ─────────────── Adresse (L8, R7) ───────────────
+
+  it("adresse : chiffrée en base, géocodée (adaptateur simulé), repli centre de commune ; lue par l'accompagnant le jour de la visite seulement, journalisée", async () => {
+    const address = await import("./address");
+    const exact = await address.computeHomeLocation("12 rue Schoelcher", "LAMENTIN");
+    expect(exact).toMatchObject({ locationApproximate: false });
+    expect(exact.addressEnc).toMatch(/^a1:/);
+    const repli = await address.computeHomeLocation("adresse introuvable", "LAMENTIN");
+    expect(repli).toMatchObject({ locationApproximate: true, latitude: 14.6131, longitude: -60.9996 });
+    await db.aine.update({ where: { id: aineId }, data: { addressEnc: exact.addressEnc } });
+    expect(JSON.stringify(await db.aine.findUniqueOrThrow({ where: { id: aineId } }))).not.toContain("Schoelcher");
+
+    const today = await visitFor(alice, 0.5);
+    expect(await address.readAddressForCaregiver(alice.user, today.id)).toBe("12 rue Schoelcher");
+    expect(await db.auditLog.count({ where: { action: "aine.address.read", entityId: aineId, actorId: alice.user.id } })).toBe(1);
+    const log = await db.auditLog.findFirstOrThrow({ where: { action: "aine.address.read", entityId: aineId } });
+    expect(JSON.stringify(log)).not.toContain("Schoelcher");
+    const later = await visitFor(alice, 72);
+    expect(await address.readAddressForCaregiver(alice.user, later.id)).toBeNull();
+    const intrus = await caregiver("Intrus");
+    expect(await address.readAddressForCaregiver(intrus.user, today.id)).toBeNull();
+    await db.aine.update({ where: { id: aineId }, data: { addressEnc: null } });
+  });
+
   // ─────────────── R7 : la famille employeur tranche ───────────────
 
   it("visite À vérifier : seul le payeur tranche ; confirmer → VALIDEE ; signaler → opérateurs prévenus", async () => {

@@ -15,6 +15,7 @@ import { ProofSteps } from "@/components/ui/proof-steps";
 import { LevelBadge } from "@/components/status-badges";
 import { CaregiverLinkForm } from "@/components/famille/caregiver-link-form";
 import { TopBar } from "@/components/famille/top-bar";
+import { readAddress } from "@/server/presence/address";
 
 export const metadata: Metadata = { title: "Fiche de l'aîné" };
 
@@ -30,6 +31,7 @@ export default async function Page({ params, searchParams }: Props) {
   const { aine, isPayer } = data;
   const payer = aine.members.find((m) => m.isPayer);
   const name = `${aine.firstName} ${initialWithDot(aine.lastInitial)}`.trim();
+  const address = readAddress(aine);
 
   return (
     <>
@@ -43,6 +45,13 @@ export default async function Page({ params, searchParams }: Props) {
             {communeLabel(aine.commune)}
             {aine.addressHint ? ` · ${aine.addressHint}` : ""}
           </p>
+          {/* L1-B (L8) : adresse exacte, lue par le cercle Lakou (déchiffrée côté serveur). */}
+          {address ? (
+            <p className="text-[15px] text-muted">
+              {address}
+              {aine.locationApproximate ? " · position approximative" : ""}
+            </p>
+          ) : null}
         </div>
       </header>
 
