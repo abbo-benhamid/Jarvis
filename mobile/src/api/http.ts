@@ -296,7 +296,6 @@ export function creerApiHttp(
     horsLigne,
 
     connecter: (email, motDePasse) => ouvrirSession({ methode: 'mot_de_passe', email: email.trim(), motDePasse }),
-    connecterDemo: () => ouvrirSession({ methode: 'demo', role: 'ACCOMPAGNANT' }),
 
     async restaurer() {
       const jeton = await stockage.lire().catch(() => null);

@@ -5,7 +5,7 @@ import {
   api,
   ApiError,
   API_MODE,
-  CODE_DOMICILE_DEMO,
+  CODE_DOMICILE_SIMULE,
   messageErreur,
   type PositionPonctuelle,
   type ReponseVisite,
@@ -395,7 +395,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
               onChangeText={(t) => setCode(normaliserCode(t))}
               erreur={verifie && !pretArrivee ? 'Entrez le code du domicile, ou acceptez la lecture de la position plus bas.' : null}
               aide={
-                API_MODE === 'simule' ? `Code d’exemple : ${CODE_DOMICILE_DEMO}` : 'Il n’est pas gardé sur ce téléphone.'
+                API_MODE === 'simule' ? `Code d’exemple : ${CODE_DOMICILE_SIMULE}` : 'Il n’est pas gardé sur ce téléphone.'
               }
             />
             {gpsPossible ? (

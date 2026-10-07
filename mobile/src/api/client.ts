@@ -17,12 +17,11 @@ import type {
  *
  * Les écrans n'appellent QUE cette interface. Deux implémentations :
  * - `http.ts` (lot M2, par défaut) : routes `/api/v1` de `plateforme/` (docs/tech/api-v1.md) ;
- * - `simule.ts` (lot M1) : données en mémoire, pour la démo hors ligne (`EXPO_PUBLIC_API_MODE=simule`).
+ * - `simule.ts` (lot M1) : données en mémoire, pour les tests hors ligne (`EXPO_PUBLIC_API_MODE=simule`).
  *
  * | Méthode              | Route v1                                       |
  * |----------------------|------------------------------------------------|
  * | connecter            | POST /auth/code (PKCE S256) puis /auth/token   |
- * | connecterDemo        | idem, `methode: "demo"` (DEMO_MODE=true)       |
  * | restaurer            | POST /auth/refresh (jeton du stockage sûr)     |
  * | moi                  | GET  /me                                       |
  * | deconnecter          | POST /auth/logout                              |
@@ -46,8 +45,6 @@ export interface KoudmenApi {
 
   /** E-mail et mot de passe. Les jetons vont dans le stockage sûr de l'appareil. */
   connecter(email: string, motDePasse: string): Promise<Moi>;
-  /** Compte de démonstration partagé (serveur en DEMO_MODE seulement). */
-  connecterDemo(): Promise<Moi>;
   /** Au démarrage : reprend la connexion gardée sur l'appareil. `null` si aucune. */
   restaurer(): Promise<Moi | null>;
   moi(): Promise<Moi>;

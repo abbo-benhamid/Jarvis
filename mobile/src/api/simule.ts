@@ -14,18 +14,19 @@ import {
 } from './types';
 
 /**
- * Implémentation SIMULÉE (démo hors ligne, `EXPO_PUBLIC_API_MODE=simule`).
+ * Implémentation SIMULÉE (tests hors ligne, `EXPO_PUBLIC_API_MODE=simule`).
  * Mêmes formes que l'API v1 (contrats Zod). Données en mémoire, perdues au redémarrage.
+ * L1 : plus de « compte de démonstration ». Tout e-mail valide + le mot de passe simulé ouvre une session.
  */
 
-export const EMAIL_DEMO = 'accompagnant@demo.koudmen.test';
-export const MOT_DE_PASSE_DEMO = 'koudmen';
+/** Mot de passe accepté par l'API simulée (tests seulement, jamais affiché en mode réel). */
+export const MOT_DE_PASSE_SIMULE = 'koudmen';
 /**
- * Code du domicile de Léonie (fictif), le MÊME que dans les données de démo du site
- * (plateforme/prisma/seed.ts, `homeCode: "LKW7Q3"`). Arbitrage V1 X3 : un seul code par domicile,
+ * Code du domicile de Léonie dans les données simulées, le MÊME que dans les données d'exemple du site
+ * (plateforme/prisma/seed.ts, `homeCode: "LKW7Q3"`, aligné P14). Arbitrage V1 X3 : un seul code par domicile,
  * écrit en clair et en QR sur la même feuille ; l'app le scanne OU le saisit.
  */
-export const CODE_DOMICILE_DEMO = 'LKW7Q3';
+export const CODE_DOMICILE_SIMULE = 'LKW7Q3';
 
 const attendre = (ms = 280) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -44,8 +45,8 @@ const MOI: Moi = {
   role: 'ACCOMPAGNANT',
   prenom: 'Josiane',
   nom: 'Mathurin',
-  email: EMAIL_DEMO,
-  demo: true,
+  email: 'josiane.mathurin@exemple.fr',
+  demo: false,
   bacASable: false,
 };
 
@@ -149,14 +150,9 @@ export function creerApiSimulee(): KoudmenApi {
 
     async connecter(email, motDePasse) {
       await attendre();
-      if (!email.includes('@') || motDePasse !== MOT_DE_PASSE_DEMO) {
+      if (!email.includes('@') || motDePasse !== MOT_DE_PASSE_SIMULE) {
         throw new ApiError('IDENTIFIANTS_INVALIDES', MESSAGES.IDENTIFIANTS_INVALIDES, 401);
       }
-      session = MOI;
-      return session;
-    },
-    async connecterDemo() {
-      await attendre();
       session = MOI;
       return session;
     },
@@ -193,7 +189,7 @@ export function creerApiSimulee(): KoudmenApi {
       exigerSession();
       const v = trouver(visiteId);
       if (!v.actions.checkIn) throw new ApiError('CONFLIT', 'L’arrivée est déjà enregistrée, ou la visite n’est pas ouverte.');
-      const codeOk = codeDomicile ? codeDomicile.trim().toUpperCase() === CODE_DOMICILE_DEMO : undefined;
+      const codeOk = codeDomicile ? codeDomicile.trim().toUpperCase() === CODE_DOMICILE_SIMULE : undefined;
       if (!position && codeOk === false) throw new ApiError('INVALIDE', 'Ce code ne correspond pas au domicile.');
       const facteurs: FacteurPreuve[] = [...(position ? (['GPS'] as const) : []), ...(codeOk ? (['CODE_DOMICILE'] as const) : [])];
       const maintenant = new Date().toISOString();

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { router } from 'expo-router';
-import { api, EMAIL_DEMO, messageErreur, MOT_DE_PASSE_DEMO } from '@/api';
+import { api, messageErreur, MOT_DE_PASSE_SIMULE } from '@/api';
 import { useSession } from '@/session/SessionProvider';
 import { fonts, useTheme } from '@/theme';
 import { Badge, Button, CaseIllustration, Em, Field, Icon, Kreyol, Logo, MadrasLine, Screen, Text } from '@/ui';
@@ -14,21 +14,21 @@ import { Badge, Button, CaseIllustration, Em, Field, Icon, Kreyol, Logo, MadrasL
 export default function Connexion() {
   const { c } = useTheme();
   const { width } = useWindowDimensions();
-  const { etat, connecter, connecterDemo, reprendre } = useSession();
+  const { etat, connecter, reprendre } = useSession();
   const [email, setEmail] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
   const [erreur, setErreur] = useState<string | null>(null);
   // V1c (UX M8) : le bouton reste actif ; au toucher, on dit ce qui manque, près du champ.
   const [manque, setManque] = useState<{ email: string | null; motDePasse: string | null }>({ email: null, motDePasse: null });
-  const [envoi, setEnvoi] = useState<'compte' | 'demo' | null>(null);
+  const [envoi, setEnvoi] = useState(false);
 
   const avis = etat.statut === 'deconnecte' ? etat.message : null;
   const reprisePossible = etat.statut === 'deconnecte' && etat.reprisePossible;
   const pret = email.includes('@') && motDePasse.length > 0;
 
-  const valider = async (demo: boolean) => {
+  const valider = async () => {
     if (envoi) return;
-    if (!demo && !pret) {
+    if (!pret) {
       setManque({
         email: email.includes('@') ? null : email.trim() ? 'Vérifiez l’e-mail : il manque « @ ».' : 'Entrez votre e-mail.',
         motDePasse: motDePasse.length > 0 ? null : 'Entrez votre mot de passe.',
@@ -37,14 +37,13 @@ export default function Connexion() {
     }
     setManque({ email: null, motDePasse: null });
     setErreur(null);
-    setEnvoi(demo ? 'demo' : 'compte');
+    setEnvoi(true);
     try {
-      if (demo) await connecterDemo();
-      else await connecter(email, motDePasse);
-      router.replace('/visites');
+      await connecter(email, motDePasse);
+      router.replace('/');
     } catch (e) {
       setErreur(messageErreur(e));
-      setEnvoi(null);
+      setEnvoi(false);
     }
   };
 
@@ -115,30 +114,19 @@ export default function Connexion() {
             setMotDePasse(t);
             if (manque.motDePasse) setManque((m) => ({ ...m, motDePasse: null }));
           }}
-          onSubmitEditing={() => void valider(false)}
+          onSubmitEditing={() => void valider()}
           returnKeyType="go"
           erreur={manque.motDePasse ?? erreur}
-          aide={api.mode === 'simule' ? `Compte d’exemple : ${EMAIL_DEMO}, mot de passe « ${MOT_DE_PASSE_DEMO} ».` : undefined}
+          aide={api.mode === 'simule' ? `Mode simulé : tout e-mail, mot de passe « ${MOT_DE_PASSE_SIMULE} ».` : undefined}
         />
         <Button
           testID="bouton-connexion"
           label="Me connecter"
           icon="lock"
-          onPress={() => void valider(false)}
-          loading={envoi === 'compte'}
+          onPress={() => void valider()}
+          loading={envoi}
           accessibilityHint={pret ? undefined : 'Entrez d’abord votre e-mail et votre mot de passe.'}
         />
-        {/* V2-app : le compte partagé n'apparaît qu'en simulé ou en développement (jamais dans un build publié). */}
-        {api.mode === 'simule' || __DEV__ ? (
-          <Button
-            testID="bouton-demo"
-            variant="link"
-            label="Essayer avec le compte d’exemple"
-            onPress={() => void valider(true)}
-            loading={envoi === 'demo'}
-            disabled={envoi !== null}
-          />
-        ) : null}
       </View>
 
       <View style={{ alignItems: 'center', marginTop: 16 }}>
