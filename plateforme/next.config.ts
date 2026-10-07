@@ -6,7 +6,7 @@ const isDev = process.env.NODE_ENV !== "production";
  * Politique de sécurité du contenu (CSP) raisonnable pour Next.js sans nonce :
  * - scripts et styles de notre origine seulement ('unsafe-inline' requis par l'hydratation Next.js) ;
  * - 'unsafe-eval' seulement en développement (rechargement à chaud) ;
- * - aucune ressource tierce, aucune mise en cadre (frame-ancestors 'none').
+ * - aucune ressource tierce (sauf les tuiles de carte OpenFreeMap, L1-B), aucune mise en cadre (frame-ancestors 'none').
  */
 const csp = [
   "default-src 'self'",
@@ -14,7 +14,11 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  `connect-src 'self'${isDev ? " ws:" : ""}`,
+  // L1-B (L7) : tuiles, styles, polices et icônes de la carte (OpenFreeMap, sans clé).
+  `connect-src 'self' https://tiles.openfreemap.org${isDev ? " ws:" : ""}`,
+  // L1-B (L7) : MapLibre GL JS lance son calcul de tuiles dans un worker créé depuis un blob.
+  "worker-src 'self' blob:",
+  "child-src blob:",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

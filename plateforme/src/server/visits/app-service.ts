@@ -133,13 +133,14 @@ export async function processAppEvents(user: AppUser, events: Evenement[], recei
       if (skew && visite && outcome.statut === "ACCEPTE" && (e.type === "CHECK_IN" || e.type === "CHECK_OUT")) skewedVisits.add(visite.id);
       if (late && visite && outcome.statut === "ACCEPTE") lateVisits.add(visite.id);
       // La visite peut être prouvée par un facteur reçu avant (ex. code, puis position) : VALIDE.
-      if (e.type === "CHECK_IN" && outcome.statut === "ACCEPTE" && !late && !skew && visite?.statut === "VALIDEE" && outcome.statutPreuve === "A_VERIFIER") {
-        outcome.statutPreuve = "VALIDE";
-        outcome.raison = "Présence confirmée : deux preuves sur trois.";
+      if (e.type === "CHECK_IN" && outcome.statut === "ACCEPTE" && !late && !skew && visite?.statut === "VALIDEE" && outcome.controle?.statut === "A_VERIFIER") {
+        outcome.controle = { statut: "VALIDE", raison: "Présence confirmée : deux preuves sur trois." };
       }
-      if (skew && outcome.statutPreuve === "VALIDE") {
-        outcome.statutPreuve = "A_VERIFIER";
-        outcome.raison = "L'heure du téléphone est très différente de l'heure réelle. La famille employeur confirmera la visite.";
+      if (skew && outcome.controle?.statut === "VALIDE") {
+        outcome.controle = {
+          statut: "A_VERIFIER",
+          raison: "L'heure du téléphone est très différente de l'heure réelle. La famille employeur confirmera la visite.",
+        };
       }
       result = { clientEventId: e.clientEventId, type: e.type, horlogeSuspecte: skew, ...outcome, ...(visite ? { visite } : {}) };
       // Sécurité m1 : on garde l'id de visite seulement s'il appartient à ce compte (sinon null).
@@ -277,7 +278,7 @@ async function keepRefusedKayeAsDraft(actor: Actor, e: Extract<Evenement, { type
  * - QR faux ou révoqué, code faux → le facteur est refusé. Sans autre facteur accepté : événement REFUSE.
  * - Échec de position (trop loin, imprécise, simulée, domicile approximatif) → ne bloque pas : « À vérifier ».
  * - Reçu plus de 30 min après l'heure de l'appareil (`late`) → « À vérifier » (P1/P8).
- * Le résultat porte `statutPreuve` (VALIDE, A_VERIFIER, REFUSE) et une `raison` en français simple.
+ * Le résultat porte `controle: { statut (VALIDE, A_VERIFIER, REFUSE), raison }` en français simple (contrat de l'app L1-C).
  */
 async function checkIn(actor: Actor, e: Extract<Evenement, { type: "CHECK_IN" }>, at: Date, late: boolean): Promise<Outcome> {
   const preuves: NonNullable<Outcome["preuves"]> = {};
@@ -295,7 +296,7 @@ async function checkIn(actor: Actor, e: Extract<Evenement, { type: "CHECK_IN" }>
       recorded = true;
     } catch (err) {
       if (!(err instanceof AccompagnantError)) throw err;
-      if (err.code === "INTROUVABLE") return { ...refused(err), statutPreuve: "REFUSE", raison: err.message };
+      if (err.code === "INTROUVABLE") return { ...refused(err), controle: { statut: "REFUSE", raison: err.message } };
       preuves.code = { valide: false, message: err.message };
       firstError = err;
     }
@@ -313,7 +314,7 @@ async function checkIn(actor: Actor, e: Extract<Evenement, { type: "CHECK_IN" }>
       if (!ev.valid && ev.reason) raisons.push(GPS_FAILURE_MESSAGES[ev.reason]);
     } catch (err) {
       if (!(err instanceof AccompagnantError)) throw err;
-      if (err.code === "INTROUVABLE") return { ...refused(err), statutPreuve: "REFUSE", raison: err.message };
+      if (err.code === "INTROUVABLE") return { ...refused(err), controle: { statut: "REFUSE", raison: err.message } };
       preuves.position = { valide: false, message: err.message };
       firstError ??= err;
       raisons.push(err.message);
@@ -321,14 +322,14 @@ async function checkIn(actor: Actor, e: Extract<Evenement, { type: "CHECK_IN" }>
   } else if (codeOk) {
     raisons.push("Position non envoyée.");
   }
-  if (!recorded && firstError) return { ...refused(firstError), preuves, statutPreuve: "REFUSE", raison: firstError.message };
+  if (!recorded && firstError) return { ...refused(firstError), preuves, controle: { statut: "REFUSE", raison: firstError.message } };
   if (!codeOk) raisons.unshift(preuves.code?.message ?? "Carte du domicile non scannée.");
   if (late) raisons.push(`Check-in reçu plus de ${ECART_RECEPTION_CHECKIN_MAX_MIN} minutes après l'heure du téléphone.`);
   if (codeOk && positionOk && !late) {
-    return { statut: "ACCEPTE", preuves, statutPreuve: "VALIDE", raison: "Présence confirmée : carte du domicile et position." };
+    return { statut: "ACCEPTE", preuves, controle: { statut: "VALIDE", raison: "Présence confirmée : carte du domicile et position." } };
   }
   const raison = `${raisons.join(" ")} La famille employeur confirmera la visite.`.slice(0, 300);
-  return { statut: "ACCEPTE", preuves, statutPreuve: "A_VERIFIER", raison };
+  return { statut: "ACCEPTE", preuves, controle: { statut: "A_VERIFIER", raison } };
 }
 
 /** P1/P8 : un check-in reçu plus de 30 min après l'heure de l'appareil. */

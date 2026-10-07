@@ -88,9 +88,15 @@ export async function startOrStopTrip(actor: TripActor, visitId: string, action:
   if (state === "DEJA_ARRIVE") throw new TripError("Le check-in est déjà fait : le trajet n'a plus lieu d'être partagé.", "CONFLIT");
   if (state === "TROP_TOT") throw new TripError("Le partage du trajet s'ouvre 2 heures avant le début de la visite.", "INTERDIT");
   if (state === "TROP_TARD") throw new TripError("Cette visite est terminée : le trajet ne peut plus être partagé.", "INTERDIT");
+  // Carte d'itinéraire de l'app (L1-C) : domicile arrondi ; l'accord de l'aîné est déjà vérifié (presenceRefusal).
+  const domicile = {
+    latitude: roundCoord(visit.aine.latitude),
+    longitude: roundCoord(visit.aine.longitude),
+    approximatif: visit.aine.locationApproximate,
+  };
 
   if (visit.trip && visit.trip.expiresAt.getTime() > now.getTime()) {
-    return { trajet: { etat: "EN_COURS", expireA: visit.trip.expiresAt.toISOString() } };
+    return { trajet: { etat: "EN_COURS", expireA: visit.trip.expiresAt.toISOString() }, domicile };
   }
   const expiresAt = new Date(now.getTime() + TRAJET_DUREE_MS);
   // Un trajet expiré est remplacé (sa dernière position est effacée).
@@ -111,7 +117,7 @@ export async function startOrStopTrip(actor: TripActor, visitId: string, action:
     },
   });
   await logAudit({ actor, action: "trip.started", entityType: "Visit", entityId: visit.id, metadata: { durationMinutes: TRAJET_DUREE_MS / 60_000 } });
-  return { trajet: { etat: "EN_COURS", expireA: trip.expiresAt.toISOString() } };
+  return { trajet: { etat: "EN_COURS", expireA: trip.expiresAt.toISOString() }, domicile };
 }
 
 /**

@@ -130,7 +130,7 @@ describe.runIf(enabled)("Lot L1-B (présence) sur une vraie base", async () => {
     const [r] = await app.processAppEvents(alice.user, [
       checkIn(v.id, { qr: await qrOf(aineId), position: { ...north(60), precisionMetres: 15, consentement: true } }),
     ]);
-    expect(r).toMatchObject({ statut: "ACCEPTE", statutPreuve: "VALIDE", visite: { statut: "VALIDEE", score: 2 } });
+    expect(r).toMatchObject({ statut: "ACCEPTE", controle: { statut: "VALIDE" }, visite: { statut: "VALIDEE", score: 2 } });
     const gps = await db.visitProof.findUniqueOrThrow({ where: { visitId_factor: { visitId: v.id, factor: "GPS" } } });
     expect(gps).toMatchObject({ valid: true, latitude: null, longitude: null, accuracyMeters: null, distanceMeters: 60 });
     const audit = JSON.stringify(await db.auditLog.findMany({ where: { entityId: v.id } }));
@@ -143,20 +143,20 @@ describe.runIf(enabled)("Lot L1-B (présence) sur une vraie base", async () => {
     const [r1] = await app.processAppEvents(alice.user, [
       checkIn(v1.id, { qr: await qrOf(aineId), position: { ...north(10), precisionMetres: 5, consentement: true, simulee: true } }),
     ]);
-    expect(r1).toMatchObject({ statut: "ACCEPTE", statutPreuve: "A_VERIFIER" });
-    expect(r1!.raison).toMatch(/simulée/);
+    expect(r1).toMatchObject({ statut: "ACCEPTE", controle: { statut: "A_VERIFIER" } });
+    expect(r1!.controle!.raison).toMatch(/simulée/);
     const v2 = await visitFor(alice);
     const [r2] = await app.processAppEvents(alice.user, [checkIn(v2.id, { qr: await qrOf(aineId), position: { ...north(800), precisionMetres: 10, consentement: true } })]);
-    expect(r2).toMatchObject({ statutPreuve: "A_VERIFIER" });
-    expect(r2!.raison).toMatch(/trop loin/);
+    expect(r2).toMatchObject({ controle: { statut: "A_VERIFIER" } });
+    expect(r2!.controle!.raison).toMatch(/trop loin/);
   });
 
   it("QR faux, d'un autre domicile, ou révoqué (carte régénérée) → REFUSE ; le code de secours marche", async () => {
     const v = await visitFor(alice);
     const [faux] = await app.processAppEvents(alice.user, [checkIn(v.id, { qr: "koudmen:domicile:s1:eyJhbGciOiJFZERTQSJ9.eyJjIjoiQUFBQUFBQUFBQUFBQUFBQUFBQUFBQSIsInYiOjF9.AAAA" })]);
-    expect(faux).toMatchObject({ statut: "REFUSE", statutPreuve: "REFUSE" });
+    expect(faux).toMatchObject({ statut: "REFUSE", controle: { statut: "REFUSE" } });
     const [autre] = await app.processAppEvents(alice.user, [checkIn(v.id, { qr: await qrOf(otherAineId) })]);
-    expect(autre).toMatchObject({ statut: "REFUSE", statutPreuve: "REFUSE", raison: "Ce QR code est celui d'un autre domicile." });
+    expect(autre).toMatchObject({ statut: "REFUSE", controle: { statut: "REFUSE", raison: "Ce QR code est celui d'un autre domicile." } });
 
     const oldQr = await qrOf(aineId);
     const before = await db.aine.findUniqueOrThrow({ where: { id: aineId }, select: { homeCode: true, homeCardVersion: true } });
@@ -166,13 +166,13 @@ describe.runIf(enabled)("Lot L1-B (présence) sur une vraie base", async () => {
     expect(after.homeCode).not.toBe(before.homeCode);
     expect(await db.auditLog.count({ where: { action: "aine.home_card.regenerated", entityId: aineId } })).toBe(1);
     const [revoque] = await app.processAppEvents(alice.user, [checkIn(v.id, { qr: oldQr })]);
-    expect(revoque).toMatchObject({ statut: "REFUSE", statutPreuve: "REFUSE" });
-    expect(revoque!.raison).toMatch(/remplacée/);
+    expect(revoque).toMatchObject({ statut: "REFUSE", controle: { statut: "REFUSE" } });
+    expect(revoque!.controle!.raison).toMatch(/remplacée/);
     const [ancienCode] = await app.processAppEvents(alice.user, [checkIn(v.id, { codeDomicile: before.homeCode })]);
     expect(ancienCode).toMatchObject({ statut: "REFUSE" });
     const [code] = await app.processAppEvents(alice.user, [checkIn(v.id, { codeDomicile: after.homeCode })]);
-    expect(code).toMatchObject({ statut: "ACCEPTE", statutPreuve: "A_VERIFIER" });
-    expect(code!.raison).toMatch(/Position non envoyée/);
+    expect(code).toMatchObject({ statut: "ACCEPTE", controle: { statut: "A_VERIFIER" } });
+    expect(code!.controle!.raison).toMatch(/Position non envoyée/);
   });
 
   it("hors fenêtre (début − 2 h) → REFUSE", async () => {
@@ -182,8 +182,8 @@ describe.runIf(enabled)("Lot L1-B (présence) sur une vraie base", async () => {
     try {
       const v = await visitFor(alice, 5);
       const [r] = await app.processAppEvents(alice.user, [checkIn(v.id, { qr: await qrOf(aineId) })]);
-      expect(r).toMatchObject({ statut: "REFUSE", statutPreuve: "REFUSE" });
-      expect(r!.raison).toMatch(/2 heures avant/);
+      expect(r).toMatchObject({ statut: "REFUSE", controle: { statut: "REFUSE" } });
+      expect(r!.controle!.raison).toMatch(/2 heures avant/);
     } finally {
       process.env.NEXT_PUBLIC_TEST_MODE = "true";
       process.env.DEMO_MODE = demo;
@@ -195,8 +195,8 @@ describe.runIf(enabled)("Lot L1-B (présence) sur une vraie base", async () => {
     const [r] = await app.processAppEvents(alice.user, [
       checkIn(v.id, { qr: await qrOf(aineId), position: { ...north(20), precisionMetres: 10, consentement: true } }, new Date(Date.now() - 45 * 60_000)),
     ]);
-    expect(r).toMatchObject({ statut: "ACCEPTE", statutPreuve: "A_VERIFIER", visite: { statut: "A_VERIFIER" } });
-    expect(r!.raison).toMatch(/30 minutes/);
+    expect(r).toMatchObject({ statut: "ACCEPTE", controle: { statut: "A_VERIFIER" }, visite: { statut: "A_VERIFIER" } });
+    expect(r!.controle!.raison).toMatch(/30 minutes/);
     expect((await db.visit.findUniqueOrThrow({ where: { id: v.id } })).lateCheckInAt).not.toBeNull();
   });
 
@@ -236,6 +236,8 @@ describe.runIf(enabled)("Lot L1-B (présence) sur une vraie base", async () => {
 
     const started = await trajet.startOrStopTrip(alice.user, v.id, "DEMARRER");
     expect(started.trajet.etat).toBe("EN_COURS");
+    // Carte d'itinéraire de l'app : domicile arrondi à 3 décimales.
+    expect(started.domicile).toEqual({ latitude: 14.613, longitude: -61, approximatif: false });
     expect(new Date(started.trajet.expireA!).getTime() - Date.now()).toBeGreaterThan(59 * 60_000);
     const t0 = Date.now();
     expect(await trajet.recordTripPosition(alice.user, v.id, pos(3000), new Date(t0))).toBe("GARDEE");

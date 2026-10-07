@@ -35,6 +35,14 @@ export const reponseTrajetSchema = z
         expireA: dateIsoSchema.nullable(),
       })
       .strict(),
+    /**
+     * Domicile de l'aîné pour la carte d'itinéraire de l'app (DEMARRER seulement), arrondi à 3 décimales.
+     * Absent si l'accord de l'aîné n'est pas enregistré. `approximatif` : centre de la commune.
+     */
+    domicile: z
+      .object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180), approximatif: z.boolean() })
+      .strict()
+      .optional(),
   })
   .strict();
 export type ReponseTrajet = z.infer<typeof reponseTrajetSchema>;

@@ -187,7 +187,8 @@ test("O6/O7 (L1-B, R7) — visite à vérifier : l'opérateur ne tranche pas, la
   await page.goto("/famille/visites");
   const review = page.getByRole("form", { name: new RegExp(`Trancher la visite chez ${fam.aine.firstName}`) });
   await review.getByRole("button", { name: "Oui, la visite a eu lieu" }).click();
-  await expect(page.getByText("Merci. La visite est validée.")).toBeVisible();
+  // La page se recharge : la visite affiche « Validée » et le formulaire disparaît.
+  await expect(review).toHaveCount(0);
   expect((await prisma.visit.findUniqueOrThrow({ where: { id: visit.id } })).status).toBe("VALIDEE");
 });
 

@@ -193,7 +193,7 @@ export const positionPonctuelleSchema = z
   .strict();
 
 /** L1-B (L9) : contenu du QR signé de la carte domicile (`koudmen:domicile:s1:<jeton>`) ou le jeton seul. */
-export const QR_DOMICILE_MAX = 400;
+export const QR_DOMICILE_MAX = 2000;
 
 /** Check-in : QR signé, code du domicile et/ou position ponctuelle (au moins un des trois). */
 export const evenementCheckInSchema = z
@@ -276,6 +276,15 @@ export type MotifRefus = z.infer<typeof motifRefusSchema>;
 /** L1-B (§ 2.3) : statut de la preuve de présence après un CHECK_IN. */
 export const statutPreuveCheckInSchema = z.enum(["VALIDE", "A_VERIFIER", "REFUSE"]);
 export type StatutPreuveCheckIn = z.infer<typeof statutPreuveCheckInSchema>;
+/** L1-B (§ 2.3) : contrôle du check-in, même forme que `controleCheckInSchema` de l'app (L1-C). */
+export const controleCheckInSchema = z
+  .object({
+    statut: statutPreuveCheckInSchema,
+    /** Raison en français simple, affichable telle quelle. */
+    raison: z.string().max(300).nullable().optional(),
+  })
+  .strict();
+export type ControleCheckIn = z.infer<typeof controleCheckInSchema>;
 /** L1-B (P1/P8) : écart réception − survenue au-delà duquel un check-in passe « À vérifier » (minutes). */
 export const ECART_RECEPTION_CHECKIN_MAX_MIN = 30;
 
@@ -315,9 +324,7 @@ export const resultatEvenementSchema = z
      * famille employeur doit confirmer (position absente, refusée, simulée, reçue en retard…). REFUSE : QR faux ou
      * révoqué, code faux, hors délai.
      */
-    statutPreuve: statutPreuveCheckInSchema.optional(),
-    /** Raison du statut, en français simple (affichable telle quelle). */
-    raison: z.string().max(300).optional(),
+    controle: controleCheckInSchema.optional(),
   })
   .strict();
 export type ResultatEvenement = z.infer<typeof resultatEvenementSchema>;

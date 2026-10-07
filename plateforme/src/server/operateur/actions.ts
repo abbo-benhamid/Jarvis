@@ -203,7 +203,7 @@ export async function proposeCaregiverAction(_prev: ActionResult, formData: Form
 const visitSchema = z.object({ visitId: z.string().cuid() });
 
 /** L1-B (R7) : l'opérateur ne tranche plus une visite. La famille employeur le fait dans son espace. */
-export const OPERATOR_CONFIRM_DISABLED = "Une visite à vérifier est tranchée par la famille employeur, dans son espace. L'opérateur ne la confirme pas.";
+const OPERATOR_CONFIRM_DISABLED = "Une visite à vérifier est tranchée par la famille employeur, dans son espace. L'opérateur ne la confirme pas.";
 
 export async function confirmElderAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireRole("OPERATEUR");
