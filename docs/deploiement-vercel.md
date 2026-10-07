@@ -48,6 +48,50 @@ Dans **Settings → Environment Variables**, cible **Production** :
 
 Ne mets **pas** `RATE_LIMIT_DISABLED`, `DEMO_PASSWORD` ni `SEED_OPERATOR_*` en production.
 
+### 4 bis. Mode lancement (lot L1-A)
+
+En production, le site démarre en **mode lancement** : pas de démo, pas de bac à sable, pas de paiement simulé. L'inscription est ouverte.
+
+| Variable | Valeur | Obligatoire ? |
+|---|---|---|
+| `KOUDMEN_MODE` | Vide (= `lancement` en production). `essai` rouvre la démo et le bac à sable | Non |
+| `EDITEUR_NOM`, `EDITEUR_ADRESSE`, `EDITEUR_EMAIL`, `DIRECTEUR_PUBLICATION` | Identité de l'éditeur | **Oui** : sans elles, le site affiche « Configuration incomplète » |
+| `BREVO_API_KEY` | Clé API Brevo (transactionnel) | Non. Sans elle, aucun e-mail ne part : `/api/sante` l'indique, et tu valides les e-mails à la main (opérateur → **Comptes**), après un appel |
+| `MAIL_FROM` | `Koudmen <ne-pas-repondre@ton-domaine>` (domaine vérifié dans Brevo : SPF et DKIM) | Non |
+| `DONNEES_REELLES_AUTORISEES` | Vide ou `false` = **préinscription** (aucune fiche aîné réelle) | Non |
+| `HEBERGEUR_HDS`, `AIPD_DATE`, `DPO_CONTACT` | Hébergeur certifié HDS, date de l'AIPD (`AAAA-MM-JJ`), contact du DPO | **Oui si** `DONNEES_REELLES_AUTORISEES=true` (sinon le démarrage est refusé) |
+| `TESTER_INVITE_CODES`, `DEMO_MODE`, `TEST_END_DATE` | Inutiles en lancement (mode essai seulement) | Non |
+
+```mermaid
+stateDiagram-v2
+  [*] --> Preinscription: KOUDMEN_MODE vide en production
+  Preinscription --> DonneesReelles: DONNEES_REELLES_AUTORISEES=true + HEBERGEUR_HDS + AIPD_DATE + DPO_CONTACT
+  note right of Preinscription
+    Comptes famille et accompagnant ouverts
+    Demandes de rappel (formules)
+    Pas de fiche aîné, d'adresse, de QR, de Kayé, de trajet
+  end note
+```
+
+**Vérifie après le déploiement :** ouvre `https://<ton-site>/api/sante`.
+- `"mode": "lancement"`, `"configuration": "ok"`.
+- `"avertissements"` : lis chaque ligne (Brevo absent, préinscription, comptes démo restants). Un avertissement ne bloque pas le site.
+
+**Base sans données de démo.** Le seed (`pnpm db:seed`) refuse de tourner en lancement. Si la base a servi au test (comptes démo, bacs à sable) :
+- recommandé : crée une **nouvelle branche Neon vide** (ou une nouvelle base) pour le lancement, puis relie-la au projet ;
+- sinon : les bacs à sable sont effacés par la purge de la nuit ; les comptes démo sont refusés à la connexion, et `/api/sante` les compte. Demande à Claude de les effacer avec toi.
+
+### 4 ter. Sauvegarde et restauration (Neon)
+
+Neon garde l'historique de la base : la **restauration à un instant** (point-in-time restore) est possible pendant la fenêtre d'historique de ton offre (offre gratuite : 24 heures ; offres payantes : jusqu'à 7 à 30 jours [À VÉRIFIER] sur neon.tech/pricing).
+
+1. Avant chaque opération risquée (migration, nettoyage) : Neon → **Branches** → **Create branch** depuis `main` (copie instantanée).
+2. Pour restaurer : Neon → **Restore** → choisis la date et l'heure → **Restore**. Neon garde l'état d'avant dans une branche de sauvegarde.
+3. Pour une copie hors de Neon (chaque semaine) : `pg_dump "$DIRECT_URL" -Fc -f koudmen-AAAA-MM-JJ.dump`, puis range le fichier chiffré hors du dépôt. Restauration : `pg_restore -d "<url d'une base vide>" --no-owner koudmen-AAAA-MM-JJ.dump`.
+4. Teste une restauration une fois par trimestre, sur une branche de test.
+
+⚠️ Les données d'aînés réels ne vont **pas** sur Neon : elles attendent l'hébergeur HDS (voir `DONNEES_REELLES_AUTORISEES`).
+
 ## 5. Déploie
 Clique sur **Deploy**. Le build applique les migrations de la base, puis compile le site.
 Si le build échoue, copie le message d'erreur à Claude.

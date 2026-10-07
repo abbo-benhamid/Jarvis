@@ -68,10 +68,12 @@ sequenceDiagram
 | POST | `/api/v1/auth/token` | — | `{ code, codeVerifier }` | `200 { typeJeton: "Bearer", jetonAcces, expireDans, jetonRenouvellement, renouvellementExpireDans }` |
 | POST | `/api/v1/auth/refresh` | — | `{ jetonRenouvellement }` | `200` même forme que `/auth/token` |
 | POST | `/api/v1/auth/logout` | Bearer et/ou corps | `{ jetonRenouvellement?, partout? }` | `204` (idempotent) |
-| GET | `/api/v1/me` | Bearer | — | `200 { id, role, prenom, nom, email, demo, bacASable }` |
+| GET | `/api/v1/me` | Bearer | — | `200 { id, role, prenom, nom, email, demo, bacASable, emailVerifie, profilValide, preinscription }` |
+| POST | `/api/v1/auth/inscription` | — | voir § 12 | `201 { etat: "VERIFICATION_EMAIL_ENVOYEE" }` |
+| POST | `/api/v1/auth/mot-de-passe-oublie` | — | `{ email }` | `202 {}` toujours |
 
 Notes :
-- `methode: "demo"` marche seulement si `DEMO_MODE=true`. Jamais pour un opérateur.
+- `methode: "demo"` marche seulement si `DEMO_MODE=true` ET en mode essai (L1 : en lancement, `403 ACCES_REFUSE`). Jamais pour un opérateur.
 - `codeChallenge` : SHA-256 du `codeVerifier`, en base64url (43 caractères). Méthode S256 seulement.
 - `partout: true` : ferme **toutes** les connexions du compte (app et web), par `User.sessionVersion`.
 
@@ -375,7 +377,7 @@ Règles :
 5. Vue : l'employeur (payeur) et la **personne désignée** (`Aine.tripViewerId`, choisie par le payeur sur la fiche de l'aîné). Pas le reste du cercle.
 6. Le partage n'entre **jamais** dans le matching ni le tri des profils (test `trajet.test.ts`).
 7. Journal : `trip.started`, `trip.stopped { reason }`, `trip.position.viewed_sos`. **Aucune coordonnée.**
-8. Refusé si `presenceRefusal()` (production sans `DONNEES_REELLES_AUTORISEES=true`, ou accord de l'aîné absent).
+8. Refusé si `presenceRefusal()` : préinscription (`realDataAllowedFrom()` faux : lancement sans `DONNEES_REELLES_AUTORISEES=true` + `HEBERGEUR_HDS` + `AIPD_DATE` + `DPO_CONTACT`), ou accord de l’aîné pas `ACCORD_RECUEILLI` (fusion L1-A).
 
 ### 11.3 Limites de débit
 
@@ -391,4 +393,54 @@ cd plateforme
 pnpm vitest run src/server/presence src/server/geocodage src/app/api/v1/visites            # unitaires + contrats
 KOUDMEN_DB_TESTS=1 pnpm vitest run src/server/presence/presence.db.test.ts                # base réelle
 pnpm build:local && RATE_LIMIT_DISABLED=true E2E_PORT=3717 pnpm e2e e2e/presence.spec.ts  # e2e
+```
+
+## 12. Lot L1-A — inscription, mot de passe oublié, état du compte
+
+Contrats : `src/contracts/v1/inscription.ts` (`.strict()`), `src/contracts/v1/moi.ts`.
+
+### 12.1 `POST /api/v1/auth/inscription` (accompagnant seulement ; une famille s'inscrit sur le site)
+
+```json
+{ "role": "ACCOMPAGNANT", "prenom": "Rose", "nom": "Lafleur", "email": "rose@exemple.fr",
+  "telephone": "+596 696 12 34 56", "motDePasse": "…10 à 200 caractères…", "commune": "FORT_DE_FRANCE",
+  "dateNaissance": "1990-04-02", "accepteCgu": true, "accepteInfos": false }
+```
+
+| Réponse | Quand |
+|---|---|
+| `201 { etat: "VERIFICATION_EMAIL_ENVOYEE" }` | Compte créé, **ou** e-mail déjà connu (même réponse ; l'e-mail reçu dit « vous avez déjà un compte ») |
+| `400 REQUETE_INVALIDE` | Champ manquant ou en plus (ex. `accepteConfidentialite` : la confidentialité est un **lien**, pas une case — R6) |
+| `422 ACTION_IMPOSSIBLE` | Mot de passe trop courant, moins de 18 ans, commune inconnue. Message affichable |
+| `429 TROP_DE_REQUETES` | Plus de 5 inscriptions par heure et par IP (`inscription:ip`) |
+
+L'inscription est **gratuite** pour l'accompagnant (R6, J27) : aucun abonnement ni paiement n'est créé. Le compte peut se connecter tout de suite ; `profilValide` reste `false` jusqu'à la validation de l'opérateur.
+
+### 12.2 `POST /api/v1/auth/mot-de-passe-oublie`
+
+`{ email }` → `202 {}` **toujours** (compte inconnu, opérateur, limite atteinte : même réponse). Limites : 3 par heure et par e-mail (`mdp-oublie:compte`), 20 par heure et par IP. Le lien (1 h, usage unique) ouvre `/mot-de-passe/nouveau` sur le site. Le nouveau mot de passe ferme **toutes** les sessions (`sessionVersion` + 1, jetons de l'app révoqués).
+
+### 12.3 `GET /api/v1/me` (champs ajoutés)
+
+| Champ | Sens |
+|---|---|
+| `emailVerifie` | Adresse confirmée (lien reçu, ou opérateur après un appel) |
+| `profilValide` | Accompagnant : validation `VALIDE`. Famille, opérateur : `true`. Faux → « Profil en cours de validation » |
+| `preinscription` | `!realDataAllowed()` : mode lancement sans données réelles autorisées. Même règle que les gardes de L1-B (`presenceRefusal`) |
+
+### 12.4 Jetons envoyés par e-mail
+
+| Usage | Préfixe | Durée | Stockage |
+|---|---|---|---|
+| Vérification de l'e-mail | `kv1_` | 24 h, usage unique | Empreinte SHA-256 (`AccountToken.tokenHash`) |
+| Mot de passe oublié | `kp1_` | 1 h, usage unique | Empreinte SHA-256 |
+
+Un nouveau jeton annule les anciens du même usage. Consommation atomique, puis comparaison des empreintes à temps constant. Journal : `auth.register`, `auth.register_existing`, `auth.email_verified`, `auth.email_verified_manual`, `auth.password_reset_requested`, `auth.password_reset` — sans e-mail, sans jeton.
+
+### 12.5 Tester
+
+```bash
+pnpm vitest run src/app/api/v1/auth src/contracts                                  # routes et contrats
+KOUDMEN_DB_TESTS=1 pnpm vitest run src/server/auth/registration.db.test.ts          # base réelle
+pnpm build:local && RATE_LIMIT_DISABLED=true E2E_PORT=3270 pnpm e2e --project=lancement   # serveur en mode lancement
 ```
