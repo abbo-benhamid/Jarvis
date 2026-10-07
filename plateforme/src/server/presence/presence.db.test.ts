@@ -224,6 +224,84 @@ describe.runIf(enabled)("Lot L1-B (présence) sur une vraie base", async () => {
     await db.aine.update({ where: { id: aineId }, data: { addressEnc: null } });
   });
 
+  // ─────────────── Trajet en direct (L6, R3, R4) ───────────────
+
+  it("trajet : 409 sans trajet, départ masqué, arrondi, 30 s, vue employeur + personne désignée, arrêt à l'arrivée, aucune coordonnée au journal", async () => {
+    const trajet = await import("./trajet");
+    const v = await visitFor(alice, 1);
+    const pos = (m: number, at = new Date()) => ({ ...north(m), precisionMetres: 12, survenuA: at.toISOString() });
+    await expect(trajet.recordTripPosition(alice.user, v.id, pos(3000))).rejects.toMatchObject({ code: "CONFLIT" });
+    const intrus = await caregiver("Autre");
+    await expect(trajet.startOrStopTrip(intrus.user, v.id, "DEMARRER")).rejects.toMatchObject({ code: "INTROUVABLE" });
+
+    const started = await trajet.startOrStopTrip(alice.user, v.id, "DEMARRER");
+    expect(started.trajet.etat).toBe("EN_COURS");
+    expect(new Date(started.trajet.expireA!).getTime() - Date.now()).toBeGreaterThan(59 * 60_000);
+    const t0 = Date.now();
+    expect(await trajet.recordTripPosition(alice.user, v.id, pos(3000), new Date(t0))).toBe("GARDEE");
+    await expect(trajet.recordTripPosition(alice.user, v.id, pos(2900), new Date(t0 + 10_000))).rejects.toMatchObject({ code: "TROP_DE_REQUETES" });
+    const row = await db.visitTrip.findUniqueOrThrow({ where: { visitId: v.id } });
+    expect(Math.round(row.latitude! * 1000)).toBe(row.latitude! * 1000);
+
+    const payeurActor = { id: payeur.id, role: "FAMILLE" as const, sandboxId: null };
+    const cousinActor = { id: cousin.id, role: "FAMILLE" as const, sandboxId: null };
+    // Départ masqué : la famille voit seulement l'heure prévue.
+    expect(await trajet.getFamilyTripView(payeurActor, v.id)).toMatchObject({ etat: "PREVUE" });
+    expect((await trajet.getFamilyTripView(payeurActor, v.id))!.position).toBeUndefined();
+    // > 500 m du départ : position visible, distance et minutes.
+    expect(await trajet.recordTripPosition(alice.user, v.id, pos(2000, new Date(t0 + 31_000)), new Date(t0 + 31_000))).toBe("GARDEE");
+    const view = await trajet.getFamilyTripView(payeurActor, v.id);
+    expect(view).toMatchObject({ etat: "EN_ROUTE", accompagnant: { prenom: "Alice" } });
+    expect(view!.distanceMetres).toBeGreaterThan(1800);
+    expect(view!.minutesEstimees).toBeGreaterThan(0);
+    // Cercle Lakou sans être désigné : rien. Désigné : oui.
+    expect(await trajet.getFamilyTripView(cousinActor, v.id)).toBeNull();
+    await db.aine.update({ where: { id: aineId }, data: { tripViewerId: cousin.id } });
+    expect((await trajet.getFamilyTripView(cousinActor, v.id))?.etat).toBe("EN_ROUTE");
+    await db.aine.update({ where: { id: aineId }, data: { tripViewerId: null } });
+    // Opérateur : oui/non seulement ; position seulement pendant un SOS, accès journalisé.
+    expect((await trajet.visitsWithActiveTrip([v.id])).has(v.id)).toBe(true);
+    const op = { id: operateur.id, role: "OPERATEUR" as const, sandboxId: null };
+    expect(await trajet.getOperatorSosPosition(op, v.id)).toEqual({ sosActif: false });
+    await db.auditLog.create({ data: { actorId: alice.user.id, actorRole: "ACCOMPAGNANT", action: "sos.triggered", entityType: "Visit", entityId: v.id } });
+    const sos = await trajet.getOperatorSosPosition(op, v.id);
+    expect(sos).toMatchObject({ sosActif: true });
+    expect(sos && "position" in sos && sos.position).toBeTruthy();
+    expect(await db.auditLog.count({ where: { action: "trip.position.viewed_sos", entityId: v.id } })).toBe(1);
+
+    // Arrivée à moins de 150 m du domicile : le trajet s'arrête et la ligne est effacée.
+    expect(await trajet.recordTripPosition(alice.user, v.id, pos(80, new Date(t0 + 62_000)), new Date(t0 + 62_000))).toBe("ARRIVEE");
+    expect(await db.visitTrip.count({ where: { visitId: v.id } })).toBe(0);
+    expect(await trajet.getFamilyTripView(payeurActor, v.id)).toMatchObject({ etat: "PREVUE" });
+
+    const journal = JSON.stringify(await db.auditLog.findMany({ where: { entityId: v.id } }));
+    expect(journal).toContain("trip.started");
+    expect(journal).toContain("ARRIVEE");
+    expect(journal).not.toMatch(/14\.6\d/);
+  });
+
+  it("trajet : arrêt au check-in et à ARRETER, purge des trajets expirés", async () => {
+    const trajet = await import("./trajet");
+    const v = await visitFor(alice, 0.5);
+    await trajet.startOrStopTrip(alice.user, v.id, "DEMARRER");
+    await app.processAppEvents(alice.user, [checkIn(v.id, { qr: await qrOf(aineId) })]);
+    expect(await db.visitTrip.count({ where: { visitId: v.id } })).toBe(0);
+    await expect(trajet.startOrStopTrip(alice.user, v.id, "DEMARRER")).rejects.toMatchObject({ code: "CONFLIT" });
+
+    const v2 = await visitFor(alice, 0.5);
+    await trajet.startOrStopTrip(alice.user, v2.id, "DEMARRER");
+    expect(await trajet.startOrStopTrip(alice.user, v2.id, "ARRETER")).toEqual({ trajet: { etat: "ARRETE", expireA: null } });
+    expect(await db.visitTrip.count({ where: { visitId: v2.id } })).toBe(0);
+
+    await trajet.startOrStopTrip(alice.user, v2.id, "DEMARRER");
+    await db.visitTrip.update({ where: { visitId: v2.id }, data: { expiresAt: new Date(Date.now() - 1000) } });
+    await expect(trajet.recordTripPosition(alice.user, v2.id, { ...north(900), precisionMetres: 10, survenuA: new Date().toISOString() })).rejects.toMatchObject({ code: "CONFLIT" });
+    await trajet.startOrStopTrip(alice.user, v2.id, "DEMARRER");
+    await db.visitTrip.update({ where: { visitId: v2.id }, data: { expiresAt: new Date(Date.now() - 1000) } });
+    expect(await trajet.purgeTrips()).toBeGreaterThanOrEqual(1);
+    expect(await db.visitTrip.count({ where: { visitId: v2.id } })).toBe(0);
+  });
+
   // ─────────────── R7 : la famille employeur tranche ───────────────
 
   it("visite À vérifier : seul le payeur tranche ; confirmer → VALIDEE ; signaler → opérateurs prévenus", async () => {
