@@ -7,10 +7,10 @@ describe("politique des mots de passe (L1)", () => {
     expect(passwordProblem("le manguier de grand-mère")).toBeNull();
   });
 
-  it("10 caractères minimum, 128 maximum", () => {
+  it("10 caractères minimum, 200 maximum", () => {
     expect(PASSWORD_MIN).toBe(10);
     expect(passwordProblem("Abc-12345")).toBe("10 caractères minimum.");
-    expect(passwordProblem("a".repeat(5) + "B".repeat(124))).toBe("128 caractères maximum.");
+    expect(passwordProblem("a".repeat(5) + "B".repeat(196))).toBe("200 caractères maximum.");
   });
 
   it("refuse les mots de passe courants, même avec des chiffres ou des signes à la fin", () => {

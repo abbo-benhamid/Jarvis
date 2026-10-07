@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { reponseMoiSchema, type ReponseMoi } from "@/contracts/v1/moi";
 import { enforceRateLimits, ipOf, json, requireBearer, route } from "../_lib/http";
+import { realDataAllowed } from "@/server/launch";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export const GET = route(async (req: NextRequest) => {
     bacASable: user.sandboxId !== null,
     emailVerifie: user.emailVerifiedAt !== null,
     profilValide: user.role !== "ACCOMPAGNANT" || user.caregiverProfile?.validation === "VALIDE",
+    preinscription: !realDataAllowed(),
   });
   return json(body);
 });

@@ -90,7 +90,7 @@ describe("contrats v1 : authentification", () => {
 });
 
 describe("contrats v1 : /me", () => {
-  const moi = { id: "u1", role: "ACCOMPAGNANT", prenom: "Josiane", nom: "R.", email: "j@exemple.test", demo: true, bacASable: false, emailVerifie: true, profilValide: true };
+  const moi = { id: "u1", role: "ACCOMPAGNANT", prenom: "Josiane", nom: "R.", email: "j@exemple.test", demo: true, bacASable: false, emailVerifie: true, profilValide: true, preinscription: false };
 
   it("accepte le profil minimal", () => {
     expect(reponseMoiSchema.safeParse(moi).success).toBe(true);

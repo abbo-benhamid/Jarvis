@@ -36,7 +36,7 @@ describe.runIf(enabled)("accord de l'aîné (base réelle)", async () => {
 
   afterAll(async () => {
     await db.auditLog.deleteMany({ where: { entityId: aine.id } });
-    await db.aine.delete({ where: { id: aine.id } });
+    await db.aine.deleteMany({ where: { owner: { email: { endsWith: `@${DOMAIN}` } } } });
     await db.user.deleteMany({ where: { email: { endsWith: `@${DOMAIN}` } } });
     await db.$disconnect();
   });

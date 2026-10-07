@@ -17,9 +17,15 @@ import { computeVisitProof, deriveVisitStatus, haversineMeters } from "../src/se
 import { renderTemplate, type TemplateKey } from "../src/server/notification-templates";
 import { DEMO_ACCOUNTS } from "../src/server/auth/demo";
 import { upsertOperatorAccount } from "../src/server/ops/operator-account";
+import { isLaunchMode, isStrictProduction } from "../src/server/config-check";
 
 if (process.env.DEMO_MODE !== "true") {
   console.error("Seed refusé : DEMO_MODE doit valoir \"true\". Le seed efface toute la base : jamais en production réelle.");
+  process.exit(1);
+}
+// L11 : jamais de données de démo en mode lancement (production), même avec DEMO_MODE="true".
+if (isLaunchMode() || isStrictProduction()) {
+  console.error("Seed refusé : le site est en mode lancement ou en production. Pour un poste de développement, mettez KOUDMEN_MODE=\"essai\".");
   process.exit(1);
 }
 const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? "";

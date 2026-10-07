@@ -14,7 +14,7 @@ import { z } from "zod";
 
 /** Longueur minimale du mot de passe (le serveur applique aussi une liste de refus). */
 export const MOT_DE_PASSE_MIN = 10;
-export const MOT_DE_PASSE_MAX = 128;
+export const MOT_DE_PASSE_MAX = 200;
 
 export const motDePasseSchema = z.string().min(MOT_DE_PASSE_MIN).max(MOT_DE_PASSE_MAX);
 

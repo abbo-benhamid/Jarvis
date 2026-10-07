@@ -22,7 +22,7 @@ export const registerSchema = z
     firstName: z.string().trim().min(1, "Prénom obligatoire.").max(80, "80 caractères maximum."),
     lastName: z.string().trim().min(1, "Nom obligatoire.").max(80, "80 caractères maximum."),
     email: emailSchema,
-    password: z.string().min(10, "10 caractères minimum.").max(128, "128 caractères maximum."),
+    password: z.string().min(10, "10 caractères minimum.").max(200, "200 caractères maximum."),
     phone: optional(z.string().trim().regex(/^\+?[0-9 .-]{6,20}$/, "Saisissez un numéro valide (exemple : +596 696 12 34 56).")),
     commune: optional(z.string().trim().max(60)),
     birthDate: optional(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Saisissez votre date de naissance.")),
@@ -52,7 +52,7 @@ export const forgotPasswordSchema = z.object({ email: emailSchema });
 export const newPasswordSchema = z
   .object({
     token: z.string().min(10).max(200),
-    password: z.string().min(10, "10 caractères minimum.").max(128, "128 caractères maximum."),
+    password: z.string().min(10, "10 caractères minimum.").max(200, "200 caractères maximum."),
     confirm: z.string(),
   })
   .refine((v) => v.password === v.confirm, { path: ["confirm"], message: "Les deux mots de passe sont différents." });

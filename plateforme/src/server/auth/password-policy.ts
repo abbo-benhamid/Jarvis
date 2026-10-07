@@ -1,13 +1,13 @@
 /**
  * Politique des mots de passe (L1, contrat § 2.1). Fonctions PURES : serveur, tests, formulaires.
- * - 10 caractères au moins, 128 au plus.
+ * - 10 caractères au moins, 200 au plus (aligné sur l'app). bcrypt lit les 72 premiers octets.
  * - Refus des mots de passe trop courants (liste ci-dessous, avec ou sans chiffres et signes à la fin).
  * - Refus d'un mot de passe qui reprend l'e-mail, le prénom ou le nom, ou qui répète un seul caractère.
  * Recommandation ANSSI / CNIL (délibération 2022-100) : longueur d'abord, liste de refus ensuite.
  */
 
 export const PASSWORD_MIN = 10;
-export const PASSWORD_MAX = 128;
+export const PASSWORD_MAX = 200;
 
 /**
  * Mots de passe trop courants (fuites publiques, en minuscules). Liste courte et volontairement locale :

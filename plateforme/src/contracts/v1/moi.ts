@@ -26,6 +26,11 @@ export const reponseMoiSchema = z
      * Faux → l'app affiche « Profil en cours de validation ».
      */
     profilValide: z.boolean(),
+    /**
+     * R1 : le service est en préinscription (données réelles des aînés fermées : pas de fiche aîné, de QR,
+     * de Kayé ni de trajet). Vrai seulement en mode lancement sans DONNEES_REELLES_AUTORISEES.
+     */
+    preinscription: z.boolean(),
   })
   .strict();
 export type ReponseMoi = z.infer<typeof reponseMoiSchema>;

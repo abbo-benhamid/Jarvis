@@ -5,6 +5,8 @@ import { purgeExpiredSandboxes, purgeRetention } from "@/server/sandbox/purge";
 import { purgeAppData } from "@/server/app-retention";
 import { flushPendingPushSafe } from "@/server/notifications/push/service";
 import { testEndDate } from "@/server/env";
+import { isLaunchMode } from "@/server/launch";
+import { purgeLaunchData } from "@/server/launch-retention";
 
 /**
  * Purge nocturne (Vercel Cron, vercel.json) : bacs à sable de plus de 30 jours (D2), puis durées de
@@ -21,7 +23,9 @@ export async function GET(req: NextRequest) {
   const purged = await purgeExpiredSandboxes(db);
   const retention = await purgeRetention(db, now, testEndDate());
   const app = await purgeAppData(now);
-  await db.auditLog.create({ data: { action: "sandbox.purged", entityType: "Sandbox", metadata: { purged, ...retention, app } } });
+  // L11 / L1-A : en lancement, tous les restes de bac à sable ; jetons de compte, comptes jamais confirmés, demandes de rappel.
+  const lancement = await purgeLaunchData(isLaunchMode(), now);
+  await db.auditLog.create({ data: { action: "sandbox.purged", entityType: "Sandbox", metadata: { purged, ...retention, app, lancement } } });
   const push = await flushPendingPushSafe();
-  return NextResponse.json({ purged, ...retention, app, push });
+  return NextResponse.json({ purged, ...retention, app, lancement, push });
 }

@@ -125,8 +125,10 @@ describe("GET /api/v1/me", () => {
       emailVerifie: true,
       // L2 : accompagnant pas encore validé → « Profil en cours de validation ».
       profilValide: false,
+      // R1 : mode essai en test → données réelles autorisées → pas de préinscription.
+      preinscription: false,
     });
-    expect(Object.keys(body).sort()).toEqual(["bacASable", "demo", "email", "emailVerifie", "id", "nom", "prenom", "profilValide", "role"]);
+    expect(Object.keys(body).sort()).toEqual(["bacASable", "demo", "email", "emailVerifie", "id", "nom", "preinscription", "prenom", "profilValide", "role"]);
   });
 
   it("L1 : famille → profilValide vrai ; e-mail non confirmé → emailVerifie faux", async () => {
