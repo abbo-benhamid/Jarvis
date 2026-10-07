@@ -9,9 +9,11 @@ Expo SDK 57 · React Native 0.86 · Expo Router · TypeScript strict · contrats
 |---|---|---|
 | `EXPO_PUBLIC_API_URL` | `http://localhost:3000` (défaut) | API v1 de `plateforme/` |
 | `EXPO_PUBLIC_API_URL` | `/` | même origine (export web + `scripts/proxy-dev.mjs`) |
-| `EXPO_PUBLIC_API_MODE` | `simule` | démo hors ligne, données en mémoire (capteurs simulés aussi) |
+| `EXPO_PUBLIC_API_MODE` | `simule` | tests hors ligne, données en mémoire (capteurs simulés aussi). Aucun texte « démo » |
 | `EXPO_PUBLIC_NATIF` | `simule` / `reel` | force les capteurs simulés, ou les vrais capteurs avec l'API simulée |
 | `EXPO_PUBLIC_SITE_URL` | `https://koudmen.vercel.app` (défaut, [À VÉRIFIER]) | site des pages légales (écran « À propos et confidentialité ») |
+| `EXPO_PUBLIC_WEB_URL` | `SITE_URL` par défaut | L1 : site des familles (« Vous êtes une famille ? »), `/cgu`, `/confidentialite` |
+| `EXPO_PUBLIC_EMAIL_CONTACT` | `contact@koudmen.fr` ([À VÉRIFIER]) | L1 : contact sur « Profil en cours de validation » |
 
 Repli : `expo.extra.apiUrl` / `expo.extra.apiMode` dans un `app.config`.
 Les variables `EXPO_PUBLIC_*` sont figées au build : ajoutez `--clear` si vous changez de valeur (cache Metro).
@@ -24,10 +26,10 @@ Les variables `EXPO_PUBLIC_*` sont figées au build : ajoutez `--clear` si vous 
    npm install
    EXPO_PUBLIC_API_URL=http://<IP-de-l-ordinateur>:3000 npx expo start
    ```
-3. Scannez le QR code. Connexion : `accompagnant@demo.koudmen.test` et `DEMO_PASSWORD` de `plateforme/.env`,
-   ou le lien « Essayer avec le compte d’exemple » (visible en mode simulé ou en développement seulement).
+3. Scannez le QR code. Connectez-vous avec un compte accompagnant, ou touchez « Créer un compte accompagnant » (L1).
+   Plus de compte de démonstration dans l’app (L1).
 
-Sans serveur : `EXPO_PUBLIC_API_MODE=simule npx expo start` (mot de passe `koudmen`, code du domicile `LKW7Q3`).
+Sans serveur : `EXPO_PUBLIC_API_MODE=simule npx expo start` (tout e-mail, mot de passe `koudmen`, code du domicile `LKW7Q3`). Voir aussi « Lot L1 » plus bas.
 La démo simulée reprend la Léonie J. du site (`plateforme/prisma/seed.ts`) et **le même code** `LKW7Q3` (arbitrage V1 X3).
 
 ### Essayer la caméra et la position réelles (lot M4)
@@ -50,6 +52,42 @@ Limites d'Expo Go :
   Les textes Koudmen (`NSCameraUsageDescription`, `NSLocationWhenInUseUsageDescription`) apparaissent seulement
   dans un build (`npx eas-cli@latest build --profile development`), à faire au premier build EAS (ADR 0008).
 - Pour rejouer l'invite après un refus : supprimez les autorisations d'Expo Go dans les réglages du téléphone.
+
+## Lot L1 : comptes, trajet partagé, QR signé
+
+Détails, contrats et points ouverts : `docs/tech/L1-C-notes.md`.
+
+```mermaid
+flowchart TD
+  C[Connexion] -->|Créer un compte| I[Inscription] --> E[Vérifiez votre e-mail] --> C
+  C -->|Mot de passe oublié| M[Lien par e-mail]
+  C -->|GET /me| S{État du compte}
+  S -->|preinscription| B[Koudmen ouvre bientôt]
+  S -->|profilValide = false| V[Profil en cours de validation]
+  S -->|actif| L[Visites]
+  L --> F[Fiche] -->|Je pars chez …| A{Accord déjà donné ?}
+  A -->|Non| AI[Écran d'information + J'accepte] --> T
+  A -->|Oui| T[Trajet partagé · bandeau Arrêter]
+  T -->|check-in · 60 min · < 150 m · Arrêter · arrière-plan| F
+  F -->|QR s1 + position| R[VALIDE / À vérifier / refusé]
+```
+
+| Règle du trajet | Valeur |
+|---|---|
+| Accord | Écran d'information avant le premier partage, geste actif, mémorisé par compte, révocable dans Profil |
+| Position envoyée | Arrondie à 3 décimales (~100 m), précision annoncée ≥ 100 m, une toutes les 30 s au plus |
+| Hors ligne | Jamais en file : la position perdue n'est pas renvoyée, la suivante part |
+| Arrêt | Check-in, 60 min, moins de 150 m d'un domicile précis, « Arrêter », app en arrière-plan, 409 |
+| Permission | « Pendant l'utilisation » seulement (`watchPositionAsync`), jamais « Toujours » |
+
+Mode simulé (tests) : comptes `en-validation@exemple.fr`, `email-a-verifier@exemple.fr`, `preinscription@exemple.fr`
+(mot de passe `koudmen`), QR signé `QR_SIGNE_SIMULE` (un jeton contenant `revoque` est refusé). Scénario des capteurs :
+`__KOUDMEN_NATIF__ = { mocked, distance, suivi, intervalleSuiviMs, ecartEnvoiMs }`. Journal : `__KOUDMEN_API_JOURNAL__`.
+
+```bash
+npm run test:l1                                                   # 16 unitaires
+EXPO_OFFLINE=1 npm run export:web:simule && npm run e2e:simule    # dont e2e/simule/l1.spec.ts
+```
 
 ## Micro-animations et langage de lancement (sprint V2-app)
 
@@ -113,7 +151,7 @@ flowchart TD
 |---|---|
 | `LKW7Q3` | Code lisible (QR actuels) |
 | `koudmen:domicile:LKW7Q3` | Code lisible (format v1 à imprimer) |
-| `koudmen:domicile:s1:<jeton>` | Jeton signé futur : reconnu, message « pas encore accepté » |
+| `koudmen:domicile:s1:<jeton>` | L1 : carte domicile signée, envoyée dans `qr` du CHECK_IN |
 
 ## Hors ligne (lot M3)
 
@@ -251,7 +289,7 @@ flowchart LR
 
 ## Règles respectées
 
-- Position : une seule lecture à l'arrivée, avec accord. Jamais en arrière-plan.
+- Position : une seule lecture à l’arrivée, avec accord. L1 : pendant un trajet partagé (accord mémorisé), au premier plan seulement. Jamais en arrière-plan.
   Permission « pendant l'utilisation » seulement : `app.json` bloque `ACCESS_BACKGROUND_LOCATION` et n'a pas de texte « Always ».
 - Caméra : lecture du QR seulement, aucune photo gardée, micro jamais demandé (`RECORD_AUDIO` bloquée).
 - SOS : aucune position envoyée. Appels 15 et 112 proposés avant et après l'alerte.
@@ -264,7 +302,7 @@ flowchart LR
 - Hors ligne (M3) : après un Kayé gardé, l'écran reste sur le formulaire (message + bandeau). Un nouvel appui après l'envoi réel donne un refus « déjà envoyé » (affiché dans le bandeau). Un écran « Kayé gardé » dédié serait plus clair (`app/kaye/[id].tsx`).
 - Hors ligne (M3) : un check-in gardé ne change pas la fiche avant l'envoi (pas d'état optimiste).
 - Pas de push (lot N1).
-- QR signé (`koudmen:domicile:s1:<jeton>`) : reconnu mais pas encore envoyé, le serveur n'accepte que le code lisible (api-v1 § 9.7).
+- QR signé : contrats L1 provisoires (`src/contrats-l1`) en attendant ceux du serveur (voir docs/tech/L1-C-notes.md).
 - Web : le scan demande `BarcodeDetector` (Chrome Android oui, Safari iOS non) ; sinon saisie manuelle seulement.
 - Invites caméra et position avec les textes Koudmen : à vérifier au premier build EAS (Expo Go affiche les siens).
 - `aine.interets` est vide côté serveur (api-v1 § 9.7) : pas de puces de centres d'intérêt pour l'instant.
