@@ -166,7 +166,7 @@ test("O4/O5 — matching manuel (D6) : compatibles d'abord, profil proposé À L
   await expect(page.getByRole("cell", { name: req.id })).toBeVisible();
 });
 
-test("O6/O7 — visite à vérifier : confirmation simulée de l'aîné, puis appel vocal dans la boîte d'envoi", async ({ page }) => {
+test("O6/O7 (L1-B, R7) — visite à vérifier : l'opérateur ne tranche pas, la famille employeur confirme", async ({ page }) => {
   const fam = await createFamilyWithAine({ aineFirstName: `Visite${uid()}`, commune: "MARIN" });
   const req = await createRequest({ aineId: fam.aine.id, createdById: fam.user.id, level: 1, slots: [] });
   const cg = await createCaregiver({ firstName: "Visiteuse", status: "BENEVOLE_ASSO", validation: "VALIDE", communes: ["MARIN"], avail: [] });
@@ -177,16 +177,18 @@ test("O6/O7 — visite à vérifier : confirmation simulée de l'aîné, puis ap
   const card = page.getByRole("article", { name: new RegExp(fam.aine.firstName) });
   await expect(card.getByText("À vérifier", { exact: true })).toBeVisible();
   await expect(card.getByText(/Code du domicile : valide/)).toBeVisible();
-  await card.getByRole("button", { name: "L'aîné a confirmé (appel simulé)" }).click();
-  await expect(page).toHaveURL(new RegExp(`confirme=${visit.id}`));
-  await expect(page.getByText(/statut « Validée », 2 preuves sur 3/)).toBeVisible();
-  expect((await prisma.visit.findUniqueOrThrow({ where: { id: visit.id } })).status).toBe("VALIDEE");
+  await expect(card.getByText("La famille employeur confirme ou signale cette visite.")).toBeVisible();
+  await expect(card.getByRole("button", { name: /appel simulé/ })).toHaveCount(0);
+  // R3 : l'opérateur voit seulement « trajet partagé : oui/non ».
+  await expect(card.getByText("Trajet partagé : non")).toBeVisible();
 
-  await page.goto("/operateur/notifications");
-  await page.getByLabel("Canal").selectOption("VOIX");
-  await page.getByRole("button", { name: "Filtrer" }).click();
-  await expect(page).toHaveURL(/canal=VOIX/);
-  await expect(page.getByText(new RegExp(`Appel vocal à ${fam.aine.firstName}`))).toBeVisible();
+  await page.context().clearCookies();
+  await login(page, fam.user.email);
+  await page.goto("/famille/visites");
+  const review = page.getByRole("form", { name: new RegExp(`Trancher la visite chez ${fam.aine.firstName}`) });
+  await review.getByRole("button", { name: "Oui, la visite a eu lieu" }).click();
+  await expect(page.getByText("Merci. La visite est validée.")).toBeVisible();
+  expect((await prisma.visit.findUniqueOrThrow({ where: { id: visit.id } })).status).toBe("VALIDEE");
 });
 
 test("O8 — retours testeurs : un avis envoyé apparaît, puis passe de Nouveau à Lu à Traité", async ({ page }) => {

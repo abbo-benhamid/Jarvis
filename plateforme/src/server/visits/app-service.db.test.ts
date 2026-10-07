@@ -77,6 +77,8 @@ describe.runIf(enabled)("Lot A2 (API v1 : visites, événements, propositions) s
         addressHint: "Quartier Bas-Mission (fictif)",
         latitude: 14.6131,
         longitude: -60.9996,
+        // L1-B (L10) : domicile géocodé (sinon la position ne peut pas être comparée).
+        locationApproximate: false,
         phone: "+596 596 00 00 00",
         needs: ["AIDE_RENFORCEE"],
         activityLevel: 2,

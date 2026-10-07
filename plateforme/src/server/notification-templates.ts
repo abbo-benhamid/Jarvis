@@ -23,7 +23,8 @@ export type TemplateKey =
   | "DEMANDE_ANNULEE"
   | "PROCHE_AIDANT_INVITATION"
   | "PROCHE_AIDANT_RATTACHE"
-  | "SOS_ACCOMPAGNANT";
+  | "SOS_ACCOMPAGNANT"
+  | "VISITE_SIGNALEE";
 
 type Vars = Record<string, string | number>;
 
@@ -111,6 +112,11 @@ const TEMPLATES: Record<TemplateKey, { subject: string; body: string }> = {
   SOS_ACCOMPAGNANT: {
     subject: "SOS d'un accompagnant",
     body: "SOS : {accompagnant} demande de l'aide ({heure}). Rappelez cette personne tout de suite. Ouvrez Koudmen pour voir la visite.",
+  },
+  // L1-B (R7) : la famille employeur signale un problème sur une visite « À vérifier ». Aux opérateurs du même monde.
+  VISITE_SIGNALEE: {
+    subject: "Visite signalée par la famille",
+    body: "La famille de {aine} signale un problème sur la visite du {date}. Appelez la famille. Ouvrez Koudmen pour voir la visite.",
   },
   PAIEMENT_SIMULE: {
     subject: "Formule {formule} activée",
