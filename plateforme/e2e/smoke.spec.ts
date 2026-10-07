@@ -154,23 +154,31 @@ test("le bouton « Donner mon avis » enregistre un retour", async ({ page }) =>
   await expect(dialog.getByText("Merci !")).toBeVisible();
 });
 
-test("inscription d'un accompagnant (code testeur, CGU, âge) puis orientation", async ({ page }) => {
+test("inscription d'un accompagnant (CGU, date de naissance, mot de passe courant refusé) puis orientation", async ({ page }) => {
   const email = `e2e-${Date.now()}@exemple.test`;
   await page.goto("/inscription?role=ACCOMPAGNANT");
-  await page.getByLabel("Prénom").fill("Test");
+  await page.locator("#firstName").fill("Test");
   await page.locator("#lastName").fill("Accompagnant");
+  await page.locator("#email").fill(email);
+  await page.locator("#phone").fill("+596 696 11 22 33");
+  await page.locator("#commune").selectOption("ROBERT");
+  await page.locator("#birthDate").fill("1992-06-15");
+  await page.getByLabel(/J'accepte les conditions/).check();
+  // L1 : mot de passe trop courant → refus, et la saisie reste en place.
+  await page.locator("#password").fill("Martinique972");
+  await page.getByRole("button", { name: "Créer mon compte" }).click();
+  await expect(page.getByText("Ce mot de passe est trop courant. Choisissez-en un autre.").first()).toBeVisible();
+  await expect(page.locator("#email")).toHaveValue(email);
+  await page.locator("#password").fill("Lagon-Bleu-Robert-2026");
+  await page.getByRole("button", { name: "Créer mon compte" }).click();
+  await expect(page).toHaveURL(/\/inscription\/envoye\?role=ACCOMPAGNANT/);
+  await page.goto("/connexion");
   await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Mot de passe").fill("motdepasse-e2e");
-  await page.getByLabel(/données d'exemple/).check();
-  await page.getByLabel(/conditions d'utilisation de la démo/).check();
-  await page.getByLabel("J'ai 18 ans ou plus.").check();
-  // Code faux : refus, et la saisie reste en place.
-  await page.getByLabel("Code testeur").fill("CODE-INCONNU");
-  await page.getByRole("button", { name: "Créer mon compte" }).click();
-  await expect(page.getByText("Ce code testeur n'est pas valide.")).toBeVisible();
-  await expect(page.getByLabel("Email")).toHaveValue(email);
-  await page.getByLabel("Code testeur").fill(E2E_TESTER_CODE);
-  await page.getByRole("button", { name: "Créer mon compte" }).click();
+  await page.getByLabel("Mot de passe").fill("Lagon-Bleu-Robert-2026");
+  await page.getByRole("button", { name: "Se connecter" }).click();
+  await expect(page).toHaveURL(/\/accompagnant/);
+  await expect(page.getByTestId("etat-compte")).toContainText("Profil en cours de validation");
+  await page.goto("/accompagnant/orientation");
   await expect(page).toHaveURL(/\/accompagnant\/orientation$/);
 });
 

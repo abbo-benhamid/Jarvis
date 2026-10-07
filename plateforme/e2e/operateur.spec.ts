@@ -76,6 +76,8 @@ test("O2/O3 — valider un accompagnant : revue de chaque vérification, motif o
   // Revue des vérifications : identité, casier, diplôme (ouvre le niveau 4).
   for (const label of ["Pièce d'identité", "Extrait de casier judiciaire", "Diplôme d'aide à la personne"]) {
     const card = page.getByRole("region", { name: label });
+    // R6 (J6) : casier B3 = date « vu le » seulement, sans texte.
+    if (label === "Extrait de casier judiciaire") await card.getByLabel(/Extrait B3 vu le/).fill(new Date().toISOString().slice(0, 10));
     await card.getByRole("button", { name: "Valider" }).click();
     await expect(card.getByText("Vérification validée.")).toBeVisible();
   }

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { cleanupE2E, createCaregiver, E2E_DOMAIN, E2E_PASSWORD, E2E_TESTER_CODE, login, loginOperateur, prisma, uid } from "./fixtures";
+import { cleanupE2E, createCaregiver, E2E_DOMAIN, E2E_PASSWORD, login, loginOperateur, prisma, uid } from "./fixtures";
 
 /**
  * Parcours complet dans le MONDE RÉEL (hors bac à sable), flux D6 :
@@ -40,17 +40,18 @@ test("parcours complet : la famille demande, Koudmen propose, la famille choisit
 
   // ── 1. Famille : inscription, profil de l'aîné, demande ──
   const familyEmail = `famille-${id}@${E2E_DOMAIN}`;
+  // L2 : inscription ouverte (plus de code testeur), puis connexion avec le mot de passe.
   await page.goto("/inscription?role=FAMILLE");
-  await page.getByLabel("Code testeur").fill(E2E_TESTER_CODE);
   await page.getByLabel("Prénom").fill("Annick");
   await page.locator("#lastName").fill(`E2E-${id}`);
   await page.getByLabel("Email").fill(familyEmail);
   await page.getByLabel("Mot de passe").fill(E2E_PASSWORD);
   await page.getByLabel("J'habite").selectOption("HEXAGONE");
-  await page.getByLabel(/données d'exemple/).check();
-  await page.getByLabel(/conditions d'utilisation de la démo/).check();
+  await page.getByLabel(/J'accepte les conditions/).check();
   await page.getByLabel("J'ai 18 ans ou plus.").check();
   await page.getByRole("button", { name: "Créer mon compte" }).click();
+  await expect(page).toHaveURL(/\/inscription\/envoye/);
+  await login(page, familyEmail);
   await expect(page).toHaveURL(/\/famille$/);
 
   await page.goto("/famille/aines/nouveau");
