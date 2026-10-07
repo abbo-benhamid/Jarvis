@@ -8,7 +8,10 @@ import { sameScope } from "@/server/scope";
 import { isDemoMode } from "@/server/env";
 import { orientCaregiver, type OrientationAnswers, type OrientationResult } from "@/server/rules/orientation";
 import { allowedLevelsFor, canStatusDoLevel, statusIsPaid } from "@/server/rules/status-levels";
-import { evaluateGps, verifyHomeCode } from "@/server/visits/proof";
+import { evaluateGps, GPS_FAILURE_MESSAGES, verifyHomeCode } from "@/server/visits/proof";
+import { tokenFromQr } from "@/server/presence/qr-token";
+import { resolveHomeCardToken } from "@/server/presence/home-card";
+import { endTripForVisit } from "@/server/presence/trajet";
 import { recordProof, refreshVisitStatus } from "@/server/visits/service";
 import { formatTime } from "@/lib/format";
 import { lockCareRequests } from "@/server/matching/locks";
@@ -87,7 +90,7 @@ async function loadOwnedVisit(userId: string, visitId: string) {
   const visit = await db.visit.findFirst({
     where: ownedVisitWhere(userId, visitId),
     include: {
-      aine: { select: { id: true, firstName: true, latitude: true, longitude: true, homeCode: true } },
+      aine: { select: { id: true, firstName: true, latitude: true, longitude: true, locationApproximate: true, homeCode: true } },
       proofs: true,
       journal: { select: { id: true } },
       caregiver: { select: { validation: true } },
@@ -474,6 +477,8 @@ async function markCheckIn(actor: Actor, visit: Awaited<ReturnType<typeof loadOw
   const res = await db.visit.updateMany({ where: { id: visit.id, checkInAt: null }, data: { checkInAt: now } });
   if (res.count === 1) {
     await logAudit({ actor, action: "visit.checkin", entityType: "Visit", entityId: visit.id, metadata: { method } });
+    // L6 : le trajet en direct s'arrête au check-in (la dernière position est effacée).
+    await endTripForVisit(visit.id, "CHECK_IN", actor);
     await notifyLakou(
       visit.aineId,
       "VISITE_COMMENCEE",
@@ -493,8 +498,10 @@ export type GpsCheckInInput = {
   latitude?: number;
   longitude?: number;
   accuracy?: number;
-  /** Position simulée au domicile (mode test seulement). */
+  /** Position simulée au domicile (bouton du mode test seulement). */
   simulated?: boolean;
+  /** L10 : le téléphone signale une position simulée (`mocked` Android). Refusée : la preuve passe « À vérifier ». */
+  mocked?: boolean;
 };
 
 /**
@@ -521,8 +528,8 @@ export async function checkInWithGps(actor: Actor, input: GpsCheckInInput, now: 
   } else {
     if (input.latitude == null || input.longitude == null) throw new AccompagnantError("Position manquante.", "INVALIDE");
     evaluation = evaluateGps(
-      { lat: input.latitude, lng: input.longitude, accuracy: input.accuracy ?? null },
-      { lat: visit.aine.latitude, lng: visit.aine.longitude },
+      { lat: input.latitude, lng: input.longitude, accuracy: input.accuracy ?? null, mocked: input.mocked ?? false },
+      { lat: visit.aine.latitude, lng: visit.aine.longitude, approximate: visit.aine.locationApproximate },
     );
   }
   await markCheckIn(actor, visit, input.simulated ? "GPS_SIMULE" : "GPS", now);
@@ -532,21 +539,57 @@ export async function checkInWithGps(actor: Actor, input: GpsCheckInInput, now: 
       factor: "GPS",
       valid: evaluation.valid,
       simulated: input.simulated ?? false,
-      latitude: input.simulated ? null : input.latitude,
-      longitude: input.simulated ? null : input.longitude,
-      accuracyMeters: input.simulated ? null : (input.accuracy ?? null),
+      // R7 : aucune coordonnée brute gardée. Seulement le résultat et la distance arrondie (dizaine de mètres).
+      latitude: null,
+      longitude: null,
+      accuracyMeters: null,
       distanceMeters: evaluation.distanceMeters,
       details: input.simulated
         ? "Position simulée au domicile (mode test)."
-        : evaluation.reason === "TROP_LOIN"
-          ? "Position trop loin du domicile."
-          : evaluation.reason === "PRECISION_FAIBLE"
-            ? "Position trop imprécise."
-            : null,
+        : evaluation.reason
+          ? GPS_FAILURE_MESSAGES[evaluation.reason]
+          : null,
     },
     actor,
   );
+  if (input.mocked) {
+    await logAudit({ actor, action: "visit.gps.mocked", entityType: "Visit", entityId: visit.id });
+  }
   return evaluation;
+}
+
+/** Messages du QR signé refusé (L10 : jeton faux ou révoqué → refusé). */
+export const QR_REFUSAL_MESSAGES = {
+  FAUX: "Ce QR code n'est pas une carte Koudmen valable. Entrez le code écrit sous le QR.",
+  REVOQUE: "Cette carte domicile a été remplacée. Demandez la nouvelle carte à la famille.",
+  AUTRE_DOMICILE: "Ce QR code est celui d'un autre domicile.",
+} as const;
+
+/**
+ * Facteur (b) par le QR SIGNÉ de la carte domicile (L9, L10). Le jeton n'est jamais enregistré ni journalisé.
+ * Jeton faux, révoqué (carte régénérée) ou d'un autre domicile → refus, compté comme un essai de code.
+ */
+export async function checkInWithQr(actor: Actor, visitId: string, qr: string, now: Date = new Date()) {
+  const visit = await loadOwnedVisit(actor.id, visitId);
+  assertActiveCaregiver(visit);
+  assertCanAddProof(visit, now);
+  if (visit.proofs.some((p) => p.factor === "CODE_DOMICILE" && p.valid)) {
+    return { valid: true as const, alreadyDone: true };
+  }
+  const failures = await db.auditLog.count({ where: { action: "visit.code.failed", entityType: "Visit", entityId: visit.id } });
+  if (failures >= MAX_CODE_ATTEMPTS) {
+    throw new AccompagnantError("Trop d'essais pour le code. Demandez à la famille de confirmer votre visite.", "INTERDIT");
+  }
+  const token = tokenFromQr(qr);
+  const resolution = token ? await resolveHomeCardToken(token) : ({ ok: false, reason: "FAUX" } as const);
+  const refusal = !resolution.ok ? resolution.reason : resolution.aineId !== visit.aineId ? "AUTRE_DOMICILE" : null;
+  if (refusal) {
+    await logAudit({ actor, action: "visit.code.failed", entityType: "Visit", entityId: visit.id, metadata: { method: "QR", reason: refusal } });
+    throw new AccompagnantError(QR_REFUSAL_MESSAGES[refusal], "INVALIDE");
+  }
+  await markCheckIn(actor, visit, "QR_SIGNE", now);
+  await recordProof(visit.id, { factor: "CODE_DOMICILE", valid: true, details: "QR signé de la carte domicile scanné sur place." }, actor);
+  return { valid: true as const, alreadyDone: false };
 }
 
 /** Facteur (b) code domicile. Le code saisi n'est jamais enregistré ni journalisé. */

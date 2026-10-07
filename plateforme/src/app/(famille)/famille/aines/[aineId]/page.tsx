@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BookOpen, CalendarDays, HandHeart, HeartHandshake, Pencil, ShieldCheck, UserPlus, Users } from "lucide-react";
+import { BookOpen, CalendarDays, HandHeart, HeartHandshake, Pencil, QrCode, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { requireRole } from "@/server/auth/guards";
 import { getAineForFamily } from "@/server/famille/queries";
 import { communeLabel } from "@/lib/communes";
@@ -13,7 +13,6 @@ import { Card, CardLink, CardTitle, Chip, SectionHeader } from "@/components/ui/
 import { LinkButton } from "@/components/ui/button";
 import { ProofSteps } from "@/components/ui/proof-steps";
 import { LevelBadge } from "@/components/status-badges";
-import { HomeCode } from "@/components/famille/home-code";
 import { CaregiverLinkForm } from "@/components/famille/caregiver-link-form";
 import { TopBar } from "@/components/famille/top-bar";
 
@@ -80,7 +79,20 @@ export default async function Page({ params, searchParams }: Props) {
 
       <SectionHeader title="Profil" />
       <div className="flex flex-col gap-3">
-        <HomeCode code={aine.homeCode} aineFirstName={aine.firstName} />
+        {/* L1-B (L9) : la carte domicile signée remplace l'affichage du code seul. */}
+        <CardLink href={`/famille/aines/${aine.id}/carte-domicile`}>
+          <span className="flex items-center gap-3.5">
+            <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-full bg-mer-soft text-mer [&_svg]:size-5 [&_svg]:[stroke-width:1.6]">
+              <QrCode />
+            </span>
+            <span className="min-w-0">
+              <b className="block font-semibold">Carte domicile</b>
+              <span className="block text-[15px] text-muted">
+                QR code et code de secours à imprimer · version {aine.homeCardVersion}
+              </span>
+            </span>
+          </span>
+        </CardLink>
 
         <Card className="flex flex-col gap-3">
           <CardTitle className="mb-0">Accompagnement</CardTitle>

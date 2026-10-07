@@ -9,3 +9,4 @@ export * from "./moi";
 export * from "./visits";
 export * from "./visits-propositions";
 export * from "./appareils";
+export * from "./trajet";
