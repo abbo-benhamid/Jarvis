@@ -62,7 +62,7 @@ test("L1 : démo, bac à sable et offre factice fermés ; accueil « Créer un c
     ["/tester", "/inscription"],
     ["/tester/design", "/inscription"],
     ["/cgu-test", "/cgu"],
-  ]) {
+  ] as const) {
     await page.goto(from);
     await expect(page).toHaveURL(new RegExp(`${to}$`));
   }

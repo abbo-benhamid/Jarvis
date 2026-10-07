@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { DEMO_PASSWORD, E2E_TESTER_CODE, OPERATEUR_EMAIL, OPERATEUR_PASSWORD } from "./fixtures";
+import { DEMO_PASSWORD, OPERATEUR_EMAIL, OPERATEUR_PASSWORD } from "./fixtures";
 
 /**
  * Smoke tests S1b. Prérequis : base migrée + seedée, DEMO_MODE=true, TESTER_INVITE_CODES contient un code avec « E2E ».
