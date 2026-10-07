@@ -66,7 +66,7 @@ export default function CguTestPage() {
     },
   ];
   return (
-    <LegalPage title="Conditions d'utilisation de la démo" updated="4 octobre 2026">
+    <LegalPage title="Conditions d'utilisation de la démo" updated="4 octobre 2026" label="Démo · mise à jour le">
       <p className="text-lg">
         En entrant dans la démo, vous acceptez ces conditions. Elles sont courtes. Lisez-les en entier.
       </p>

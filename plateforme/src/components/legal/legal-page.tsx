@@ -4,13 +4,15 @@ import { cn } from "@/lib/cn";
  * Mise en page commune des pages légales (D4) : titre, date, sections courtes (style STE).
  * Lecture longue : colonne de 70 caractères environ, sections sur cartes coton, tableaux lisibles.
  */
-export function LegalPage({ title, updated, children }: { title: string; updated: string; children: React.ReactNode }) {
+export function LegalPage({ title, updated, label = "Mise à jour le", children }: { title: string; updated: string; label?: string; children: React.ReactNode }) {
   return (
     <article className="mx-auto flex max-w-3xl flex-col gap-5">
       <header className="flex flex-col gap-2 pb-2">
         <p className="text-[13px] leading-snug font-semibold tracking-[.12em] text-muted uppercase">Informations légales</p>
         <h1 className="font-display text-[36px] leading-[1.05] font-normal tracking-[-.02em] lg:text-[44px]">{title}</h1>
-        <p className="text-[15px] text-muted">Démo · mise à jour le {updated}</p>
+        <p className="text-[15px] text-muted">
+          {label} {updated}
+        </p>
       </header>
       {children}
     </article>

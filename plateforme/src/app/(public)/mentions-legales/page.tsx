@@ -1,3 +1,4 @@
+import { isLaunchMode } from "@/server/launch";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { editorInfo } from "@/server/env";
@@ -9,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 /** D4 (T2) : mentions légales. Identité de l'éditeur : EDITEUR_NOM, EDITEUR_ADRESSE, EDITEUR_EMAIL, DIRECTEUR_PUBLICATION. */
 export default function MentionsLegalesPage() {
+  const launch = isLaunchMode();
   const e = editorInfo();
   return (
     <LegalPage title="Mentions légales" updated="4 octobre 2026">
@@ -47,15 +49,30 @@ export default function MentionsLegalesPage() {
       </LegalSection>
 
       <LegalSection title="Nature du site">
-        <p>Koudmen ouvre bientôt en Martinique. Ce site est une démo. Il sert à recueillir l&apos;avis de testeurs invités.</p>
-        <LegalList
-          items={[
-            "Koudmen ne rend aucun service réel. Aucune visite réelle n'a lieu.",
-            "Aucun paiement réel n'est demandé. Aucun message réel n'est envoyé.",
-            "Koudmen n'est pas un service d'aide à domicile autorisé.",
-            "Les tarifs affichés sont des tarifs de lancement. Ils ne sont pas encore commercialisés.",
-          ]}
-        />
+        {launch ? (
+          <>
+            <p>Koudmen ouvre bientôt en Martinique. Koudmen met en relation des familles et des accompagnants.</p>
+            <LegalList
+              items={[
+                "Koudmen n'est pas un service d'aide à domicile autorisé. Koudmen n'emploie pas les accompagnants.",
+                "Les visites ne sont pas encore proposées. Aucun paiement n'est demandé.",
+                "Les tarifs affichés sont des tarifs de lancement. Un conseiller les explique par téléphone.",
+              ]}
+            />
+          </>
+        ) : (
+          <>
+            <p>Koudmen ouvre bientôt en Martinique. Ce site est une démo. Il sert à recueillir l&apos;avis de testeurs invités.</p>
+            <LegalList
+              items={[
+                "Koudmen ne rend aucun service réel. Aucune visite réelle n'a lieu.",
+                "Aucun paiement réel n'est demandé. Aucun message réel n'est envoyé.",
+                "Koudmen n'est pas un service d'aide à domicile autorisé.",
+                "Les tarifs affichés sont des tarifs de lancement. Ils ne sont pas encore commercialisés.",
+              ]}
+            />
+          </>
+        )}
       </LegalSection>
 
       <LegalSection title="Signaler un contenu">
@@ -72,8 +89,8 @@ export default function MentionsLegalesPage() {
             politique de confidentialité
           </Link>{" "}
           et les{" "}
-          <Link href="/cgu-test" className="font-semibold text-mer underline">
-            conditions d&apos;utilisation de la démo
+          <Link href={launch ? "/cgu" : "/cgu-test"} className="font-semibold text-mer underline">
+            {launch ? "conditions d'utilisation" : "conditions d'utilisation de la démo"}
           </Link>
           .
         </p>
