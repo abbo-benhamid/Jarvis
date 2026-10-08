@@ -275,6 +275,13 @@ export const motifRefusSchema = z.enum([
   "CONFLIT",
   /** Donnée refusée (code faux, check-in pas encore fait, hors délai). */
   "INVALIDE",
+  /**
+   * L1d (D9) : Koudmen est en préinscription (données réelles des aînés fermées). Rien n'est gardé,
+   * pas même en brouillon. L'app vide sa file pour cet événement et affiche le message.
+   */
+  "PREINSCRIPTION",
+  /** L1d (D8, D9) : l'accord de l'aîné manque, est refusé ou retiré. Rien n'est gardé. */
+  "ACCORD_MANQUANT",
 ]);
 export type MotifRefus = z.infer<typeof motifRefusSchema>;
 

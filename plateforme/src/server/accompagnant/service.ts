@@ -14,6 +14,7 @@ import { tokenFromQr } from "@/server/presence/qr-token";
 import { resolveHomeCardToken } from "@/server/presence/home-card";
 import { endTripForVisit } from "@/server/presence/trajet";
 import { homePoint } from "@/server/presence/address";
+import { PRESENCE_REFUSAL_MESSAGES, presenceRefusal, type PresenceGuardAine } from "@/server/visits/launch-guards";
 import { recordProof, refreshVisitStatus } from "@/server/visits/service";
 import { formatTime } from "@/lib/format";
 import { lockCareRequests } from "@/server/matching/locks";
@@ -45,7 +46,8 @@ import {
 
 export type Actor = { id: string; role: Role; firstName: string };
 
-export type AccompagnantErrorCode = "INTROUVABLE" | "INTERDIT" | "CONFLIT" | "INVALIDE" | "TARIF";
+/** L1d (D9) : PREINSCRIPTION (données réelles fermées), ACCORD_MANQUANT (accord absent, refusé ou retiré). */
+export type AccompagnantErrorCode = "INTROUVABLE" | "INTERDIT" | "CONFLIT" | "INVALIDE" | "TARIF" | "PREINSCRIPTION" | "ACCORD_MANQUANT";
 
 /** Erreur métier : `message` s'affiche tel quel à l'accompagnant. */
 export class AccompagnantError extends Error {
@@ -118,6 +120,16 @@ async function loadOwnedVisit(userId: string, visitId: string) {
   });
   if (!visit) throw new AccompagnantError("Visite introuvable.", "INTROUVABLE");
   return visit;
+}
+
+/**
+ * L1d (D9, R1 et R5) : toute action qui touche les données d'un aîné (check-in, Kayé, brouillon) exige les données
+ * réelles ouvertes (sauf bac à sable) ET l'accord de l'aîné recueilli. Refusé sinon, sans rien garder.
+ */
+export function assertAineDataOpen(aine: PresenceGuardAine): void {
+  const refusal = presenceRefusal(aine);
+  if (refusal === "DONNEES_REELLES_NON_AUTORISEES") throw new AccompagnantError(PREINSCRIPTION_MESSAGE, "PREINSCRIPTION");
+  if (refusal === "ACCORD_MANQUANT") throw new AccompagnantError(PRESENCE_REFUSAL_MESSAGES.ACCORD_MANQUANT, "ACCORD_MANQUANT");
 }
 
 /**
@@ -488,6 +500,8 @@ export async function declineProposal(actor: Actor, proposalId: string, declineN
 // ─────────────────────────────── A7 — Check-in / check-out ───────────────────────────────
 
 function assertCanAddProof(visit: Awaited<ReturnType<typeof loadOwnedVisit>>, now: Date) {
+  // L1d (D8, D9) : préinscription, accord absent, refusé ou retrait → aucun check-in (QR, code, position).
+  assertAineDataOpen(visit.aine);
   if (!visitAcceptsProof(visit)) {
     throw new AccompagnantError("Cette visite est terminée. Vous ne pouvez plus faire de check-in.", "CONFLIT");
   }
@@ -669,8 +683,10 @@ export async function checkOut(actor: Actor, visitId: string, now: Date = new Da
 /** Un Kayé par visite, après le check-in. Notifie le cercle Lakou (sans donnée de santé). */
 export async function createKaye(actor: Actor, input: KayeInput) {
   // R1 : pas de Kayé réel en préinscription (données réelles des aînés fermées).
-  if (!realDataAllowed()) throw new AccompagnantError(PREINSCRIPTION_MESSAGE, "INTERDIT");
+  if (!realDataAllowed()) throw new AccompagnantError(PREINSCRIPTION_MESSAGE, "PREINSCRIPTION");
   const visit = await loadOwnedVisit(actor.id, input.visitId);
+  // L1d (D8, D9) : accord de l'aîné obligatoire (retrait → Kayé bloqués).
+  assertAineDataOpen(visit.aine);
   assertActiveCaregiver(visit);
   if (visit.journal) throw new AccompagnantError("Le Kayé de cette visite existe déjà.", "CONFLIT");
   if (!canWriteKaye({ checkInAt: visit.checkInAt, hasJournal: false })) {

@@ -2,12 +2,15 @@ import "server-only";
 import { Prisma, type Role } from "@prisma/client";
 import { db } from "@/server/db";
 import { isLaunchMode } from "@/server/config-check";
+import { PREINSCRIPTION_MESSAGE, realDataAllowed } from "@/server/launch";
+import { presenceRefusal } from "./launch-guards";
 import { logAudit } from "@/server/audit";
 import { notifyUser } from "@/server/outbox";
 import { formatTime } from "@/lib/format";
 import { communeLabel } from "@/lib/communes";
 import {
   AccompagnantError,
+  assertAineDataOpen,
   checkInWithCode,
   checkInWithQr,
   checkInWithGps,
@@ -62,7 +65,8 @@ export async function listAppVisits(userId: string, jours: number, now: Date = n
     select: APP_VISIT_SELECT,
   });
   const testMode = isTestMode();
-  return rows.map((r) => toVisiteDto(r, now, testMode));
+  // L1d (D9) : aucune donnée d'aîné en préinscription, ni sans accord recueilli (ou après un retrait).
+  return rows.filter((r) => presenceRefusal(r.aine) === null).map((r) => toVisiteDto(r, now, testMode));
 }
 
 /** Une visite de CET accompagnant (null sinon : même réponse qu'une visite inexistante). */
@@ -71,7 +75,8 @@ export async function getAppVisit(userId: string, visitId: string, now: Date = n
     where: ownedVisitWhere(userId, visitId),
     select: { ...APP_VISIT_SELECT, kayeDraft: { select: { content: true } } },
   });
-  if (!row) return null;
+  // L1d (D9) : même réponse qu'une visite inconnue en préinscription ou sans accord de l'aîné.
+  if (!row || presenceRefusal(row.aine) !== null) return null;
   const draft = row.journal === null && row.kayeDraft ? brouillonKayeSchema.safeParse(row.kayeDraft.content) : null;
   return { ...toVisiteDto(row, now, isTestMode()), brouillonKaye: draft?.success ? draft.data : null };
 }
@@ -210,6 +215,11 @@ async function visitState(userId: string, visitId: string) {
 async function handleEvent(actor: Actor, user: AppUser, e: Evenement, active: boolean, at: Date, skew: boolean, late = false): Promise<Outcome> {
   // Sécurité avant tout : le SOS passe toujours, même pour un profil inactif.
   if (e.type === "SOS") return sos(actor, user, e.visiteId ?? null, at, skew);
+  // L1d (D9, code M1) : en préinscription, AUCUN événement ne touche une donnée d'aîné réelle (check-in, Kayé,
+  // brouillon). Motif dédié ; rien n'est gardé, pas même en brouillon.
+  if (user.sandboxId === null && !realDataAllowed()) {
+    return { statut: "REFUSE", motif: "PREINSCRIPTION", message: PREINSCRIPTION_MESSAGE };
+  }
   if (!active) {
     return {
       statut: "REFUSE",
@@ -355,9 +365,17 @@ async function flagLateCheckIn(actor: Actor, visitId: string, now: Date) {
 async function saveDraft(actor: Actor, e: Extract<Evenement, { type: "KAYE_BROUILLON" }>, occurredAt: Date): Promise<Outcome> {
   const visit = await db.visit.findFirst({
     where: ownedVisitWhere(actor.id, e.visiteId),
-    select: { id: true, journal: { select: { id: true } }, kayeDraft: { select: { occurredAt: true } }, mission: { select: { status: true } } },
+    select: {
+      id: true,
+      journal: { select: { id: true } },
+      kayeDraft: { select: { occurredAt: true } },
+      mission: { select: { status: true } },
+      aine: { select: { sandboxId: true, accordEtat: true, consentGiven: true, consentAt: true } },
+    },
   });
   if (!visit) throw new AccompagnantError("Visite introuvable.", "INTROUVABLE");
+  // L1d (D9) : pas de brouillon (texte de santé possible) en préinscription ni sans accord de l'aîné.
+  assertAineDataOpen(visit.aine);
   if (visit.journal) throw new AccompagnantError("Le Kayé de cette visite est déjà publié.", "CONFLIT");
   if (visit.mission.status !== "ACTIVE") throw new AccompagnantError("Cette mission est suspendue ou terminée.", "INTERDIT");
   if (visit.kayeDraft && visit.kayeDraft.occurredAt.getTime() > occurredAt.getTime()) {

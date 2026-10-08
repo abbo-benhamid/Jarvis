@@ -29,7 +29,7 @@ export function effectiveEventTime(occurredAt: Date, receivedAt: Date): Date {
 }
 
 /** Code d'erreur métier du Lot B → motif de refus du contrat. */
-export function motifFromServiceCode(code: "INTROUVABLE" | "INTERDIT" | "CONFLIT" | "INVALIDE" | "TARIF"): MotifRefus {
+export function motifFromServiceCode(code: "INTROUVABLE" | "INTERDIT" | "CONFLIT" | "INVALIDE" | "TARIF" | "PREINSCRIPTION" | "ACCORD_MANQUANT"): MotifRefus {
   if (code === "TARIF") return "INVALIDE";
   return code;
 }
@@ -60,7 +60,8 @@ export const APP_VISIT_SELECT = {
   checkInAt: true,
   checkOutAt: true,
   clockSkewAt: true,
-  aine: { select: { firstName: true, lastInitial: true, commune: true, addressHint: true } },
+  // L1d (D9) : champs des gardes R1/R5 (jamais renvoyés à l'app).
+  aine: { select: { firstName: true, lastInitial: true, commune: true, addressHint: true, sandboxId: true, accordEtat: true, consentGiven: true, consentAt: true } },
   mission: { select: { status: true, request: { select: { level: true, frequency: true, durationMinutes: true, notes: true } } } },
   caregiver: { select: { validation: true } },
   proofs: { select: { factor: true, valid: true } },

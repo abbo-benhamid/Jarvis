@@ -385,6 +385,52 @@ describe.runIf(enabled)("Lot L1-B (présence) sur une vraie base", async () => {
     expect((await db.visit.findUniqueOrThrow({ where: { id: v2.id } })).status).toBe("A_VERIFIER");
   });
 
+  it("D9 (code M1) : en préinscription, brouillon, Kayé et check-in refusés (motif PREINSCRIPTION), rien n'est gardé ; GET /visites vide", async () => {
+    const v = await visitFor(alice, -0.2);
+    const qr = await qrOf(aineId);
+    const saved = { ...process.env };
+    process.env.KOUDMEN_MODE = "lancement";
+    delete process.env.DONNEES_REELLES_AUTORISEES;
+    try {
+      const kaye = { humeur: "BIEN", appetit: "BON", activites: [], note: "", aSurveiller: true, noteSurveillance: "Toux depuis hier" };
+      const events = [
+        { clientEventId: randomUUID(), survenuA: new Date().toISOString(), type: "KAYE_BROUILLON", visiteId: v.id, kaye },
+        { clientEventId: randomUUID(), survenuA: new Date().toISOString(), type: "KAYE_PUBLICATION", visiteId: v.id, kaye },
+        checkIn(v.id, { qr, position: { ...north(20), precisionMetres: 10, consentement: true } }),
+      ] as Evenement[];
+      const results = await app.processAppEvents(alice.user, events);
+      for (const r of results) expect(r).toMatchObject({ statut: "REFUSE", motif: "PREINSCRIPTION" });
+      expect(await db.kayeDraft.count({ where: { visitId: v.id } })).toBe(0);
+      expect(await db.journalEntry.count({ where: { visitId: v.id } })).toBe(0);
+      expect((await db.visit.findUniqueOrThrow({ where: { id: v.id } })).checkInAt).toBeNull();
+      expect(await app.listAppVisits(alice.user.id, 7)).toEqual([]);
+      expect(await app.getAppVisit(alice.user.id, v.id)).toBeNull();
+    } finally {
+      for (const k of ["KOUDMEN_MODE", "DONNEES_REELLES_AUTORISEES"]) delete process.env[k];
+      Object.assign(process.env, saved);
+    }
+  });
+
+  it("D8 + D9 (code M2) : après le retrait de l'accord, QR, code, trajet et Kayé refusés (ACCORD_MANQUANT)", async () => {
+    const trajet = await import("./trajet");
+    const id = await aine("Retrait", payeur.id);
+    const v = await visitFor(alice, -0.2, id);
+    const qr = await qrOf(id);
+    const { code } = await card.getHomeCard({ id: payeur.id, role: "FAMILLE", sandboxId: null }, id);
+    await db.aine.update({ where: { id }, data: { accordEtat: "ACCORD_RETIRE", consentGiven: false } });
+    const [byQr] = await app.processAppEvents(alice.user, [checkIn(v.id, { qr })]);
+    expect(byQr).toMatchObject({ statut: "REFUSE", motif: "ACCORD_MANQUANT" });
+    const [byCode] = await app.processAppEvents(alice.user, [checkIn(v.id, { codeDomicile: code })]);
+    expect(byCode).toMatchObject({ statut: "REFUSE", motif: "ACCORD_MANQUANT" });
+    const [draft] = await app.processAppEvents(alice.user, [
+      { clientEventId: randomUUID(), survenuA: new Date().toISOString(), type: "KAYE_BROUILLON", visiteId: v.id, kaye: { humeur: "BIEN", appetit: "BON", activites: [], note: "", aSurveiller: false } } as unknown as Evenement,
+    ]);
+    expect(draft).toMatchObject({ statut: "REFUSE", motif: "ACCORD_MANQUANT" });
+    await expect(trajet.startOrStopTrip(alice.user, v.id, "DEMARRER")).rejects.toMatchObject({ code: "INTERDIT" });
+    expect(await app.getAppVisit(alice.user.id, v.id)).toBeNull();
+    expect((await db.visit.findUniqueOrThrow({ where: { id: v.id } })).checkInAt).toBeNull();
+  });
+
   it("D4 (sécu M3) : en lancement, QR + position = PRESENCE_PROBABLE ; contestation 48 h → À vérifier ; VALIDEE avec la confirmation", async () => {
     const saved = { ...process.env };
     Object.assign(process.env, LAUNCH_REAL);

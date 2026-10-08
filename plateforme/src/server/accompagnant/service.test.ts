@@ -283,7 +283,7 @@ function visitFixture(
     scheduledEnd: new Date("2026-10-05T17:00:00Z"),
     checkInAt: over.checkInAt ?? null,
     checkOutAt: over.checkOutAt ?? null,
-    aine: { id: "aine-leonie", firstName: "Léonie", latitude: 14.6173, longitude: -61.0597, locationApproximate: false, homeCode: "LKW7Q3" },
+    aine: { id: "aine-leonie", firstName: "Léonie", latitude: 14.6173, longitude: -61.0597, locationApproximate: false, homeGeoEnc: null, homeCode: "LKW7Q3", sandboxId: null, accordEtat: "ACCORD_RECUEILLI", consentGiven: true, consentAt: new Date() },
     proofs: over.proofs ?? [],
     journal: over.journal ?? null,
     caregiver: { validation: over.validation ?? "VALIDE" },

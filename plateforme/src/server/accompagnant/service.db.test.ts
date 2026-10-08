@@ -81,6 +81,7 @@ describe.runIf(enabled)("Lot B sur une vraie base", async () => {
         longitude: -60.9996,
         activityLevel: 2,
         consentGiven: true,
+        accordEtat: "ACCORD_RECUEILLI",
         consentByType: "AINE",
         consentByName: "Test",
         consentAt: new Date(),
