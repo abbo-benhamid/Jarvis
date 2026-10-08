@@ -548,6 +548,9 @@ model CaregiverProfile {
   refusalCode         String?
   refusalProposedById String?
   refusalProposedAt   DateTime?
+  /// L2b (M1) : annulation d'un refus proposé, proposée par un opérateur ; un AUTRE opérateur la confirme.
+  refusalCancelProposedById String?
+  refusalCancelProposedAt   DateTime?
   refusedAt           DateTime?
   /// Visio de repli demandée (créneau, raison) : l'équipe rappelle pour fixer l'heure.
   visioRequestedAt    DateTime?
@@ -601,6 +604,14 @@ model VerificationItem {
   /// Refus proposé par un premier opérateur ; `REFUSE` seulement après la confirmation d'un second.
   refusalProposedById String?
   refusalProposedAt   DateTime?
+  /// L2b (M1) : annulation du refus proposé : proposée par un opérateur, confirmée par un AUTRE.
+  refusalCancelProposedById String?
+  refusalCancelProposedAt   DateTime?
+  /// L2b (M7) : adaptateur qui a mis VALIDE (simule, brevo, twilio, veriff, stripe, recherche-entreprises, insee, operateur).
+  /// En lancement, un élément validé par « simule » (ou sans adaptateur connu) compte comme NON validé.
+  validatedWith       String?
+  /// L2b (M3) : identifiants des décisions du prestataire déjà appliquées (anti-rejeu durable, 20 dernières).
+  appliedDecisionIds  String[]            @default([])
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @default(now()) @updatedAt
 
@@ -637,6 +648,13 @@ model IdentityCheck {
   /// Suppression des images et de la biométrie chez le prestataire (décision + 30 jours).
   redactRequestedAt   DateTime?
   redactConfirmedAt   DateTime?
+  /// L2b (M4) : essais de suppression en échec (alerte opérateur et /api/sante à partir de 3).
+  redactAttempts      Int              @default(0)
+  redactLastAttemptAt DateTime?
+  /// Code court de l'échec (ex. « HTTP 503 »). Jamais de donnée personnelle.
+  redactLastError     String?
+  /// L2b (M2) : décisions reçues APRÈS la décision appliquée (gardées en trace, jamais appliquées).
+  lateOutcomes        String[]         @default([])
 
   @@index([verificationItemId])
   @@index([documentNumberHmac])
@@ -664,7 +682,8 @@ model SensitiveDocument {
   sizeBytes          Int
   uploadedAt         DateTime              @default(now())
   decidedAt          DateTime?
-  deleteAfter        DateTime?
+  /// L2b (M5) : toujours rempli. Dépôt + 90 jours ; à la décision, décision + 30 jours.
+  deleteAfter        DateTime              @default(dbgenerated("(now() + '90 days'::interval)"))
   deletedAt          DateTime?
 
   accessLogs DocumentAccessLog[]
@@ -728,6 +747,25 @@ model WebhookEvent {
   @@index([receivedAt])
 }
 
+/// L2b (M4) : suppression due chez le prestataire d'identité, HORS cascade. Une ligne est créée par un
+/// déclencheur PostgreSQL quand une IdentityCheck non encore supprimée chez le prestataire disparaît
+/// (compte supprimé, purge des comptes non confirmés, droit à l'effacement). La purge nocturne la traite.
+model ProviderRedaction {
+  id                String    @id @default(cuid())
+  provider          String
+  providerSessionId String    @unique
+  /// COMPTE_SUPPRIME (déclencheur) ; aucune donnée personnelle.
+  reason            String
+  createdAt         DateTime  @default(now())
+  dueAt             DateTime  @default(now())
+  requestedAt       DateTime?
+  attempts          Int       @default(0)
+  lastAttemptAt     DateTime?
+  lastError         String?
+
+  @@index([requestedAt, dueAt])
+}
+
 /// L2 (étude § 6.5) : demande de réexamen après un refus (30 jours). Un AUTRE opérateur la traite sous 7 jours.
 model VerificationAppeal {
   id          String           @id @default(cuid())
@@ -740,6 +778,9 @@ model VerificationAppeal {
   handledById String?
   /// ACCEPTE (dossier rouvert) ou MAINTENU.
   outcome     String?
+  /// L2b (B1) : un recours ACCEPTÉ rouvre des éléments refusés à deux opérateurs : il faut donc aussi deux opérateurs.
+  acceptProposedById String?
+  acceptProposedAt   DateTime?
 
   @@index([handledAt, createdAt])
   @@index([caregiverId])
