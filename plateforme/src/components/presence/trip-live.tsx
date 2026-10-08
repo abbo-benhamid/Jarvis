@@ -5,11 +5,14 @@ import { Clock, MapPin, Navigation } from "lucide-react";
 import type { ReponseTrajetFamille } from "@/contracts/v1/trajet";
 import { Card } from "@/components/ui/card";
 import { TripMapClient } from "./trip-map-client";
+import { hourIn, ZonedTime } from "@/components/ui/zoned-time";
+import { MARTINIQUE_TZ } from "@/lib/format";
 
 /** Intervalle d'interrogation (L7 : pas de WebSocket sur Vercel). */
 export const POLL_MS = 10_000;
 
-const time = (iso: string) => new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Martinique" }).format(new Date(iso));
+/** L1d (m7) : format unique « 9 h 30 », heure de Martinique. */
+const time = (iso: string) => hourIn(new Date(iso), MARTINIQUE_TZ);
 
 function distanceLabel(m: number): string {
   return m < 1000 ? `${m} m` : `${(m / 1000).toFixed(1).replace(".", ",")} km`;
@@ -26,7 +29,7 @@ export function tripHeadline(v: ReponseTrajetFamille): string {
     case "TERMINEE":
       return "La visite est terminée.";
     default:
-      return `Visite prévue à ${time(v.heurePrevue)} avec ${p}.`;
+      return `Visite prévue à ${time(v.heurePrevue)} (heure de Martinique) avec ${p}.`;
   }
 }
 
@@ -87,7 +90,9 @@ export function TripLive({ visitId, initial }: { visitId: string; initial: Repon
         <ul className="m-0 flex list-none flex-col gap-3 p-0 text-[15px] leading-[1.45]">
           <li className="flex gap-3">
             <Clock aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-mer" strokeWidth={1.6} />
-            <span>Heure prévue : {time(view.heurePrevue)}</span>
+            <span>
+              Heure prévue : <ZonedTime start={view.heurePrevue} />
+            </span>
           </li>
           {enRoute ? (
             <>
@@ -99,7 +104,9 @@ export function TripLive({ visitId, initial }: { visitId: string; initial: Repon
               </li>
               <li className="flex gap-3">
                 <MapPin aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-mer" strokeWidth={1.6} />
-                <span>Position mise à jour à {time(view.position!.majA)}, précise à environ {view.position!.precisionMetres} m.</span>
+                <span>
+                  Position mise à jour à <ZonedTime start={view.position!.majA} />, précise à environ {view.position!.precisionMetres} m.
+                </span>
               </li>
             </>
           ) : null}
@@ -108,7 +115,7 @@ export function TripLive({ visitId, initial }: { visitId: string; initial: Repon
             <span>{view.domicile.approximatif ? "Domicile : position approximative (centre de la commune)." : "Domicile : adresse enregistrée."}</span>
           </li>
         </ul>
-        <p className="mt-3 border-t border-line pt-3 text-[13px] text-muted">
+        <p className="mt-3 border-t border-line pt-3 text-[15px] text-muted">
           La position est arrondie et visible seulement pendant le trajet. Elle n&apos;est pas gardée.
         </p>
       </Card>

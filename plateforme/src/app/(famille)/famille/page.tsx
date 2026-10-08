@@ -15,8 +15,9 @@ import { StatusCard } from "@/components/ui/status-card";
 import { Avatar } from "@/components/ui/avatar";
 import { KayePreview } from "@/components/famille/kaye-card";
 import { aineStatus } from "@/components/famille/status";
-import { capitalize, dayLong, dayNumber, hourLabel, relativeDay, weekdayShort } from "@/components/famille/format";
+import { capitalize, dayLong, dayNumber, relativeDay, weekdayShort } from "@/components/famille/format";
 import { callbackContext } from "@/server/offre/rappel";
+import { ZonedTime } from "@/components/ui/zoned-time";
 
 export const metadata: Metadata = { title: "Accueil famille" };
 
@@ -138,9 +139,11 @@ function AineBlock({ m, kaye, several, now, canFollow }: { m: Membership; kaye: 
             <DateBox day={weekdayShort(next.scheduledStart)} date={dayNumber(next.scheduledStart)} label={dayLong(next.scheduledStart)} />
             <span className="min-w-0">
               <b className="block font-semibold">
-                {hourLabel(next.scheduledStart)} · avec {next.caregiver.user.firstName}
+                {capitalize(dayLong(next.scheduledStart))}, avec {next.caregiver.user.firstName}
               </b>
-              <span className="block text-[15px] leading-[1.4] text-muted">{capitalize(dayLong(next.scheduledStart))}, chez {aine.firstName}</span>
+              <span className="block text-[15px] leading-[1.4] text-muted">
+                À <ZonedTime start={next.scheduledStart} />, chez {aine.firstName}
+              </span>
             </span>
           </span>
         </CardLink>

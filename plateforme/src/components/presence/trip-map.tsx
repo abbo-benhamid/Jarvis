@@ -9,9 +9,34 @@ import type { Map as MapLibreMap, Marker } from "maplibre-gl";
  * - Le texte alternatif est la liste textuelle affichée SOUS la carte par la page (la carte est `aria-hidden`).
  * - `prefers-reduced-motion` : aucun déplacement animé de la vue.
  * - Sans WebGL ou sans réseau : la carte est remplacée par un message ; la liste textuelle reste.
+ * - L1d (M8) : textes des contrôles en français (`locale`), boutons ≥ 44 px (globals.css), marqueurs posés
+ *   SANS attendre les tuiles, et message « Carte indisponible » si la carte ne charge pas en 8 s.
  * [À VÉRIFIER] Conditions d'usage d'OpenFreeMap (usage gratuit, attribution OpenStreetMap affichée).
  */
 export const OPENFREEMAP_STYLE = "https://tiles.openfreemap.org/styles/positron";
+
+/** L1d (M8) : textes de MapLibre en français (critère WCAG 3.1.2, langue des parties). */
+export const MAP_LOCALE_FR: Record<string, string> = {
+  "AttributionControl.MapFeedback": "Signaler une erreur sur la carte",
+  "AttributionControl.ToggleAttribution": "Afficher ou masquer les sources de la carte",
+  "CooperativeGesturesHandler.MacHelpText": "Utilisez ⌘ + défilement pour zoomer",
+  "CooperativeGesturesHandler.MobileHelpText": "Utilisez deux doigts pour déplacer la carte",
+  "CooperativeGesturesHandler.WindowsHelpText": "Utilisez Ctrl + défilement pour zoomer",
+  "FullscreenControl.Enter": "Plein écran",
+  "FullscreenControl.Exit": "Quitter le plein écran",
+  "GeolocateControl.FindMyLocation": "Trouver ma position",
+  "GeolocateControl.LocationNotAvailable": "Position indisponible",
+  "LogoControl.Title": "Logo MapLibre",
+  "Map.Title": "Carte du trajet",
+  "Marker.Title": "Repère",
+  "NavigationControl.ResetBearing": "Remettre le nord en haut",
+  "NavigationControl.ZoomIn": "Zoomer",
+  "NavigationControl.ZoomOut": "Dézoomer",
+  "Popup.Close": "Fermer",
+};
+
+/** Délai au-delà duquel une carte sans tuiles est remplacée par le message (M8). */
+export const MAP_LOAD_TIMEOUT_MS = 8_000;
 
 export type TripMapProps = {
   home: { latitude: number; longitude: number; approximate: boolean };
@@ -38,6 +63,7 @@ export function TripMap({ home, position, caregiver }: TripMapProps) {
   const lib = useRef<typeof import("maplibre-gl") | null>(null);
   const [failed, setFailed] = useState(false);
   const [ready, setReady] = useState(false);
+  const [timedOut, setTimedOut] = useState(false);
 
   // Création de la carte (une fois).
   useEffect(() => {
@@ -54,12 +80,19 @@ export function TripMap({ home, position, caregiver }: TripMapProps) {
           zoom: 13,
           attributionControl: { compact: true },
           cooperativeGestures: true,
+          locale: MAP_LOCALE_FR,
         });
         m.addControl(new maplibre.NavigationControl({ showCompass: false }), "top-right");
         new maplibre.Marker({ element: markerElement("home", "Domicile") }).setLngLat([home.longitude, home.latitude]).addTo(m);
         m.on("error", () => undefined);
-        m.once("load", () => !cancelled && setReady(true));
+        // M8 : marqueurs et cadrage sans attendre les tuiles ; message si rien ne charge en 8 s.
+        const timer = setTimeout(() => !cancelled && !m.loaded() && setTimedOut(true), MAP_LOAD_TIMEOUT_MS);
+        m.once("load", () => {
+          clearTimeout(timer);
+          if (!cancelled) setTimedOut(false);
+        });
         map.current = m;
+        setReady(true);
       } catch {
         if (!cancelled) setFailed(true);
       }
@@ -99,5 +132,15 @@ export function TripMap({ home, position, caregiver }: TripMapProps) {
       </div>
     );
   }
-  return <div ref={box} className="kd-map" aria-hidden="true" data-testid="carte-trajet" />;
+  // M8 : la carte n'est plus `aria-hidden` (ses boutons sont focalisables) ; ses textes sont en français.
+  return (
+    <div className="relative">
+      <div ref={box} className="kd-map" data-testid="carte-trajet" />
+      {timedOut ? (
+        <p role="status" className="absolute inset-x-3 top-3 rounded-md bg-surface p-3 text-center text-[15px] font-semibold shadow-card">
+          Carte indisponible. Les informations sont ci-dessous.
+        </p>
+      ) : null}
+    </div>
+  );
 }

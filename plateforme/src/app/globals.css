@@ -607,5 +607,14 @@ dialog::backdrop {
   background: var(--surface-2);
 }
 .kd-map .maplibregl-ctrl-attrib {
-  font-size: 11px;
+  font-size: 13px;
+}
+/* L1d (M8) : boutons de la carte (zoom, sources) ≥ 44 px. */
+.kd-map .maplibregl-ctrl-group button,
+.kd-map .maplibregl-ctrl-attrib-button {
+  width: 44px;
+  height: 44px;
+}
+.kd-map .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  background-size: 28px;
 }
