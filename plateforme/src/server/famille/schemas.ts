@@ -105,14 +105,17 @@ export const aineLaunchCreateSchema = z.object({
 });
 
 /** R5 : en lancement, l'accord n'est jamais saisi par la famille (le conseiller l'enregistre). */
-export const aineLaunchUpdateSchema = aineSchema.omit({ consentGiven: true, consentByType: true, consentByName: true }).extend({ aineId: id });
+/** L1d (M6) : à la modification, les besoins sont facultatifs (la famille peut ajouter seulement l'adresse). */
+export const aineLaunchUpdateSchema = aineSchema
+  .omit({ consentGiven: true, consentByType: true, consentByName: true })
+  .extend({ aineId: id, needs: z.array(z.enum(NEED_VALUES)).default([]) });
 
 export const invitationSchema = z.object({
   aineId: id,
   relation: z.string({ message: "Indiquez le lien avec l'aîné." }).trim().min(2, "Indiquez le lien avec l'aîné.").max(60, "60 caractères maximum."),
   email: z.preprocess(
     (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
-    z.string().trim().toLowerCase().email("Adresse email invalide.").max(200).optional(),
+    z.string().trim().toLowerCase().email("Adresse e-mail invalide.").max(200).optional(),
   ),
 });
 

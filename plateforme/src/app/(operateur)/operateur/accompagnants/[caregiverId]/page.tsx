@@ -15,6 +15,7 @@ import { DecisionForm, VerificationReviewForm } from "@/components/operateur/for
 import { CAREGIVER_STATUS_LABELS, VERIFICATION_STATUS_LABELS, VERIFICATION_TYPE_LABELS } from "@/lib/labels";
 import { communeLabel } from "@/lib/communes";
 import { formatDateTime, formatEuros } from "@/lib/format";
+import { isLaunchMode } from "@/server/launch";
 
 export const metadata: Metadata = { title: "Profil accompagnant" };
 export const dynamic = "force-dynamic";
@@ -119,7 +120,7 @@ export default async function Page({ params }: { params: Promise<{ caregiverId: 
               <InfoRow label="Q5 Lien familial">{FAMILY_LINK[orientation.data.familyLink]}</InfoRow>
             </dl>
           ) : (
-            <p className="text-muted">Réponses non disponibles (profil de démonstration ou orientation non faite).</p>
+            <p className="text-muted">{isLaunchMode() ? "Orientation pas encore faite." : "Réponses non disponibles (profil de démonstration ou orientation non faite)."}</p>
           )}
         </Card>
       </div>
@@ -129,7 +130,7 @@ export default async function Page({ params }: { params: Promise<{ caregiverId: 
           Vérifications
         </h2>
         <p className="mb-4 text-muted">
-          Aucune pièce n&apos;est stockée dans cette version. Contrôlez la déclaration, puis validez ou refusez chaque ligne. Le diplôme validé
+          {isLaunchMode() ? "Koudmen ne garde aucune copie des pièces." : "Aucune pièce n'est stockée dans cette version."} Contrôlez la déclaration, puis validez ou refusez chaque ligne. Le diplôme validé
           ouvre le niveau 4.
         </p>
         {cg.verifications.length === 0 ? (

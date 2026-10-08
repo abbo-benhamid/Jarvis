@@ -104,7 +104,7 @@ export async function getFamilyAines(userId: string) {
   const rows = await db.lakouMember.findMany({
     where: { userId },
     orderBy: { joinedAt: "asc" },
-    select: { isPayer: true, aine: { select: { id: true, firstName: true, lastInitial: true, activityLevel: true, commune: true } } },
+    select: { isPayer: true, aine: { select: { id: true, firstName: true, lastInitial: true, activityLevel: true, commune: true, accordEtat: true } } },
   });
   return rows.map((r) => ({ ...r.aine, isPayer: r.isPayer }));
 }

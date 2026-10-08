@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/server/auth/guards";
-import { listAinesForAccord, SITUATION_LABELS } from "@/server/operateur/accord";
+import { SITUATION_LABELS } from "@/server/operateur/accord";
+import { listAinesForAccordL1d } from "@/server/operateur/accord-l1d";
 import { logAudit } from "@/server/audit";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -8,7 +9,8 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { NOTICE_FALC, NOTICE_FALC_VERSION } from "@/lib/legal-launch";
 import { communeLabel } from "@/lib/communes";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, fullName } from "@/lib/format";
+import { LinkButton } from "@/components/ui/button";
 import { AccordForm } from "./accord-form";
 
 export const metadata: Metadata = { title: "Accord des aînés" };
@@ -27,7 +29,7 @@ const STATE: Record<string, { label: string; tone: BadgeTone }> = {
  */
 export default async function Page() {
   const user = await requireRole("OPERATEUR");
-  const rows = await listAinesForAccord();
+  const rows = await listAinesForAccordL1d();
   if (rows.length > 0) await logAudit({ actor: user, action: "aine.accord_list_viewed", entityType: "Aine", metadata: { count: rows.length } });
   return (
     <>
@@ -42,7 +44,7 @@ export default async function Page() {
         <p className="mt-2 text-sm text-muted">Réponses possibles : oui, non, « je veux en parler à quelqu&apos;un » (rappelez plus tard).</p>
       </Card>
       {rows.length === 0 ? (
-        <EmptyState title="Aucun aîné à appeler." />
+        <EmptyState title="Aucune fiche d'aîné pour le moment." />
       ) : (
         <ul className="m-0 flex list-none flex-col gap-4 p-0">
           {rows.map((a) => (
@@ -59,8 +61,25 @@ export default async function Page() {
                   {a.owner.phone ? ` (${a.owner.phone})` : ""} · Fiche créée le {formatDateTime(a.createdAt)}
                   {a.accordAt && a.accordEtat !== "EN_ATTENTE_ACCORD" ? ` · Réponse du ${formatDateTime(a.accordAt)}` : ""}
                 </p>
+                {a.lastRappel ? (
+                  <p className="rounded-md bg-soleil-soft p-3 text-[15px] font-semibold">
+                    À rappeler : la personne voulait en parler à quelqu&apos;un (appel noté le {formatDateTime(a.lastRappel)}).
+                  </p>
+                ) : null}
+                {/* m14 : lien vers la carte domicile après un accord. */}
+                {a.accordEtat === "ACCORD_RECUEILLI" ? (
+                  <LinkButton href={`/operateur/aines/${a.id}/carte-domicile`} variant="quiet">
+                    Carte domicile de {a.firstName}
+                  </LinkButton>
+                ) : null}
                 {a.accordEtat === "ACCORD_REFUSE" || a.accordEtat === "ACCORD_RETIRE" ? null : (
-                  <AccordForm aineId={a.id} recueilli={a.accordEtat === "ACCORD_RECUEILLI"} situations={SITUATION_LABELS} />
+                  <AccordForm
+                    aineId={a.id}
+                    firstName={a.firstName}
+                    recueilli={a.accordEtat === "ACCORD_RECUEILLI"}
+                    situations={SITUATION_LABELS}
+                    members={a.members.map((m) => ({ userId: m.userId, isPayer: m.isPayer, label: `${fullName(m.user)} (${m.relation})` }))}
+                  />
                 )}
               </Card>
             </li>

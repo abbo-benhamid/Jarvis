@@ -10,6 +10,7 @@ import { addMonths } from "@/server/sandbox/purge";
  * - Seul un compte FAMILLE (réel) demande ; un accompagnant ne paie jamais rien (J27).
  * - Une seule demande ouverte par compte, aîné et formule (pas de doublon).
  * - J35 : une demande sans suite est effacée 3 mois après sa dernière mise à jour.
+ * - L1d (M4) : téléphone et créneau donnés dans la demande ; `plan = null` = « poser une question » (sans formule).
  */
 
 export const ACTIVATION_RETENTION_MONTHS = 3;
@@ -18,8 +19,11 @@ export class ActivationError extends Error {}
 
 type Requester = { id: string; role: Role; isDemo: boolean; sandboxId: string | null };
 
-export async function requestActivation(user: Requester, input: { plan: Plan; aineId: string | null }): Promise<{ created: boolean; id: string }> {
-  if (user.role !== "FAMILLE") throw new ActivationError("Seul un compte famille demande une formule.");
+export async function requestActivation(
+  user: Requester,
+  input: { plan: Plan | null; aineId: string | null; phone?: string | null; creneau?: string | null },
+): Promise<{ created: boolean; id: string }> {
+  if (user.role !== "FAMILLE") throw new ActivationError("Seul un compte famille demande un appel.");
   if (input.plan === "LAKOU") throw new ActivationError("La formule Libre est gratuite : aucun appel n'est nécessaire.");
   if (input.aineId) {
     const member = await db.lakouMember.findUnique({ where: { aineId_userId: { aineId: input.aineId, userId: user.id } }, select: { isPayer: true } });
@@ -30,9 +34,17 @@ export async function requestActivation(user: Requester, input: { plan: Plan; ai
     where: { userId: user.id, aineId: input.aineId, plan: input.plan, status: "NOUVELLE" },
     select: { id: true },
   });
-  if (open) return { created: false, id: open.id };
-  const created = await db.planActivationRequest.create({ data: { userId: user.id, aineId: input.aineId, plan: input.plan }, select: { id: true } });
-  await logAudit({ actor: user, action: "plan.activation_requested", entityType: "PlanActivationRequest", entityId: created.id, metadata: { plan: input.plan, avecAine: Boolean(input.aineId) } });
+  if (open) {
+    // Le numéro ou le créneau peut changer : la dernière demande fait foi.
+    if (input.phone || input.creneau) await db.planActivationRequest.update({ where: { id: open.id }, data: { phone: input.phone ?? undefined, creneau: input.creneau ?? undefined } });
+    return { created: false, id: open.id };
+  }
+  const created = await db.planActivationRequest.create({
+    data: { userId: user.id, aineId: input.aineId, plan: input.plan, phone: input.phone ?? null, creneau: input.creneau ?? null },
+    select: { id: true },
+  });
+  // Jamais le numéro dans le journal.
+  await logAudit({ actor: user, action: "plan.activation_requested", entityType: "PlanActivationRequest", entityId: created.id, metadata: { plan: input.plan ?? "QUESTION", avecAine: Boolean(input.aineId), creneau: input.creneau ?? null } });
   return { created: true, id: created.id };
 }
 
@@ -60,6 +72,8 @@ export async function listActivations() {
       createdAt: true,
       handledAt: true,
       user: { select: { firstName: true, lastName: true, email: true, phone: true } },
+      phone: true,
+      creneau: true,
       aine: { select: { firstName: true, commune: true } },
     },
   });

@@ -35,8 +35,11 @@ export function ProfileForm({
   status,
   initial,
   smicCents,
+  launch = false,
 }: {
   status: CaregiverStatus;
+  /** L1d (M1) : en lancement, pas de mention « données d'exemple ». */
+  launch?: boolean;
   initial: ProfileFormValues;
   /** Plancher salarié (D10) si le statut est salarié, sinon null. */
   smicCents: number | null;
@@ -201,7 +204,7 @@ export function ProfileForm({
           </FormField>
         ) : null}
         {status === "AUTO_ENTREPRENEUR_SAP" ? (
-          <FormField label="Votre SIRET" htmlFor="siret" hint="14 chiffres. Données d'exemple seulement." errors={fe?.siret} required>
+          <FormField label="Votre SIRET" htmlFor="siret" hint={launch ? "14 chiffres." : "14 chiffres. Données d'exemple seulement."} errors={fe?.siret} required>
             <Input {...fieldA11y("siret", fe?.siret, true)} {...text("siret")} inputMode="numeric" maxLength={20} />
           </FormField>
         ) : null}

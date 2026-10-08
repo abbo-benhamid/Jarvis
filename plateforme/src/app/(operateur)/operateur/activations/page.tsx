@@ -11,6 +11,7 @@ import { OpsAction } from "@/components/operateur/ops-action";
 import { getPlan } from "@/lib/plans";
 import { communeLabel } from "@/lib/communes";
 import { formatDateTime } from "@/lib/format";
+import { creneauLabelOperateur } from "@/lib/rappel";
 
 export const metadata: Metadata = { title: "Demandes de rappel" };
 export const dynamic = "force-dynamic";
@@ -28,23 +29,25 @@ export default async function Page() {
       <PageHeader
         eyebrow="Formules"
         title="Demandes de rappel"
-        description="Une famille veut une formule payante. Appelez-la pour expliquer. N'encaissez rien : les conditions de vente ne sont pas encore publiées."
+        description="Une famille veut être appelée : pour une formule, ou pour poser une question. Appelez-la dans le créneau choisi. N'encaissez rien : les conditions de vente ne sont pas encore publiées."
       />
       {rows.length === 0 ? (
         <EmptyState title="Aucune demande en attente." />
       ) : (
         <DataTable
           minWidth="52rem"
-          head={["Date", "Famille", "Contact", "Formule", "Aîné", "État", "Action"]}
+          head={["Date", "Famille", "À appeler", "Sujet", "Aîné", "État", "Action"]}
           rows={rows.map((r) => [
             formatDateTime(r.createdAt),
             `${r.user.firstName} ${r.user.lastName}`,
-            <span key="c" className="text-sm">
-              {r.user.phone ?? "pas de téléphone"}
+            <span key="c" className="text-[15px]">
+              <strong className="font-semibold">{r.phone ?? r.user.phone ?? "pas de téléphone"}</strong>
               <br />
-              {r.user.email}
+              {creneauLabelOperateur(r.creneau)}
+              <br />
+              <span className="text-sm text-muted">{r.user.email}</span>
             </span>,
-            getPlan(r.plan).name,
+            r.plan ? `Formule ${getPlan(r.plan).name}` : "Question",
             r.aine ? `${r.aine.firstName} (${communeLabel(r.aine.commune)})` : "—",
             r.status === "NOUVELLE" ? <Badge key="s" tone="soleil">À appeler</Badge> : <Badge key="s" tone="mer">Appel fait</Badge>,
             <div key="a" className="flex flex-col gap-2">

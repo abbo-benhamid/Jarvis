@@ -34,8 +34,8 @@ export function OpsAction({
       ))}
       {children}
       {confirm ? (
-        <label className="flex min-h-11 items-start gap-2 text-sm">
-          <input type="checkbox" name="confirm" value="on" required className="mt-1 size-4" />
+        <label className="flex min-h-11 cursor-pointer items-start gap-3 py-2 text-[15px]">
+          <input type="checkbox" name="confirm" value="on" required className="mt-0.5 size-6 shrink-0 accent-[var(--mer)]" />
           <span>{confirm}</span>
         </label>
       ) : null}

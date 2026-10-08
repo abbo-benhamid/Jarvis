@@ -76,7 +76,7 @@ export function AineForm({ defaults, launch = false }: { defaults?: AineFormDefa
         <FormField
           label="Commune"
           htmlFor="commune"
-          hint="Sans adresse exacte, Koudmen place le domicile au centre de la commune."
+          hint={minimal ? undefined : "Sans adresse exacte, Koudmen place le domicile au centre de la commune."}
           errors={fe?.commune}
           required
         >
@@ -105,7 +105,7 @@ export function AineForm({ defaults, launch = false }: { defaults?: AineFormDefa
         {editing && defaults?.address && defaults.locationApproximate ? (
           <Alert tone="attention">Cette adresse n&apos;a pas été trouvée exactement. Koudmen utilise une position approximative. Vérifiez le numéro et la rue.</Alert>
         ) : null}
-        <FormField label="Indication pour trouver la maison (facultatif)" htmlFor="addressHint" hint="Exemple : quartier, couleur du portail. Données d'exemple seulement." errors={fe?.addressHint}>
+        <FormField label="Indication pour trouver la maison (facultatif)" htmlFor="addressHint" hint={launch ? "Exemple : quartier, couleur du portail." : "Exemple : quartier, couleur du portail. Données d'exemple seulement."} errors={fe?.addressHint}>
           <Input {...fieldA11y("addressHint", fe?.addressHint, true)} defaultValue={defaults?.addressHint ?? ""} autoComplete="off" maxLength={160} />
         </FormField>
           </>
@@ -124,7 +124,7 @@ export function AineForm({ defaults, launch = false }: { defaults?: AineFormDefa
       {minimal ? null : <Card className="flex flex-col gap-4">
         <h2 className="font-display text-[22px] leading-[1.2] font-normal tracking-[-.015em] text-balance">2. De quoi a-t-il besoin{"\u202f"}?</h2>
         <Alert tone="info">N&apos;écrivez aucune information médicale. Koudmen ne demande pas de diagnostic ni de traitement.</Alert>
-        <Fieldset legend="Besoins (un ou plusieurs)" errors={fe?.needs}>
+        <Fieldset legend={launch && editing ? "Besoins (facultatif)" : "Besoins (un ou plusieurs)"} errors={fe?.needs}>
           <div className="grid gap-x-4 sm:grid-cols-2">
             {NEED_VALUES.map((n) => (
               <Checkbox key={n} id={`need-${n}`} name="needs" value={n} defaultChecked={defaults?.needs.includes(n)} label={NEED_LABELS[n]} />

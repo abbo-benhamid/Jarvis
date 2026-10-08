@@ -44,7 +44,7 @@ test("parcours complet : la famille demande, Koudmen propose, la famille choisit
   await page.goto("/inscription?role=FAMILLE");
   await page.getByLabel("Prénom").fill("Annick");
   await page.locator("#lastName").fill(`E2E-${id}`);
-  await page.getByLabel("Email").fill(familyEmail);
+  await page.getByLabel("Adresse e-mail").fill(familyEmail);
   await page.getByLabel("Mot de passe").fill(E2E_PASSWORD);
   await page.getByLabel("J'habite").selectOption("HEXAGONE");
   await page.getByLabel(/J'accepte les conditions/).check();
