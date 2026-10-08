@@ -141,6 +141,8 @@ test('arrêt automatique à moins de 150 m d’un domicile PRÉCIS (ARRETER envo
   const e = m.g.etat();
   expect(e.statut).toBe('inactif');
   expect(e.statut === 'inactif' && e.fin?.raison).toBe('arrivee');
+  // Revue UX m9 : texte neutre, avec le prénom de l'aîné.
+  expect(e.statut === 'inactif' && e.fin?.message).toBe('Vous êtes presque chez Léonie. Le partage s’arrête tout seul.');
   expect(m.suivisArretes()).toBe(1);
   expect(m.appels).toContain('ARRETER vis_1');
   expect(m.envoyes).toHaveLength(0);

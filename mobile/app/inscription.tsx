@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Linking, StyleSheet, View, type TextInput } from 'react-native';
+import { Linking, Platform, StyleSheet, View, type TextInput, type TextInputProps } from 'react-native';
 import { router } from 'expo-router';
 import { retourConnexion } from '@/session/navigation';
 import { api, messageErreur, WEB_URL } from '@/api';
@@ -148,7 +148,8 @@ export default function Inscription() {
           label="Date de naissance"
           placeholder="JJ/MM/AAAA"
           keyboardType="number-pad"
-          autoComplete="birthdate-full"
+          // Revue UX m11 : « bday » est la valeur HTML valide (web) ; « birthdate-full » sur iOS et Android.
+          autoComplete={(Platform.OS === 'web' ? 'bday' : 'birthdate-full') as TextInputProps['autoComplete']}
           maxLength={10}
           value={champs.dateNaissance}
           onChangeText={(t) => changer('dateNaissance', formaterSaisieDate(t))}

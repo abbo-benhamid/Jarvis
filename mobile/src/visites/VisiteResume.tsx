@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import type { Visite } from '@/api';
-import { jourCourt, libelleJour, plageHoraire } from '@/lib/format';
+import { jourCourt, libelleJour, numeroJour, plageHoraire } from '@/lib/format';
 import { fonts, radius, useTheme } from '@/theme';
 import { Avatar, Badge, Chip, IconButton, MapIllustration, PressableCard, ProofBadge, Text } from '@/ui';
 import { estProuvee, lieuAine, nbPreuves, nomAine } from './regles';
@@ -12,7 +12,7 @@ export function DateBox({ iso }: { iso: string }) {
     <View style={[styles.datebox, { backgroundColor: c.surface2 }]}>
       <Text style={{ fontFamily: fonts.sansBold, fontSize: 12, lineHeight: 14, letterSpacing: 1.2, color: c.hibiscus }}>{jourCourt(iso)}</Text>
       <Text style={{ fontFamily: fonts.sansSemiBold, fontSize: 24, lineHeight: 26, color: c.fg }} num>
-        {new Date(iso).getDate()}
+        {numeroJour(iso)}
       </Text>
     </View>
   );

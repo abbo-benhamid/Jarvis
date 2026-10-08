@@ -38,6 +38,8 @@ export function Screen({ children, dock, header, bottomInset = 0, testID }: Prop
         style={styles.scroll}
         contentContainerStyle={[styles.column, styles.content, { paddingBottom: dock ? reserve : reserve + insets.bottom }]}
         keyboardShouldPersistTaps="handled"
+        // Revue UX m11 (axe `scrollable-region-focusable`) : sur le web, la zone qui défile se prend au clavier.
+        tabIndex={Platform.OS === 'web' ? 0 : undefined}
         showsVerticalScrollIndicator={false}
       >
         {children}

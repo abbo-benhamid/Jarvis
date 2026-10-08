@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { demandeEvenementsSchema, demandeInscriptionSchema, reponseMoiSchema } from '../../contracts';
 import { lireControle } from '../../api/l1';
+import { heureTexte, horsFuseauMartinique, libelleJour, memeJour, plageAvecFuseau } from '../../lib/format';
 import { lienItineraire } from '../../lib/geo';
 import { emailAVerifier, etatCompte } from '../../session/compte';
 import { CHAMPS_VIDES, dateVersIso, formaterSaisieDate, validerInscription } from '../formulaire';
@@ -107,4 +108,16 @@ test('itinéraire : Apple Plans sur iOS, Google Maps ailleurs ; texte si domicil
   expect(lienItineraire('ios', { point, texte: '' })).toBe('https://maps.apple.com/?daddr=14.6085%2C-61.068&dirflg=d');
   expect(lienItineraire('android', { point, texte: '' })).toBe('https://www.google.com/maps/dir/?api=1&destination=14.6085%2C-61.068&travelmode=driving');
   expect(lienItineraire('web', { point: null, texte: 'Bourg, Rivière-Pilote, Martinique' })).toContain('destination=Bourg%2C%20Rivi%C3%A8re-Pilote%2C%20Martinique');
+});
+
+test('heures : heure de Martinique partout, format « 9 h 30 », heure locale ajoutée hors fuseau (D16, m7)', () => {
+  // 13 h 30 UTC = 9 h 30 à la Martinique (UTC−4, pas d'heure d'été).
+  expect(heureTexte('2026-10-08T13:30:00Z')).toBe('9 h 30');
+  expect(heureTexte('2026-10-08T14:00:00Z')).toBe('10 h');
+  // 2 h 30 UTC le 9 = 22 h 30 le 8 à la Martinique : même jour que 13 h UTC le 8.
+  expect(memeJour('2026-10-09T02:30:00Z', '2026-10-08T13:00:00Z')).toBe(true);
+  expect(libelleJour('2026-10-09T02:30:00Z', new Date('2026-10-08T13:00:00Z'))).toBe('Aujourd’hui');
+  const plage = plageAvecFuseau('2026-10-08T13:30:00Z', '2026-10-08T15:30:00Z');
+  expect(plage.startsWith('9 h 30 – 11 h 30, heure de Martinique')).toBe(true);
+  expect(plage.includes('chez vous')).toBe(horsFuseauMartinique());
 });

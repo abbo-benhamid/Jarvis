@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { api, messageErreur, type Visite } from '@/api';
-import { dateLongue, heureCourte, plageHoraire, pluriel } from '@/lib/format';
+import { dateLongue, heureTexte, plageHoraire, pluriel } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
 import { emailAVerifier } from '@/session/compte';
 import { useSession } from '@/session/SessionProvider';
@@ -98,12 +98,12 @@ export default function Visites() {
                 key={v.id}
                 onPress={() => ouvrir(v)}
                 accessibilityRole="button"
-                accessibilityLabel={`${heureCourte(v.debut)}, ${v.aine.prenom}, ${libelleStatut(v)}`}
+                accessibilityLabel={`À ${heureTexte(v.debut)}, ${v.aine.prenom}, ${libelleStatut(v)}`}
                 aria-current={now ? 'true' : undefined}
                 style={[styles.slot, { backgroundColor: now ? c.surface : c.surface2 }, now && { borderColor: c.mer, borderWidth: 1.5 }]}
               >
                 <Text style={{ fontFamily: fonts.sansSemiBold, fontSize: 16, lineHeight: 20, color: now ? c.mer : c.fg }} num>
-                  {heureCourte(v.debut)}
+                  à {heureTexte(v.debut)}
                 </Text>
                 <Text variant="small" tone="muted" numberOfLines={1} style={{ fontSize: 14 }}>
                   {v.aine.prenom} · {libelleStatut(v)}
