@@ -1,15 +1,29 @@
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
-import { mimeDepuisNom, type FichierChoisi } from './verifications';
+import { cacheDirectory, deleteAsync } from 'expo-file-system/legacy';
+import { copieEnCache, mimeDepuisNom, type FichierChoisi } from './verifications';
 
 /**
- * L2 : choix d'un justificatif. Modules compatibles Expo Go (`expo-document-picker`, `expo-image-picker`).
+ * L2 : choix d'un justificatif. Modules compatibles Expo Go (`expo-document-picker`, `expo-image-picker`,
+ * `expo-file-system`).
  *
  * - Photo : JPEG compressé (qualité 0,7). Sur iOS, la compression convertit aussi le HEIC en JPEG :
  *   le serveur accepte seulement PDF, JPEG et PNG. EXIF non demandé (pas de position dans le fichier).
  * - Fichier : PDF, JPEG ou PNG, copié dans le cache de l'app le temps de l'envoi.
- * - Rien n'est écrit ailleurs sur le téléphone ; l'app oublie le fichier après l'envoi.
+ * - L2b (revue m6) : la COPIE dans le cache de l'app est effacée (`oublierFichier`) après l'envoi, quand la
+ *   personne choisit un autre fichier, et quand l'écran se ferme. L'original (galerie, dossier) n'est jamais touché.
  */
+
+/** Efface la copie du justificatif dans le cache de l'app. Sans erreur visible (web, fichier déjà effacé). */
+export async function oublierFichier(f: Pick<FichierChoisi, 'uri'> | null | undefined): Promise<void> {
+  if (!f) return;
+  try {
+    if (!copieEnCache(f.uri, cacheDirectory)) return;
+    await deleteAsync(f.uri, { idempotent: true });
+  } catch {
+    // Web ou module absent : rien à effacer dans un cache natif.
+  }
+}
 export type SourceFichier = 'camera' | 'galerie' | 'fichier';
 
 export type ResultatChoix = { fichier: FichierChoisi } | { annule: true } | { erreur: string };

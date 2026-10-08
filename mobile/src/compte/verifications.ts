@@ -163,6 +163,16 @@ export function controlerFichier(f: Pick<FichierChoisi, 'type' | 'taille' | 'nom
   return null;
 }
 
+/**
+ * L2b (revue m6) : la copie du justificatif dans le cache de l'app est effacée après l'envoi.
+ * Seulement un fichier DANS le cache de l'app (jamais l'original de la galerie ou d'un dossier du téléphone).
+ */
+export function copieEnCache(uri: string, dossierCache: string | null | undefined): boolean {
+  if (!dossierCache || !uri.startsWith('file://') || !dossierCache.startsWith('file://')) return false;
+  const dossier = dossierCache.endsWith('/') ? dossierCache : `${dossierCache}/`;
+  return uri.startsWith(dossier) && uri.length > dossier.length && !uri.includes('/../') && !uri.includes('%2e%2e') && !uri.includes('%2E%2E');
+}
+
 export function mimeDepuisNom(nom: string): string | null {
   const ext = /\.([a-z0-9]+)$/i.exec(nom)?.[1]?.toLowerCase();
   const table: Record<string, string> = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png' };

@@ -27,7 +27,8 @@ export const MESSAGES: Record<CodeErreurApp, string> = {
   ACCORD_MANQUANT: 'L’accord de l’aîné n’est pas recueilli. Rien n’est enregistré pour cette visite.',
   // L2 (contrat serveur verifications.ts) : vérification de l'accompagnant.
   PREFIXE_NON_ACCEPTE: 'Koudmen accepte les numéros des Antilles, de la Guyane, de La Réunion, de Mayotte et de la France hexagonale.',
-  NUMERO_DEJA_UTILISE: 'Ce numéro sert déjà à un autre compte. Écrivez à l’équipe Koudmen.',
+  // L2b (revue m1) : message neutre (le serveur n'envoie plus ce code ; gardé pour un ancien serveur).
+  NUMERO_DEJA_UTILISE: 'Ce numéro ne peut pas être utilisé. Contactez l’équipe Koudmen.',
   CODE_FAUX: 'Ce code n’est pas le bon. Vérifiez le SMS, puis réessayez.',
   CODE_EXPIRE: 'Ce code a expiré. Demandez un nouveau code.',
   TROP_D_ESSAIS: 'Trop d’essais avec ce code. Demandez un nouveau code.',

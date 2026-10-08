@@ -5,6 +5,7 @@ import {
   appelPropose,
   codeComplet,
   controlerFichier,
+  copieEnCache,
   ecranItem,
   formaterSiret,
   formaterTelephone,
@@ -121,4 +122,17 @@ test('contrat serveur : dossier strict, sans image ni donnée en trop', () => {
   };
   expect(dossierVerificationSchema.safeParse(dossier).success).toBe(true);
   expect(dossierVerificationSchema.safeParse({ ...dossier, photo: 'data:image/jpeg;base64,AAAA' }).success).toBe(false);
+});
+
+test('L2b (revue m6) : seule la copie dans le cache de l’app est effacée après l’envoi', () => {
+  const cache = 'file:///data/user/0/fr.koudmen/cache/';
+  expect(copieEnCache(`${cache}DocumentPicker/abc.pdf`, cache)).toBe(true);
+  expect(copieEnCache(`${cache}ImagePicker/photo.jpg`, cache.slice(0, -1))).toBe(true);
+  // Jamais l'original (galerie, dossier, autre app), jamais une sortie du cache.
+  expect(copieEnCache('content://media/external/images/media/12', cache)).toBe(false);
+  expect(copieEnCache('file:///storage/emulated/0/DCIM/photo.jpg', cache)).toBe(false);
+  expect(copieEnCache(`${cache}../files/secret.db`, cache)).toBe(false);
+  expect(copieEnCache(`${cache}%2e%2e/files/secret.db`, cache)).toBe(false);
+  expect(copieEnCache(cache, cache)).toBe(false);
+  expect(copieEnCache(`${cache}a.pdf`, null)).toBe(false);
 });

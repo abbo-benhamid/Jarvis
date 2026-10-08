@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform, View } from 'react-native';
 import { api, messageErreur } from '@/api';
 import type { TypeDocument } from '@/contracts';
@@ -6,7 +6,7 @@ import { useTheme } from '@/theme';
 import { Button, Card, Icon, Text } from '@/ui';
 import { Alerte } from './BlocsVerification';
 import { ChoixCarte } from './ChoixCarte';
-import { choisirFichier, type SourceFichier } from './choixFichier';
+import { choisirFichier, oublierFichier, type SourceFichier } from './choixFichier';
 import { AIDE_DOCUMENT, controlerFichier, formaterTaille, LIBELLES_DOCUMENT, type FichierChoisi } from './verifications';
 
 /**
@@ -28,6 +28,12 @@ export function EnvoiDocument({
   const [fichier, setFichier] = useState<FichierChoisi | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
+  // L2b (revue m6) : la copie en cache est effacée quand l'écran se ferme (envoi abandonné).
+  const courant = useRef<FichierChoisi | null>(null);
+  useEffect(() => {
+    courant.current = fichier;
+  }, [fichier]);
+  useEffect(() => () => void oublierFichier(courant.current), []);
 
   const choisir = async (source: SourceFichier) => {
     setErreur(null);
@@ -37,10 +43,13 @@ export function EnvoiDocument({
       setErreur(r.erreur);
       return;
     }
+    // Un nouveau choix remplace l'ancien : l'ancienne copie en cache est effacée.
+    if (fichier && fichier.uri !== r.fichier.uri) void oublierFichier(fichier);
     const probleme = controlerFichier(r.fichier);
     if (probleme) {
       setErreur(probleme);
       setFichier(null);
+      void oublierFichier(r.fichier);
       return;
     }
     setFichier(r.fichier);
@@ -56,7 +65,8 @@ export function EnvoiDocument({
     setErreur(null);
     try {
       await api.envoyerDocument(type, fichier);
-      // L'app oublie le fichier : rien n'est gardé sur le téléphone après l'envoi.
+      // L'app oublie le fichier : la copie en cache est effacée (L2b, revue m6).
+      await oublierFichier(fichier);
       setFichier(null);
       await onEnvoye();
     } catch (e) {
