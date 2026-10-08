@@ -11,7 +11,6 @@ import type {
   ReponseRefus,
   ReponseVisite,
   ResultatEvenement,
-  ResultatEvenementL1,
   Visite,
 } from './types';
 
@@ -85,7 +84,7 @@ export interface KoudmenApi {
    * Lot M3 (les 5 actions ci-dessous) : l'événement passe par la file hors ligne.
    * Sans réseau : `ApiError('EN_ATTENTE')`, l'événement reste gardé et part au retour du réseau.
    */
-  checkIn(visiteId: string, preuve: PreuveArrivee): Promise<ResultatEvenementL1>;
+  checkIn(visiteId: string, preuve: PreuveArrivee): Promise<ResultatEvenement>;
   /** Check-out : aucune position. */
   checkOut(visiteId: string): Promise<ResultatEvenement>;
   enregistrerBrouillonKaye(visiteId: string, brouillon: BrouillonKaye): Promise<ResultatEvenement>;

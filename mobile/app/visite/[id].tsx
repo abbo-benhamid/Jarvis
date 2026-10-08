@@ -10,11 +10,11 @@ import {
   type PositionPonctuelle,
   type ReponseVisite,
   type ControleCheckIn,
-  type ResultatEvenementL1,
+  type ResultatEvenement,
 } from '@/api';
 import { heureTexte, libelleJour, NBSP, plageHoraire } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
-import { lireControle, PREFIXE_QR_SIGNE } from '@/contrats-l1';
+import { lireControle, PREFIXE_QR_SIGNE } from '@/api/l1';
 import { lireQrDomicile, natif, normaliserCode, type NumeroUrgence } from '@/native';
 import { retourAuxVisites } from '@/session/navigation';
 import { fonts, radius, useTheme } from '@/theme';
@@ -117,7 +117,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
   const [erreur, setErreur] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [accordPosition, setAccordPosition] = useState(false);
-  const [retour, setRetour] = useState<ResultatEvenementL1 | null>(null);
+  const [retour, setRetour] = useState<ResultatEvenement | null>(null);
   /** L1 : QR signé lu (`koudmen:domicile:s1:…`), en mémoire jusqu'à l'envoi. */
   const [qrSigne, setQrSigne] = useState<string | null>(null);
   /** L1 (L10) : résultat du contrôle du check-in (VALIDE, A_VERIFIER, REFUSE) et sa raison. */

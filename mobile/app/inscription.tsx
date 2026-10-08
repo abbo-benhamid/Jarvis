@@ -6,7 +6,7 @@ import { api, messageErreur, WEB_URL } from '@/api';
 import { ChoixCommune } from '@/compte/ChoixCommune';
 import { EnTeteRetour } from '@/compte/EnTete';
 import { CHAMPS_VIDES, formaterSaisieDate, ORDRE_CHAMPS, validerInscription, type ChampsInscription, type ErreursInscription } from '@/compte/formulaire';
-import { MOT_DE_PASSE_MIN } from '@/contrats-l1';
+import { MOT_DE_PASSE_MIN } from '@/contracts';
 import { useTheme } from '@/theme';
 import { Button, CaseACocher, Em, Field, Icon, Screen, Text } from '@/ui';
 

@@ -1,13 +1,12 @@
+import { demandeInscriptionSchema, type ControleCheckIn } from '@/contracts';
 import {
   ageEnAnnees,
   AGE_MIN_ACCOMPAGNANT,
-  demandeInscriptionSchema,
   DISTANCE_ARRIVEE_M,
   DUREE_MAX_TRAJET_MIN,
   PREFIXE_QR_SIGNE,
-  type ControleCheckIn,
   type DomicileTrajet,
-} from '@/contrats-l1';
+} from './l1';
 import { trouverCommune } from '@/lib/communes';
 import { distanceMetres } from '@/lib/geo';
 import type { KoudmenApi } from './client';
@@ -22,7 +21,6 @@ import {
   type Proposition,
   type ReponseVisite,
   type ResultatEvenement,
-  type ResultatEvenementL1,
   type Visite,
 } from './types';
 
@@ -242,6 +240,8 @@ export function creerApiSimulee(): KoudmenApi {
             prenom: ok.data.prenom,
             nom: ok.data.nom,
             email: ok.data.email,
+            demo: false,
+            bacASable: false,
             emailVerifie: false,
             profilValide: false,
             preinscription: false,
@@ -321,7 +321,7 @@ export function creerApiSimulee(): KoudmenApi {
       });
       // L6 : le check-in arrête le trajet. Aucune position n'est gardée.
       trajets.delete(visiteId);
-      const r: ResultatEvenementL1 = {
+      const r: ResultatEvenement = {
         ...resultat('CHECK_IN', nv),
         ...(controle ? { controle } : {}),
         preuves: {

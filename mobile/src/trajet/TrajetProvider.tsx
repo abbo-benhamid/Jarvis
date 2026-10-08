@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 import { api } from '@/api';
-import type { DomicileTrajet } from '@/contrats-l1';
+import type { DomicileTrajet } from '@/api/l1';
 import { natif } from '@/native';
 import { useSession } from '@/session/SessionProvider';
 import { donnerAccordTrajet, lireAccordTrajet, retirerAccordTrajet, type AccordTrajet } from './accord';

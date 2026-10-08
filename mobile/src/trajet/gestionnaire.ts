@@ -22,7 +22,7 @@ import {
   DISTANCE_ARRIVEE_M,
   DUREE_MAX_TRAJET_MIN,
   type DomicileTrajet,
-} from '../contrats-l1';
+} from '../api/l1';
 import { arrondir, distanceMetres } from '../lib/geo';
 import type { PositionTrajet } from '../api/client';
 import { ApiError, type EtatTrajetServeur } from '../api/types';

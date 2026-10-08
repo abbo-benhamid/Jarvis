@@ -8,7 +8,7 @@
  * pas de code du domicile, pas d'historique de Kayé, pas de donnée de santé.
  */
 import type { CodeErreur, MotifRefus } from '@/contracts';
-import type { DomicileTrajet as Domicile } from '@/contrats-l1';
+import type { DomicileTrajet as Domicile } from './l1';
 
 export type {
   BrouillonKaye,
@@ -23,15 +23,14 @@ export type {
   Visite,
 } from '@/contracts';
 export { SEUIL_PREUVE } from '@/contracts';
-// L1 : contrats PROVISOIRES (src/contrats-l1), en attendant les contrats serveur des agents A et B.
+// L1 (D13) : contrats serveur synchronisés. Seuls les ajouts propres à l'app viennent de `./l1`.
 export type {
   ControleCheckIn,
   DemandeInscription,
-  DomicileTrajet,
-  MoiL1 as Moi,
-  ResultatEvenementL1,
-  StatutControle,
-} from '@/contrats-l1';
+  ReponseMoi as Moi,
+  StatutPreuveCheckIn as StatutControle,
+} from '@/contracts';
+export type { DomicileTrajet } from './l1';
 
 /** Deux facteurs de preuve sur trois valident une visite. */
 export { SEUIL_PREUVE as PREUVES_REQUISES } from '@/contracts';
