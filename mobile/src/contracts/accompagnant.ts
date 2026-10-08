@@ -62,11 +62,15 @@ export type ResultatOrientation = z.infer<typeof resultatOrientationSchema>;
 
 // ─────────────── État de la vérification ───────────────
 
-/** Mêmes valeurs que `CaregiverValidation` du serveur. */
-export const validationProfilSchema = z.enum(["BROUILLON", "EN_ATTENTE", "VALIDE", "REFUSE", "SUSPENDU"]);
+/** Mêmes valeurs que `CaregiverValidation` du serveur. L2 : + A_COMPLETER (complément demandé), EXPIRE (élément arrivé à échéance). */
+export const validationProfilSchema = z.enum(["BROUILLON", "EN_ATTENTE", "A_COMPLETER", "VALIDE", "REFUSE", "SUSPENDU", "EXPIRE"]);
 
-/** Étapes affichées dans l'app, dans l'ordre. */
-export const codeEtapeSchema = z.enum(["ORIENTATION", "PROFIL", "PIECES", "DEMANDE", "APPEL_EQUIPE"]);
+/**
+ * Étapes affichées dans l'app, dans l'ordre.
+ * L2 : TELEPHONE, IDENTITE, ENTREPRISE, ADRESSE (faites dans l'app ou sur le site ; détail : GET /accompagnant/verifications).
+ * Une étape L2 absente de la liste ne concerne pas le statut (ex. ENTREPRISE pour un salarié CESU).
+ */
+export const codeEtapeSchema = z.enum(["ORIENTATION", "PROFIL", "TELEPHONE", "IDENTITE", "ENTREPRISE", "ADRESSE", "PIECES", "DEMANDE", "APPEL_EQUIPE"]);
 
 export const etapeSchema = z
   .object({

@@ -25,6 +25,17 @@ export const MESSAGES: Record<CodeErreurApp, string> = {
   // L1d (agent F1, contrat serveur D8/D9) : minimum pour la copie synchronisée des contrats.
   PREINSCRIPTION: 'Koudmen ouvre bientôt. Nous vous contactons dès l’ouverture.',
   ACCORD_MANQUANT: 'L’accord de l’aîné n’est pas recueilli. Rien n’est enregistré pour cette visite.',
+  // L2 (contrat serveur verifications.ts) : vérification de l'accompagnant.
+  PREFIXE_NON_ACCEPTE: 'Koudmen accepte les numéros des Antilles, de la Guyane, de La Réunion, de Mayotte et de la France hexagonale.',
+  NUMERO_DEJA_UTILISE: 'Ce numéro sert déjà à un autre compte. Écrivez à l’équipe Koudmen.',
+  CODE_FAUX: 'Ce code n’est pas le bon. Vérifiez le SMS, puis réessayez.',
+  CODE_EXPIRE: 'Ce code a expiré. Demandez un nouveau code.',
+  TROP_D_ESSAIS: 'Trop d’essais avec ce code. Demandez un nouveau code.',
+  DEJA_VALIDE: 'Cette étape est déjà faite.',
+  FICHIER_TROP_GROS: 'Ce fichier est trop gros (5 Mo au plus). Prenez une photo à la place.',
+  TYPE_NON_ACCEPTE: 'Ce type de fichier n’est pas accepté. Envoyez un PDF ou une photo (JPEG, PNG).',
+  ELEMENTS_MANQUANTS: 'Il manque encore une étape. Faites les étapes « À faire », puis réessayez.',
+  SERVICE_INDISPONIBLE: 'Ce service est fermé pour le moment. Réessayez plus tard, ou choisissez une visio avec l’équipe.',
   RESEAU: 'Pas de connexion au service. Vérifiez votre réseau, puis réessayez.',
   REPONSE_INVALIDE: 'L’app doit être mise à jour. Réessayez plus tard.',
   POSITION_INDISPONIBLE: 'La position n’est pas disponible. Utilisez le code du domicile.',

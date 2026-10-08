@@ -33,6 +33,27 @@ export const CODES_ERREUR = [
   "TROP_DE_REQUETES",
   /** 500 : erreur du serveur. Aucun détail technique. */
   "ERREUR_INTERNE",
+  // ─── L2 : vérification de l'accompagnant (verifications.ts) ───
+  /** 422 : numéro hors des préfixes acceptés (Antilles, Guyane, Réunion, Mayotte, Hexagone). */
+  "PREFIXE_NON_ACCEPTE",
+  /** 409 : ce numéro sert déjà à un autre compte accompagnant. */
+  "NUMERO_DEJA_UTILISE",
+  /** 422 : code à 6 chiffres faux. Le message dit combien d'essais restent. */
+  "CODE_FAUX",
+  /** 422 : code expiré (10 minutes). L'app propose un nouvel envoi. */
+  "CODE_EXPIRE",
+  /** 422 : 5 essais faux : le code est annulé. L'app propose un nouvel envoi. */
+  "TROP_D_ESSAIS",
+  /** 409 : élément déjà validé. */
+  "DEJA_VALIDE",
+  /** 413 : fichier de plus de 5 Mo. */
+  "FICHIER_TROP_GROS",
+  /** 415 : type de fichier refusé (PDF, JPEG ou PNG seulement, type réel contrôlé). */
+  "TYPE_NON_ACCEPTE",
+  /** 422 : la demande ne peut pas partir : le message liste les éléments qui manquent. */
+  "ELEMENTS_MANQUANTS",
+  /** 503 : service externe fermé ou plafond atteint (SMS, identité, documents). Repli : visio ou appel de l'équipe. */
+  "SERVICE_INDISPONIBLE",
 ] as const;
 
 export const codeErreurSchema = z.enum(CODES_ERREUR);
@@ -67,4 +88,14 @@ export const STATUT_HTTP: Record<CodeErreur, number> = {
   ACTION_IMPOSSIBLE: 422,
   TROP_DE_REQUETES: 429,
   ERREUR_INTERNE: 500,
+  PREFIXE_NON_ACCEPTE: 422,
+  NUMERO_DEJA_UTILISE: 409,
+  CODE_FAUX: 422,
+  CODE_EXPIRE: 422,
+  TROP_D_ESSAIS: 422,
+  DEJA_VALIDE: 409,
+  FICHIER_TROP_GROS: 413,
+  TYPE_NON_ACCEPTE: 415,
+  ELEMENTS_MANQUANTS: 422,
+  SERVICE_INDISPONIBLE: 503,
 };
