@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireRole } from "@/server/auth/guards";
 import { db } from "@/server/db";
 import { logAudit } from "@/server/audit";
+import { isLaunchMode } from "@/server/launch";
 import type { ActionResult } from "@/lib/action-result";
 import { PresenceError, regenerateHomeCard } from "./home-card";
 import { decideVisitReview, ReviewError } from "./review";
@@ -12,12 +13,17 @@ import { decideVisitReview, ReviewError } from "./review";
 const schema = z.object({ aineId: z.string().min(1).max(64), confirm: z.literal("oui") });
 const viewerSchema = z.object({ aineId: z.string().min(1).max(64), viewerId: z.string().max(64) });
 
+/** L1d (D11) : message affiché à la famille. L'aîné choisit ; le conseiller enregistre. */
+const TRIP_VIEWER_BY_ELDER = "C'est l'aîné qui choisit cette personne, pendant l'appel d'un conseiller Koudmen. Appelez l'équipe pour changer ce choix.";
+
 /**
- * L1-B (R4) : le payeur choisit la « personne désignée » qui voit le trajet en direct, en plus de lui-même.
- * Vide = personne d'autre. La personne doit être membre du cercle Lakou. Journalisé.
+ * L1-B (R4) : personne désignée qui voit le trajet en direct.
+ * L1d (D11) : en mode lancement, la famille ne choisit plus : l'aîné choisit pendant l'appel d'accord et le
+ * conseiller l'enregistre (`recordTripViewerChoiceAction`). En mode essai (données fictives), le payeur choisit encore.
  */
 export async function setTripViewerAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireRole("FAMILLE");
+  if (isLaunchMode()) return { ok: false, error: TRIP_VIEWER_BY_ELDER };
   const parsed = viewerSchema.safeParse({ aineId: formData.get("aineId"), viewerId: formData.get("viewerId") ?? "" });
   if (!parsed.success) return { ok: false, error: "Choisissez une personne." };
   const { aineId, viewerId } = parsed.data;
