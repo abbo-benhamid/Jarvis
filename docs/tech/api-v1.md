@@ -503,3 +503,39 @@ File opérateur « Accompagnants à appeler » (`server/operateur/files-lancemen
 | `POST /visites/:id/position` | 409 CONFLIT (plus 429) si le trajet a été effacé entre-temps (check-in, ARRETER, expiration) ; 403 INTERDIT si la mission, le profil ou l'accord ne permet plus le trajet | m3 |
 | `GET /visites`, `GET /visites/:id` | Visites masquées en préinscription et sans accord de l'aîné (404 pour `/:id`) | D9 |
 | `POST /auth/inscription` | E-mail connu d'un opérateur : même 201, aucun e-mail ; course (double appui) : 201, jamais 500 | D5, m2 |
+
+## 14. Lot L2 — vérification de l'accompagnant (téléphone, identité, entreprise, documents)
+
+> Contrat : `plateforme/src/contracts/v1/verifications.ts` (`.strict()`, copié dans l'app par `sync-contracts`).
+> Décision : [ADR 0009](adr/0009-verification-identite.md). Étude : [`L2-verification-identite.md`](L2-verification-identite.md) § 8.3.
+> Statut : **contrat publié** (premier commit du lot L2-I). Les routes suivent dans les commits suivants.
+
+### 14.1 Routes (jeton d'accès, rôle ACCOMPAGNANT)
+
+| Route | Corps | Réponse | Erreurs propres |
+|---|---|---|---|
+| `GET /api/v1/accompagnant/verifications` | — | 200 `DossierVerification` | — |
+| `POST /api/v1/accompagnant/verifications/telephone/code` | `{ telephone, canal: SMS \| APPEL }` | 202 `{ challengeId, canal, expireA, renvoiPossibleA, appelPossible }` | 422 PREFIXE_NON_ACCEPTE, 409 NUMERO_DEJA_UTILISE, 409 DEJA_VALIDE, 429, 503 SERVICE_INDISPONIBLE |
+| `POST /api/v1/accompagnant/verifications/telephone/confirmer` | `{ challengeId, code }` | 200 `{ etat: VALIDE, telephoneMasque }` | 422 CODE_FAUX, CODE_EXPIRE, TROP_D_ESSAIS |
+| `POST /api/v1/accompagnant/verifications/identite/session` | `{ plateforme: web \| app, consentementBiometrie: true }` | 201 `{ url, expireA, retour }` | 409 DEJA_VALIDE, 429 (3 sessions), 503 |
+| `POST /api/v1/accompagnant/verifications/identite/visio` | `{ creneau, raison }` | 201 `{ demandeLe, creneau }` | 409 DEJA_VALIDE |
+| `POST /api/v1/accompagnant/verifications/adresse` | `{ ligne, complement?, codePostal, commune }` | 200 `{ etat, justificatifRequis }` | 409 DEJA_VALIDE |
+| `POST /api/v1/accompagnant/verifications/entreprise` | `{ siret }` | 200 `{ etat, actif, nomConforme, adresseSiegeConforme, documentRequis, message }` | 422 ACTION_IMPOSSIBLE (SIRET faux, statut sans entreprise), 409 NUMERO_DEJA_UTILISE (SIRET d'un autre compte) |
+| `POST /api/v1/accompagnant/documents` | multipart : `type`, `fichier` | 201 `{ documentId, etatItem, conservation }` | 413 FICHIER_TROP_GROS, 415 TYPE_NON_ACCEPTE, 503 |
+| `POST /api/v1/accompagnant/verifications/soumettre` | `{}` | 200 `{ dossier: { etat } }` | 422 ELEMENTS_MANQUANTS (le message liste les éléments), 409 CONFLIT |
+| `POST /api/v1/accompagnant/verifications/recours` | `{ motifRecours }` | 201 `{ recoursId, etat: EN_ATTENTE }` | 422 ACTION_IMPOSSIBLE (pas de refus, délai de 30 jours passé, recours déjà ouvert) |
+
+### 14.2 Écarts avec l'étude § 8.3
+
+| Étude | Contrat | Raison |
+|---|---|---|
+| Erreurs `{ error: { code, message } }` | `{ erreur: { code, message } }` | Format unique de l'API v1 (§ 1) |
+| `422 ITEMS_MANQUANTS { items }` | `422 ELEMENTS_MANQUANTS`, liste dans `message` | Le format d'erreur n'a pas de champ en plus |
+| `EXPIRE` (code) | `CODE_EXPIRE` | `EXPIRE` est déjà un état d'élément |
+| `TROP_DE_DEMANDES`, `TROP_DE_TENTATIVES` | `TROP_DE_REQUETES` (429, existant) | Code existant de l'API |
+| Visio : `{ creneau }` → `{ rendezVous }` | `{ creneau, raison }` → `{ demandeLe, creneau }` | Pas d'agenda en ligne : l'équipe rappelle pour fixer l'heure |
+| Session d'identité : `{ plateforme }` | `+ consentementBiometrie: true` | Consentement explicite (art. 9.2.a), étude § 7.3 |
+| — | `POST /verifications/adresse` | L'adresse déclarée est nécessaire au contrôle du siège et du justificatif |
+| Plafond SMS : « envois en file » | 503 SERVICE_INDISPONIBLE + alerte opérateur | Pas de file d'envoi différé en V1.1 |
+| Routes opérateur `/api/v1/operateur/**` | Server Actions du site + `GET /operateur/documents/{id}/apercu` | L'opérateur travaille sur le web seulement (ADR 0008) |
+| `etatVerification.validation` (L1d) | + `A_COMPLETER`, `EXPIRE` ; `etapes` + `TELEPHONE`, `IDENTITE`, `ENTREPRISE`, `ADRESSE` | Branchement L2 sur `GET /accompagnant/verification` |
