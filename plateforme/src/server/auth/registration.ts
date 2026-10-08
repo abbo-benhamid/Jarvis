@@ -1,6 +1,7 @@
 import "server-only";
-import type { FamilyLocation, Role } from "@prisma/client";
+import { Prisma, type FamilyLocation, type Role } from "@prisma/client";
 import { db } from "@/server/db";
+import { hitRateLimit } from "@/server/rate-limit";
 import { appUrl } from "@/server/env";
 import { logAudit } from "@/server/audit";
 import { sendMail } from "@/server/mail";
@@ -89,20 +90,66 @@ export async function registerAccount(input: RegistrationInput, now: Date = new 
   const problem = registrationProblem(input, now);
   if (problem) return problem;
 
-  const existing = await db.user.findUnique({ where: { email: input.email }, select: { id: true, role: true, firstName: true, isDemo: true, sandboxId: true } });
+  const existing = await db.user.findUnique({ where: { email: input.email }, select: EXISTING_SELECT });
   if (existing) {
     // Même coût de calcul qu'une création (bcrypt), sans rien écrire.
     await verifyPasswordForUnknownAccount(input.password);
-    if (realAccount(existing)) {
-      const token = await issueAccountToken(existing.id, "MOT_DE_PASSE", now);
-      await sendMail(existingAccountEmail(input.email, existing.firstName, `${appUrl()}/connexion`, resetLink(token)));
-    }
-    await logAudit({ action: "auth.register_existing", entityType: "User", entityId: existing.id, metadata: { via: input.via } });
+    await notifyExistingAccount(input, existing, now);
     return { ok: true };
   }
 
   const passwordHash = await hashPassword(input.password);
-  const created = await db.$transaction(async (tx) => {
+  let created: { user: { id: string; role: Role; firstName: string }; token: string };
+  try {
+    created = await createAccount(input, passwordHash, now);
+  } catch (e) {
+    // Code m2 : deux envois simultanés avec le même e-mail (double appui). Le second suit la branche
+    // « e-mail connu » : même réponse 201, jamais de 500.
+    if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")) throw e;
+    const raced = await db.user.findUnique({ where: { email: input.email }, select: EXISTING_SELECT });
+    if (!raced) throw e;
+    await notifyExistingAccount(input, raced, now);
+    return { ok: true };
+  }
+  if (await mailQuotaAllows(input.email, now)) {
+    await sendMail(verificationEmail(input.email, created.user.firstName, verificationLink(created.token)));
+  }
+  return { ok: true };
+}
+
+const EXISTING_SELECT = { id: true, role: true, firstName: true, isDemo: true, sandboxId: true } as const;
+
+/**
+ * L1d (D6) : au plus 3 e-mails de compte par 24 h vers UNE adresse, tous chemins confondus (inscription,
+ * « compte existant », mot de passe oublié, renvoi du lien). Au-delà : rien ne part, la réponse ne change pas.
+ * L'e-mail « mot de passe changé » (alerte de sécurité, après un lien valable) n'est pas limité.
+ */
+async function mailQuotaAllows(email: string, now: Date): Promise<boolean> {
+  const r = await hitRateLimit("email:destinataire", email, now);
+  if (!r.allowed) await logAudit({ action: "auth.mail_quota_reached", entityType: "User", metadata: { limite: "3/24h" } });
+  return r.allowed;
+}
+
+/**
+ * Inscription avec un e-mail connu : e-mail « vous avez déjà un compte » avec un lien « nouveau mot de passe ».
+ * L1d (D5) : JAMAIS de lien ni d'e-mail pour un compte OPÉRATEUR (même réponse à l'appelant). Les limites
+ * « mot de passe oublié » (3/h par e-mail) et « e-mail visé » (3/24 h) s'appliquent aussi à ce chemin.
+ */
+async function notifyExistingAccount(input: RegistrationInput, existing: { id: string; role: Role; firstName: string; isDemo: boolean; sandboxId: string | null }, now: Date) {
+  let sent = false;
+  if (realAccount(existing) && existing.role !== "OPERATEUR") {
+    const perAccount = await hitRateLimit("mdp-oublie:compte", input.email, now);
+    if (perAccount.allowed && (await mailQuotaAllows(input.email, now))) {
+      const token = await issueAccountToken(existing.id, "MOT_DE_PASSE", now);
+      await sendMail(existingAccountEmail(input.email, existing.firstName, `${appUrl()}/connexion`, resetLink(token)));
+      sent = true;
+    }
+  }
+  await logAudit({ action: "auth.register_existing", entityType: "User", entityId: existing.id, metadata: { via: input.via, envoye: sent } });
+}
+
+async function createAccount(input: RegistrationInput, passwordHash: string, now: Date) {
+  return db.$transaction(async (tx) => {
     const user = await tx.user.create({
       data: {
         email: input.email,
@@ -127,8 +174,6 @@ export async function registerAccount(input: RegistrationInput, now: Date = new 
     );
     return { user, token };
   });
-  await sendMail(verificationEmail(input.email, created.user.firstName, verificationLink(created.token)));
-  return { ok: true };
 }
 
 /** L3 : confirme l'e-mail par le lien reçu. Retourne false si le lien est invalide, expiré ou déjà utilisé. */
@@ -149,6 +194,7 @@ export async function verifyEmailToken(token: string, now: Date = new Date()): P
 export async function resendVerification(userId: string, now: Date = new Date()): Promise<boolean> {
   const user = await db.user.findUnique({ where: { id: userId }, select: { id: true, role: true, email: true, firstName: true, emailVerifiedAt: true, isDemo: true, sandboxId: true } });
   if (!user || user.emailVerifiedAt || !realAccount(user)) return false;
+  if (!(await mailQuotaAllows(user.email, now))) return false;
   const token = await issueAccountToken(user.id, "VERIFICATION_EMAIL", now);
   await sendMail(verificationEmail(user.email, user.firstName, verificationLink(token)));
   await logAudit({ actor: { id: user.id, role: user.role }, action: "auth.email_verification_resent", entityType: "User", entityId: user.id });
@@ -161,7 +207,7 @@ export async function resendVerification(userId: string, now: Date = new Date())
  */
 export async function requestPasswordReset(email: string, now: Date = new Date()): Promise<void> {
   const user = await db.user.findUnique({ where: { email }, select: { id: true, role: true, firstName: true, isDemo: true, sandboxId: true } });
-  if (!user || user.role === "OPERATEUR" || !realAccount(user)) {
+  if (!user || user.role === "OPERATEUR" || !realAccount(user) || !(await mailQuotaAllows(email, now))) {
     await logAudit({ action: "auth.password_reset_requested", entityType: "User", entityId: null, metadata: { envoye: false } });
     return;
   }
@@ -185,8 +231,12 @@ export type ResetResult = { ok: true } | { ok: false; reason: "LIEN" | "MOT_DE_P
 export async function resetPassword(token: string, newPassword: string, now: Date = new Date()): Promise<ResetResult> {
   const peek = await peekAccountToken(token, "MOT_DE_PASSE", now);
   if (!peek.ok) return { ok: false, reason: "LIEN", message: "Ce lien ne marche plus. Demandez un nouveau lien." };
-  const target = await db.user.findUnique({ where: { id: peek.userId }, select: { email: true, firstName: true, lastName: true } });
-  if (!target) return { ok: false, reason: "LIEN", message: "Ce lien ne marche plus. Demandez un nouveau lien." };
+  const target = await db.user.findUnique({ where: { id: peek.userId }, select: { email: true, firstName: true, lastName: true, role: true } });
+  // L1d (D5) : un compte opérateur ne change JAMAIS de mot de passe par un lien reçu par e-mail.
+  if (!target || target.role === "OPERATEUR") {
+    if (target) await logAudit({ action: "auth.password_reset_refused", entityType: "User", entityId: peek.userId, metadata: { raison: "OPERATEUR" } });
+    return { ok: false, reason: "LIEN", message: "Ce lien ne marche plus. Demandez un nouveau lien." };
+  }
   const problem = passwordProblem(newPassword, target);
   if (problem) return { ok: false, reason: "MOT_DE_PASSE", message: problem };
   const passwordHash = await hashPassword(newPassword);
@@ -195,7 +245,7 @@ export async function resetPassword(token: string, newPassword: string, now: Dat
     const check = await consumeAccountToken(token, "MOT_DE_PASSE", now, tx);
     if (!check.ok) return null;
     const u = await tx.user.findUnique({ where: { id: check.userId }, select: { id: true, role: true, email: true, firstName: true, emailVerifiedAt: true } });
-    if (!u) return null;
+    if (!u || u.role === "OPERATEUR") return null;
     await tx.user.update({
       where: { id: u.id },
       data: {

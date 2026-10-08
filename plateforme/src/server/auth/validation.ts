@@ -1,4 +1,10 @@
 import { z } from "zod";
+import { NOM_PERSONNE_MAX, NOM_PERSONNE_REGEX } from "@/contracts/v1/inscription";
+
+/** L1d (D6) : prénom ou nom d'un compte. Mêmes règles que l'API v1 (pas d'URL, pas de chiffre, 40 caractères). */
+const NAME_RULE = "Lettres, espaces, tirets et apostrophes seulement.";
+export const personNameSchema = (label: string) =>
+  z.string().trim().min(1, `${label} obligatoire.`).max(NOM_PERSONNE_MAX, `${NOM_PERSONNE_MAX} caractères maximum.`).regex(NOM_PERSONNE_REGEX, NAME_RULE);
 
 export const emailSchema = z.string().trim().toLowerCase().email("Adresse email invalide.").max(200);
 
@@ -19,8 +25,8 @@ const optional = <T extends z.ZodTypeAny>(schema: T) => z.preprocess((v) => (typ
 export const registerSchema = z
   .object({
     role: z.enum(["FAMILLE", "ACCOMPAGNANT"], { message: "Choisissez un type de compte." }),
-    firstName: z.string().trim().min(1, "Prénom obligatoire.").max(80, "80 caractères maximum."),
-    lastName: z.string().trim().min(1, "Nom obligatoire.").max(80, "80 caractères maximum."),
+    firstName: personNameSchema("Prénom"),
+    lastName: personNameSchema("Nom"),
     email: emailSchema,
     password: z.string().min(10, "10 caractères minimum.").max(200, "200 caractères maximum."),
     phone: optional(z.string().trim().regex(/^\+?[0-9 .-]{6,20}$/, "Saisissez un numéro valide (exemple : +596 696 12 34 56).")),

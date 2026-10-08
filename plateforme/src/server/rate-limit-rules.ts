@@ -27,6 +27,11 @@ export const RATE_RULES = {
   "mdp-oublie:ip": { limit: 20, windowSeconds: 60 * 60 },
   /** L3 : renvoi du lien de vérification, par compte. */
   "verif-email:compte": { limit: 3, windowSeconds: 60 * 60 },
+  /**
+   * L1d (D6) : e-mails de compte envoyés à UNE adresse (vérification, « compte existant », mot de passe oublié,
+   * renvoi du lien), tous chemins confondus : 3 par 24 h. Au-delà, rien ne part (même réponse à l'appelant).
+   */
+  "email:destinataire": { limit: 3, windowSeconds: 24 * 60 * 60 },
   /** L3 : essais de jetons reçus par e-mail (lien de vérification, nouveau mot de passe), par IP. */
   "jeton-email:ip": { limit: 30, windowSeconds: 60 * 60 },
 } as const satisfies Record<string, { limit: number; windowSeconds: number }>;

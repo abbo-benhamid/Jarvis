@@ -137,6 +137,16 @@ describe("contrats v1 : inscription et mot de passe oublié (L1-A, R6)", () => {
     expect(demandeInscriptionSchema.safeParse({ ...ok, dateNaissance: "02/04/1990" }).success).toBe(false);
   });
 
+  it("D6 : prénom et nom filtrés (lettres, espaces, tirets, apostrophes ; 40 caractères ; pas d'URL)", () => {
+    for (const prenom of ["Marie-Josée", "Jean Pierre", "N'Dri", "Ève", "Hélène’s"]) {
+      expect(demandeInscriptionSchema.safeParse({ ...ok, prenom }).success).toBe(true);
+    }
+    for (const prenom of ["https://evil.example", "appelez le 0696", "a@b", "Rose:", "x".repeat(41), " ", "-Rose", "Rose/Lys"]) {
+      expect(demandeInscriptionSchema.safeParse({ ...ok, prenom }).success).toBe(false);
+    }
+    expect(demandeInscriptionSchema.safeParse({ ...ok, nom: "www.exemple.fr" }).success).toBe(false);
+  });
+
   it("réponses fixes (aucune fuite d'existence de compte)", () => {
     expect(reponseInscriptionSchema.safeParse({ etat: "VERIFICATION_EMAIL_ENVOYEE" }).success).toBe(true);
     expect(reponseInscriptionSchema.safeParse({ etat: "COMPTE_EXISTANT" }).success).toBe(false);

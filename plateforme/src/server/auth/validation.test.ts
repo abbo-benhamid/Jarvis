@@ -36,6 +36,12 @@ describe("registerSchema (L2, R6)", () => {
     const r = registerSchema.safeParse(famille);
     expect(r.success && r.data.email).toBe("line@example.test");
   });
+  it("D6 : refuse une URL, des chiffres ou plus de 40 caractères dans le prénom et le nom", () => {
+    expect(registerSchema.safeParse({ ...famille, firstName: "Votre accès est bloqué, appelez le 0696 00 00 00" }).success).toBe(false);
+    expect(registerSchema.safeParse({ ...famille, firstName: "http://piege.example" }).success).toBe(false);
+    expect(registerSchema.safeParse({ ...famille, lastName: "x".repeat(41) }).success).toBe(false);
+    expect(registerSchema.safeParse({ ...famille, firstName: "Marie-Josée", lastName: "D'Alembert" }).success).toBe(true);
+  });
   it("famille : exige le lieu de vie et la déclaration d'âge", () => {
     expect(registerSchema.safeParse({ ...famille, location: undefined }).success).toBe(false);
     expect(registerSchema.safeParse({ ...famille, adult: undefined }).success).toBe(false);

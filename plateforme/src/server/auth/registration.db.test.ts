@@ -143,6 +143,62 @@ describe.runIf(enabled)("inscription et liens par e-mail (base réelle)", async 
     expect(sent.map((m) => m.template)).toContain("MOT_DE_PASSE_CHANGE");
   });
 
+  it("D5 (code M4, sécu M4) : inscription avec l'e-mail d'un opérateur → aucun e-mail, aucun jeton ; resetPassword refuse l'opérateur", async () => {
+    const op = await db.user.create({
+      data: { email: email("operateur"), passwordHash: "x", role: "OPERATEUR", firstName: "Op", lastName: "Koudmen", emailVerifiedAt: new Date() },
+    });
+    const r = await reg.registerAccount({ ...base, role: "ACCOMPAGNANT", email: email("operateur") });
+    expect(r).toEqual({ ok: true });
+    expect(sent).toHaveLength(0);
+    expect(await db.accountToken.count({ where: { userId: op.id } })).toBe(0);
+    await reg.requestPasswordReset(email("operateur"));
+    expect(sent).toHaveLength(0);
+    // Un jeton créé par un autre chemin (ou ancien) ne change jamais le mot de passe d'un opérateur.
+    const t = await tokens.issueAccountToken(op.id, "MOT_DE_PASSE");
+    expect(await reg.resetPassword(t, "Nouveau-Lagon-2027")).toMatchObject({ ok: false, reason: "LIEN" });
+    expect((await db.user.findUniqueOrThrow({ where: { id: op.id } })).passwordHash).toBe("x");
+  });
+
+  it("D6 : 3 e-mails au plus par 24 h vers une adresse, tous chemins confondus", async () => {
+    await reg.registerAccount({ ...base, role: "FAMILLE", email: email("quota"), location: "HEXAGONE", commune: null, birthDate: null, firstName: "Quota" });
+    const u = await db.user.findUniqueOrThrow({ where: { email: email("quota") } });
+    expect(await reg.resendVerification(u.id)).toBe(true);
+    await reg.requestPasswordReset(email("quota"));
+    expect(sent).toHaveLength(3);
+    // 4e envoi : rien ne part, quel que soit le chemin.
+    expect(await reg.resendVerification(u.id)).toBe(false);
+    await reg.requestPasswordReset(email("quota"));
+    expect(await reg.registerAccount({ ...base, role: "FAMILLE", email: email("quota"), location: "HEXAGONE", commune: null, birthDate: null })).toEqual({ ok: true });
+    expect(sent).toHaveLength(3);
+    // Le lendemain, la fenêtre est rouverte.
+    expect(await reg.resendVerification(u.id, new Date(Date.now() + 24 * 3600_000 + 60_000))).toBe(true);
+    expect(sent).toHaveLength(4);
+  });
+
+  it("D5 : la branche « e-mail connu » applique la limite « mot de passe oublié » (3/h par e-mail)", async () => {
+    const { hitRateLimit } = await import("@/server/rate-limit");
+    const input = { ...base, role: "FAMILLE" as const, email: email("limite"), location: "HEXAGONE" as const, commune: null, birthDate: null };
+    const t0 = new Date(Date.now() + 3 * 24 * 3600_000);
+    await reg.registerAccount(input, t0);
+    sent.length = 0;
+    // Le lendemain (quota par adresse rouvert), 3 « mot de passe oublié » par le formulaire dans l'heure…
+    const t1 = new Date(t0.getTime() + 25 * 3600_000);
+    for (let i = 0; i < 3; i++) await hitRateLimit("mdp-oublie:compte", email("limite"), t1);
+    // … puis une inscription avec le même e-mail : la limite par compte s'applique, aucun lien ne part.
+    expect(await reg.registerAccount(input, t1)).toEqual({ ok: true });
+    expect(sent).toHaveLength(0);
+    // Une heure plus tard : le lien part de nouveau.
+    expect(await reg.registerAccount(input, new Date(t1.getTime() + 3601_000))).toEqual({ ok: true });
+    expect(sent.map((m) => m.template)).toEqual(["COMPTE_EXISTANT"]);
+  });
+
+  it("code m2 : deux inscriptions simultanées avec le même e-mail → deux réponses ok, un seul compte, pas de 500", async () => {
+    const input = { ...base, role: "FAMILLE" as const, email: email("double"), location: "HEXAGONE" as const, commune: null, birthDate: null };
+    const results = await Promise.all([reg.registerAccount(input), reg.registerAccount(input), reg.registerAccount(input)]);
+    expect(results).toEqual([{ ok: true }, { ok: true }, { ok: true }]);
+    expect(await db.user.count({ where: { email: email("double") } })).toBe(1);
+  });
+
   it("validation manuelle par l'opérateur : une fois, journalisée (J31)", async () => {
     await reg.registerAccount({ ...base, role: "FAMILLE", email: email("appel"), location: "HEXAGONE", commune: null, birthDate: null, firstName: "Appel" });
     const u = await db.user.findUniqueOrThrow({ where: { email: email("appel") } });
