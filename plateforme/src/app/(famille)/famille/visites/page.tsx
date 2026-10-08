@@ -16,6 +16,8 @@ import { FilterTabs } from "@/components/famille/filter-tabs";
 import { capitalize, dayLong, dayNumber, hourLabel, weekdayShort } from "@/components/famille/format";
 import { Term } from "@/components/ui/term";
 import { isLaunchMode } from "@/server/launch";
+import { PreinscriptionClosedPage } from "@/components/account/preinscription";
+import { realDataAllowed } from "@/server/launch";
 
 export const metadata: Metadata = { title: "Visites" };
 
@@ -27,6 +29,8 @@ type VisitRow = Awaited<ReturnType<typeof getFamilyVisits>>[number];
  */
 export default async function Page({ searchParams }: { searchParams: Promise<{ aine?: string }> }) {
   const user = await requireRole("FAMILLE");
+  // L1d (M3) : en préinscription, page fermée avec la raison. Pas de bouton « Ajouter un aîné ».
+  if (!realDataAllowed()) return <PreinscriptionClosedPage title="Les visites" />;
   const { aine: aineFilter } = await searchParams;
   const aines = await getFamilyAines(user.id);
   const selected = aines.find((a) => a.id === aineFilter)?.id;

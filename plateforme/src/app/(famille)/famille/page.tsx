@@ -16,6 +16,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { KayePreview } from "@/components/famille/kaye-card";
 import { aineStatus } from "@/components/famille/status";
 import { capitalize, dayLong, dayNumber, hourLabel, relativeDay, weekdayShort } from "@/components/famille/format";
+import { callbackContext } from "@/server/offre/rappel";
 
 export const metadata: Metadata = { title: "Accueil famille" };
 
@@ -70,7 +71,7 @@ export default async function Page() {
       ) : null}
 
       {memberships.length === 0 ? (
-        <EmptyHome />
+        <EmptyHome requestedOn={realDataAllowed() ? null : ((await callbackContext(user.id)).latest?.createdAt ?? null)} />
       ) : (
         <div className="flex flex-col gap-10">
           {memberships.map((m) => (
@@ -225,14 +226,14 @@ function AineBlock({ m, kaye, several, now, canFollow }: { m: Membership; kaye: 
 }
 
 const STEPS = [
-  { title: "Créez le profil de votre aîné", text: "Prénom, commune, besoins et son accord. 2 minutes." },
+  { title: "Créez le profil de votre aîné", text: "Prénom, commune et téléphone. 2 minutes. Un conseiller l'appelle pour son accord." },
   { title: "Invitez vos proches", text: "Frères, sœurs, cousins : tout le cercle Lakou lit les nouvelles." },
   { title: "Demandez un accompagnement", text: "Koudmen vous propose 1 à 3 profils près de chez lui. Vous choisissez." },
 ] as const;
 
-function EmptyHome() {
-  // R1 : en préinscription, aucune fiche aîné. On propose l'appel d'un conseiller.
-  if (!realDataAllowed()) return <PreinscriptionNotice />;
+function EmptyHome({ requestedOn }: { requestedOn: string | null }) {
+  // R1 : en préinscription, aucune fiche aîné. On propose l'appel d'un conseiller (L1d M4 : et on dit s'il est demandé).
+  if (!realDataAllowed()) return <PreinscriptionNotice requestedOn={requestedOn} />;
   return (
     <EmptyState
       titleAs="h2"

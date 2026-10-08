@@ -10,6 +10,8 @@ import { KayePreview } from "@/components/famille/kaye-card";
 import { FilterTabs } from "@/components/famille/filter-tabs";
 import { capitalize, dayLong } from "@/components/famille/format";
 import { Term } from "@/components/ui/term";
+import { PreinscriptionClosedPage } from "@/components/account/preinscription";
+import { realDataAllowed } from "@/server/launch";
 
 export const metadata: Metadata = { title: "Kayé" };
 
@@ -18,6 +20,8 @@ type Props = { searchParams: Promise<{ aine?: string; signal?: string }> };
 /** F8 : fil chronologique des Kayé (journal de visite) de tous les aînés du cercle. Chaque carte mène au détail. */
 export default async function Page({ searchParams }: Props) {
   const user = await requireRole("FAMILLE");
+  // L1d (M3) : en préinscription, page fermée avec la raison. Pas de bouton « Ajouter un aîné ».
+  if (!realDataAllowed()) return <PreinscriptionClosedPage title="Le Kayé" />;
   const sp = await searchParams;
   const aines = await getFamilyAines(user.id);
   const selected = aines.find((a) => a.id === sp.aine)?.id;
