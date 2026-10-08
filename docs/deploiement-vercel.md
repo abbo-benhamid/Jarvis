@@ -54,13 +54,15 @@ En production, le site démarre en **mode lancement** : pas de démo, pas de bac
 
 | Variable | Valeur | Obligatoire ? |
 |---|---|---|
-| `KOUDMEN_MODE` | Vide (= `lancement` en production). `essai` rouvre la démo et le bac à sable | Non |
+| `KOUDMEN_MODE` | Vide (= `lancement` en production) ou `lancement`. **`essai` est refusé en production** (page « Configuration incomplète », L1d D1) | Non |
+| `DEMO_MODE`, `KOUDMEN_OPERATEUR_CONFIRME` | `false` ou vide. **`true` est refusé en production** (L1d D1) | Non |
+| `QR_SIGNING_KEY`, `ADDRESS_ENC_KEY` | 32 octets aléatoires en base64, différents : `openssl rand -base64 32` (deux fois). Gardez une copie hors de Vercel (coffre) : sans `ADDRESS_ENC_KEY`, les adresses sont illisibles | **Oui si** `DONNEES_REELLES_AUTORISEES=true`, aussi en Preview et sur Clever Cloud (L1d D2). La clé de développement du dépôt et une clé trop régulière sont refusées |
 | `EDITEUR_NOM`, `EDITEUR_ADRESSE`, `EDITEUR_EMAIL`, `DIRECTEUR_PUBLICATION` | Identité de l'éditeur | **Oui** : sans elles, le site affiche « Configuration incomplète » |
 | `BREVO_API_KEY` | Clé API Brevo (transactionnel) | Non. Sans elle, aucun e-mail ne part : `/api/sante` l'indique, et tu valides les e-mails à la main (opérateur → **Comptes**), après un appel |
 | `MAIL_FROM` | `Koudmen <ne-pas-repondre@ton-domaine>` (domaine vérifié dans Brevo : SPF et DKIM) | Non |
 | `DONNEES_REELLES_AUTORISEES` | Vide ou `false` = **préinscription** (aucune fiche aîné réelle) | Non |
 | `HEBERGEUR_HDS`, `AIPD_DATE`, `DPO_CONTACT` | Hébergeur certifié HDS, date de l'AIPD (`AAAA-MM-JJ`), contact du DPO | **Oui si** `DONNEES_REELLES_AUTORISEES=true` (sinon le démarrage est refusé) |
-| `TESTER_INVITE_CODES`, `DEMO_MODE`, `TEST_END_DATE` | Inutiles en lancement (mode essai seulement) | Non |
+| `TESTER_INVITE_CODES`, `TEST_END_DATE` | Inutiles en lancement (mode essai seulement) | Non |
 
 ```mermaid
 stateDiagram-v2

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generateKeyPairSync } from "node:crypto";
-import { DEV_QR_SEED_HEX, parseQrSigningKey, presenceConfigProblems, resolveQrKey } from "./config";
+import { DEV_ADDRESS_KEY_HEX, DEV_QR_SEED_HEX, parseQrSigningKey, presenceConfigProblems, presenceKeysRequired, resolveAddressKey, resolveQrKey, weakKeyBytes } from "./config";
 import { homeCardQrContent, newHomeCardId, qrKeyPair, signHomeCardToken, tokenFromQr, verifyHomeCardToken } from "./qr-token";
 import { decryptAddress, encryptAddress } from "./address-crypto";
 import { presenceRefusal, realDataAllowedLocal } from "@/server/visits/launch-guards";
@@ -10,6 +10,8 @@ import { qrMatrix } from "@/lib/qr";
 const KEY_A = "jIFap7/9yWO0DJl/S2PvASG4xcd3hgd7q+0ccZQ+pow=";
 const KEY_B = "Irx0YGksVDcEh69UBRXldm7oy3x0BJoXwJNYVvDPfBk=";
 const PROD = { VERCEL_ENV: "production" };
+/** D2 : données réelles ouvertes (lancement + HDS, AIPD, DPO). */
+const REAL = { DONNEES_REELLES_AUTORISEES: "true", HEBERGEUR_HDS: "Clever Cloud HDS", AIPD_DATE: "2026-12-01", DPO_CONTACT: "dpo@koudmen.fr" };
 
 describe("clés L1-B (config-check)", () => {
   it("hors production stricte : aucune exigence, clé de développement", () => {
@@ -18,8 +20,28 @@ describe("clés L1-B (config-check)", () => {
     expect(k.kind === "seed" && Buffer.from(k.seed).toString("hex")).toBe(DEV_QR_SEED_HEX);
   });
 
-  it("production stricte : clés obligatoires, jamais d'exemple ni la clé de développement", () => {
-    expect(presenceConfigProblems(PROD).join(" ")).toMatch(/QR_SIGNING_KEY manquant.*ADDRESS_ENC_KEY manquant/);
+  it("D2 : préinscription en production stricte : clés pas exigées, mais contrôlées si présentes", () => {
+    expect(presenceConfigProblems(PROD)).toEqual([]);
+    expect(presenceConfigProblems({ ...PROD, QR_SIGNING_KEY: "abc" }).join(" ")).toContain("bonne forme");
+    expect(() => resolveQrKey(PROD)).toThrow();
+  });
+
+  it("D2 : NODE_ENV=production avec données réelles (Preview, Clever Cloud) : jamais la clé de développement", () => {
+    const env = { NODE_ENV: "production", ...REAL };
+    expect(presenceKeysRequired(env)).toBe(true);
+    expect(presenceKeysRequired({ NODE_ENV: "production" })).toBe(false);
+    expect(presenceKeysRequired({ NODE_ENV: "production", KOUDMEN_MODE: "essai", ...REAL })).toBe(false);
+    expect(() => resolveQrKey(env)).toThrow();
+    expect(() => resolveAddressKey(env)).toThrow();
+    const devAddress = Buffer.from(DEV_ADDRESS_KEY_HEX, "hex").toString("base64");
+    expect(() => resolveAddressKey({ ...env, ADDRESS_ENC_KEY: devAddress })).toThrow("clé de développement");
+    expect(() => resolveAddressKey({ ...env, ADDRESS_ENC_KEY: Buffer.alloc(32, 7).toString("base64") })).toThrow("trop faible");
+    expect(resolveAddressKey({ ...env, ADDRESS_ENC_KEY: KEY_B })).toHaveLength(32);
+    expect(weakKeyBytes(Buffer.from(KEY_A, "base64"))).toBe(false);
+  });
+
+  it("production stricte avec données réelles : clés obligatoires, jamais d'exemple ni la clé de développement", () => {
+    expect(presenceConfigProblems({ ...PROD, ...REAL }).join(" ")).toMatch(/QR_SIGNING_KEY manquant.*ADDRESS_ENC_KEY manquant/);
     expect(presenceConfigProblems({ ...PROD, QR_SIGNING_KEY: "remplacez-moi", ADDRESS_ENC_KEY: KEY_B }).join(" ")).toContain("valeur d'exemple");
     const dev = Buffer.from(DEV_QR_SEED_HEX, "hex").toString("base64");
     expect(presenceConfigProblems({ ...PROD, QR_SIGNING_KEY: dev, ADDRESS_ENC_KEY: KEY_B }).join(" ")).toContain("clé de développement");

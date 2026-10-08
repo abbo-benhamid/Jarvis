@@ -118,7 +118,9 @@ describe("L3 : e-mails et avertissements", () => {
   });
   it("signale le mode préinscription et le mode essai en production", () => {
     expect(configWarnings(launchEnv()).join(" ")).toContain("préinscription");
-    expect(configWarnings(prodEnv()).join(" ")).toContain("Mode essai en production");
+    expect(configWarnings({ NODE_ENV: "production", KOUDMEN_MODE: "essai" }).join(" ")).toContain("Mode essai sur un serveur de production");
+    // D1 : en production stricte, le mode essai n'est plus un avertissement mais un refus.
+    expect(configWarnings(prodEnv()).join(" ")).not.toContain("Mode essai");
   });
 });
 
@@ -131,8 +133,8 @@ describe("configuration de production (B1, B3)", () => {
   });
 
   it("accepte une configuration aléatoire", () => {
-    expect(productionConfigProblems(prodEnv())).toEqual([]);
-    expect(() => assertProductionConfig(prodEnv())).not.toThrow();
+    expect(productionConfigProblems(launchEnv())).toEqual([]);
+    expect(() => assertProductionConfig(launchEnv())).not.toThrow();
   });
 
   it("refuse les valeurs d'exemple de .env.example et de la CI", () => {
@@ -166,7 +168,39 @@ describe("configuration de production (B1, B3)", () => {
     expect(testerCodeProblem("T-------------")).not.toBeNull();
     expect(productionConfigProblems(prodEnv({ TESTER_INVITE_CODES: "" }))).toContain("TESTER_INVITE_CODES est vide.");
     expect(productionConfigProblems(prodEnv({ RATE_LIMIT_DISABLED: "true" }))).toContain("RATE_LIMIT_DISABLED est interdit en production.");
-    expect(productionConfigProblems(prodEnv({ TEST_END_DATE: "fin octobre" }))).toHaveLength(1);
+    expect(productionConfigProblems(launchEnv({ TEST_END_DATE: "fin octobre" }))).toHaveLength(1);
+  });
+
+  it("D1 : mode essai, KOUDMEN_OPERATEUR_CONFIRME et DEMO_MODE bloquent la production stricte", () => {
+    const essai = productionConfigProblems(prodEnv());
+    expect(essai.some((p) => p.startsWith("KOUDMEN_MODE=essai est interdit"))).toBe(true);
+    expect(() => assertProductionConfig(prodEnv())).toThrow("KOUDMEN_MODE=essai");
+    // Strict en local (KOUDMEN_STRICT_CONFIG) sans KOUDMEN_MODE ni NODE_ENV=production : mode essai, donc refusé.
+    expect(productionConfigProblems({ ...launchEnv({ VERCEL_ENV: undefined }), KOUDMEN_STRICT_CONFIG: "true" }).join(" ")).toContain("KOUDMEN_MODE=essai");
+    expect(productionConfigProblems(launchEnv({ KOUDMEN_OPERATEUR_CONFIRME: "true" })).join(" ")).toContain("KOUDMEN_OPERATEUR_CONFIRME=true est interdit");
+    expect(productionConfigProblems(launchEnv({ DEMO_MODE: "true" }))).toContain("DEMO_MODE=true est interdit en production : mettez DEMO_MODE=false.");
+    expect(productionConfigProblems(launchEnv({ DEMO_MODE: "false", KOUDMEN_OPERATEUR_CONFIRME: "false" }))).toEqual([]);
+    // Hors production stricte (e2e : next start en mode essai), rien n'est refusé.
+    expect(productionConfigProblems({ NODE_ENV: "production", KOUDMEN_MODE: "essai", DEMO_MODE: "true", KOUDMEN_OPERATEUR_CONFIRME: "true" })).toEqual([]);
+  });
+
+  it("D2 : clés de la présence exigées seulement avec les données réelles ouvertes", () => {
+    const real = { DONNEES_REELLES_AUTORISEES: "true", HEBERGEUR_HDS: "Clever Cloud HDS", AIPD_DATE: "2026-12-01", DPO_CONTACT: "dpo@koudmen.fr" };
+    const noKeys = { QR_SIGNING_KEY: undefined, ADDRESS_ENC_KEY: undefined };
+    // Préinscription en production stricte : pas de clé, pas de page 503.
+    expect(productionConfigProblems(launchEnv(noKeys))).toEqual([]);
+    // Données réelles ouvertes : clés obligatoires.
+    expect(productionConfigProblems(launchEnv({ ...noKeys, ...real })).join(" ")).toMatch(/QR_SIGNING_KEY manquant.*ADDRESS_ENC_KEY manquant/);
+    // Preview Vercel ou Clever Cloud (NODE_ENV=production, pas strict) avec les données réelles : mêmes exigences.
+    const preview = { NODE_ENV: "production", VERCEL_ENV: "preview", ...real };
+    expect(productionConfigProblems(preview).join(" ")).toMatch(/QR_SIGNING_KEY manquant.*ADDRESS_ENC_KEY manquant/);
+    expect(productionConfigProblems({ ...preview, ...PRESENCE_KEYS })).toEqual([]);
+    // Préinscription hors production stricte : rien.
+    expect(productionConfigProblems({ NODE_ENV: "production" })).toEqual([]);
+    // Clé faible (32 octets nuls) refusée.
+    const zeros = Buffer.alloc(32).toString("base64");
+    expect(productionConfigProblems({ ...preview, ...PRESENCE_KEYS, ADDRESS_ENC_KEY: zeros }).join(" ")).toContain("ADDRESS_ENC_KEY n'est pas assez aléatoire");
+    expect(productionConfigProblems(launchEnv({ QR_SIGNING_KEY: zeros })).join(" ")).toContain("QR_SIGNING_KEY n'est pas assez aléatoire");
   });
 
   it("PM1 : TRUST_PROXY inconnu refusé en production ; vercel, clevercloud et aucun acceptés", () => {

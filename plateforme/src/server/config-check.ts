@@ -100,7 +100,10 @@ export function configWarnings(env: Env = process.env): string[] {
   if (launch && realDataAllowedFrom(env)) {
     out.push("Données réelles des aînés ouvertes : gardez à jour le contrat HDS, l'AIPD et l'avis de l'avocat.");
   }
-  if (!launch && isStrictProduction(env)) out.push("Mode essai en production : la démo et le bac à sable sont ouverts.");
+  // D1 : en production stricte, le mode essai est un problème bloquant (productionConfigProblems), pas un avertissement.
+  if (!launch && !isStrictProduction(env) && env.NODE_ENV === "production") {
+    out.push("Mode essai sur un serveur de production : la démo et le bac à sable sont ouverts (données d'exemple seulement).");
+  }
   return out;
 }
 
@@ -174,8 +177,19 @@ export function testerCodeProblem(code: string): string | null {
  * Les messages ne contiennent jamais la valeur d'un secret.
  */
 export function productionConfigProblems(env: Env = process.env): string[] {
-  if (!isStrictProduction(env)) return [];
+  // D2 : hors production stricte, seules les clés de la présence sont contrôlées, et seulement quand
+  // NODE_ENV=production ouvre les données réelles (Preview Vercel, Clever Cloud HDS). Vide sinon (local, CI, e2e).
+  if (!isStrictProduction(env)) return presenceConfigProblems(env);
   const out: string[] = [];
+  // L1d (D1, sécurité S1) : la démo et le bac à sable n'existent jamais en production stricte.
+  // `KOUDMEN_MODE=essai` ouvrirait les données réelles sans HDS ni AIPD ; c'est un problème BLOQUANT (page 503).
+  if (siteMode(env) === "essai") {
+    out.push("KOUDMEN_MODE=essai est interdit en production : il ouvre la démo et les données sans HDS. Mettez KOUDMEN_MODE=lancement (ou laissez vide).");
+  }
+  if (env.KOUDMEN_OPERATEUR_CONFIRME?.trim().toLowerCase() === "true") {
+    out.push("KOUDMEN_OPERATEUR_CONFIRME=true est interdit en production : la confirmation simulée de l'aîné n'est pas une preuve (R7).");
+  }
+  if (env.DEMO_MODE?.trim().toLowerCase() === "true") out.push("DEMO_MODE=true est interdit en production : mettez DEMO_MODE=false.");
   for (const name of ["SESSION_SECRET", "CRON_SECRET"]) {
     const p = secretProblem(name, env[name]);
     if (p) out.push(p);
@@ -214,7 +228,8 @@ export function productionConfigProblems(env: Env = process.env): string[] {
     out.push("TRUST_PROXY doit valoir vercel, clevercloud ou aucun.");
   }
   if (env.TEST_END_DATE && !/^\d{4}-\d{2}-\d{2}$/.test(env.TEST_END_DATE.trim())) out.push("TEST_END_DATE n'est pas une date (format AAAA-MM-JJ).");
-  // L1-B (L9, R7) : clé de signature des cartes domicile et clé de chiffrement des adresses (src/server/presence/config.ts).
+  // L1-B (L9, R7), L1d (D2) : clé de signature des cartes domicile et clé de chiffrement des adresses
+  // (src/server/presence/config.ts) ; exigées seulement avec les données réelles ouvertes.
   out.push(...presenceConfigProblems(env));
   return out;
 }
