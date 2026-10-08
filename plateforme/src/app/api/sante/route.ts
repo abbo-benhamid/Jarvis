@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/server/db";
 import { brevoHealth } from "@/server/mail/brevo";
 import { configWarnings, productionConfigProblems, realDataAllowedFrom, siteMode } from "@/server/config-check";
+import { verificationServicesState } from "@/server/verifications/config";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,8 @@ export async function GET() {
       avertissements: warnings,
       baseDeDonnees: database,
       email: brevo ? { adaptateur: "brevo", repond: brevo.repond, cleAcceptee: brevo.cleAcceptee } : { adaptateur: "console", repond: false, cleAcceptee: false },
+      // L2 : adaptateur et ouverture de chaque service de vérification (aucune valeur secrète). Jamais de 503 pour ces clés.
+      verifications: verificationServicesState(),
       variables: {
         DATABASE_URL: Boolean(process.env.DATABASE_URL),
         DIRECT_URL: Boolean(process.env.DIRECT_URL || process.env.DATABASE_URL_UNPOOLED),
@@ -54,6 +57,14 @@ export async function GET() {
         APP_URL: Boolean(process.env.APP_URL),
         BREVO_API_KEY: Boolean(process.env.BREVO_API_KEY),
         MAIL_FROM: Boolean(process.env.MAIL_FROM),
+        BREVO_SMS_SENDER: Boolean(process.env.BREVO_SMS_SENDER),
+        VERIFF_API_KEY: Boolean(process.env.VERIFF_API_KEY),
+        VERIFF_SHARED_SECRET: Boolean(process.env.VERIFF_SHARED_SECRET),
+        STRIPE_SECRET_KEY: Boolean(process.env.STRIPE_SECRET_KEY),
+        STRIPE_IDENTITY_WEBHOOK_SECRET: Boolean(process.env.STRIPE_IDENTITY_WEBHOOK_SECRET),
+        TWILIO_ACCOUNT_SID: Boolean(process.env.TWILIO_ACCOUNT_SID),
+        INSEE_API_KEY: Boolean(process.env.INSEE_API_KEY),
+        DOCUMENT_ENC_KEY: Boolean(process.env.DOCUMENT_ENC_KEY),
       },
     },
     { status: ok ? 200 : 503, headers: { "cache-control": "no-store" } },

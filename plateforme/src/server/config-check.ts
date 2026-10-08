@@ -8,6 +8,7 @@
  */
 
 import { presenceConfigProblems } from "./presence/config";
+import { verificationConfigProblems, verificationConfigWarnings } from "./verifications/config";
 
 type Env = Record<string, string | undefined>;
 
@@ -104,6 +105,8 @@ export function configWarnings(env: Env = process.env): string[] {
   if (!launch && !isStrictProduction(env) && env.NODE_ENV === "production") {
     out.push("Mode essai sur un serveur de production : la démo et le bac à sable sont ouverts (données d'exemple seulement).");
   }
+  // L2 : services de vérification (SMS, appel, identité, registre, documents). Avertissement, jamais de 503.
+  out.push(...verificationConfigWarnings(env));
   return out;
 }
 
@@ -231,6 +234,8 @@ export function productionConfigProblems(env: Env = process.env): string[] {
   // L1-B (L9, R7), L1d (D2) : clé de signature des cartes domicile et clé de chiffrement des adresses
   // (src/server/presence/config.ts) ; exigées seulement avec les données réelles ouvertes.
   out.push(...presenceConfigProblems(env));
+  // L2 : seulement avec les données réelles ouvertes (jamais en préinscription) : clé de documents fausse.
+  out.push(...verificationConfigProblems(env));
   return out;
 }
 
