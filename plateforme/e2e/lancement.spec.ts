@@ -40,7 +40,7 @@ async function register(page: Page, role: "FAMILLE" | "ACCOMPAGNANT", email: str
   await page.goto("/inscription");
   await page.getByLabel(role === "FAMILLE" ? /^Famille/ : /^Accompagnant/).check();
   await page.locator("#firstName").fill("Rose");
-  await page.locator("#lastName").fill(`E2E-${uid()}`);
+  await page.locator("#lastName").fill(`Essai-${uid().replace(/[0-9]/g, (d) => "abcdefghij"[Number(d)]!)}`);
   await page.getByLabel("Adresse e-mail").fill(email);
   await page.locator("#phone").fill("+596 696 12 34 56");
   await page.getByLabel("Mot de passe").fill(PASSWORD);
@@ -101,7 +101,7 @@ test("L1 : /api/sante (mode, avertissement Brevo, prÃ©inscription) ; API v1 : dÃ
   expect((await demo.json()).erreur.code).toBe("ACCES_REFUSE");
 
   const email = `api-${uid()}@${E2E_DOMAIN}`;
-  const body = { role: "ACCOMPAGNANT", prenom: "Api", nom: `E2E-${uid()}`, email, telephone: "+596 696 00 00 01", motDePasse: PASSWORD, commune: "LAMENTIN", dateNaissance: "1995-01-15", accepteCgu: true };
+  const body = { role: "ACCOMPAGNANT", prenom: "Api", nom: `Essai-${uid().replace(/[0-9]/g, (d) => "abcdefghij"[Number(d)]!)}`, email, telephone: "+596 696 00 00 01", motDePasse: PASSWORD, commune: "LAMENTIN", dateNaissance: "1995-01-15", accepteCgu: true };
   const first = await request.post("/api/v1/auth/inscription", { data: body });
   const again = await request.post("/api/v1/auth/inscription", { data: { ...body, prenom: "Autre" } });
   expect(first.status()).toBe(201);

@@ -43,7 +43,7 @@ test("parcours complet : la famille demande, Koudmen propose, la famille choisit
   // L2 : inscription ouverte (plus de code testeur), puis connexion avec le mot de passe.
   await page.goto("/inscription?role=FAMILLE");
   await page.getByLabel("Prénom").fill("Annick");
-  await page.locator("#lastName").fill(`E2E-${id}`);
+  await page.locator("#lastName").fill(`Essai-${id.replace(/[0-9]/g, (d) => "abcdefghij"[Number(d)]!)}`);
   await page.getByLabel("Adresse e-mail").fill(familyEmail);
   await page.getByLabel("Mot de passe").fill(E2E_PASSWORD);
   await page.getByLabel("J'habite").selectOption("HEXAGONE");
