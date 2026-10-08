@@ -3,7 +3,11 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 import { requireRole } from "@/server/auth/guards";
 import { caregiverHistory, getCaregiver } from "@/server/operateur/queries";
-import { allowedDecisions, OPTIONAL_VERIFICATIONS, validationBlockers } from "@/server/operateur/rules";
+import { allowedDecisions, OPTIONAL_VERIFICATIONS } from "@/server/operateur/rules";
+import { blockersFor, REFUSAL_LABELS } from "@/server/verifications/review";
+import { isL2Type } from "@/server/verifications/rules";
+import { CancelRefusalForm } from "@/components/operateur/verification-review";
+import { LinkButton } from "@/components/ui/button";
 import { orientationSchema } from "@/server/rules/orientation";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -47,14 +51,15 @@ const ACTION_LABELS: Record<string, string> = {
 };
 
 export default async function Page({ params }: { params: Promise<{ caregiverId: string }> }) {
-  await requireRole("OPERATEUR");
   const { caregiverId } = await params;
   if (!z.string().cuid().safeParse(caregiverId).success) notFound();
+  // L2 : les éléments du statut (téléphone, identité, adresse, entreprise) sont créés avant la lecture.
+  const blockers = await blockersFor(caregiverId);
   const cg = await getCaregiver(caregiverId);
   if (!cg) notFound();
+  const me = await requireRole("OPERATEUR");
   const history = await caregiverHistory(cg.id, cg.verifications.map((v) => v.id));
   const decisions = allowedDecisions(cg.validation);
-  const blockers = validationBlockers(cg);
   const orientation = orientationSchema.safeParse(cg.orientationAnswers);
   const name = `${cg.user.firstName} ${cg.user.lastName}`;
 
@@ -66,6 +71,18 @@ export default async function Page({ params }: { params: Promise<{ caregiverId: 
       {cg.validationReason && (cg.validation === "REFUSE" || cg.validation === "SUSPENDU") ? (
         <Alert tone="attention" title="Motif de la dernière décision" className="mb-6">
           {cg.validationReason}
+        </Alert>
+      ) : null}
+
+      {cg.refusalProposedAt && cg.validation !== "REFUSE" ? (
+        <Alert tone="attention" title="Refus proposé : second avis attendu" className="mb-6">
+          <p>
+            Motif : {REFUSAL_LABELS[cg.refusalCode ?? ""] ?? "non noté"}.{" "}
+            {cg.refusalProposedById === me.id ? "Vous avez proposé ce refus : un autre opérateur doit le confirmer." : "Pour confirmer, choisissez « Refuser le profil » ci-dessous."}
+          </p>
+          <div className="mt-2">
+            <CancelRefusalForm caregiverId={cg.id} />
+          </div>
         </Alert>
       ) : null}
 
@@ -159,7 +176,13 @@ export default async function Page({ params }: { params: Promise<{ caregiverId: 
                     {v.reviewNote ? ` — « ${v.reviewNote} »` : ""}
                   </p>
                 ) : null}
-                {v.status !== "A_FOURNIR" ? <VerificationReviewForm verificationId={v.id} b3={v.type === "CASIER_B3"} /> : null}
+                {isL2Type(v.type) ? (
+                  <LinkButton href={`/operateur/verifications/${v.id}`} variant="quiet">
+                    Revoir {VERIFICATION_TYPE_LABELS[v.type].toLowerCase()}
+                  </LinkButton>
+                ) : v.status !== "A_FOURNIR" ? (
+                  <VerificationReviewForm verificationId={v.id} b3={v.type === "CASIER_B3"} />
+                ) : null}
               </Card>
             ))}
           </div>

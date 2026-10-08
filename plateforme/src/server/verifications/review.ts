@@ -16,7 +16,7 @@ import { notifyUser } from "@/server/outbox";
 import { documentPort } from "@/server/adapters/documents";
 import { identityPortFor } from "@/server/adapters/identity";
 import type { AccessReason } from "@/server/ports/verification";
-import { validationBlockers } from "@/server/operateur/rules";
+import { REFUSAL_CODE_LABELS, validationBlockers } from "@/server/operateur/rules";
 import { hmacHex } from "./crypto";
 import { formatPhone, normalizePhone } from "./phone";
 import {
@@ -44,17 +44,7 @@ export const ITEM_DECISIONS = ["VALIDE", "COMPLEMENT", "REFUSE", "CONFIRMER_REFU
 export type ItemDecision = (typeof ITEM_DECISIONS)[number];
 
 /** Libellés des motifs de refus (liste fermée, étude § 6.5). */
-export const REFUSAL_LABELS: Record<string, string> = {
-  IDENTITE_NON_CONFIRMEE: "Identité non confirmée",
-  DOCUMENT_FRAUDULEUX: "Document frauduleux",
-  MINEUR: "Personne mineure",
-  AGE_INSUFFISANT_NIVEAU: "Âge insuffisant pour le niveau demandé",
-  B3_NON_CONFORME: "Casier B3 non conforme",
-  ENTREPRISE_CESSEE: "Entreprise fermée",
-  STATUT_INCOMPATIBLE: "Statut incompatible",
-  DOSSIER_INCOMPLET_90J: "Dossier incomplet depuis 90 jours",
-  COMPTE_EN_DOUBLE: "Compte en double",
-};
+export const REFUSAL_LABELS: Record<string, string> = REFUSAL_CODE_LABELS;
 
 /** Codes de doute affichés à l'opérateur (décision du prestataire, registre). */
 export const DOUBT_LABELS: Record<string, string> = {

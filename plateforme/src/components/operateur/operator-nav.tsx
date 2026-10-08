@@ -12,6 +12,7 @@ import {
   PhoneCall,
   PhoneIncoming,
   ScrollText,
+  ShieldCheck,
   UserCheck,
   Users,
   type LucideIcon,
@@ -28,6 +29,8 @@ export const OPERATOR_NAV: readonly NavItem[] = [
   { href: "/operateur/aines", label: "Accord des aînés", icon: PhoneCall },
   { href: "/operateur/activations", label: "Demandes de rappel", icon: PhoneIncoming },
   { href: "/operateur/accompagnants", label: "Accompagnants", icon: Users },
+  // L2 : vérifications à revoir (justificatifs, doutes du prestataire, visios, refus à confirmer, recours).
+  { href: "/operateur/verifications", label: "Vérifications à revoir", icon: ShieldCheck },
   { href: "/operateur/demandes", label: "Demandes", icon: ClipboardList },
   { href: "/operateur/visites", label: "Visites", icon: MapPin },
   { href: "/operateur/notifications", label: "Notifications", icon: Inbox },

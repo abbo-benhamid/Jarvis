@@ -12,6 +12,7 @@ import { CAREGIVER_STATUS_LABELS, LEVEL_LABELS, proofCountLabel } from "@/lib/la
 import { communeLabel } from "@/lib/communes";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { launchQueueCounts } from "@/server/operateur/files-lancement";
+import { reviewQueueCount } from "@/server/verifications/review";
 import { isLaunchMode } from "@/server/launch";
 
 export const metadata: Metadata = { title: "Tableau de bord opérateur" };
@@ -23,10 +24,10 @@ const ROW_LINK = "inline-flex min-h-11 items-center font-semibold text-mer no-un
 
 export default async function Page() {
   await requireRole("OPERATEUR");
-  const [d, q] = await Promise.all([getDashboard(), launchQueueCounts()]);
+  const [d, q, toReview] = await Promise.all([getDashboard(), launchQueueCounts(), reviewQueueCount()]);
   const launch = isLaunchMode();
   const c = d.counts;
-  const total = q.accords + q.rappels + q.emails + q.accompagnants + c.caregiversPending + c.requestsOpen + c.visitsToCheck + c.alerts + c.feedbackNew;
+  const total = q.accords + q.rappels + q.emails + q.accompagnants + toReview + c.caregiversPending + c.requestsOpen + c.visitsToCheck + c.alerts + c.feedbackNew;
 
   return (
     <>
@@ -68,6 +69,7 @@ export default async function Page() {
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <StatTile label="Accompagnants à vérifier" count={c.caregiversPending} href="/operateur/accompagnants?validation=EN_ATTENTE" />
+          <StatTile label="Vérifications à revoir" count={toReview} href="/operateur/verifications" hint="Justificatifs, doutes, visios, refus à confirmer, recours." />
           <StatTile
             label="Demandes à matcher"
             count={c.requestsOpen}

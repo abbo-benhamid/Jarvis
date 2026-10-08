@@ -12,6 +12,7 @@ import { communeLabel } from "@/lib/communes";
 import { formatDateTime, fullName } from "@/lib/format";
 import { LinkButton } from "@/components/ui/button";
 import { AccordForm } from "./accord-form";
+import { TripViewerChoiceForm } from "./trip-viewer-choice-form";
 
 export const metadata: Metadata = { title: "Accord des aînés" };
 export const dynamic = "force-dynamic";
@@ -68,9 +69,22 @@ export default async function Page() {
                 ) : null}
                 {/* m14 : lien vers la carte domicile après un accord. */}
                 {a.accordEtat === "ACCORD_RECUEILLI" ? (
-                  <LinkButton href={`/operateur/aines/${a.id}/carte-domicile`} variant="quiet">
-                    Carte domicile de {a.firstName}
-                  </LinkButton>
+                  <>
+                    <LinkButton href={`/operateur/aines/${a.id}/carte-domicile`} variant="quiet">
+                      Carte domicile de {a.firstName}
+                    </LinkButton>
+                    <p className="text-[15px]">
+                      Personne désignée pour le trajet :{" "}
+                      <strong>{a.members.find((m) => m.userId === a.tripViewerId) ? fullName(a.members.find((m) => m.userId === a.tripViewerId)!.user) : "l'employeur"}</strong>
+                      {a.tripViewerChosenAt ? ` (choix du ${formatDateTime(a.tripViewerChosenAt)})` : ""}.
+                    </p>
+                    <TripViewerChoiceForm
+                      aineId={a.id}
+                      firstName={a.firstName}
+                      currentId={a.tripViewerId}
+                      members={a.members.map((m) => ({ userId: m.userId, isPayer: m.isPayer, label: `${fullName(m.user)} (${m.relation})` }))}
+                    />
+                  </>
                 ) : null}
                 {a.accordEtat === "ACCORD_REFUSE" || a.accordEtat === "ACCORD_RETIRE" ? null : (
                   <AccordForm

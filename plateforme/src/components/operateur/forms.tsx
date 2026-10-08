@@ -13,11 +13,12 @@ import {
   DECISION_LABELS,
   decisionNeedsReason,
   REASON_MIN,
+  REFUSAL_CODE_LABELS,
   type CaregiverDecision,
 } from "@/server/operateur/rules";
 import { initialActionState } from "@/lib/action-result";
 import { FormField, Fieldset, fieldA11y } from "@/components/ui/form-field";
-import { Radio, Textarea } from "@/components/ui/input";
+import { Radio, Select, Textarea } from "@/components/ui/input";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { FormMessage } from "@/components/ui/form-message";
 
@@ -45,6 +46,18 @@ export function DecisionForm({ caregiverId, decisions }: { caregiverId: string; 
           />
         ))}
       </Fieldset>
+      {choice === "REFUSER" ? (
+        <FormField label="Motif du refus (liste fermée)" htmlFor="motifCode" hint="Un refus exige deux opérateurs : le premier propose, un autre confirme." errors={fe?.motifCode} required>
+          <Select {...fieldA11y("motifCode", fe?.motifCode, true)} defaultValue="">
+            <option value="">Choisissez</option>
+            {Object.entries(REFUSAL_CODE_LABELS).map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+          </Select>
+        </FormField>
+      ) : null}
       <FormField
         label={needsReason ? "Motif (obligatoire)" : "Motif"}
         htmlFor="reason"

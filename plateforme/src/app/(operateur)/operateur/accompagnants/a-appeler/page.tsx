@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireRole } from "@/server/auth/guards";
-import { listCaregiversToCall, CAREGIVER_STALE_HOURS } from "@/server/operateur/files-lancement";
+import { CALL_REASON_LABELS, listCaregiversToCall, CAREGIVER_STALE_HOURS } from "@/server/operateur/files-lancement";
 import { logAudit } from "@/server/audit";
 import { ageLabel } from "@/server/operateur/rules";
 import { PageHeader } from "@/components/ui/page-header";
@@ -28,7 +28,7 @@ export default async function Page() {
       <PageHeader
         eyebrow="Accompagnants"
         title="Accompagnants à appeler"
-        description={`Appelez chaque personne. Vérification demandée : faites l'entretien. Profil incomplet depuis plus de ${CAREGIVER_STALE_HOURS} h : aidez-la à finir son profil.`}
+        description={`Appelez chaque personne. Vérification demandée : faites l'entretien. Orientation faite : aidez-la à finir son profil. Inscrite depuis plus de ${CAREGIVER_STALE_HOURS} h sans orientation : expliquez la suite.`}
       />
       {rows.length === 0 ? (
         <EmptyState title="Personne à appeler." />
@@ -48,12 +48,10 @@ export default async function Page() {
               </span>,
               <span key="s" className="flex flex-col gap-1">
                 <ValidationBadge status={c.validation} />
+                <span className="text-[15px] font-semibold">{CALL_REASON_LABELS[c.raison]}</span>
                 <span className="text-sm text-muted">
-                  {c.validation === "EN_ATTENTE"
-                    ? `Vérification demandée. ${declared} pièce(s) déclarée(s).`
-                    : c.status
-                      ? `${CAREGIVER_STATUS_LABELS[c.status]}. Profil incomplet.`
-                      : "Orientation pas encore faite."}
+                  {c.status ? `${CAREGIVER_STATUS_LABELS[c.status]}. ` : ""}
+                  {c.validation === "EN_ATTENTE" ? `${declared} pièce(s) déclarée(s) ou vérifiée(s).` : null}
                 </span>
               </span>,
               <Link key="a" href={`/operateur/accompagnants/${c.id}`} className="inline-flex min-h-11 items-center font-semibold text-mer underline underline-offset-4">

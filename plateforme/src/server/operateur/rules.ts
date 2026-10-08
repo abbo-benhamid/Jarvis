@@ -81,6 +81,18 @@ export const REFUSAL_CODES = [
   "COMPTE_EN_DOUBLE",
 ] as const;
 
+export const REFUSAL_CODE_LABELS: Record<(typeof REFUSAL_CODES)[number], string> = {
+  IDENTITE_NON_CONFIRMEE: "Identité non confirmée",
+  DOCUMENT_FRAUDULEUX: "Document frauduleux",
+  MINEUR: "Personne mineure",
+  AGE_INSUFFISANT_NIVEAU: "Âge insuffisant pour le niveau demandé",
+  B3_NON_CONFORME: "Casier B3 non conforme",
+  ENTREPRISE_CESSEE: "Entreprise fermée",
+  STATUT_INCOMPATIBLE: "Statut incompatible",
+  DOSSIER_INCOMPLET_90J: "Dossier incomplet depuis 90 jours",
+  COMPTE_EN_DOUBLE: "Compte en double",
+};
+
 export const decisionSchema = z
   .object({
     caregiverId: z.string().cuid(),
