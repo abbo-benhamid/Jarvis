@@ -27,6 +27,8 @@ const VALIDATION_TONE: Record<CaregiverValidation, BadgeTone> = {
   VALIDE: "feuille",
   REFUSE: "hibiscus",
   SUSPENDU: "hibiscus",
+  A_COMPLETER: "soleil",
+  EXPIRE: "neutre",
 };
 
 export function ValidationBadge({ status }: { status: CaregiverValidation }) {

@@ -21,6 +21,9 @@ const TONE: Record<VerificationStatus, BadgeTone> = {
   DECLARE: "mer",
   VALIDE: "feuille",
   REFUSE: "hibiscus",
+  EN_COURS: "mer",
+  A_REVOIR: "mer",
+  EXPIRE: "soleil",
 };
 
 const EXAMPLES: Record<VerificationType, string> = {
@@ -31,6 +34,9 @@ const EXAMPLES: Record<VerificationType, string> = {
   STATUT_PRO: "Exemple : numéro d'entreprise actif, déclaré pour les services à la personne.",
   PSC1: "Exemple : formation aux premiers secours suivie en 2024.",
   DIPLOME: "Exemple : diplôme d'accompagnant éducatif et social obtenu en 2019.",
+  TELEPHONE: "",
+  ADRESSE: "",
+  ENTREPRISE: "",
 };
 
 export type VerificationRowData = {

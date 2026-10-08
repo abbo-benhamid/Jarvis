@@ -88,6 +88,8 @@ export const VALIDATION_LABELS: Record<CaregiverValidation, string> = {
   VALIDE: "Validé (vérifications déclarées)",
   REFUSE: "Refusé",
   SUSPENDU: "Suspendu",
+  A_COMPLETER: "Complément demandé",
+  EXPIRE: "Une vérification a expiré",
 };
 
 export const VERIFICATION_TYPE_LABELS: Record<VerificationType, string> = {
@@ -98,13 +100,19 @@ export const VERIFICATION_TYPE_LABELS: Record<VerificationType, string> = {
   STATUT_PRO: "Preuve de votre statut (numéro d'entreprise ou service d'aide)",
   PSC1: "Formation aux premiers secours",
   DIPLOME: "Diplôme d'aide à la personne",
+  TELEPHONE: "Numéro de téléphone",
+  ADRESSE: "Adresse",
+  ENTREPRISE: "Entreprise (SIRET)",
 };
 
 export const VERIFICATION_STATUS_LABELS: Record<VerificationStatus, string> = {
   A_FOURNIR: "À fournir",
+  EN_COURS: "En cours",
   DECLARE: "Déclaré",
+  A_REVOIR: "Relu par l'équipe",
   VALIDE: "Validé",
   REFUSE: "Refusé",
+  EXPIRE: "Expiré",
 };
 
 export const SLOT_LABELS: Record<TimeSlot, string> = {

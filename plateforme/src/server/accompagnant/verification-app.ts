@@ -20,7 +20,7 @@ export function toResultatOrientation(r: OrientationResult): ResultatOrientation
     statut: r.status,
     explication: r.explanation.slice(0, 600),
     avertissements: r.warnings.slice(0, 10).map((w) => w.slice(0, 600)),
-    pieces: r.requiredVerifications.slice(0, 10),
+    pieces: r.requiredVerifications.filter((t): t is ResultatOrientation["pieces"][number] => t !== "TELEPHONE" && t !== "ADRESSE" && t !== "ENTREPRISE").slice(0, 10),
     niveaux: [...r.allowedLevels],
   };
 }
