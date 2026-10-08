@@ -34,3 +34,11 @@
 | P13 | UX M2 (point 3) | MINEUR | Invite « Scénario terminé » et questions rapides au milieu du contenu | Les déplacer dans « Détails » ou en fin de page |
 | P14 | X3 | MINEUR | Code de démo commun web + app | Seed web : Léonie = `LKW7Q3`. L'app (mode simulé) utilise `KDM482` : à aligner côté mobile |
 | P15 | Juridique | [À VÉRIFIER] | Phrase « employeur » de la page Demandes, mentions Expo de `/confidentialite` | Relecture avocat / DPO |
+
+## Ajouts L1 (arbitrage `L1-arbitrage-revues.md`)
+
+| # | Origine | Gravité | Sujet | Proposition |
+|---|---|---|---|---|
+| P1 bis | Sécu L1 M3 | BLOQUANT données réelles | QR rejouable avec une position fabriquée | Appel « tapez 1 » de l'aîné (Twilio) obligatoire pour `VALIDEE` |
+| P16 | Sécu L1 mineurs | MINEUR | `/api/sante` trop bavard, jetons d'e-mail dans l'URL, preuve serveur de l'accord trajet, rayon de départ fixe, tuiles appelées depuis le navigateur, rotation des clés | Voir `L1-securite.md` |
+| P17 | Juridique L1 | [À VÉRIFIER AVEC UN AVOCAT] | CGU, confidentialité, conditions accompagnants, mention crédit d'impôt | Relecture avocat |
