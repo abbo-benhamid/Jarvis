@@ -32,15 +32,18 @@ export async function recordAccordAction(_prev: ActionResult, formData: FormData
   if (!parsed.success) return fail("Vérifiez les champs en rouge.", parsed.error.flatten().fieldErrors);
   const r = await recordElderAccord(user, parsed.data);
   revalidatePath("/operateur/aines");
+  revalidatePath("/operateur");
   if (!r.ok) return fail(r.error);
-  const message =
-    parsed.data.resultat === "RAPPELER"
-      ? "Appel enregistré. L'accord reste en attente : rappelez l'aîné plus tard."
-      : parsed.data.resultat === "ACCORD"
-        ? "Accord de l'aîné enregistré."
-        : "Réponse enregistrée. Missions suspendues, visites à venir annulées, carte domicile révoquée.";
-  return { ok: true, message };
+  return { ok: true, message: ACCORD_MESSAGES[parsed.data.resultat] };
 }
+
+/** L1d (D14, textes de F2) : message après l'enregistrement de la réponse de l'aîné. */
+const ACCORD_MESSAGES = {
+  ACCORD: "Accord enregistré. La famille voit « Accord donné ».",
+  REFUS: "Refus enregistré. Aucune visite n'est organisée. La fiche est effacée cette nuit.",
+  RAPPELER: "Rappel noté. Rappelez la personne plus tard. La fiche reste « en attente de l'appel ».",
+  RETRAIT: "Retrait de l'accord enregistré. Missions suspendues, visites à venir annulées, carte domicile révoquée.",
+} as const;
 
 /** L1d (D11) : l'aîné change sa personne désignée lors d'un appel ; le conseiller l'enregistre. */
 export async function recordTripViewerChoiceAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {

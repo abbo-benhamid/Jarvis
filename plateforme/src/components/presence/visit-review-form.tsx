@@ -24,7 +24,10 @@ export function VisitReviewForm({
   caregiver,
   valid,
   reportedOn = null,
+  contestUntil = null,
 }: {
+  /** L1d (D4, F1) : « Présence probable » : date limite de contestation (48 h), sinon null (visite « À vérifier »). */
+  contestUntil?: string | null;
   visitId: string;
   firstName: string;
   caregiver: string;
@@ -54,10 +57,17 @@ export function VisitReviewForm({
     <form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-md bg-soleil-soft p-3.5" aria-label={`Vérifier la visite chez ${firstName}`}>
       <FormMessage state={state} />
       <input type="hidden" name="visitId" value={visitId} />
-      <p className="text-[15px] leading-[1.45]">
-        <strong>À vérifier.</strong> {proofCountLabel(valid)}. Il en faut 2. Vous êtes l&apos;employeur : la visite de {caregiver} a-t-elle eu lieu chez{" "}
-        {firstName} ?
-      </p>
+      {contestUntil ? (
+        <p className="text-[15px] leading-[1.45]">
+          <strong>Présence probable.</strong> Carte du domicile et position reçues ; {firstName} n&apos;a pas encore confirmé. Vous êtes l&apos;employeur : la
+          visite de {caregiver} a-t-elle eu lieu ? Un problème ? Signalez-le avant le {contestUntil}.
+        </p>
+      ) : (
+        <p className="text-[15px] leading-[1.45]">
+          <strong>À vérifier.</strong> {proofCountLabel(valid)}. Il en faut 2. Vous êtes l&apos;employeur : la visite de {caregiver} a-t-elle eu lieu chez{" "}
+          {firstName} ?
+        </p>
+      )}
       {choice ? (
         <div className="flex flex-col gap-2" role="group" aria-label="Confirmer votre réponse">
           <p className="text-[15px] font-semibold">

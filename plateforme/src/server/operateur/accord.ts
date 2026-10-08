@@ -30,6 +30,9 @@ export const SITUATION_LABELS: Record<(typeof SITUATIONS)[number], string> = {
   MANDAT_PROTECTION_FUTURE: "Mandat de protection future",
 };
 
+/** D11 : valeur du champ « personne désignée » quand l'aîné garde le défaut (l'employeur seul). */
+export const EMPLOYEUR = "EMPLOYEUR";
+
 /** D14 : réponses de l'appel d'accord (aucune n'est cochée par défaut dans le formulaire). */
 export const ACCORD_RESULTATS = ["ACCORD", "REFUS", "RAPPELER", "RETRAIT"] as const;
 
@@ -40,7 +43,7 @@ const optionalEnum = <T extends readonly [string, ...string[]]>(values: T) => z.
 export const accordSchema = z
   .object({
     aineId: z.string().cuid(),
-    resultat: z.enum(ACCORD_RESULTATS, { message: "Choisissez la réponse." }),
+    resultat: z.enum(ACCORD_RESULTATS, { message: "Choisissez la réponse de l'aîné." }),
     appelLe: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "Indiquez la date et l'heure de l'appel."),
     qui: optionalEnum(["AINE", "REPRESENTANT"] as const),
     nomRepresentant: optionalText(120),
@@ -52,7 +55,7 @@ export const accordSchema = z
      * D11 : personne désignée CHOISIE PAR L'AÎNÉ pendant l'appel (identifiant d'un membre du cercle Lakou).
      * Vide = l'employeur seul (défaut). Seulement avec la réponse ACCORD.
      */
-    personneDesignee: z.preprocess((v) => (v === "" ? undefined : v), z.string().cuid("Choisissez une personne du cercle.").optional()),
+    personneDesignee: z.preprocess((v) => (v === "" || v === EMPLOYEUR ? undefined : v), z.string().cuid("Choisissez une personne du cercle.").optional()),
   })
   .superRefine((v, ctx) => {
     if (v.resultat === "RAPPELER") return;
@@ -82,11 +85,15 @@ function callDate(appelLe: string, now: Date): Date | null {
   return appel;
 }
 
-/** D11 : la personne désignée doit être membre du cercle Lakou de l'aîné. */
-async function viewerProblem(aineId: string, viewerId: string | undefined): Promise<string | null> {
-  if (!viewerId) return null;
-  const member = await db.lakouMember.findFirst({ where: { aineId, userId: viewerId }, select: { id: true } });
-  return member ? null : "Cette personne n'est pas dans le cercle Lakou de l'aîné.";
+/**
+ * D11 : la personne désignée doit être membre du cercle Lakou de l'aîné. L'employeur (payeur) voit déjà le
+ * trajet : le choisir revient au défaut (null). Renvoie l'id à enregistrer, ou une erreur.
+ */
+async function resolveViewer(aineId: string, viewerId: string | undefined): Promise<{ ok: true; id: string | null } | { ok: false; error: string }> {
+  if (!viewerId) return { ok: true, id: null };
+  const member = await db.lakouMember.findFirst({ where: { aineId, userId: viewerId }, select: { isPayer: true } });
+  if (!member) return { ok: false, error: "Cette personne n'est pas dans le cercle Lakou de l'aîné." };
+  return { ok: true, id: member.isPayer ? null : viewerId };
 }
 
 /** Enregistre la réponse de l'aîné. Le retrait n'est possible qu'après un accord. */
@@ -108,8 +115,8 @@ export async function recordElderAccord(operator: { id: string; role: Role }, v:
     return { ok: true };
   }
 
-  const problem = await viewerProblem(aine.id, v.personneDesignee);
-  if (problem) return { ok: false, error: problem };
+  const viewer = await resolveViewer(aine.id, v.personneDesignee);
+  if (!viewer.ok) return viewer;
   const target = TARGET[v.resultat];
   // D8 : nouveau code de secours avant la transaction (unicité vérifiée en base).
   const newHomeCode = target === "ACCORD_RECUEILLI" ? null : await generateUniqueHomeCode();
@@ -130,7 +137,7 @@ export async function recordElderAccord(operator: { id: string; role: Role }, v:
         consentAt: appel,
         // D11 : choix de l'aîné pendant l'appel (vide = l'employeur seul).
         ...(target === "ACCORD_RECUEILLI"
-          ? { tripViewerId: v.personneDesignee ?? null, tripViewerChosenAt: v.personneDesignee ? appel : null, tripViewerRecordedById: v.personneDesignee ? operator.id : null }
+          ? { tripViewerId: viewer.id, tripViewerChosenAt: viewer.id ? appel : null, tripViewerRecordedById: viewer.id ? operator.id : null }
           : {}),
       },
     });
@@ -147,7 +154,7 @@ export async function recordElderAccord(operator: { id: string; role: Role }, v:
           langue: v.langue ?? null,
           situation: v.situationJuridique ?? null,
           notice: v.noticeLue ? NOTICE_FALC_VERSION : null,
-          personneDesignee: Boolean(v.personneDesignee),
+          personneDesignee: Boolean(viewer.id),
           ...(frozen ?? {}),
         },
       },
@@ -198,7 +205,7 @@ export const tripViewerChoiceSchema = z.object({
   aineId: z.string().cuid(),
   appelLe: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, "Indiquez la date et l'heure de l'appel."),
   /** Vide = l'employeur seul. */
-  personneDesignee: z.preprocess((v) => (v === "" ? undefined : v), z.string().cuid().optional()),
+  personneDesignee: z.preprocess((v) => (v === "" || v === EMPLOYEUR ? undefined : v), z.string().cuid().optional()),
   confirm: z.literal("on", { message: "Confirmez que l'aîné a fait ce choix au téléphone." }),
 });
 
@@ -212,13 +219,13 @@ export async function recordTripViewerChoice(operator: { id: string; role: Role 
   if (aine.accordEtat !== "ACCORD_RECUEILLI") return { ok: false, error: "Enregistrez d'abord l'accord de l'aîné." };
   const appel = callDate(v.appelLe, now);
   if (!appel) return { ok: false, error: "La date de l'appel est dans le futur." };
-  const problem = await viewerProblem(aine.id, v.personneDesignee);
-  if (problem) return { ok: false, error: problem };
+  const viewer = await resolveViewer(aine.id, v.personneDesignee);
+  if (!viewer.ok) return viewer;
   await db.aine.update({
     where: { id: aine.id },
-    data: { tripViewerId: v.personneDesignee ?? null, tripViewerChosenAt: appel, tripViewerRecordedById: operator.id },
+    data: { tripViewerId: viewer.id, tripViewerChosenAt: appel, tripViewerRecordedById: operator.id },
   });
-  await logAudit({ actor: operator, action: "aine.trip_viewer.recorded", entityType: "Aine", entityId: aine.id, metadata: { designated: Boolean(v.personneDesignee) } });
+  await logAudit({ actor: operator, action: "aine.trip_viewer.recorded", entityType: "Aine", entityId: aine.id, metadata: { designated: Boolean(viewer.id) } });
   return { ok: true };
 }
 
@@ -227,7 +234,7 @@ export async function recordTripViewerChoice(operator: { id: string; role: Role 
  * D11 : les membres du cercle Lakou (choix de la personne désignée) et la personne désignée actuelle.
  */
 export async function listAinesForAccord() {
-  return db.aine.findMany({
+  const rows = await db.aine.findMany({
     where: { sandboxId: null, accordEtat: { in: ["EN_ATTENTE_ACCORD", "ACCORD_RECUEILLI", "ACCORD_REFUSE", "ACCORD_RETIRE"] } },
     orderBy: [{ accordEtat: "asc" }, { createdAt: "asc" }],
     take: 200,
@@ -243,9 +250,11 @@ export async function listAinesForAccord() {
       tripViewerId: true,
       tripViewerChosenAt: true,
       owner: { select: { firstName: true, lastName: true, phone: true } },
-      members: { select: { userId: true, isPayer: true, relation: true, user: { select: { firstName: true, lastName: true } } } },
+      members: { select: { userId: true, isPayer: true, relation: true, user: { select: { firstName: true, lastName: true } } }, orderBy: { joinedAt: "asc" } },
     },
   });
+  // Interface F2 : `lastRappel` = dernier appel « rappeler plus tard » (seulement tant que l'accord est en attente).
+  return rows.map((r) => ({ ...r, lastRappel: r.accordEtat === "EN_ATTENTE_ACCORD" ? r.accordRappelAt : null }));
 }
 
 /** Comptes réels dont l'e-mail n'est pas confirmé (L3, page « Comptes »). */

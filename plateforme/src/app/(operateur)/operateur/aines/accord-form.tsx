@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { recordAccordL1dAction } from "@/server/operateur/accord-l1d-actions";
+import { recordAccordAction as recordAccordL1dAction } from "@/server/operateur/comptes-actions";
 import { initialActionState } from "@/lib/action-result";
 import { FormField, Fieldset, fieldA11y } from "@/components/ui/form-field";
 import { Checkbox, Input, Radio, Select } from "@/components/ui/input";

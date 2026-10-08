@@ -20,6 +20,8 @@ import { PreinscriptionClosedPage } from "@/components/account/preinscription";
 import { realDataAllowed } from "@/server/launch";
 import { ZonedTime } from "@/components/ui/zoned-time";
 import { reportedVisits } from "@/server/presence/review-trace";
+import { CONTESTATION_HOURS, contestationOpen } from "@/server/visits/proof";
+import { formatDateTime } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Visites" };
 
@@ -167,6 +169,16 @@ function VisitItem({ v, showAine, employer, canFollow }: { v: VisitRow; showAine
               <strong>À vérifier :</strong> il manque une preuve. Le gestionnaire principal du profil confirme la visite.
             </p>
           )
+        ) : null}
+        {/* L1d (D4, F1) : « Présence probable » : l'employeur confirme, ou signale un problème pendant 48 h. */}
+        {v.status === "PRESENCE_PROBABLE" && employer && contestationOpen(v) ? (
+          <VisitReviewForm
+            visitId={v.id}
+            firstName={v.aine.firstName}
+            caregiver={v.caregiver.user.firstName}
+            valid={v.proofs.filter((p) => p.valid).length}
+            contestUntil={formatDateTime(new Date((v.checkInAt ?? v.scheduledStart).getTime() + CONTESTATION_HOURS * 3_600_000))}
+          />
         ) : null}
         {/* L1-B (L6, R4) : suivi du trajet, pour l'employeur et la personne désignée, le jour de la visite. */}
         {canFollow && (v.status === "PREVUE" || v.status === "EN_COURS") && isSoon(v.scheduledStart) ? (

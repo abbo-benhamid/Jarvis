@@ -125,6 +125,13 @@ function verdict(status: VisitStatus | undefined, obtained: number, aineFirstNam
       text: `Il manque une preuve. Koudmen appelle ${aineFirstName} pour confirmer, puis l'équipe vérifie. Vous n'avez rien à faire.`,
     };
   }
+  // L1d (D4, F1) : carte du domicile + position, sans la confirmation de l'aîné.
+  if (status === "PRESENCE_PROBABLE") {
+    return {
+      title: `${n} · présence probable`,
+      text: `Carte du domicile et position reçues. ${aineFirstName} n'a pas encore confirmé. Un problème ? Signalez-le dans « Visites » pendant 48 heures.`,
+    };
+  }
   return { title: `${n} · visite en cours`, text: "Les preuves arrivent pendant la visite." };
 }
 

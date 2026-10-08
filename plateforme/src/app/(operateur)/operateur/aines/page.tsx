@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/server/auth/guards";
 import { SITUATION_LABELS } from "@/server/operateur/accord";
-import { listAinesForAccordL1d } from "@/server/operateur/accord-l1d";
+import { listAinesForAccord as listAinesForAccordL1d } from "@/server/operateur/accord";
 import { logAudit } from "@/server/audit";
 import { PageHeader } from "@/components/ui/page-header";
 import { Card, CardTitle } from "@/components/ui/card";

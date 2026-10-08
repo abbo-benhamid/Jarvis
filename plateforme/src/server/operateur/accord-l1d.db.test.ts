@@ -10,7 +10,8 @@ vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 
 describe.runIf(enabled)("accord à 3 réponses (L1d, base réelle)", async () => {
   const { db } = await import("@/server/db");
-  const { accordL1dSchema, recordElderAccordL1d } = await import("./accord-l1d");
+  // L1d (fusion F1) : le doublon accord-l1d.ts est supprimé ; mêmes tests sur accord.ts.
+  const { accordSchema: accordL1dSchema, recordElderAccord: recordElderAccordL1d } = await import("./accord");
   const DOMAIN = "accord-l1d-test.koudmen.test";
   const run = `${Date.now().toString(36)}${randomBytes(3).toString("hex")}`;
   const payeur = await db.user.create({ data: { email: `p-${run}@${DOMAIN}`, passwordHash: "x", role: "FAMILLE", firstName: "Céline", lastName: "A" } });
