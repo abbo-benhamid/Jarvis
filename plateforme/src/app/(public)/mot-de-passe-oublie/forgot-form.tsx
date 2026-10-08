@@ -13,7 +13,7 @@ export function ForgotPasswordForm() {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
       <FormMessage state={state} />
-      <FormField label="Email" htmlFor="email" errors={fe?.email} required>
+      <FormField label="Adresse e-mail" htmlFor="email" errors={fe?.email} required>
         <Input {...fieldA11y("email", fe?.email)} type="email" autoComplete="email" required />
       </FormField>
       <PendingButton pending={pending} size="lg" className="w-full" pendingLabel="Envoi…">

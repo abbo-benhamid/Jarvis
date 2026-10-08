@@ -36,10 +36,11 @@ export async function AccountStatus({ user }: { user: CurrentUser }) {
       {pendingProfile ? (
         <Alert tone="info" title="Profil en cours de validation">
           {validation === "EN_ATTENTE"
-            ? `L'équipe Koudmen vérifie votre profil. Réponse en ${VALIDATION_DELAY_DAYS} jours au plus.`
+            ? `L'équipe Koudmen vérifie votre profil. Un conseiller vous appelle. Réponse en ${VALIDATION_DELAY_DAYS} jours au plus.`
             : validation === "REFUSE" || validation === "SUSPENDU"
               ? "Votre profil n'est pas validé. Le motif est écrit plus bas. Vous pouvez demander un réexamen à l'équipe."
-              : "Complétez votre profil, puis demandez la vérification. Vous recevez des propositions seulement après la validation."}
+              : // L1d (M14, D15) : même chemin sur le site et dans l'app. Texte à aligner avec F3 (app) à la fusion.
+                "Prochaine étape : répondez aux 5 questions sur votre statut, puis demandez la vérification, ici ou dans l'application Koudmen. Un conseiller vous appelle ensuite."}
         </Alert>
       ) : null}
     </div>

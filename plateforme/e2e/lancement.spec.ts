@@ -41,7 +41,7 @@ async function register(page: Page, role: "FAMILLE" | "ACCOMPAGNANT", email: str
   await page.getByLabel(role === "FAMILLE" ? /^Famille/ : /^Accompagnant/).check();
   await page.locator("#firstName").fill("Rose");
   await page.locator("#lastName").fill(`E2E-${uid()}`);
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Adresse e-mail").fill(email);
   await page.locator("#phone").fill("+596 696 12 34 56");
   await page.getByLabel("Mot de passe").fill(PASSWORD);
   if (role === "ACCOMPAGNANT") {
@@ -124,7 +124,7 @@ test("L3 : mot de passe oublié → nouveau mot de passe → l'ancien ne marche 
   const email = `famille-mdp-${uid()}@${E2E_DOMAIN}`;
   await register(page, "FAMILLE", email);
   await page.goto("/mot-de-passe-oublie");
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Adresse e-mail").fill(email);
   await page.getByRole("button", { name: "Recevoir un lien" }).click();
   await expect(page.getByText(/Si un compte existe avec cette adresse/)).toBeVisible();
   const link = await mailLink(email, "MOT_DE_PASSE_OUBLIE");
@@ -136,7 +136,7 @@ test("L3 : mot de passe oublié → nouveau mot de passe → l'ancien ne marche 
   await page.goto(link);
   await expect(page.getByText("Ce lien ne marche plus.")).toBeVisible();
   await page.goto("/connexion");
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Adresse e-mail").fill(email);
   await page.getByLabel("Mot de passe").fill(PASSWORD);
   await page.getByRole("button", { name: "Se connecter" }).click();
   await expect(page.getByText("Email ou mot de passe incorrect.")).toBeVisible();

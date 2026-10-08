@@ -129,7 +129,7 @@ test("une famille ne peut pas ouvrir l'espace opérateur", async ({ page }) => {
 
 test("connexion d'un vrai opérateur par email et mot de passe", async ({ page }) => {
   await page.goto("/connexion");
-  await page.getByLabel("Email").fill(OPERATEUR_EMAIL);
+  await page.getByLabel("Adresse e-mail").fill(OPERATEUR_EMAIL);
   await page.getByLabel("Mot de passe").fill(OPERATEUR_PASSWORD);
   await page.getByRole("button", { name: "Se connecter" }).click();
   await expect(page).toHaveURL(/\/operateur$/);
@@ -137,11 +137,11 @@ test("connexion d'un vrai opérateur par email et mot de passe", async ({ page }
 
 test("une erreur de connexion garde l'email saisi (pas de remise à zéro)", async ({ page }) => {
   await page.goto("/connexion");
-  await page.getByLabel("Email").fill("famille@demo.koudmen.test");
+  await page.getByLabel("Adresse e-mail").fill("famille@demo.koudmen.test");
   await page.getByLabel("Mot de passe").fill(`${DEMO_PASSWORD}-faux`);
   await page.getByRole("button", { name: "Se connecter" }).click();
   await expect(page.getByText("Email ou mot de passe incorrect.")).toBeVisible();
-  await expect(page.getByLabel("Email")).toHaveValue("famille@demo.koudmen.test");
+  await expect(page.getByLabel("Adresse e-mail")).toHaveValue("famille@demo.koudmen.test");
 });
 
 test("le bouton « Donner mon avis » enregistre un retour", async ({ page }) => {
@@ -173,7 +173,7 @@ test("inscription d'un accompagnant (CGU, date de naissance, mot de passe couran
   await page.getByRole("button", { name: "Créer mon compte" }).click();
   await expect(page).toHaveURL(/\/inscription\/envoye\?role=ACCOMPAGNANT/);
   await page.goto("/connexion");
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Adresse e-mail").fill(email);
   await page.getByLabel("Mot de passe").fill("Lagon-Bleu-Robert-2026");
   await page.getByRole("button", { name: "Se connecter" }).click();
   await expect(page).toHaveURL(/\/accompagnant/);

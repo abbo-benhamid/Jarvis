@@ -1,6 +1,12 @@
 import { z } from "zod";
 
-export const emailSchema = z.string().trim().toLowerCase().email("Adresse email invalide.").max(200);
+export const emailSchema = z
+  .string({ message: "Entrez votre adresse e-mail." })
+  .trim()
+  .toLowerCase()
+  .min(1, "Entrez votre adresse e-mail.")
+  .email("Adresse e-mail invalide.")
+  .max(200);
 
 export const loginSchema = z.object({
   email: emailSchema,
