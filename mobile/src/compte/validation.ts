@@ -75,6 +75,13 @@ function detailEtape(code: EtatVerification['etapes'][number]['code'], v: EtatVe
       return demandeEnvoyee(v)
         ? 'L’équipe vous appelle au numéro donné à l’inscription. Elle vérifie votre identité et vos références.'
         : 'Après votre demande de vérification.';
+    case 'TELEPHONE':
+    case 'IDENTITE':
+    case 'ENTREPRISE':
+    case 'ADRESSE':
+      // L2 : le détail et l'action sont dans « Mes vérifications ».
+      if (faite) return undefined;
+      return surLeSite ? 'Sur le site Koudmen, avec le même compte.' : 'Dans l’app : voir « Mes vérifications », plus bas.';
     default:
       return surLeSite && !faite ? 'Sur le site Koudmen, avec le même compte.' : undefined;
   }
