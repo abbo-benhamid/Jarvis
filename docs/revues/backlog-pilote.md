@@ -42,3 +42,23 @@
 | P1 bis | Sécu L1 M3 | BLOQUANT données réelles | QR rejouable avec une position fabriquée | Appel « tapez 1 » de l'aîné (Twilio) obligatoire pour `VALIDEE` |
 | P16 | Sécu L1 mineurs | MINEUR | `/api/sante` trop bavard, jetons d'e-mail dans l'URL, preuve serveur de l'accord trajet, rayon de départ fixe, tuiles appelées depuis le navigateur, rotation des clés | Voir `L1-securite.md` |
 | P17 | Juridique L1 | [À VÉRIFIER AVEC UN AVOCAT] | CGU, confidentialité, conditions accompagnants, mention crédit d'impôt | Relecture avocat |
+
+## Ajouts L2 (revue `L2-securite.md`, sprint L2b)
+
+Corrigés dans L2b : B1, M1 à M7, m1, m2, m4, m6, m10, m11, m12 (voir `docs/tech/L2b-notes.md`). Reste :
+
+| # | Origine | Gravité | Sujet | Proposition |
+|---|---|---|---|---|
+| P18 | Sécu L2 m3 | MINEUR (avant données réelles) | PDF non aplati (JavaScript, pièces jointes, métadonnées) ; pas d'antivirus ; JPEG mal formé gardé tel quel ; CSP de l'aperçu PDF sans `sandbox` | Refuser un PDF avec `/JS`, `/JavaScript`, `/EmbeddedFile`, `/Launch` ; refuser un JPEG non analysable ; ClamAV ; `sandbox` dans la CSP |
+| P19 | Sécu L2 m4 (reste) | MINEUR | Aperçu d'un document en GET (lien piégé = fausse ligne d'accès) ; 2FA opérateur absente | Aperçu en POST avec jeton anti-CSRF ou page intermédiaire ; TOTP opérateur |
+| P20 | Sécu L2 m5 | MINEUR | Une ligne `AuditLog` par webhook non signé (journal inondable) | Compteur agrégé par minute |
+| P21 | Sécu L2 m7 | MINEUR | Clé maîtresse des documents sans identifiant de version ; adresse de l'accompagnant chiffrée avec `DOCUMENT_ENC_KEY` | Format `k<version>:<idClé>:…`, liste de clés actives ; clé dédiée à l'adresse |
+| P22 | Sécu L2 m8 | MINEUR | `User.phone` et `PhoneChallenge.phoneE164` en clair (étude § 7.1 : `phoneEnc`) | Chiffrer, ou corriger l'étude et l'AIPD |
+| P23 | Sécu L2 m9 | MINEUR | Stripe : pas d'empreinte de pièce (pas de détection de compte en double) | Avec Stripe : élément `A_REVOIR` (décision humaine) |
+| P24 | Sécu L2 m13 | MINEUR | Dépôt API : corps lu en entier sans `content-length` | Lecture du flux avec un compteur, coupure à 5 Mo + marge |
+| P25 | L2b (M1) | MINEUR | Éléments hors L2 (casier B3, références…) : refus proposé par la fiche accompagnant, mais pas d'écran pour ANNULER ce refus proposé | Ajouter l'annulation à deux opérateurs sur la fiche |
+| P26 | L2b (M3) | [À VÉRIFIER] | Veriff : en-tête d'horodatage signé dans l'API récente ? | Si oui : l'exiger (fenêtre de 5 minutes), comme Stripe |
+| P27 | L2b (M5) | MINEUR | Fermeture du dossier `DOSSIER_INCOMPLET_90J` (étude § 6.6) : l'élément revient « à faire », le dossier n'est pas fermé | Fermeture à deux opérateurs ou fermeture sans refus, avec e-mail |
+| P28 | L2b (M6) | MINEUR | Rotation de la clé HMAC : la recherche « une pièce = un compte » utilise l'empreinte calculée par l'adaptateur (clé courante seulement) | Adaptateur : renvoyer les empreintes de toutes les clés actives pendant la rotation |
+| P29 | Sécu L2 M4 / RGPD | [À VÉRIFIER DPO] | Retrait du consentement biométrique : suppression anticipée chez le prestataire sur demande | Bouton « retirer mon accord » → ligne `ProviderRedaction` immédiate |
+| P30 | Sécu L2 M1 point 3 | [À VÉRIFIER fondateur] | Élément passé par `A_REVOIR` avec un code de risque (`RISQUE`, `COMPTE_EN_DOUBLE`, `MINEUR`) : `VALIDE` à deux opérateurs ? | Décision produit |

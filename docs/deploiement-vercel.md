@@ -112,7 +112,9 @@ flowchart LR
 | `ADDRESS_PROOF_REQUIRED` | Vide ou `true` (défaut) ; `false` seulement après l'avis de l'avocat | Non |
 | `ADAPTER_DOCUMENTS` | `simule` (défaut) ou `base-chiffree` | Non |
 | `DOCUMENT_ENC_KEY` | 32 octets aléatoires : `openssl rand -base64 32`. **Différente** de `ADDRESS_ENC_KEY`. Copie dans un coffre | Oui si `ADAPTER_DOCUMENTS=base-chiffree`. Avec les données réelles ouvertes, une clé mal formée bloque le démarrage |
-| `PHONE_ALLOWED_PREFIXES`, `VERIFF_BASE_URL`, `VERIFICATION_HMAC_KEY`, `SIMULATED_WEBHOOK_SECRET` | Réglages fins (voir `.env.example`) | Non |
+| `VERIFICATION_HMAC_KEY` | L2b (M6) : clé HMAC DÉDIÉE des empreintes (numéros, pièces, codes) : `openssl rand -base64 32`. **Différente** de `SESSION_SECRET`, `CRON_SECRET`, `DOCUMENT_ENC_KEY`, `ADDRESS_ENC_KEY`. Copie dans un coffre. Rotation : `VERIFICATION_HMAC_KEY_VERSION`, `VERIFICATION_HMAC_KEY_PREVIOUS`, `VERIFICATION_HMAC_KEY_PREVIOUS_VERSION` | **Oui** dès qu'un adaptateur réel est actif (`ADAPTER_OTP`, `ADAPTER_OTP_APPEL`, `ADAPTER_IDENTITY`, `ADAPTER_DOCUMENTS`) ou que les données réelles sont ouvertes : sinon page 503. En lancement sans elle, l'opérateur ne valide pas un numéro |
+| `SMS_ACCOUNT_DAILY_BUDGET_CENTS` | L2b (m2) : plafond quotidien SMS + appels PAR COMPTE (défaut `60`) | Non |
+| `PHONE_ALLOWED_PREFIXES`, `VERIFF_BASE_URL`, `SIMULATED_WEBHOOK_SECRET` | Réglages fins (voir `.env.example`) | Non |
 
 **Vérifie après le déploiement :** `https://<ton-site>/api/sante` → bloc `"verifications"` : chaque service dit son adaptateur et `ouvert: true/false`. Lis les avertissements `ADAPTER_…`.
 

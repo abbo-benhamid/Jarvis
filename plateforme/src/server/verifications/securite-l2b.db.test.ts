@@ -355,7 +355,7 @@ describe.runIf(enabled)("L2b : scénarios d'attaque S1 à S6 et corrections (bas
   // ─────────────── Mineurs ───────────────
 
   it("m2 : plafond SMS par compte (un compte ne coupe pas le SMS pour tous)", async () => {
-    const paid = new SimulatedOtpAdapter();
+    const paid = new SimulatedOtpAdapter("SMS");
     paid.estimatedCostCents = () => 25;
     setOtpPortForTests("SMS", paid);
     const a = await caregiver("SALARIE_FAMILLE_CESU", "Rémy");

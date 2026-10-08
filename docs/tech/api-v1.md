@@ -515,12 +515,12 @@ File opérateur « Accompagnants à appeler » (`server/operateur/files-lancemen
 | Route | Corps | Réponse | Erreurs propres |
 |---|---|---|---|
 | `GET /api/v1/accompagnant/verifications` | — | 200 `DossierVerification` | — |
-| `POST /api/v1/accompagnant/verifications/telephone/code` | `{ telephone, canal: SMS \| APPEL }` | 202 `{ challengeId, canal, expireA, renvoiPossibleA, appelPossible }` | 422 PREFIXE_NON_ACCEPTE, 409 NUMERO_DEJA_UTILISE, 409 DEJA_VALIDE, 429, 503 SERVICE_INDISPONIBLE |
+| `POST /api/v1/accompagnant/verifications/telephone/code` | `{ telephone, canal: SMS \| APPEL }` | 202 `{ challengeId, canal, expireA, renvoiPossibleA, appelPossible }` | 422 PREFIXE_NON_ACCEPTE, 422 ACTION_IMPOSSIBLE (L2b : numéro déjà pris, message neutre ; élément en revue ou refusé), 409 DEJA_VALIDE, 429, 503 SERVICE_INDISPONIBLE |
 | `POST /api/v1/accompagnant/verifications/telephone/confirmer` | `{ challengeId, code }` | 200 `{ etat: VALIDE, telephoneMasque }` | 422 CODE_FAUX, CODE_EXPIRE, TROP_D_ESSAIS |
 | `POST /api/v1/accompagnant/verifications/identite/session` | `{ plateforme: web \| app, consentementBiometrie: true }` | 201 `{ url, expireA, retour }` | 409 DEJA_VALIDE, 429 (3 sessions), 503 |
 | `POST /api/v1/accompagnant/verifications/identite/visio` | `{ creneau, raison }` | 201 `{ demandeLe, creneau }` | 409 DEJA_VALIDE |
 | `POST /api/v1/accompagnant/verifications/adresse` | `{ ligne, complement?, codePostal, commune }` | 200 `{ etat, justificatifRequis }` | 409 DEJA_VALIDE |
-| `POST /api/v1/accompagnant/verifications/entreprise` | `{ siret }` | 200 `{ etat, actif, nomConforme, adresseSiegeConforme, documentRequis, message }` | 422 ACTION_IMPOSSIBLE (SIRET faux, statut sans entreprise), 409 NUMERO_DEJA_UTILISE (SIRET d'un autre compte) |
+| `POST /api/v1/accompagnant/verifications/entreprise` | `{ siret }` | 200 `{ etat, actif, nomConforme, adresseSiegeConforme, documentRequis, message }` | 422 ACTION_IMPOSSIBLE (SIRET faux, statut sans entreprise ; L2b : SIRET déjà pris, message neutre et file opérateur ; élément en revue ou refusé) |
 | `POST /api/v1/accompagnant/documents` | multipart : `type`, `fichier` | 201 `{ documentId, etatItem, conservation }` | 413 FICHIER_TROP_GROS, 415 TYPE_NON_ACCEPTE, 503 |
 | `POST /api/v1/accompagnant/verifications/soumettre` | `{}` | 200 `{ dossier: { etat } }` | 422 ELEMENTS_MANQUANTS (le message liste les éléments), 409 CONFLIT |
 | `POST /api/v1/accompagnant/verifications/recours` | `{ motifRecours }` | 201 `{ recoursId, etat: EN_ATTENTE }` | 422 ACTION_IMPOSSIBLE (pas de refus, délai de 30 jours passé, recours déjà ouvert) |

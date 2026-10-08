@@ -355,7 +355,7 @@ export async function blockersFor(caregiverId: string, launch: boolean = isLaunc
   const missing = itemsNotValidated(requiredFor(p, effective), effective).filter(isL2Type);
   if (missing.length > 0) out.push(`Pas encore vérifié : ${missing.map((t) => L2_LABELS[t]).join(", ")}.`);
   if (p.refusalProposedAt) out.push("Un refus du profil est proposé : un autre opérateur le confirme, ou deux opérateurs l'annulent.");
-  const proposed = items.filter((i) => i.refusalProposedAt !== null);
+  const proposed = items.filter((i) => Boolean(i.refusalProposedAt));
   if (proposed.length > 0) out.push(`Refus proposé sur : ${proposed.map((i) => L2_LABELS[i.type]).join(", ")}.`);
   return out;
 }
