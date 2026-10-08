@@ -39,6 +39,7 @@ export default async function Page() {
                 <ElementStatus item={item} />
               </div>
               <p className="text-[15px]">{item.message}</p>
+              {item.etat === "EN_COURS" ? <Alert tone="succes">Document reçu. L&apos;équipe Koudmen le relit. Il est effacé 30 jours après la décision.</Alert> : null}
               {!open ? (
                 <Alert tone="info">L&apos;enregistrement de l&apos;adresse ouvre bientôt. L&apos;équipe Koudmen vérifie votre adresse pendant la visio.</Alert>
               ) : item.etat === "VALIDE" || item.etat === "A_REVOIR" ? null : (

@@ -97,6 +97,36 @@ export async function createCaregiver(p: {
   return { user, profile: user.caregiverProfile!, fullName: `${user.firstName} ${user.lastName}` };
 }
 
+/** L2 : accompagnant au profil complet, dossier BROUILLON (casier B3 déclaré, identité à faire). */
+export async function createDraftCaregiver(firstName: string) {
+  const id = uid();
+  const user = await prisma.user.create({
+    data: {
+      email: `brouillon-${id}@${E2E_DOMAIN}`,
+      passwordHash: await passwordHash(),
+      role: "ACCOMPAGNANT",
+      firstName,
+      lastName: `Bellemare`,
+      phone: null,
+      emailVerifiedAt: new Date(),
+      caregiverProfile: {
+        create: {
+          status: "SALARIE_FAMILLE_CESU",
+          allowedLevels: [1, 2],
+          communes: ["LAMENTIN"],
+          hourlyRateCents: 1500,
+          birthDate: new Date("1985-03-02"),
+          validation: "BROUILLON",
+          availabilities: { create: [{ dayOfWeek: 2, slot: "MATIN" }] },
+          verifications: { create: [{ type: "IDENTITE" }, { type: "CASIER_B3", status: "DECLARE", declaredAt: new Date() }] },
+        },
+      },
+    },
+    include: { caregiverProfile: true },
+  });
+  return { user, profile: user.caregiverProfile! };
+}
+
 export async function createFamilyWithAine(p: { aineFirstName: string; commune: string; activityLevel?: number }) {
   const id = uid();
   const c = getCommune(p.commune);

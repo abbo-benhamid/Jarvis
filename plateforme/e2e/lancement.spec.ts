@@ -193,3 +193,12 @@ test("R1 / L4 : préinscription — pas de fiche aîné ; demande de rappel visi
   await page.goto("/operateur/test");
   await expect(page).toHaveURL(/\/operateur$/);
 });
+
+test("L2 : en lancement, les services simulés sont fermés (page et webhook simulés absents, avertissements dans /api/sante)", async ({ request }) => {
+  expect((await request.get("/verification/simulee?session=sim_abcdefghijkl")).status()).toBe(404);
+  expect((await request.post("/api/webhooks/identite/simule", { data: {} })).status()).toBe(404);
+  const sante = await (await request.get("/api/sante")).json();
+  expect(sante.verifications.identite).toEqual({ adaptateur: "simule", ouvert: false });
+  expect(sante.verifications.sms.ouvert).toBe(false);
+  expect(sante.avertissements.join(" ")).toMatch(/ADAPTER_IDENTITY=simule en lancement/);
+});

@@ -37,6 +37,7 @@ export default async function Page() {
                 <ElementStatus item={item} />
               </div>
               <p className="text-[15px]">{item.message}</p>
+              {item.etat === "EN_COURS" ? <Alert tone="succes">Document reçu. L&apos;équipe Koudmen le relit. Il est effacé 30 jours après la décision.</Alert> : null}
               <p className="text-sm text-muted">Koudmen lit le registre public des entreprises : entreprise active, nom, activité et adresse du siège.</p>
               {item.etat === "VALIDE" || item.etat === "A_REVOIR" ? null : <CompanyForm defaultSiret={p.siret ?? ""} />}
             </Card>

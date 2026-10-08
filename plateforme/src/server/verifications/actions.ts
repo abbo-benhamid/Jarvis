@@ -38,6 +38,7 @@ import {
 import { cancelDossierRefusal, decideAppeal, decideItem, ITEM_DECISIONS } from "./review";
 import { SIMULATED_SCENARIOS } from "@/server/adapters/identity/simule";
 import { isLaunchMode } from "@/server/launch";
+import { appUrl } from "@/server/env";
 
 async function actor(): Promise<Actor> {
   const u = await requireRole("ACCOMPAGNANT");
@@ -55,6 +56,12 @@ function str(fd: FormData, k: string): string {
 }
 
 const done = () => revalidatePath("/accompagnant", "layout");
+
+/** Une adresse de NOTRE site devient un chemin (le site reste sur l'hôte courant : préversion, tests locaux). */
+function sameOriginPath(url: string): string {
+  const base = appUrl();
+  return url.startsWith(`${base}/`) ? url.slice(base.length) : url;
+}
 
 // ─────────────── Téléphone ───────────────
 
@@ -94,7 +101,7 @@ export async function startIdentityAction(_prev: ActionResult, fd: FormData): Pr
   } catch (e) {
     return toFailure(e);
   }
-  redirect(url);
+  redirect(sameOriginPath(url));
 }
 
 export async function requestVisioAction(_prev: ActionResult, fd: FormData): Promise<ActionResult> {
@@ -117,7 +124,7 @@ export async function simulateIdentityAction(fd: FormData): Promise<void> {
   const session = str(fd, "session");
   if (!scenario.success) redirect(`/verification/simulee?session=${encodeURIComponent(session)}`);
   const r = await simulateIdentityDecision(session, scenario.data);
-  redirect(r?.returnUrl ?? "/");
+  redirect(r ? sameOriginPath(r.returnUrl) : "/");
 }
 
 // ─────────────── Adresse, entreprise, documents ───────────────

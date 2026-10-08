@@ -78,8 +78,19 @@ test("O2/O3 — valider un accompagnant : revue de chaque vérification, motif o
   await decision.getByRole("button", { name: "Enregistrer la décision" }).click();
   await expect(decision.getByText(/Écrivez le motif/)).toBeVisible();
 
-  // Revue des vérifications : identité, casier, diplôme (ouvre le niveau 4).
-  for (const label of ["Pièce d'identité", "Extrait de casier judiciaire", "Diplôme d'aide à la personne"]) {
+  // L2 : identité, téléphone, adresse → écran « Vérifications à revoir » (liste de cases, validation manuelle après visio ou appel).
+  for (const label of ["Pièce d'identité", "Numéro de téléphone", "Adresse"]) {
+    await page.getByRole("region", { name: label }).getByRole("link", { name: /^Revoir/ }).click();
+    await page.getByLabel("Valider").check();
+    const list = page.getByRole("group", { name: /Liste de contrôle/ });
+    for (const box of await list.getByRole("checkbox").all()) await box.check();
+    await page.getByRole("button", { name: "Enregistrer la décision" }).click();
+    await expect(page.getByText("Décision prise : Vérifié.")).toBeVisible();
+    await page.goto(`/operateur/accompagnants/${cg.profile.id}`);
+  }
+
+  // Revue des vérifications déclarées : casier, diplôme (ouvre le niveau 4).
+  for (const label of ["Extrait de casier judiciaire", "Diplôme d'aide à la personne"]) {
     const card = page.getByRole("region", { name: label });
     // R6 (J6) : casier B3 = date « vu le » seulement, sans texte.
     if (label === "Extrait de casier judiciaire") await card.getByLabel(/Extrait B3 vu le/).fill(new Date().toISOString().slice(0, 10));
@@ -108,7 +119,7 @@ test("O2/O3 — valider un accompagnant : revue de chaque vérification, motif o
 
   // Notifications simulées + audit.
   const messages = await prisma.outboxMessage.findMany({ where: { recipientUserId: cg.user.id }, select: { template: true } });
-  expect(messages.map((m) => m.template).sort()).toEqual(["ACCOMPAGNANT_SUSPENDU", "ACCOMPAGNANT_VALIDE"]);
+  expect(messages.map((m) => m.template).filter((t) => t.startsWith("ACCOMPAGNANT_")).sort()).toEqual(["ACCOMPAGNANT_SUSPENDU", "ACCOMPAGNANT_VALIDE"]);
   await page.goto("/operateur/journal-audit?action=caregiver.suspend");
   await expect(page.getByRole("cell", { name: cg.profile.id })).toBeVisible();
 });

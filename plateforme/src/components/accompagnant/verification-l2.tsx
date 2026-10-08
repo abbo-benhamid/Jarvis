@@ -73,7 +73,6 @@ export function PhoneForm({ defaultPhone, voiceOpen }: { defaultPhone: string; v
       ) : null}
       {challenge ? (
         <form onSubmit={confirm.onSubmit} className="flex flex-col gap-3" noValidate>
-          <Success state={send.state} />
           <FormMessage state={confirm.state} />
           <input type="hidden" name="challengeId" value={challenge.challengeId} />
           <FormField label="Code à 6 chiffres" htmlFor="code" hint="Le code expire dans 10 minutes. Ne le donnez à personne." errors={ce?.code} required>
@@ -164,7 +163,6 @@ export function AddressForm({ hasAddress }: { hasAddress: boolean }) {
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3" noValidate>
       <FormMessage state={state} />
-      <Success state={state} />
       {hasAddress ? <p className="text-[15px] text-muted">Votre adresse est enregistrée (chiffrée). Vous déménagez ? Écrivez la nouvelle adresse.</p> : null}
       <FormField label="Numéro et voie" htmlFor="ligne" hint="Exemple : 12 rue des Flamboyants." errors={fe?.ligne} required>
         <Input {...fieldA11y("ligne", fe?.ligne, true)} autoComplete="address-line1" maxLength={120} required />
@@ -201,7 +199,6 @@ export function DocumentForm({ types }: { types: readonly (readonly [string, str
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3" noValidate encType="multipart/form-data">
       <FormMessage state={state} />
-      <Success state={state} />
       <FormField label="Type de document" htmlFor="type" errors={fe?.type} required>
         <Select {...fieldA11y("type", fe?.type)} defaultValue={types[0]?.[0]} required>
           {types.map(([v, l]) => (
