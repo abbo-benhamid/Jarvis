@@ -162,6 +162,8 @@ export default function CompteEnValidation() {
               large
               trailing="right"
               label={`Continuer : ${prochain.libelle}`}
+              // Retour d'une étape : on attend l'état relu, pour ne pas rouvrir une étape déjà faite.
+              loading={dossierL2.chargement}
               onPress={() => router.push(ecranProchain)}
             />
           ) : dossierL2.dossier.peutSoumettre ? (

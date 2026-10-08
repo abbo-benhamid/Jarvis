@@ -191,7 +191,6 @@ export default function VerifierTelephone() {
             // iOS : le clavier propose le code reçu par SMS. Android et web : lecture du SMS (`sms-otp`).
             textContentType="oneTimeCode"
             autoComplete={Platform.OS === 'web' ? ('one-time-code' as never) : 'sms-otp'}
-            maxLength={6}
             onSubmitEditing={() => void confirmer()}
           />
           <Button testID="bouton-confirmer-code" large label="Valider le code" loading={envoi === 'confirmer'} onPress={() => void confirmer()} />
@@ -205,7 +204,7 @@ export default function VerifierTelephone() {
               variant="quiet"
               label={canal === 'APPEL' ? 'Rappeler avec un nouveau code' : 'Renvoyer un SMS'}
               disabled={attente > 0}
-              onPressInactif={() => setErreurCode(`Attendez ${attente} s avant un nouvel envoi.`)}
+              onPressInactif={() => setMaintenant(Date.now())}
               loading={envoi === canal}
               onPress={() => void envoyerCode(canal)}
             />
@@ -217,7 +216,7 @@ export default function VerifierTelephone() {
                 label="Recevoir un appel à la place"
                 accessibilityHint="Une voix lit le code. Utile si le SMS n’arrive pas."
                 disabled={attente > 0}
-                onPressInactif={() => setErreurCode(`Attendez ${attente} s avant un nouvel envoi.`)}
+                onPressInactif={() => setMaintenant(Date.now())}
                 loading={envoi === 'APPEL'}
                 onPress={() => void envoyerCode('APPEL')}
               />

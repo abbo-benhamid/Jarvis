@@ -12,7 +12,7 @@
       "bundleIdentifier": "fr.koudmen.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Koudmen lit votre position quand vous validez votre arrivée, et pendant un trajet que vous choisissez de partager, app ouverte. Jamais en arrière-plan.",
-        "NSCameraUsageDescription": "Koudmen utilise la caméra pour lire le QR code affiché au domicile. Aucune photo n’est gardée."
+        "NSCameraUsageDescription": "Koudmen utilise la caméra pour lire le QR code du domicile, et pour photographier un justificatif si vous le choisissez. Aucune photo du QR n’est gardée."
       }
     },
     "android": {
@@ -56,7 +56,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Koudmen utilise la caméra pour lire le QR code affiché au domicile. Aucune photo n’est gardée.",
+          "cameraPermission": "Koudmen utilise la caméra pour lire le QR code du domicile, et pour photographier un justificatif si vous le choisissez. Aucune photo du QR n’est gardée.",
           "microphonePermission": false,
           "recordAudioAndroid": false,
           "barcodeScannerEnabled": true
@@ -75,7 +75,15 @@
           "isAndroidMotionActivityEnabled": false
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Koudmen ouvre vos photos seulement pour envoyer le justificatif que vous choisissez.",
+          "cameraPermission": "Koudmen utilise la caméra pour lire le QR code du domicile, et pour photographier un justificatif si vous le choisissez. Aucune photo du QR n’est gardée.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
