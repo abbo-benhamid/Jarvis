@@ -169,6 +169,37 @@ test.describe('erreurs', () => {
     expect(await stockage.listerLignes()).toEqual([]);
   });
 
+  for (const motif of ['PREINSCRIPTION', 'ACCORD_MANQUANT'] as const) {
+    test(`L1d (D9) : refus ${motif} : l'événement sort de la file, rien n'est gardé (ni Kayé, ni ligne)`, async () => {
+      const stockage = stockageMemoire();
+      const serveur = serveurFactice();
+      serveur.reseau = false;
+      const retraits: (string | null)[] = [];
+      const file = creerFile({ stockage, transport: serveur.transport, planifier: minuteursManuels().planifier, alea: () => 0, surRetrait: (v) => retraits.push(v) });
+      serveur.refuser = (e) => (e.type === 'KAYE_BROUILLON' ? motif : null);
+      const k = ev.brouillon();
+      await file.soumettre(k).catch(() => undefined);
+      expect(await stockage.listerLignes()).toHaveLength(1);
+      serveur.reseau = true;
+      await file.synchroniser({ forcer: true });
+
+      expect(file.etat().enAttente).toBe(0);
+      // Le message s'affiche une fois (mémoire), sans contenu.
+      expect(file.etat().refus).toEqual([{ id: k.clientEventId, type: 'KAYE_BROUILLON', visiteId: 'vis_1', code: motif, message: `Refusé : ${motif}` }]);
+      // Rien sur le téléphone, et le brouillon ne revient pas dans le formulaire.
+      expect(await stockage.listerLignes()).toEqual([]);
+      expect(await file.kayeEnAttente('vis_1')).toBeNull();
+      expect(retraits).toEqual(['vis_1']);
+
+      // Réouverture : la file relit le stockage, le refus n'y est pas.
+      const file2 = creerFile({ stockage, transport: serveur.transport, planifier: minuteursManuels().planifier });
+      await file2.synchroniser({ forcer: true });
+      expect(file2.etat().refus).toEqual([]);
+      await file.oublierRefus();
+      expect(file.etat().refus).toEqual([]);
+    });
+  }
+
   test('refus métier pendant soumettre : ApiError avec le motif et le message du serveur', async () => {
     const { file, serveur } = monter();
     serveur.refuser = () => 'INVALIDE';

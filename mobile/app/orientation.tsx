@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { router } from 'expo-router';
 import { api, messageErreur } from '@/api';
 import { ChoixCarte } from '@/compte/ChoixCarte';
-import type { ResultatOrientation } from '@/compte/contratAccompagnant';
+import type { ResultatOrientation } from '@/compte/orientation';
 import { EnTeteRetour } from '@/compte/EnTete';
 import {
   BROUILLON_VIDE,

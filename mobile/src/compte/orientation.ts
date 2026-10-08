@@ -5,14 +5,24 @@
  * `orientation-result.tsx`, `lib/labels.ts`). Le SERVEUR calcule le résultat. `orienterLocalement` sert seulement
  * au mode simulé et aux tests : copie de `plateforme/src/server/rules/orientation.ts` (garder les deux alignés).
  */
+import type { z } from 'zod';
+// L1d (F1) : contrat serveur synchronisé (`src/contracts/accompagnant.ts`). Chemin relatif : module pur, testé sous Node.
 import type {
-  IssueOrientation,
-  Piece,
-  ReponsesOrientation,
+  DemandeOrientation,
+  issueOrientationSchema,
+  pieceSchema,
   ResultatOrientation,
-  Situation,
-  StatutAccompagnant,
-} from './contratAccompagnant';
+  situationSchema,
+  statutAccompagnantSchema,
+} from '../contracts';
+
+export type { ResultatOrientation } from '../contracts';
+/** Réponses aux 5 questions (corps de POST /accompagnant/orientation). */
+export type ReponsesOrientation = DemandeOrientation;
+export type IssueOrientation = z.infer<typeof issueOrientationSchema>;
+export type Piece = z.infer<typeof pieceSchema>;
+export type Situation = z.infer<typeof situationSchema>;
+export type StatutAccompagnant = z.infer<typeof statutAccompagnantSchema>;
 
 export type OptionOrientation<V extends string> = { value: V; label: string; hint?: string };
 

@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Linking, StyleSheet, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { api, ApiError, EMAIL_CONTACT, messageErreur, WEB_URL } from '@/api';
-import type { EtatVerification } from '@/compte/contratAccompagnant';
+import type { EtatVerification } from '@/contracts';
 import { Etapes } from '@/compte/Etapes';
 import { actionValidation, etapesValidation } from '@/compte/validation';
 import { emailAVerifier } from '@/session/compte';

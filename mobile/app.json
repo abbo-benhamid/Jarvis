@@ -74,7 +74,8 @@
           "isAndroidForegroundServiceEnabled": false,
           "isAndroidMotionActivityEnabled": false
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

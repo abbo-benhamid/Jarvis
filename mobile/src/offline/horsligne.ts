@@ -38,8 +38,9 @@ const CLE_COMPTE = 'compte';
 export function assemblerHorsLigne(o: { transport: Transport; plateforme: Plateforme; surveiller: Surveiller }): HorsLigne {
   const plateforme = o.plateforme;
   const { stockage } = plateforme;
-  const file = creerFile({ stockage, transport: o.transport });
   const cache = creerCache(stockage);
+  // L1d (D9) : refus « sans trace » → la fiche gardée de la visite est effacée aussi.
+  const file = creerFile({ stockage, transport: o.transport, surRetrait: (id) => void (id ? cache.oublierVisite(id) : undefined) });
   const surveiller = o.surveiller;
 
   let enLigne: boolean | null = null;

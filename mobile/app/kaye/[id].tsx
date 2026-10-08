@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { api, ApiError, messageErreur, type BrouillonKaye, type KayePublie } from '@/api';
+import { REFUS_SANS_TRACE } from '@/offline/file';
 import { useAsync } from '@/lib/useAsync';
 import { proposerNotifications } from '@/push';
 import { retourAuxVisites } from '@/session/navigation';
@@ -227,7 +228,11 @@ export default function KayeFormulaire() {
       if (envoyer) proposerNotifications();
     } catch (e) {
       if (e instanceof ApiError && e.code === 'EN_ATTENTE') setGardeIci(`${e.message} Votre texte reste ici.`);
-      else setErreur(`${messageErreur(e)} Votre texte reste ici.`);
+      // L1d (D9) : préinscription ou accord manquant. Rien n'est gardé, ni ici ni sur le téléphone.
+      else if (e instanceof ApiError && REFUS_SANS_TRACE.has(e.code)) {
+        setK(depuisBrouillon(null));
+        setErreur(`${e.message} Le texte est effacé de ce téléphone.`);
+      } else setErreur(`${messageErreur(e)} Votre texte reste ici.`);
     } finally {
       setEnvoi(null);
     }

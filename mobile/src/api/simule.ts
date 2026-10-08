@@ -7,7 +7,7 @@ import {
   PREFIXE_QR_SIGNE,
   type DomicileTrajet,
 } from './l1';
-import { reponsesOrientationSchema, type EtatVerification } from '@/compte/contratAccompagnant';
+import { demandeOrientationSchema, type EtatVerification, type ResultatOrientation } from '@/contracts';
 import { orienterLocalement } from '@/compte/orientation';
 import { trouverCommune } from '@/lib/communes';
 import { distanceMetres } from '@/lib/geo';
@@ -109,16 +109,39 @@ const COMPTES_TEST: Record<string, Partial<Moi>> = {
   'demande-envoyee@exemple.fr': { prenom: 'Gisèle', nom: 'Adèle', profilValide: false },
 };
 
+/**
+ * D15 : état de vérification simulé, même calcul que le serveur (`verification-app.ts`, F1).
+ * Le mode simulé n'a pas de profil web : communes, disponibilités, tarif et pièces comptent comme faits.
+ */
+type BaseVerification = { validation: EtatVerification['validation']; orientation: ResultatOrientation | null; raison: string | null };
+export function etatVerificationSimule(b: BaseVerification): EtatVerification {
+  const recommande = b.orientation?.issue === 'RECOMMANDE';
+  const envoyee = b.validation === 'EN_ATTENTE' || b.validation === 'VALIDE';
+  return {
+    validation: b.validation,
+    orientation: b.orientation,
+    etapes: [
+      { code: 'ORIENTATION', libelle: 'Répondre aux 5 questions', faite: recommande, surLeSite: false },
+      { code: 'PROFIL', libelle: 'Communes, disponibilités et tarif', faite: recommande, surLeSite: true },
+      { code: 'PIECES', libelle: 'Déclarer vos pièces', faite: recommande, surLeSite: true },
+      { code: 'DEMANDE', libelle: 'Demander la vérification', faite: envoyee, surLeSite: false },
+      { code: 'APPEL_EQUIPE', libelle: 'Appel de l’équipe Koudmen, puis validation', faite: b.validation === 'VALIDE', surLeSite: false },
+    ],
+    manque: [],
+    raison: b.validation === 'REFUSE' || b.validation === 'SUSPENDU' ? b.raison : null,
+    peutDemander: recommande && (b.validation === 'BROUILLON' || b.validation === 'REFUSE'),
+  };
+}
+
 /** D15 : état de vérification de départ des comptes de test. */
-const VERIFICATION_TEST: Record<string, EtatVerification> = {
+const VERIFICATION_TEST: Record<string, BaseVerification> = {
   'demande-envoyee@exemple.fr': {
     validation: 'EN_ATTENTE',
     orientation: orienterLocalement({ activity: 'LIEN', paid: true, existingStatus: 'AUCUN', situations: [], familyLink: 'AUCUN' }),
-    manque: [],
     raison: null,
   },
 };
-const VERIFICATION_VIDE: EtatVerification = { validation: 'BROUILLON', orientation: null, manque: [], raison: null };
+const VERIFICATION_VIDE: BaseVerification = { validation: 'BROUILLON', orientation: null, raison: null };
 
 function visite(id: string, debut: string, finMin: number, aine: Partial<Visite['aine']>, consignes: string, checkIn: boolean): Visite {
   return {
@@ -197,8 +220,8 @@ export function creerApiSimulee(): KoudmenApi {
   /** Trajets en cours : visite → fin automatique (ms). Aucune position gardée (L6 : pas d'historique). */
   const trajets = new Map<string, number>();
   /** D15 : état de vérification par e-mail (gardé après la déconnexion, comme sur le serveur). */
-  const verifications = new Map<string, EtatVerification>();
-  const verificationDe = (email: string): EtatVerification => verifications.get(email) ?? VERIFICATION_TEST[email] ?? VERIFICATION_VIDE;
+  const verifications = new Map<string, BaseVerification>();
+  const verificationDe = (email: string): BaseVerification => verifications.get(email) ?? VERIFICATION_TEST[email] ?? VERIFICATION_VIDE;
   const domicileDe = (v: Visite): DomicileTrajet | null => {
     if (v.id === 'vis_leonie_j0') return DOMICILE_SIMULE;
     const c = trouverCommune(v.aine.commune);
@@ -295,12 +318,12 @@ export function creerApiSimulee(): KoudmenApi {
     async lireVerification() {
       await attendre(200);
       exigerSession();
-      return verificationDe((session as Moi).email);
+      return etatVerificationSimule(verificationDe((session as Moi).email));
     },
     async envoyerOrientation(reponses) {
       await attendre(350);
       exigerSession();
-      const ok = reponsesOrientationSchema.safeParse(reponses);
+      const ok = demandeOrientationSchema.safeParse(reponses);
       if (!ok.success) throw new ApiError('REQUETE_INVALIDE', MESSAGES.REQUETE_INVALIDE, 400);
       const email = (session as Moi).email;
       const avant = verificationDe(email);
@@ -323,9 +346,9 @@ export function creerApiSimulee(): KoudmenApi {
         throw new ApiError('ACTION_IMPOSSIBLE', 'Faites d’abord l’orientation (5 questions).', 422);
       }
       journalApi().demandesVerification.push(email);
-      const apres: EtatVerification = { ...avant, validation: 'EN_ATTENTE', raison: null };
+      const apres: BaseVerification = { ...avant, validation: 'EN_ATTENTE', raison: null };
       verifications.set(email, apres);
-      return apres;
+      return etatVerificationSimule(apres);
     },
 
     async listerVisites() {

@@ -1,4 +1,4 @@
-import type { EtatVerification, ReponsesOrientation, ResultatOrientation } from '@/compte/contratAccompagnant';
+import type { DemandeOrientation as ReponsesOrientation, EtatVerification, ResultatOrientation } from '@/contracts';
 import type { HorsLigneVue } from '@/offline';
 import type {
   BrouillonKaye,

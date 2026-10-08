@@ -23,6 +23,9 @@ import { planifierParDefaut, type LigneStockee, type Planifier, type StockageHor
  * 8. Lignes gardées illisibles pour l'instant (clé indisponible) : rien n'est effacé. Seul le SOS part ; le reste attend.
  * 9. Session perdue : la file s'arrête et garde tout. Elle repart après la reconnexion.
  * 10. Déconnexion : `vider()` (et `toutEffacer()` du stockage par l'appelant).
+ * 11. L1d (D9) : refus `PREINSCRIPTION` ou `ACCORD_MANQUANT` : l'événement SORT de la file et rien n'est gardé
+ *     sur le téléphone (ni le contenu, ni le brouillon, ni la ligne). Le message s'affiche une fois (mémoire seulement).
+ *     `surRetrait(visiteId)` permet d'effacer aussi la fiche gardée de cette visite.
  */
 
 /** Envoie UN événement (POST /evenements). Lève une `ApiError` si la requête échoue. */
@@ -63,6 +66,8 @@ export type OptionsFile = {
   /** Nombre dans [0, 1) pour l'aléa de l'attente progressive. */
   alea?: () => number;
   planifier?: Planifier;
+  /** L1d (D9) : appelé après un refus « sans trace » (préinscription, accord manquant), pour effacer la fiche gardée. */
+  surRetrait?: (visiteId: string | null) => void;
 };
 
 export interface FileEvenements {
@@ -104,6 +109,12 @@ export const MAX_EN_COURS = 10;
 const REFUS_CORRIGEABLES = new Set<CodeErreurApp>(['INVALIDE', 'INTERDIT', 'A_VERIFIER']);
 /** Actions dont une nouvelle saisie remplace la précédente encore en attente (même visite). */
 const REMPLACABLES = new Set<TypeEvenement>(['CHECK_IN', 'KAYE_BROUILLON', 'KAYE_PUBLICATION']);
+/**
+ * L1d (D9, serveur F1) : refus qui retirent l'événement SANS RIEN GARDER.
+ * - `PREINSCRIPTION` : Koudmen n'est pas encore ouvert, le serveur ne garde rien ;
+ * - `ACCORD_MANQUANT` : l'accord de l'aîné n'est pas recueilli (ou il est retiré).
+ */
+export const REFUS_SANS_TRACE = new Set<CodeErreurApp>(['PREINSCRIPTION', 'ACCORD_MANQUANT']);
 const SESSION = new Set<CodeErreurApp>(['NON_AUTHENTIFIE', 'JETON_INVALIDE', 'JETON_REUTILISE', 'ACCES_REFUSE', 'CODE_INVALIDE']);
 
 export type Genre = 'reseau' | 'session' | 'definitif';
@@ -156,6 +167,8 @@ type Ligne = {
   enCoursRepetes?: number;
   /** `false` : l'écriture sur le téléphone a échoué, la ligne existe seulement en mémoire. */
   persistee?: boolean;
+  /** L1d (D9) : refus « sans trace » : jamais écrit sur le téléphone (message en mémoire seulement). */
+  sansTrace?: boolean;
 };
 
 type Attente = { resolve: (r: ResultatEvenement) => void; reject: (e: unknown) => void };
@@ -252,6 +265,7 @@ export function creerFile(o: OptionsFile): FileEvenements {
    * Renvoie `false` en cas d'échec : l'écran ne dit alors PAS « gardé sur ce téléphone ».
    */
   async function persister(l: Ligne): Promise<boolean> {
+    if (l.sansTrace) return true;
     const gen = generation;
     try {
       await stockage.ecrireLigne(versStockage(l));
@@ -375,6 +389,23 @@ export function creerFile(o: OptionsFile): FileEvenements {
     await persister(l);
   }
 
+  /**
+   * L1d (D9) : refus « sans trace ». La ligne sort du stockage tout de suite. Seul le message reste, en mémoire,
+   * pour l'afficher une fois (bandeau). Aucun contenu (Kayé, code, position) n'est gardé.
+   */
+  async function retirerSansTrace(l: Ligne, e: Evenement, erreur: ApiError) {
+    l.statut = 'REFUSE';
+    l.sansTrace = true;
+    l.refus = { id: l.id, type: e.type, visiteId: visiteDe(e), code: erreur.code, message: erreur.message };
+    l.evenement = null;
+    await oublierStockage(l.id);
+    try {
+      o.surRetrait?.(visiteDe(e));
+    } catch {
+      // L'effacement de la fiche gardée est un plus : il ne bloque jamais la file.
+    }
+  }
+
   async function passe(forcer: boolean): Promise<void> {
     await charger();
     const gen = generation;
@@ -441,7 +472,8 @@ export function creerFile(o: OptionsFile): FileEvenements {
         }
 
         if (issue.genre === 'definitif') {
-          await refuser(l, e, issue.erreur);
+          if (REFUS_SANS_TRACE.has(issue.erreur.code)) await retirerSansTrace(l, e, issue.erreur);
+          else await refuser(l, e, issue.erreur);
           regler(l.id, { erreur: issue.erreur });
           notifier();
           continue;
