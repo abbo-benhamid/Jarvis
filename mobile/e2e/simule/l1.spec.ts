@@ -144,7 +144,9 @@ test('D15 : orientation en 5 questions puis demande de vérification, dans l’a
   await page.getByTestId('bouton-orientation-continuer').click();
 
   await expect(page.getByTestId('etapes-validation')).toContainText('Payé par la famille, avec le CESU');
-  await expect(validation).not.toContainText(/vous appelle/i);
+  // Avant l'envoi : les étapes ne disent pas « l'équipe vous appelle » (le bouton dit ce qui se passe après l'envoi).
+  await expect(page.getByTestId('etapes-validation')).not.toContainText(/vous appelle/i);
+  await expect(page.getByTestId('etapes-validation')).toContainText('À envoyer maintenant.');
   await page.getByTestId('bouton-demander-verification').click();
   await expect(page.getByTestId('etapes-validation')).toContainText('Demande envoyée.');
   await expect(page.getByTestId('etapes-validation')).toContainText('L’équipe vous appelle');

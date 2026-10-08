@@ -137,7 +137,7 @@ export default function CompteEnValidation() {
         ) : action === 'demander' ? (
           <>
             <Text variant="body" style={{ fontSize: 16 }}>
-              Envoyez votre demande. L’équipe Koudmen reçoit votre dossier, puis vous appelle au numéro donné à l’inscription.
+              Envoyez votre demande. Après l’envoi seulement, l’équipe Koudmen vous appelle au numéro donné à l’inscription.
             </Text>
             <Button testID="bouton-demander-verification" large label="Demander la vérification" loading={envoi} onPress={() => void demander()} />
           </>

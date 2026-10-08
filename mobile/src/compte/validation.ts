@@ -63,7 +63,9 @@ export function etapesValidation({ emailOk, verification: v, routesAbsentes }: E
     ? { titre: 'Demande de vérification', detail: 'Demande envoyée.', etat: 'fait' }
     : v?.validation === 'REFUSE'
       ? { titre: 'Demande de vérification', detail: 'Corrigez ce qui est demandé, puis envoyez une nouvelle demande.', etat: 'en_cours' }
-      : { titre: 'Demande de vérification', detail: 'Après votre statut.', etat: orientationOk ? 'en_cours' : 'a_venir' };
+      : orientationOk
+        ? { titre: 'Demande de vérification', detail: 'À envoyer maintenant.', etat: 'en_cours' }
+        : { titre: 'Demande de vérification', detail: 'Après votre statut.', etat: 'a_venir' };
 
   const etapeEchange: Etape = envoyee
     ? {
