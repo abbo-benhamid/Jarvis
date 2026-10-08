@@ -12,6 +12,7 @@ const enabled = process.env.KOUDMEN_DB_TESTS === "1";
 describe.runIf(enabled)("Lot B sur une vraie base", async () => {
   const { db } = await import("@/server/db");
   const service = await import("./service");
+  const { mqDayOfWeek } = await import("./schedule");
   const tag = `lotb-${randomBytes(4).toString("hex")}`;
   const userIds: string[] = [];
   const aineIds: string[] = [];
@@ -56,8 +57,9 @@ describe.runIf(enabled)("Lot B sur une vraie base", async () => {
         status: "PROPOSEE",
         slots: {
           create: [
-            { dayOfWeek: 1, slot: "APRES_MIDI" },
-            { dayOfWeek: 3, slot: "APRES_MIDI" },
+            // Jours relatifs à aujourd'hui (heure de Martinique) : aucun créneau déjà passé, donc toujours 8 visites.
+            { dayOfWeek: (mqDayOfWeek(new Date()) + 1) % 7, slot: "APRES_MIDI" },
+            { dayOfWeek: (mqDayOfWeek(new Date()) + 3) % 7, slot: "APRES_MIDI" },
           ],
         },
       },
