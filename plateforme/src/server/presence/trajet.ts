@@ -55,6 +55,16 @@ export async function endTripForVisit(visitId: string, reason: TripEndReason, ac
   return r.count > 0;
 }
 
+/**
+ * L1d (D7, code M3, sécu M6) : effacement PARESSEUX. Chaque lecture ou écriture de trajet efface d'abord TOUS les
+ * trajets expirés (60 min), et avec eux la dernière position et le point de départ. Requête indexée (`expiresAt`).
+ * La purge de nuit reste le filet de sécurité quand aucun appel n'arrive.
+ */
+export async function purgeExpiredTrips(now: Date = new Date()): Promise<number> {
+  const r = await db.visitTrip.deleteMany({ where: { expiresAt: { lte: now } } });
+  return r.count;
+}
+
 async function loadOwnedVisitForTrip(userId: string, visitId: string) {
   const visit = await db.visit.findFirst({
     where: { id: visitId, caregiver: { userId } },
@@ -82,6 +92,7 @@ function roundedHome(aine: HomePointSource) {
 
 /** POST /visites/:id/trajet — DEMARRER (idempotent tant que le trajet court) ou ARRETER (idempotent). */
 export async function startOrStopTrip(actor: TripActor, visitId: string, action: "DEMARRER" | "ARRETER", now: Date = new Date()): Promise<ReponseTrajet> {
+  await purgeExpiredTrips(now);
   const visit = await loadOwnedVisitForTrip(actor.id, visitId);
   if (action === "ARRETER") {
     await endTripForVisit(visit.id, "ARRETER", actor);
@@ -130,11 +141,19 @@ export async function startOrStopTrip(actor: TripActor, visitId: string, action:
  * À moins de 150 m du domicile : le trajet s'arrête (ARRIVEE).
  */
 export async function recordTripPosition(actor: TripActor, visitId: string, input: DemandePosition, receivedAt: Date = new Date()): Promise<"GARDEE" | "IGNOREE" | "ARRIVEE"> {
+  await purgeExpiredTrips(receivedAt);
   const visit = await loadOwnedVisitForTrip(actor.id, visitId);
   const trip = visit.trip;
   if (!trip || trip.expiresAt.getTime() <= receivedAt.getTime() || visit.checkInAt) {
     if (trip) await endTripForVisit(visit.id, visit.checkInAt ? "CHECK_IN" : "EXPIRATION");
     throw new TripError("Aucun trajet en cours pour cette visite.", "CONFLIT");
+  }
+  // Code m3 : mêmes contrôles qu'au démarrage. Profil suspendu, mission suspendue ou accord retiré pendant le
+  // trajet → le trajet s'arrête et la position n'est pas écrite.
+  const refusal = presenceRefusal(visit.aine);
+  if (visit.caregiver.validation !== "VALIDE" || visit.mission.status !== "ACTIVE" || refusal) {
+    await endTripForVisit(visit.id, "ARRETER", actor);
+    throw new TripError(refusal ? PRESENCE_REFUSAL_MESSAGES[refusal] : "Ce trajet ne peut plus être partagé.", "INTERDIT");
   }
   const lat = roundCoord(input.latitude);
   const lng = roundCoord(input.longitude);
@@ -155,7 +174,12 @@ export async function recordTripPosition(actor: TripActor, visitId: string, inpu
         : {}),
     },
   });
-  if (claim.count !== 1) throw new TripError("Une position toutes les 30 secondes au plus.", "TROP_DE_REQUETES");
+  if (claim.count !== 1) {
+    // Code m3 : la ligne a pu être effacée entre-temps (check-in, ARRETER, expiration) → 409, pas 429.
+    const still = await db.visitTrip.findUnique({ where: { id: trip.id }, select: { expiresAt: true } });
+    if (!still || still.expiresAt.getTime() <= receivedAt.getTime()) throw new TripError("Aucun trajet en cours pour cette visite.", "CONFLIT");
+    throw new TripError("Une position toutes les 30 secondes au plus.", "TROP_DE_REQUETES");
+  }
   if (!at) return "IGNOREE";
   if (arrivedHome({ lat, lng }, homePoint(visit.aine))) {
     await endTripForVisit(visit.id, "ARRIVEE", actor);
@@ -169,6 +193,7 @@ export async function recordTripPosition(actor: TripActor, visitId: string, inpu
 /** GET /api/famille/visites/:id/trajet : employeur ou personne désignée seulement (R4). Null = introuvable ou non permis. */
 export async function getFamilyTripView(user: TripActor, visitId: string, now: Date = new Date()): Promise<ReponseTrajetFamille | null> {
   if (user.role !== "FAMILLE") return null;
+  await purgeExpiredTrips(now);
   const visit = await db.visit.findUnique({
     where: { id: visitId },
     select: {
@@ -234,6 +259,7 @@ export async function getFamilyTripView(user: TripActor, visitId: string, now: D
 /** R3 : l'opérateur voit seulement « trajet partagé : oui/non ». Renvoie les visites avec un trajet en cours. */
 export async function visitsWithActiveTrip(visitIds: string[], now: Date = new Date()): Promise<Set<string>> {
   if (visitIds.length === 0) return new Set();
+  await purgeExpiredTrips(now);
   const rows = await db.visitTrip.findMany({ where: { visitId: { in: visitIds }, expiresAt: { gt: now } }, select: { visitId: true } });
   return new Set(rows.map((r) => r.visitId));
 }
@@ -247,6 +273,7 @@ export const SOS_ACTIF_MS = 60 * 60_000;
  */
 export async function getOperatorSosPosition(operator: TripActor, visitId: string, now: Date = new Date()) {
   if (operator.role !== "OPERATEUR") return null;
+  await purgeExpiredTrips(now);
   const visit = await db.visit.findUnique({
     where: { id: visitId },
     select: { id: true, aine: { select: { sandboxId: true, firstName: true, latitude: true, longitude: true, locationApproximate: true, homeGeoEnc: true } }, caregiver: { select: { userId: true, user: { select: { firstName: true } } } }, trip: true },

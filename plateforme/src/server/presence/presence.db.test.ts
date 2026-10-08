@@ -338,6 +338,32 @@ describe.runIf(enabled)("Lot L1-B (présence) sur une vraie base", async () => {
     expect(await db.visitTrip.count({ where: { visitId: v2.id } })).toBe(0);
   });
 
+  it("D7 (code M3, sécu M6) : un trajet expiré SANS appel est effacé au prochain appel de n'importe quel trajet ; m3 : 409 et contrôles pendant le trajet", async () => {
+    const trajet = await import("./trajet");
+    // L'accompagnant démarre, envoie une position, puis l'app est tuée (pas d'ARRETER, pas de check-in).
+    const v = await visitFor(alice, 0.5);
+    await trajet.startOrStopTrip(alice.user, v.id, "DEMARRER");
+    await trajet.recordTripPosition(alice.user, v.id, { ...north(2000), precisionMetres: 10, survenuA: new Date().toISOString() });
+    await db.visitTrip.update({ where: { visitId: v.id }, data: { expiresAt: new Date(Date.now() - 1000) } });
+    // Un AUTRE appel (vue famille d'une autre visite) efface la ligne expirée et ses coordonnées.
+    const other = await visitFor(alice, 0.5);
+    await trajet.getFamilyTripView({ id: payeur.id, role: "FAMILLE", sandboxId: null }, other.id);
+    expect(await db.visitTrip.count({ where: { visitId: v.id } })).toBe(0);
+
+    // m3 : mission suspendue pendant le trajet → la position n'est pas écrite, le trajet s'arrête.
+    const v2 = await visitFor(alice, 0.5);
+    await trajet.startOrStopTrip(alice.user, v2.id, "DEMARRER");
+    await db.mission.update({ where: { id: v2.missionId }, data: { status: "SUSPENDUE" } });
+    await expect(trajet.recordTripPosition(alice.user, v2.id, { ...north(2000), precisionMetres: 10, survenuA: new Date().toISOString() })).rejects.toMatchObject({ code: "INTERDIT" });
+    expect(await db.visitTrip.count({ where: { visitId: v2.id } })).toBe(0);
+
+    // m3 : position après le check-in (ligne effacée) → 409 CONFLIT, jamais 429.
+    const v3 = await visitFor(alice, 0.5);
+    await trajet.startOrStopTrip(alice.user, v3.id, "DEMARRER");
+    await app.processAppEvents(alice.user, [checkIn(v3.id, { qr: await qrOf(aineId) })]);
+    await expect(trajet.recordTripPosition(alice.user, v3.id, { ...north(2000), precisionMetres: 10, survenuA: new Date().toISOString() })).rejects.toMatchObject({ code: "CONFLIT" });
+  });
+
   // ─────────────── R7 : la famille employeur tranche ───────────────
 
   it("visite À vérifier : seul le payeur tranche ; confirmer → VALIDEE ; signaler → opérateurs prévenus", async () => {
