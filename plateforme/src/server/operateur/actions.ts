@@ -17,6 +17,9 @@ import { REAL_WORLD, sameScope } from "@/server/scope";
 import { VALIDATION_LABELS } from "@/lib/labels";
 import { fail, type ActionResult } from "@/lib/action-result";
 import { isLaunchMode } from "@/server/launch";
+import { blockersFor, proposeOrConfirmDossierRefusal } from "@/server/verifications/review";
+import { isL2Type } from "@/server/verifications/rules";
+import { refreshDossier } from "@/server/verifications/service";
 import {
   allowedDecisions,
   DECISION_RESULT,
@@ -27,7 +30,6 @@ import {
   proposalSchema,
   recomputeLevels,
   reviewProblem,
-  validationBlockers,
   verificationReviewSchema,
 } from "./rules";
 
@@ -58,7 +60,7 @@ export async function decideCaregiverAction(_prev: ActionResult, formData: FormD
   const user = await requireRole("OPERATEUR");
   const parsed = decisionSchema.safeParse(formToObject(formData));
   if (!parsed.success) return fail("Vérifiez la décision et le motif.", parsed.error.flatten().fieldErrors);
-  const { caregiverId, decision, reason } = parsed.data;
+  const { caregiverId, decision, reason, motifCode } = parsed.data;
 
   const cg = await db.caregiverProfile.findUnique({
     where: { id: caregiverId },
@@ -70,8 +72,20 @@ export async function decideCaregiverAction(_prev: ActionResult, formData: FormD
     return fail(`Cette décision n'est pas possible. État actuel du profil : ${VALIDATION_LABELS[cg.validation]}.`);
   }
   if (decision === "VALIDER" || decision === "REACTIVER") {
-    const blockers = validationBlockers(cg);
+    // L2 (étude § 6.4) : règles L1 + éléments obligatoires du statut (téléphone, identité, adresse, entreprise).
+    const blockers = await blockersFor(cg.id);
     if (blockers.length > 0) return fail(`Validation impossible. ${blockers.join(" ")}`);
+  }
+  // L2 (étude § 6.5) : un refus exige DEUX opérateurs. Le premier propose ; un autre confirme.
+  let refusalCode: string | null = null;
+  if (decision === "REFUSER") {
+    const step = await proposeOrConfirmDossierRefusal(user, cg.id, motifCode!);
+    if (step.step === "PROPOSE") {
+      revalidatePath("/operateur", "layout");
+      return { ok: true, message: "Refus proposé. Un autre opérateur doit le confirmer : il choisit aussi « Refuser le profil »." };
+    }
+    if (step.step === "MEME_OPERATEUR") return fail("Vous avez proposé ce refus. Un autre opérateur doit le confirmer.");
+    refusalCode = cg.refusalCode ?? motifCode ?? null;
   }
 
   const to = DECISION_RESULT[decision];
@@ -90,6 +104,7 @@ export async function decideCaregiverAction(_prev: ActionResult, formData: FormD
           allowedLevels: levels.allowedLevels,
           // R6 (J6) : à la validation, les réponses brutes de l'orientation sont effacées (seul le statut déduit reste).
           ...(to === "VALIDE" ? { orientationAnswers: Prisma.DbNull } : {}),
+          ...(to === "REFUSE" ? { refusalCode, refusedAt: new Date() } : {}),
         },
       });
       if (res.count !== 1) throw new BusinessError("Le profil a changé entre-temps. Rechargez la page.");
@@ -151,6 +166,8 @@ export async function reviewVerificationAction(_prev: ActionResult, formData: Fo
   });
   if (!item || !sameScope(item.caregiver.user?.sandboxId, REAL_WORLD)) return fail("Vérification introuvable.");
   if (item.status === "A_FOURNIR") return fail("L'accompagnant n'a pas encore déclaré cette pièce.");
+  // L2 : téléphone, identité, adresse, entreprise → écran « Vérifications à revoir » (liste de cases, second avis).
+  if (isL2Type(item.type)) return fail("Ouvrez cet élément dans « Vérifications à revoir ».");
   const problem = reviewProblem(item.type, parsed.data);
   if (problem) return fail(problem.message, { [problem.field]: [problem.message] });
   // R6 (J6) : casier B3 → aucun texte libre, seulement la date « vu le » et le verdict.
@@ -166,6 +183,8 @@ export async function reviewVerificationAction(_prev: ActionResult, formData: Fo
         reviewedById: user.id,
         reviewedAt: new Date(),
         ...(b3 ? { seenOn: new Date(`${seenOn}T00:00:00Z`), declaration: null } : {}),
+        // L2 (étude § 6.6) : le casier B3 vaut 1 an ; à l'échéance, l'élément passe EXPIRE (purge nocturne).
+        ...(b3 && verdict === "VALIDE" ? { expiresAt: new Date(new Date(`${seenOn}T00:00:00Z`).getTime() + 365 * 86_400_000) } : {}),
       },
     });
     // Le diplôme VALIDÉ ouvre le niveau 4 (salarié famille, proche aidant). Niveaux recalculés côté serveur.
@@ -186,6 +205,7 @@ export async function reviewVerificationAction(_prev: ActionResult, formData: Fo
     );
   });
 
+  await refreshDossier(item.caregiver.id);
   revalidatePath(`/operateur/accompagnants/${item.caregiver.id}`);
   return { ok: true, message: verdict === "VALIDE" ? "Vérification validée." : "Vérification refusée." };
 }

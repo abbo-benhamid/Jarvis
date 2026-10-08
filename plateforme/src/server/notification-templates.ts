@@ -25,7 +25,9 @@ export type TemplateKey =
   | "PROCHE_AIDANT_RATTACHE"
   | "SOS_ACCOMPAGNANT"
   | "VISITE_SIGNALEE"
-  | "VISITE_PRESENCE_PROBABLE";
+  | "VISITE_PRESENCE_PROBABLE"
+  | "VERIFICATION_COMPLEMENT"
+  | "VERIFICATION_TERMINEE";
 
 type Vars = Record<string, string | number>;
 
@@ -123,6 +125,15 @@ const TEMPLATES: Record<TemplateKey, { subject: string; body: string }> = {
   VISITE_PRESENCE_PROBABLE: {
     subject: "Visite : présence probable",
     body: "La visite chez {aine} du {date} a la carte du domicile et la position : présence probable. Un problème ? Contestez dans Koudmen pendant 48 heures.",
+  },
+  // L2 : vérification de l'accompagnant. Aucune donnée de la pièce, jamais « échec ».
+  VERIFICATION_COMPLEMENT: {
+    subject: "Koudmen : un complément pour votre dossier",
+    body: "Bonjour {prenom}, l'équipe Koudmen demande un complément pour « {element} » : {motif} Ouvrez Koudmen pour le fournir.",
+  },
+  VERIFICATION_TERMINEE: {
+    subject: "Koudmen : vérification reçue",
+    body: "Bonjour {prenom}, la vérification « {element} » est terminée. Ouvrez Koudmen pour voir la suite de votre dossier.",
   },
   PAIEMENT_SIMULE: {
     subject: "Formule {formule} activée",

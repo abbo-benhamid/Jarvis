@@ -8,6 +8,7 @@ import { testEndDate } from "@/server/env";
 import { isLaunchMode } from "@/server/launch";
 import { purgeLaunchData } from "@/server/launch-retention";
 import { encryptLegacyHomeLocations } from "@/server/presence/address";
+import { purgeVerificationData } from "@/server/verifications/review";
 
 /**
  * Purge nocturne (Vercel Cron, vercel.json) : bacs à sable de plus de 30 jours (D2), puis durées de
@@ -33,7 +34,14 @@ export async function GET(req: NextRequest) {
   } catch {
     domicilesChiffres = -1;
   }
-  await db.auditLog.create({ data: { action: "sandbox.purged", entityType: "Sandbox", metadata: { purged, ...retention, app, lancement, domicilesChiffres } } });
+  // L2 : documents à J+30 après la décision, suppression chez le prestataire d'identité, codes SMS, échéances (B3).
+  let verifications: Awaited<ReturnType<typeof purgeVerificationData>> | null = null;
+  try {
+    verifications = await purgeVerificationData(now);
+  } catch (e) {
+    console.error(`[cron] purge des vérifications : ${e instanceof Error ? e.name : "erreur"}`);
+  }
+  await db.auditLog.create({ data: { action: "sandbox.purged", entityType: "Sandbox", metadata: { purged, ...retention, app, lancement, domicilesChiffres, verifications } } });
   const push = await flushPendingPushSafe();
-  return NextResponse.json({ purged, ...retention, app, lancement, domicilesChiffres, push });
+  return NextResponse.json({ purged, ...retention, app, lancement, domicilesChiffres, verifications, push });
 }

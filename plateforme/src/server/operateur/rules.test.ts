@@ -35,7 +35,9 @@ describe("decisionSchema (motif obligatoire, RM-07)", () => {
     expect(decisionSchema.safeParse({ caregiverId: CUID, decision: "SUSPENDRE", reason: "court" }).success).toBe(false);
   });
   it("accepte un refus motivé", () => {
-    expect(decisionSchema.safeParse({ caregiverId: CUID, decision: "REFUSER", reason: "Casier B3 non conforme." }).success).toBe(true);
+    expect(decisionSchema.safeParse({ caregiverId: CUID, decision: "REFUSER", reason: "Casier B3 non conforme.", motifCode: "B3_NON_CONFORME" }).success).toBe(true);
+    // L2 : motif fermé obligatoire pour refuser.
+    expect(decisionSchema.safeParse({ caregiverId: CUID, decision: "REFUSER", reason: "Casier B3 non conforme." }).success).toBe(false);
   });
   it("accepte une validation sans motif", () => {
     expect(decisionSchema.safeParse({ caregiverId: CUID, decision: "VALIDER" }).success).toBe(true);

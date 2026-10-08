@@ -48,6 +48,12 @@ export function allowedDecisions(validation: CaregiverValidation): CaregiverDeci
       return ["SUSPENDRE"];
     case "SUSPENDU":
       return ["REACTIVER", "REFUSER"];
+    // L2 : complément demandé → l'accompagnant complète ; l'opérateur peut seulement refuser (second avis).
+    case "A_COMPLETER":
+      return ["REFUSER"];
+    // L2 : un élément a expiré (pas une sanction) ; l'élément renouvelé rend le profil VALIDE tout seul.
+    case "EXPIRE":
+      return ["SUSPENDRE", "REFUSER"];
     default:
       // BROUILLON : profil incomplet. REFUSE : l'accompagnant corrige puis redemande.
       return [];
@@ -62,13 +68,31 @@ export function decisionNeedsReason(d: CaregiverDecision): boolean {
 export const REASON_MIN = 10;
 export const REASON_MAX = 1000;
 
+/** L2 (étude § 6.5) : motifs fermés d'un refus de dossier. */
+export const REFUSAL_CODES = [
+  "IDENTITE_NON_CONFIRMEE",
+  "DOCUMENT_FRAUDULEUX",
+  "MINEUR",
+  "AGE_INSUFFISANT_NIVEAU",
+  "B3_NON_CONFORME",
+  "ENTREPRISE_CESSEE",
+  "STATUT_INCOMPATIBLE",
+  "DOSSIER_INCOMPLET_90J",
+  "COMPTE_EN_DOUBLE",
+] as const;
+
 export const decisionSchema = z
   .object({
     caregiverId: z.string().cuid(),
     decision: z.enum(CAREGIVER_DECISIONS, { errorMap: () => ({ message: "Choisissez une décision." }) }),
     reason: z.string().trim().max(REASON_MAX, `${REASON_MAX} caractères maximum.`).default(""),
+    /** L2 : motif fermé, obligatoire pour refuser (en plus du texte envoyé à l'accompagnant). */
+    motifCode: z.preprocess((v) => (v === "" ? undefined : v), z.enum(REFUSAL_CODES).optional()),
   })
   .superRefine((v, ctx) => {
+    if (v.decision === "REFUSER" && !v.motifCode) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["motifCode"], message: "Choisissez le motif du refus dans la liste." });
+    }
     if (decisionNeedsReason(v.decision) && v.reason.length < REASON_MIN) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

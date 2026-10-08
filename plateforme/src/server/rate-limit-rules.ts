@@ -34,6 +34,18 @@ export const RATE_RULES = {
   "email:destinataire": { limit: 3, windowSeconds: 24 * 60 * 60 },
   /** L3 : essais de jetons reçus par e-mail (lien de vérification, nouveau mot de passe), par IP. */
   "jeton-email:ip": { limit: 30, windowSeconds: 60 * 60 },
+  /** L2 (étude § 5.3) : codes de vérification du téléphone, 10 par jour par IP et par compte (+ limites par numéro en base). */
+  "otp:ip": { limit: 10, windowSeconds: 24 * 60 * 60 },
+  "otp:compte": { limit: 10, windowSeconds: 24 * 60 * 60 },
+  /** L2 : essais de code (en plus des 5 essais par code). */
+  "otp-essai:compte": { limit: 30, windowSeconds: 60 * 60 },
+  /** L2 : sessions d'identité (3 par élément, en base) et contrôles de SIRET. */
+  "identite:compte": { limit: 5, windowSeconds: 60 * 60 },
+  "entreprise:compte": { limit: 10, windowSeconds: 60 * 60 },
+  /** L2 : dépôts de documents. */
+  "document:compte": { limit: 20, windowSeconds: 24 * 60 * 60 },
+  /** L2 : webhooks des prestataires (signés), garde-fou par IP. */
+  "webhook:ip": { limit: 300, windowSeconds: 60 },
 } as const satisfies Record<string, { limit: number; windowSeconds: number }>;
 
 export type RateRuleName = keyof typeof RATE_RULES;

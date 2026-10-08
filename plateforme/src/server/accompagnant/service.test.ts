@@ -31,6 +31,7 @@ const m = vi.hoisted(() => {
     journalEntry: model(),
     kayeDraft: model(),
     auditLog: model(),
+    user: model(),
   });
   const tx = client();
   const db = { ...client(), $transaction: vi.fn(async (cb: (t: typeof tx) => unknown) => cb(tx)) };

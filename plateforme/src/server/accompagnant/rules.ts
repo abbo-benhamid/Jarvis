@@ -161,9 +161,12 @@ export function missingProfileItems(p: ProfileSnapshot): MissingItem[] {
   return out;
 }
 
-/** Toutes les vérifications sont déclarées (ou déjà validées). */
+/**
+ * Toutes les vérifications sont prêtes pour la demande : déclarées, validées, en cours ou en revue humaine (L2).
+ * Les éléments absents (L2 pas encore créés) sont contrôlés par `server/verifications/service.ts`.
+ */
 export function verificationsReady(items: { status: VerificationStatus }[]): boolean {
-  return items.length > 0 && items.every((i) => i.status === "DECLARE" || i.status === "VALIDE");
+  return items.length > 0 && items.every((i) => i.status !== "A_FOURNIR" && i.status !== "REFUSE" && i.status !== "EXPIRE");
 }
 
 /** L'accompagnant peut-il demander la vérification de son profil ? */

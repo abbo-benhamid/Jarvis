@@ -21,13 +21,15 @@ import { lockCareRequests } from "@/server/matching/locks";
 import { inTransaction } from "@/server/matching/service";
 import { MOOD_LABELS } from "@/lib/labels";
 import { planVisits } from "./schedule";
+import { addressProofRequired } from "@/server/verifications/config";
+import { l2TypesFor } from "@/server/verifications/rules";
+import { ensureRequiredItems, l2Applies, loadProfile as loadVerificationProfile, submissionProblems } from "@/server/verifications/service";
 import {
   MAX_CODE_ATTEMPTS,
   PLANCHER_SALARIE_CENTS,
   canDeclare,
   declarationProblem,
   canRedoOrientation,
-  canSubmitForReview,
   canWriteKaye,
   checkInWindow,
   missingProfileItems,
@@ -160,7 +162,10 @@ export async function saveOrientation(actor: Actor, answers: OrientationAnswers)
   // R6 (J26) : niveau 3 fermé sous 21 ans (date de naissance donnée à l'inscription).
   const age = profile.birthDate ? ageInYears(profile.birthDate) : null;
   const allowedLevels = status ? allowedLevelsFor(status, { hasDiploma: profile.hasDiploma, age }) : [];
-  const required = result.requiredVerifications;
+  // L2 : éléments du monde réel (téléphone, adresse, entreprise) ajoutés selon le statut (ni bac à sable, ni démo).
+  const owner = await db.user.findUnique({ where: { id: actor.id }, select: { sandboxId: true, isDemo: true } });
+  const l2 = status && owner && l2Applies(owner) ? l2TypesFor(status, { addressProofRequired: addressProofRequired() }) : [];
+  const required = [...new Set([...result.requiredVerifications, ...l2])];
   // D10 (M1) : un nouveau statut salarié n'hérite jamais d'un tarif sous le plancher. Le tarif est effacé :
   // le profil redevient incomplet, l'accompagnant fixe un nouveau tarif.
   const keepRate =
@@ -280,28 +285,24 @@ export async function declareVerification(actor: Actor, itemId: string, declarat
 }
 
 export async function submitForReview(actor: Actor) {
-  const profile = await getOrCreateProfile(actor.id);
-  const snapshot = {
-    status: profile.status,
-    communes: profile.communes,
-    availabilityCount: profile.availabilities.length,
-    hourlyRateCents: profile.hourlyRateCents,
-    associationName: profile.associationName,
-    saadName: profile.saadName,
-    siret: profile.siret,
-  };
-  if (!canSubmitForReview(profile.validation, snapshot, profile.verifications)) {
-    const missing = missingProfileItems(snapshot).map((m) => m.label);
+  const base = await getOrCreateProfile(actor.id);
+  // L2 : éléments requis selon le statut (téléphone, identité, adresse, entreprise) ; règles dans server/verifications.
+  const profile = await loadVerificationProfile(actor.id);
+  const items = await ensureRequiredItems(profile);
+  if (profile.validation === "EN_ATTENTE" || profile.validation === "VALIDE" || profile.validation === "A_COMPLETER") {
+    throw new AccompagnantError("Votre demande est déjà envoyée.", "CONFLIT");
+  }
+  const problems = submissionProblems(profile, items, base.availabilities.length);
+  if (problems.length > 0) {
+    const missing = missingProfileItems({ ...profile, availabilityCount: base.availabilities.length }).map((m) => m.label);
     throw new AccompagnantError(
-      missing.length > 0
-        ? `Votre profil n'est pas complet : ${missing.join(", ")}.`
-        : "Déclarez d'abord toutes vos vérifications.",
+      missing.length > 0 ? `Votre profil n'est pas complet : ${missing.join(", ")}.` : `Avant la demande : ${problems.join(" ; ")}.`,
       "INVALIDE",
     );
   }
   const res = await db.caregiverProfile.updateMany({
     where: { id: profile.id, validation: { in: ["BROUILLON", "REFUSE"] } },
-    data: { validation: "EN_ATTENTE", validationReason: null },
+    data: { validation: "EN_ATTENTE", validationReason: null, refusalCode: null, refusalProposedById: null, refusalProposedAt: null },
   });
   if (res.count !== 1) throw new AccompagnantError("Votre demande est déjà envoyée.", "CONFLIT");
   await logAudit({ actor, action: "caregiver.submitted", entityType: "CaregiverProfile", entityId: profile.id });
