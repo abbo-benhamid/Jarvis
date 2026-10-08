@@ -13,6 +13,8 @@ const VISIT_TONE: Record<VisitStatus, BadgeTone> = {
   EN_COURS: "mer",
   VALIDEE: "feuille",
   A_VERIFIER: "soleil",
+  // L1d (D4, agent F1) : minimum pour le typage ; F2 peut ajuster le ton.
+  PRESENCE_PROBABLE: "mer",
 };
 
 export function VisitStatusBadge({ status }: { status: VisitStatus }) {

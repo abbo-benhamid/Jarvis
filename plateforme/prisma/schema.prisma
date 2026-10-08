@@ -160,6 +160,8 @@ enum VisitStatus {
   EN_COURS
   VALIDEE
   A_VERIFIER
+  /// L1d (D4) : QR (ou code) + position, SANS la confirmation de l'aîné. La famille employeur peut contester 48 h.
+  PRESENCE_PROBABLE
 }
 
 enum ProofFactor {
@@ -274,6 +276,8 @@ model User {
   activationsHandled  PlanActivationRequest[] @relation("ActivationHandler")
   /// R5 : accords d'aînés enregistrés par ce conseiller.
   ainesAccordRecorded Aine[]                  @relation("AineAccordRecorder")
+  /// L1d (D11) : personnes désignées (vue du trajet) enregistrées par ce conseiller.
+  tripViewersRecorded Aine[]                  @relation("AineTripViewerRecorder")
 
   @@index([sandboxId])
   /// L11 : purge des comptes jamais confirmés (J29) et liste opérateur « e-mails à valider ».
@@ -333,6 +337,14 @@ model Aine {
   /// Null = l'employeur (le payeur du profil). Personne d'autre ne voit le trajet.
   tripViewerId        String?
   tripViewer          User?      @relation("AineTripViewer", fields: [tripViewerId], references: [id], onDelete: SetNull)
+  /// L1d (D11) : la personne désignée est CHOISIE PAR L'AÎNÉ pendant un appel du conseiller, qui l'enregistre.
+  /// Date de l'appel où l'aîné l'a choisie, et conseiller qui l'a enregistrée. Null = défaut (l'employeur seul).
+  tripViewerChosenAt  DateTime?
+  tripViewerRecordedById String?
+  tripViewerRecordedBy User?     @relation("AineTripViewerRecorder", fields: [tripViewerRecordedById], references: [id], onDelete: SetNull)
+  /// L1d (D3) : position PRÉCISE du domicile (géocodage de l'adresse), CHIFFRÉE comme l'adresse (AES-256-GCM,
+  /// format « g1:… »). `latitude`/`longitude` en clair = centre de la commune seulement. Null = pas de position précise.
+  homeGeoEnc          String?
   /// Bac à sable du testeur (D2). Null = monde réel.
   sandboxId           String?
   sandbox             Sandbox?   @relation(fields: [sandboxId], references: [id])
@@ -357,6 +369,8 @@ model Aine {
   situationJuridique  SituationJuridique?
   /// Jugement ou mandat vu le … (aucune copie conservée).
   justificatifVuLe    DateTime?               @db.Date
+  /// L1d (D14) : dernier appel sans réponse définitive (« rappeler plus tard »). L'état reste EN_ATTENTE_ACCORD.
+  accordRappelAt      DateTime?
   /// L4 : demandes de rappel liées à cet aîné.
   activationRequests  PlanActivationRequest[]
 
@@ -619,6 +633,9 @@ model Visit {
   /// L1-B (L10, P1/P8) : check-in reçu plus de 30 min après l'heure de l'appareil. La visite reste
   /// « À vérifier » tant que l'aîné ne l'a pas confirmée (deriveVisitStatus).
   lateCheckInAt  DateTime?
+  /// L1d (D4) : la famille employeur conteste une « Présence probable » (48 h au plus après le check-in).
+  /// La visite passe « À vérifier » tant que l'aîné ne l'a pas confirmée ; les opérateurs sont prévenus.
+  contestedAt    DateTime?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 

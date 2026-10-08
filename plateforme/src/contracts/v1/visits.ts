@@ -34,7 +34,12 @@ export const dateIsoSchema = z.string().datetime({ offset: true });
 /** Identifiant serveur (cuid). Une forme inattendue répond 404, comme un identifiant inconnu. */
 export const identifiantSchema = z.string().min(1).max(64).regex(/^[A-Za-z0-9_-]+$/);
 
-export const statutVisiteSchema = z.enum(["PREVUE", "EN_COURS", "VALIDEE", "A_VERIFIER"]);
+/**
+ * L1d (D4) : PRESENCE_PROBABLE = carte du domicile (QR ou code) + position, SANS la confirmation de l'aîné.
+ * La visite passe VALIDEE seulement avec la confirmation de l'aîné (ou de la famille employeur) ; la famille peut
+ * contester pendant 48 h (la visite passe alors A_VERIFIER).
+ */
+export const statutVisiteSchema = z.enum(["PREVUE", "EN_COURS", "VALIDEE", "A_VERIFIER", "PRESENCE_PROBABLE"]);
 export type StatutVisite = z.infer<typeof statutVisiteSchema>;
 
 export const facteurPreuveSchema = z.enum(["GPS", "CODE_DOMICILE", "CONFIRMATION_AINE"]);

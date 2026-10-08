@@ -142,6 +142,8 @@ export const VISIT_STATUS_LABELS: Record<VisitStatus, string> = {
   EN_COURS: "En cours",
   VALIDEE: "Validée",
   A_VERIFIER: "À vérifier",
+  /** L1d (D4) : QR + position sans la confirmation de l'aîné. La famille employeur peut contester 48 h. */
+  PRESENCE_PROBABLE: "Présence probable",
 };
 
 export const PROOF_FACTOR_LABELS: Record<ProofFactor, string> = {
