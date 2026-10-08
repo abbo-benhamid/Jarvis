@@ -12,6 +12,7 @@ import { InviteForm } from "@/components/famille/invite-form";
 import { CopyLink } from "@/components/famille/copy-link";
 import { appUrl } from "@/server/env";
 import { Term } from "@/components/ui/term";
+import { isLaunchMode } from "@/server/launch";
 
 export const metadata: Metadata = { title: "Cercle Lakou" };
 
@@ -67,7 +68,7 @@ export default async function Page({ params }: { params: Promise<{ aineId: strin
       <SectionHeader title="Inviter un proche" />
       <Card className="flex flex-col gap-3">
         <p className="text-[15px] leading-[1.45] text-muted">Koudmen crée un lien personnel. Il marche une seule fois, pendant 14 jours.</p>
-        <InviteForm aineId={aine.id} aineFirstName={aine.firstName} />
+        <InviteForm aineId={aine.id} aineFirstName={aine.firstName} launch={isLaunchMode()} />
       </Card>
 
       {invitations.length > 0 ? (

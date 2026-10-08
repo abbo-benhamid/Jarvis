@@ -15,6 +15,7 @@ import { ProposeForm } from "@/components/operateur/forms";
 import { CAREGIVER_STATUS_LABELS, FREQUENCY_LABELS, NEED_LABELS } from "@/lib/labels";
 import { communeLabel } from "@/lib/communes";
 import { formatDate, formatDateTime, formatEuros } from "@/lib/format";
+import { isLaunchMode } from "@/server/launch";
 
 export const metadata: Metadata = { title: "Matching manuel" };
 export const dynamic = "force-dynamic";
@@ -166,7 +167,7 @@ function CandidateCard({ c, requestId, canPropose }: { c: C; requestId: string; 
         <div className="mt-3">
           {d.proposalStatus === "PROPOSEE_FAMILLE" ? (
             <Alert tone="succes" title="Profil proposé à la famille">
-              La famille choisit. Si elle choisit ce profil, l&apos;accompagnant reçoit un message (simulé) et reste libre de refuser.
+              La famille choisit. Si elle choisit ce profil, {isLaunchMode() ? "Koudmen prévient l'accompagnant." : "l'accompagnant reçoit un message (simulé)."} Il reste libre de refuser.
             </Alert>
           ) : d.proposalStatus === "EN_ATTENTE" ? (
             <Alert tone="succes" title="Choisi par la famille">

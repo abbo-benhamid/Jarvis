@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { FilterForm, pickEnum } from "@/components/operateur/filter-form";
 import { CHANNEL_LABELS, ROLE_LABELS } from "@/lib/labels";
 import { formatDateTime } from "@/lib/format";
+import { isLaunchMode } from "@/server/launch";
 
 export const metadata: Metadata = { title: "Boîte d'envoi" };
 export const dynamic = "force-dynamic";
@@ -31,9 +32,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
         title="Boîte d'envoi"
         description="Tous les messages que Koudmen enverrait : WhatsApp, SMS, email, appel vocal."
       />
-      <Alert tone="info" className="mb-6">
-        Version de test : aucun message ne part réellement. Chaque message est marqué « Envoi simulé ».
-      </Alert>
+      {isLaunchMode() ? null : (
+        <Alert tone="info" className="mb-6">
+          Version de test : aucun message ne part réellement. Chaque message est marqué « Envoi simulé ».
+        </Alert>
+      )}
       <FilterForm
         action="/operateur/notifications"
         fields={[

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { isLaunchMode } from "@/server/launch";
 import { ArrowRight, ClipboardCheck, Compass } from "lucide-react";
 import { requireRole } from "@/server/auth/guards";
 import { getProfile } from "@/server/accompagnant/queries";
@@ -76,6 +77,7 @@ export default async function Page() {
       </ul>
 
       <ProfileForm
+        launch={isLaunchMode()}
         status={profile.status}
         smicCents={statusIsSalaried(profile.status) ? PLANCHER_SALARIE_CENTS : null}
         initial={{

@@ -21,6 +21,7 @@ import { LevelBadge, RequestStatusBadge } from "@/components/status-badges";
 import { CancelRequestForm } from "@/components/famille/cancel-request-form";
 import { employerSentence, requestAuthorText } from "@/components/famille/request-texts";
 import { Term } from "@/components/ui/term";
+import { isLaunchMode } from "@/server/launch";
 
 export const metadata: Metadata = { title: "Demandes d'accompagnement" };
 
@@ -81,7 +82,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
         ) : null}
         {choisi ? (
           <Alert tone="succes" title={`Vous avez choisi ${choisi}.`}>
-            Cette personne reçoit un message (simulé). Elle est libre d&apos;accepter ou de refuser, sans pénalité.
+            {isLaunchMode() ? "Koudmen prévient cette personne." : "Cette personne reçoit un message (simulé)."} Elle est libre d&apos;accepter ou de refuser, sans pénalité.
           </Alert>
         ) : null}
         {annulee ? <Alert tone="succes" title="Demande annulée.">Les propositions en attente sont annulées aussi.</Alert> : null}

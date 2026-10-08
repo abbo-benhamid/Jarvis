@@ -12,8 +12,9 @@ import { KpiTile } from "@/components/operateur/display";
 import { FeedbackStatusForm } from "@/components/operateur/forms";
 import { ROLE_LABELS } from "@/lib/labels";
 import { formatDateTime } from "@/lib/format";
+import { isLaunchMode } from "@/server/launch";
 
-export const metadata: Metadata = { title: "Retours testeurs" };
+export const metadata: Metadata = { title: "Avis reçus" };
 export const dynamic = "force-dynamic";
 
 const STATUSES = Object.keys(FEEDBACK_STATUS_LABELS) as FeedbackStatus[];
@@ -29,7 +30,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
     <>
       <PageHeader
         eyebrow="Opérateur"
-        title="Retours testeurs"
+        title={isLaunchMode() ? "Avis reçus" : "Retours testeurs"}
         description="Lisez chaque retour. Marquez-le « Lu », puis « Traité » quand une action est faite ou décidée."
         actions={
           <a href="/operateur/retours/export" className={buttonClasses("secondary")} download>
@@ -51,7 +52,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
         {rows.length} retour(s).
       </p>
       {rows.length === 0 ? (
-        <EmptyState title="Aucun retour pour ce filtre.">Les testeurs envoient leur avis avec le bouton « Donner mon avis ».</EmptyState>
+        <EmptyState title="Aucun avis pour ce filtre.">{isLaunchMode() ? "Les personnes envoient" : "Les testeurs envoient"} leur avis avec le bouton « Donner mon avis ».</EmptyState>
       ) : (
         <ul className="flex flex-col gap-3">
           {rows.map((f) => {

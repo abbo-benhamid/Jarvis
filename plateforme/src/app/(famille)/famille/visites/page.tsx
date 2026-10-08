@@ -15,6 +15,7 @@ import { ProofFactors } from "@/components/famille/proof-factors";
 import { FilterTabs } from "@/components/famille/filter-tabs";
 import { capitalize, dayLong, dayNumber, hourLabel, weekdayShort } from "@/components/famille/format";
 import { Term } from "@/components/ui/term";
+import { isLaunchMode } from "@/server/launch";
 
 export const metadata: Metadata = { title: "Visites" };
 
@@ -175,12 +176,14 @@ function isSoon(start: Date, now: Date = new Date()): boolean {
   return diff < 3 * 3_600_000 && diff > -6 * 3_600_000;
 }
 
-/** Schéma de la preuve « 2 sur 3 ». Le testeur l'ouvre avant la question. */
+/** Schéma de la preuve « 2 sur 3 ». */
 function ProofExplainer({ children }: { children?: React.ReactNode }) {
   const items = [
     { icon: MapPin, title: "Position à l'arrivée", text: "L'accompagnant donne sa position une seule fois, à l'arrivée." },
     { icon: KeyRound, title: "Carte domicile", text: "Il scanne le QR code de la carte domicile, ou saisit son code de secours." },
-    { icon: PhoneCall, title: "Confirmation de l'aîné", text: "Koudmen appelle l'aîné. Il tape 1 pour confirmer la visite (simulé dans la démo)." },
+    isLaunchMode()
+      ? { icon: PhoneCall, title: "Confirmation", text: "Si une preuve manque, la famille employeur confirme la visite, ou signale un problème." }
+      : { icon: PhoneCall, title: "Confirmation de l'aîné", text: "Koudmen appelle l'aîné. Il tape 1 pour confirmer la visite (simulé dans la démo)." },
   ];
   return (
     <details className="group rounded-card bg-surface px-5 shadow-card">

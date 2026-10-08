@@ -105,7 +105,7 @@ export function AineForm({ defaults, launch = false }: { defaults?: AineFormDefa
         {editing && defaults?.address && defaults.locationApproximate ? (
           <Alert tone="attention">Cette adresse n&apos;a pas été trouvée exactement. Koudmen utilise une position approximative. Vérifiez le numéro et la rue.</Alert>
         ) : null}
-        <FormField label="Indication pour trouver la maison (facultatif)" htmlFor="addressHint" hint="Exemple : quartier, couleur du portail. Données d'exemple seulement." errors={fe?.addressHint}>
+        <FormField label="Indication pour trouver la maison (facultatif)" htmlFor="addressHint" hint={launch ? "Exemple : quartier, couleur du portail." : "Exemple : quartier, couleur du portail. Données d'exemple seulement."} errors={fe?.addressHint}>
           <Input {...fieldA11y("addressHint", fe?.addressHint, true)} defaultValue={defaults?.addressHint ?? ""} autoComplete="off" maxLength={160} />
         </FormField>
           </>

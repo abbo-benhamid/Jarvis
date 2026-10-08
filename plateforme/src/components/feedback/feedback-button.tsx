@@ -49,7 +49,7 @@ function pageName(path: string): string {
  * « Donner mon avis » (A9, S1b-ux M4) : bouton DANS le flux, en bas de chaque page (il ne masque plus rien).
  * La fenêtre s'ouvre aussi depuis le panneau du test et depuis l'écran de fin de scénario (événement « koudmen:avis »).
  */
-export function FeedbackButton() {
+export function FeedbackButton({ launch = false }: { launch?: boolean }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [formKey, setFormKey] = useState(0);
   const [context, setContext] = useState<FeedbackContext>({});
@@ -88,13 +88,13 @@ export function FeedbackButton() {
             <X aria-hidden="true" />
           </Button>
         </div>
-        <FeedbackForm key={formKey} context={context} onDone={close} />
+        <FeedbackForm key={formKey} context={context} onDone={close} launch={launch} />
       </dialog>
     </>
   );
 }
 
-function FeedbackForm({ context, onDone }: { context: FeedbackContext; onDone: () => void }) {
+function FeedbackForm({ context, onDone, launch }: { context: FeedbackContext; onDone: () => void; launch: boolean }) {
   const pathname = usePathname();
   const pagePath = context.pagePath ?? pathname;
   // Hook du socle : le message reste en place après une erreur (pas de remise à zéro par React 19).
@@ -128,7 +128,7 @@ function FeedbackForm({ context, onDone }: { context: FeedbackContext; onDone: (
       <FormField
         label={context.question ?? "Votre message"}
         htmlFor="feedback-message"
-        hint="Qu'est-ce qui marche ? Qu'est-ce qui bloque ? N'écrivez pas de donnée personnelle réelle."
+        hint={launch ? "Qu'est-ce qui marche ? Qu'est-ce qui bloque ? N'écrivez pas d'information sur votre santé ou celle d'un proche." : "Qu'est-ce qui marche ? Qu'est-ce qui bloque ? N'écrivez pas de donnée personnelle réelle."}
         errors={!state.ok ? state.fieldErrors?.message : undefined}
         required
       >
