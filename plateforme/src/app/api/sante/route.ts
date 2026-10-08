@@ -73,6 +73,6 @@ export async function GET() {
         VERIFICATION_HMAC_KEY: Boolean(process.env.VERIFICATION_HMAC_KEY),
       },
     },
-    { status: ok ? 200 : 503, headers: { "cache-control": "no-store" } },
+    { status: ok ? 200 : 503, headers: { "cache-control": "no-store", "content-type": "application/json; charset=utf-8" } },
   );
 }
