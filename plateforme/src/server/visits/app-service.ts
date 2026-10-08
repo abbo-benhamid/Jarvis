@@ -1,6 +1,7 @@
 import "server-only";
 import { Prisma, type Role } from "@prisma/client";
 import { db } from "@/server/db";
+import { isLaunchMode } from "@/server/config-check";
 import { logAudit } from "@/server/audit";
 import { notifyUser } from "@/server/outbox";
 import { formatTime } from "@/lib/format";
@@ -133,7 +134,7 @@ export async function processAppEvents(user: AppUser, events: Evenement[], recei
       if (skew && visite && outcome.statut === "ACCEPTE" && (e.type === "CHECK_IN" || e.type === "CHECK_OUT")) skewedVisits.add(visite.id);
       if (late && visite && outcome.statut === "ACCEPTE") lateVisits.add(visite.id);
       // La visite peut être prouvée par un facteur reçu avant (ex. code, puis position) : VALIDE.
-      if (e.type === "CHECK_IN" && outcome.statut === "ACCEPTE" && !late && !skew && visite?.statut === "VALIDEE" && outcome.controle?.statut === "A_VERIFIER") {
+      if (e.type === "CHECK_IN" && outcome.statut === "ACCEPTE" && !late && !skew && (visite?.statut === "VALIDEE" || visite?.statut === "PRESENCE_PROBABLE") && outcome.controle?.statut === "A_VERIFIER") {
         outcome.controle = { statut: "VALIDE", raison: "Présence confirmée : deux preuves sur trois." };
       }
       if (skew && outcome.controle?.statut === "VALIDE") {
@@ -326,7 +327,11 @@ async function checkIn(actor: Actor, e: Extract<Evenement, { type: "CHECK_IN" }>
   if (!codeOk) raisons.unshift(preuves.code?.message ?? "Carte du domicile non scannée.");
   if (late) raisons.push(`Check-in reçu plus de ${ECART_RECEPTION_CHECKIN_MAX_MIN} minutes après l'heure du téléphone.`);
   if (codeOk && positionOk && !late) {
-    return { statut: "ACCEPTE", preuves, controle: { statut: "VALIDE", raison: "Présence confirmée : carte du domicile et position." } };
+    // L1d (D4) : en lancement, sans la confirmation de l'aîné, la visite est « Présence probable ».
+    const raison = isLaunchMode()
+      ? "Carte du domicile et position : présence probable. La famille employeur peut contester pendant 48 heures."
+      : "Présence confirmée : carte du domicile et position.";
+    return { statut: "ACCEPTE", preuves, controle: { statut: "VALIDE", raison } };
   }
   const raison = `${raisons.join(" ")} La famille employeur confirmera la visite.`.slice(0, 300);
   return { statut: "ACCEPTE", preuves, controle: { statut: "A_VERIFIER", raison } };

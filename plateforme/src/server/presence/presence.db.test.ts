@@ -14,6 +14,8 @@ const H = 3_600_000;
 const HOME = { lat: 14.6131, lng: -60.9996 };
 /** Point à `m` mètres au nord du domicile. */
 const north = (m: number) => ({ latitude: HOME.lat + m / 111_320, longitude: HOME.lng });
+/** Mode lancement avec les données réelles ouvertes (R1) : HDS, AIPD, DPO déclarés. */
+const LAUNCH_REAL = { KOUDMEN_MODE: "lancement", DONNEES_REELLES_AUTORISEES: "true", HEBERGEUR_HDS: "HDS test", AIPD_DATE: "2026-10-01", DPO_CONTACT: "dpo@test" };
 
 describe.runIf(enabled)("Lot L1-B (présence) sur une vraie base", async () => {
   process.env.NEXT_PUBLIC_TEST_MODE = "true";
@@ -348,12 +350,41 @@ describe.runIf(enabled)("Lot L1-B (présence) sur une vraie base", async () => {
     await expect(review.decideVisitReview(cousinActor, v.id, "CONFIRMER")).rejects.toThrow(/employeur/);
     const payeurActor = { id: payeur.id, role: "FAMILLE" as const, firstName: "Payeur", sandboxId: null };
     expect((await review.decideVisitReview(payeurActor, v.id, "CONFIRMER")).status).toBe("VALIDEE");
-    await expect(review.decideVisitReview(payeurActor, v.id, "CONFIRMER")).rejects.toThrow(/pas à vérifier/);
+    await expect(review.decideVisitReview(payeurActor, v.id, "CONFIRMER")).rejects.toThrow(/déjà confirmée/);
 
     const v2 = await visitFor(alice, -3);
     await db.visit.update({ where: { id: v2.id }, data: { checkInAt: new Date(Date.now() - 2.5 * H), checkOutAt: new Date(), status: "A_VERIFIER" } });
     await review.decideVisitReview(payeurActor, v2.id, "SIGNALER");
     expect(await db.auditLog.count({ where: { action: "visit.review.reported", entityId: v2.id } })).toBe(1);
     expect((await db.visit.findUniqueOrThrow({ where: { id: v2.id } })).status).toBe("A_VERIFIER");
+  });
+
+  it("D4 (sécu M3) : en lancement, QR + position = PRESENCE_PROBABLE ; contestation 48 h → À vérifier ; VALIDEE avec la confirmation", async () => {
+    const saved = { ...process.env };
+    Object.assign(process.env, LAUNCH_REAL);
+    try {
+      const payeurActor = { id: payeur.id, role: "FAMILLE" as const, firstName: "Payeur", sandboxId: null };
+      const v = await visitFor(alice, -0.2);
+      const [r] = await app.processAppEvents(alice.user, [checkIn(v.id, { qr: await qrOf(aineId), position: { ...north(20), precisionMetres: 10, consentement: true } })]);
+      expect(r).toMatchObject({ statut: "ACCEPTE", controle: { statut: "VALIDE" }, visite: { statut: "PRESENCE_PROBABLE", score: 2 } });
+      expect(r!.controle!.raison).toMatch(/48 heures/);
+      // Contestation par la famille employeur : À vérifier, opérateurs prévenus.
+      expect((await review.decideVisitReview(payeurActor, v.id, "SIGNALER")).status).toBe("A_VERIFIER");
+      const after = await db.visit.findUniqueOrThrow({ where: { id: v.id } });
+      expect(after.contestedAt).not.toBeNull();
+      expect(await db.auditLog.count({ where: { action: "visit.review.contested", entityId: v.id } })).toBe(1);
+      // Une seconde contestation est refusée ; la confirmation la tranche (VALIDEE).
+      await expect(review.decideVisitReview(payeurActor, v.id, "SIGNALER")).resolves.toMatchObject({ status: "A_VERIFIER" });
+      expect((await review.decideVisitReview(payeurActor, v.id, "CONFIRMER")).status).toBe("VALIDEE");
+
+      // Délai de 48 h dépassé : contestation refusée ; la visite reste « Présence probable ».
+      const v2 = await visitFor(alice, -0.2);
+      await app.processAppEvents(alice.user, [checkIn(v2.id, { qr: await qrOf(aineId), position: { ...north(20), precisionMetres: 10, consentement: true } })]);
+      await expect(review.decideVisitReview(payeurActor, v2.id, "SIGNALER", new Date(Date.now() + 49 * H))).rejects.toThrow(/48 heures/);
+      expect((await db.visit.findUniqueOrThrow({ where: { id: v2.id } })).status).toBe("PRESENCE_PROBABLE");
+    } finally {
+      for (const k of Object.keys(LAUNCH_REAL)) delete process.env[k];
+      Object.assign(process.env, saved);
+    }
   });
 });

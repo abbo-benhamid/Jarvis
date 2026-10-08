@@ -24,7 +24,8 @@ export type TemplateKey =
   | "PROCHE_AIDANT_INVITATION"
   | "PROCHE_AIDANT_RATTACHE"
   | "SOS_ACCOMPAGNANT"
-  | "VISITE_SIGNALEE";
+  | "VISITE_SIGNALEE"
+  | "VISITE_PRESENCE_PROBABLE";
 
 type Vars = Record<string, string | number>;
 
@@ -117,6 +118,11 @@ const TEMPLATES: Record<TemplateKey, { subject: string; body: string }> = {
   VISITE_SIGNALEE: {
     subject: "Visite signalée par la famille",
     body: "La famille de {aine} signale un problème sur la visite du {date}. Appelez la famille. Ouvrez Koudmen pour voir la visite.",
+  },
+  // L1d (D4) : carte du domicile + position, sans la confirmation de l'aîné. La famille employeur peut contester 48 h.
+  VISITE_PRESENCE_PROBABLE: {
+    subject: "Visite : présence probable",
+    body: "La visite chez {aine} du {date} a la carte du domicile et la position : présence probable. Un problème ? Contestez dans Koudmen pendant 48 heures.",
   },
   PAIEMENT_SIMULE: {
     subject: "Formule {formule} activée",

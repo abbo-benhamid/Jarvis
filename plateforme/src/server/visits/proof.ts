@@ -52,6 +52,19 @@ export type VisitTiming = {
   clockSkewAt?: Date | null;
   /** L1-B (P1/P8) : check-in reçu plus de 30 min après l'heure de l'appareil (null ou absent sinon). */
   lateCheckInAt?: Date | null;
+  /** L1d (D4) : la famille employeur a contesté une « Présence probable » (null ou absent sinon). */
+  contestedAt?: Date | null;
+};
+
+/** L1d (D4) : délai de contestation d'une « Présence probable » par la famille employeur, après le check-in. */
+export const CONTESTATION_HOURS = 48;
+
+export type DeriveOptions = {
+  /**
+   * L1d (D4, sécurité M3) : QR et position viennent du même téléphone. En mode lancement, ils donnent seulement
+   * PRESENCE_PROBABLE ; VALIDEE exige la confirmation de l'aîné (facteur CONFIRMATION_AINE).
+   */
+  requireElderConfirmation?: boolean;
 };
 
 /**
@@ -64,13 +77,27 @@ export type VisitTiming = {
  * Lot A2 : écart d'horloge > 12 h sur un événement de l'app → A_VERIFIER tant que l'aîné n'a pas confirmé
  * (le GPS et le code viennent de l'appareil, dont l'heure n'est pas fiable).
  */
-export function deriveVisitStatus(timing: VisitTiming, proof: VisitProofSummary, now: Date = new Date()): VisitStatus {
-  if ((timing.clockSkewAt || timing.lateCheckInAt) && !proof.validFactors.includes("CONFIRMATION_AINE")) return "A_VERIFIER";
-  if (proof.isProven) return "VALIDEE";
+export function deriveVisitStatus(timing: VisitTiming, proof: VisitProofSummary, now: Date = new Date(), options: DeriveOptions = {}): VisitStatus {
+  const confirmed = proof.validFactors.includes("CONFIRMATION_AINE");
+  if ((timing.clockSkewAt || timing.lateCheckInAt || timing.contestedAt) && !confirmed) return "A_VERIFIER";
+  if (proof.isProven) return options.requireElderConfirmation && !confirmed ? "PRESENCE_PROBABLE" : "VALIDEE";
   const overdue = now.getTime() > timing.scheduledEnd.getTime() + VISIT_GRACE_MINUTES * 60_000;
   if (timing.checkOutAt) return "A_VERIFIER";
   if (timing.checkInAt) return overdue ? "A_VERIFIER" : "EN_COURS";
   return overdue ? "A_VERIFIER" : "PREVUE";
+}
+
+/**
+ * L1d (D4) : la famille employeur peut contester une « Présence probable » pendant 48 h après le check-in
+ * (après l'heure prévue s'il n'y a pas de check-in). Une seule contestation.
+ */
+export function contestationOpen(
+  visit: { status: VisitStatus; checkInAt: Date | null; scheduledStart: Date; contestedAt?: Date | null },
+  now: Date = new Date(),
+): boolean {
+  if (visit.status !== "PRESENCE_PROBABLE" || visit.contestedAt) return false;
+  const from = (visit.checkInAt ?? visit.scheduledStart).getTime();
+  return now.getTime() <= from + CONTESTATION_HOURS * 3_600_000;
 }
 
 /** Distance en mètres entre deux points (formule de haversine). */

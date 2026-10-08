@@ -4,6 +4,7 @@
  */
 import type { ProofFactor, RequestStatus, VisitStatus } from "@prisma/client";
 import { computeVisitProof, deriveVisitStatus } from "@/server/visits/proof";
+import { isLaunchMode } from "@/server/config-check";
 
 /** Durée de validité d'un lien d'invitation au cercle Lakou. */
 export const INVITATION_TTL_DAYS = 14;
@@ -32,9 +33,13 @@ export function canCancelRequest(status: RequestStatus): boolean {
 export function displayVisitStatus(
   visit: { status: VisitStatus; checkInAt: Date | null; checkOutAt: Date | null; scheduledEnd: Date; proofs: { factor: ProofFactor; valid: boolean }[] },
   now: Date = new Date(),
+  requireElderConfirmation: boolean = isLaunchMode(),
 ): VisitStatus {
   const proof = computeVisitProof(visit.proofs);
-  return deriveVisitStatus(visit, proof, now);
+  // L1d (D4) : même règle que refreshVisitStatus() (« Présence probable » en lancement).
+  const derived = deriveVisitStatus(visit, proof, now, { requireElderConfirmation });
+  // Une « Présence probable » contestée reste « À vérifier » (contestedAt n'est pas toujours sélectionné).
+  return derived === "PRESENCE_PROBABLE" && visit.status === "A_VERIFIER" ? "A_VERIFIER" : derived;
 }
 
 /** Bouton « L'aîné a confirmé (appel simulé) » : visite EN_COURS ou A_VERIFIER, confirmation pas encore reçue. */

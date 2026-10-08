@@ -5,6 +5,7 @@ import { db } from "@/server/db";
 import { logAudit } from "@/server/audit";
 import { enqueueNotification, notifyLakou } from "@/server/outbox";
 import { formatDate } from "@/lib/format";
+import { isLaunchMode } from "@/server/config-check";
 import { computeVisitProof, deriveVisitStatus, generateHomeCode, VISIT_GRACE_MINUTES } from "./proof";
 
 type Actor = { id: string; role: Role };
@@ -40,7 +41,8 @@ export async function refreshVisitStatus(visitId: string, now: Date = new Date()
     include: { proofs: true, aine: { select: { id: true, firstName: true } } },
   });
   const proof = computeVisitProof(visit.proofs);
-  const status = deriveVisitStatus(visit, proof, now);
+  // L1d (D4) : en lancement, QR + position = « Présence probable » ; VALIDEE avec la confirmation de l'aîné.
+  const status = deriveVisitStatus(visit, proof, now, { requireElderConfirmation: isLaunchMode() });
   if (status === visit.status && proof.score === visit.proofScore) return visit;
 
   const updated = await db.visit.update({
@@ -48,10 +50,10 @@ export async function refreshVisitStatus(visitId: string, now: Date = new Date()
     data: { status, proofScore: proof.score },
     include: { proofs: true, aine: { select: { id: true, firstName: true } } },
   });
-  if (status !== visit.status && (status === "VALIDEE" || status === "A_VERIFIER")) {
+  if (status !== visit.status && (status === "VALIDEE" || status === "A_VERIFIER" || status === "PRESENCE_PROBABLE")) {
     await notifyLakou(
       visit.aineId,
-      status === "VALIDEE" ? "VISITE_VALIDEE" : "VISITE_A_VERIFIER",
+      status === "VALIDEE" ? "VISITE_VALIDEE" : status === "A_VERIFIER" ? "VISITE_A_VERIFIER" : "VISITE_PRESENCE_PROBABLE",
       { aine: visit.aine.firstName, date: formatDate(visit.scheduledStart), score: proof.score },
       { type: "Visit", id: visitId },
     );

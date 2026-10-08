@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   computeVisitProof,
+  CONTESTATION_HOURS,
+  contestationOpen,
   deriveVisitStatus,
   evaluateGps,
   generateHomeCode,
@@ -112,5 +114,39 @@ describe("code domicile", () => {
   it("refuse un mauvais code", () => {
     expect(verifyHomeCode("AB3K9Y", "AB3K9Z")).toBe(false);
     expect(verifyHomeCode("AB3K9", "AB3K9Z")).toBe(false);
+  });
+});
+
+describe("L1d (D4) : présence probable", () => {
+  const end = new Date("2026-10-08T15:00:00Z");
+  const now = new Date("2026-10-08T14:30:00Z");
+  const timing = { checkInAt: new Date("2026-10-08T14:00:00Z"), checkOutAt: null, scheduledEnd: end };
+  const qrGps = computeVisitProof([
+    { factor: "GPS", valid: true },
+    { factor: "CODE_DOMICILE", valid: true },
+  ]);
+  const withElder = computeVisitProof([
+    { factor: "GPS", valid: true },
+    { factor: "CONFIRMATION_AINE", valid: true },
+  ]);
+
+  it("QR + position sans l'aîné → PRESENCE_PROBABLE en lancement, VALIDEE en essai", () => {
+    expect(deriveVisitStatus(timing, qrGps, now, { requireElderConfirmation: true })).toBe("PRESENCE_PROBABLE");
+    expect(deriveVisitStatus(timing, qrGps, now)).toBe("VALIDEE");
+    expect(deriveVisitStatus(timing, withElder, now, { requireElderConfirmation: true })).toBe("VALIDEE");
+  });
+
+  it("contestée → À vérifier tant que l'aîné n'a pas confirmé", () => {
+    const contested = { ...timing, contestedAt: now };
+    expect(deriveVisitStatus(contested, qrGps, now, { requireElderConfirmation: true })).toBe("A_VERIFIER");
+    expect(deriveVisitStatus(contested, withElder, now, { requireElderConfirmation: true })).toBe("VALIDEE");
+  });
+
+  it("contestation ouverte 48 h après le check-in, une seule fois", () => {
+    const v = { status: "PRESENCE_PROBABLE" as const, checkInAt: timing.checkInAt, scheduledStart: timing.checkInAt, contestedAt: null };
+    expect(contestationOpen(v, new Date(timing.checkInAt.getTime() + CONTESTATION_HOURS * 3_600_000))).toBe(true);
+    expect(contestationOpen(v, new Date(timing.checkInAt.getTime() + CONTESTATION_HOURS * 3_600_000 + 1000))).toBe(false);
+    expect(contestationOpen({ ...v, contestedAt: now }, now)).toBe(false);
+    expect(contestationOpen({ ...v, status: "VALIDEE" }, now)).toBe(false);
   });
 });
