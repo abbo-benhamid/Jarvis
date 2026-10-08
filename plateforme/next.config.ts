@@ -40,6 +40,8 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // L2 : dépôt d'un justificatif (5 Mo au plus) par Server Action. [À VÉRIFIER] Vercel limite le corps à 4,5 Mo.
+  experimental: { serverActions: { bodySizeLimit: "6mb" } },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },
