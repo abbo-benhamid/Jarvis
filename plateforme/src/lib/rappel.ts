@@ -22,7 +22,9 @@ const MARTINIQUE_OFFSET = -4;
 
 /** Décalage de Paris par rapport à l'UTC (1 ou 2) à une date donnée. */
 export function parisOffset(d: Date): number {
-  const h = Number(new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", hour: "numeric", hourCycle: "h23" }).format(d));
+  // formatToParts : le format « 14 h » du français ne se convertit pas en nombre.
+  const part = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Paris", hour: "numeric", hourCycle: "h23" }).formatToParts(d).find((p) => p.type === "hour");
+  const h = Number(part?.value ?? d.getUTCHours() + 1);
   return (((h - d.getUTCHours()) % 24) + 24) % 24;
 }
 
