@@ -5,6 +5,7 @@ import { logAudit } from "@/server/audit";
 import { sameScope } from "@/server/scope";
 import { haversineMeters } from "@/server/visits/proof";
 import { PRESENCE_REFUSAL_MESSAGES, presenceRefusal } from "@/server/visits/launch-guards";
+import { homePoint, type HomePointSource } from "./address";
 import type { DemandePosition, ReponseTrajet, ReponseTrajetFamille } from "@/contracts/v1/trajet";
 import {
   TRAJET_DUREE_MS,
@@ -65,12 +66,18 @@ async function loadOwnedVisitForTrip(userId: string, visitId: string) {
       checkOutAt: true,
       caregiver: { select: { validation: true } },
       mission: { select: { status: true } },
-      aine: { select: { accordEtat: true, consentGiven: true, consentAt: true, sandboxId: true, latitude: true, longitude: true, locationApproximate: true } },
+      aine: { select: { accordEtat: true, consentGiven: true, consentAt: true, sandboxId: true, latitude: true, longitude: true, locationApproximate: true, homeGeoEnc: true } },
       trip: true,
     },
   });
   if (!visit) throw new TripError(VISIT_NOT_FOUND, "INTROUVABLE");
   return visit;
+}
+
+/** D3 : domicile pour une réponse (arrondi à 3 décimales, environ 110 m). */
+function roundedHome(aine: HomePointSource) {
+  const p = homePoint(aine);
+  return { latitude: roundCoord(p.lat), longitude: roundCoord(p.lng), approximatif: p.approximate };
 }
 
 /** POST /visites/:id/trajet — DEMARRER (idempotent tant que le trajet court) ou ARRETER (idempotent). */
@@ -89,11 +96,7 @@ export async function startOrStopTrip(actor: TripActor, visitId: string, action:
   if (state === "TROP_TOT") throw new TripError("Le partage du trajet s'ouvre 2 heures avant le début de la visite.", "INTERDIT");
   if (state === "TROP_TARD") throw new TripError("Cette visite est terminée : le trajet ne peut plus être partagé.", "INTERDIT");
   // Carte d'itinéraire de l'app (L1-C) : domicile arrondi ; l'accord de l'aîné est déjà vérifié (presenceRefusal).
-  const domicile = {
-    latitude: roundCoord(visit.aine.latitude),
-    longitude: roundCoord(visit.aine.longitude),
-    approximatif: visit.aine.locationApproximate,
-  };
+  const domicile = roundedHome(visit.aine);
 
   if (visit.trip && visit.trip.expiresAt.getTime() > now.getTime()) {
     return { trajet: { etat: "EN_COURS", expireA: visit.trip.expiresAt.toISOString() }, domicile };
@@ -154,8 +157,7 @@ export async function recordTripPosition(actor: TripActor, visitId: string, inpu
   });
   if (claim.count !== 1) throw new TripError("Une position toutes les 30 secondes au plus.", "TROP_DE_REQUETES");
   if (!at) return "IGNOREE";
-  const home = { lat: visit.aine.latitude, lng: visit.aine.longitude, approximate: visit.aine.locationApproximate };
-  if (arrivedHome({ lat, lng }, home)) {
+  if (arrivedHome({ lat, lng }, homePoint(visit.aine))) {
     await endTripForVisit(visit.id, "ARRIVEE", actor);
     return "ARRIVEE";
   }
@@ -182,6 +184,7 @@ export async function getFamilyTripView(user: TripActor, visitId: string, now: D
           latitude: true,
           longitude: true,
           locationApproximate: true,
+          homeGeoEnc: true,
           tripViewerId: true,
           accordEtat: true,
           consentGiven: true,
@@ -195,10 +198,11 @@ export async function getFamilyTripView(user: TripActor, visitId: string, now: D
   if (!visit || !sameScope(visit.aine.sandboxId, user.sandboxId)) return null;
   if (!tripViewerIds(visit.aine).has(user.id)) return null;
 
+  const home = homePoint(visit.aine);
   const base = {
     heurePrevue: visit.scheduledStart.toISOString(),
     accompagnant: { prenom: visit.caregiver.user.firstName },
-    domicile: { latitude: visit.aine.latitude, longitude: visit.aine.longitude, approximatif: visit.aine.locationApproximate },
+    domicile: { latitude: home.lat, longitude: home.lng, approximatif: home.approximate },
   };
   if (visit.checkOutAt || visit.status === "VALIDEE" || (visit.status === "A_VERIFIER" && !visit.checkInAt)) return { etat: "TERMINEE", ...base };
   if (visit.checkInAt) return { etat: "COMMENCEE", ...base };
@@ -215,7 +219,7 @@ export async function getFamilyTripView(user: TripActor, visitId: string, now: D
   const current = { lat: trip.latitude, lng: trip.longitude };
   const start = trip.startLatitude !== null && trip.startLongitude !== null ? { lat: trip.startLatitude, lng: trip.startLongitude } : null;
   if (departureMasked(start, current)) return { etat: "PREVUE", ...base };
-  const distance = Math.round(haversineMeters(current, { lat: visit.aine.latitude, lng: visit.aine.longitude }) / 10) * 10;
+  const distance = Math.round(haversineMeters(current, home) / 10) * 10;
   return {
     etat: "EN_ROUTE",
     ...base,
@@ -245,7 +249,7 @@ export async function getOperatorSosPosition(operator: TripActor, visitId: strin
   if (operator.role !== "OPERATEUR") return null;
   const visit = await db.visit.findUnique({
     where: { id: visitId },
-    select: { id: true, aine: { select: { sandboxId: true, firstName: true, latitude: true, longitude: true, locationApproximate: true } }, caregiver: { select: { userId: true, user: { select: { firstName: true } } } }, trip: true },
+    select: { id: true, aine: { select: { sandboxId: true, firstName: true, latitude: true, longitude: true, locationApproximate: true, homeGeoEnc: true } }, caregiver: { select: { userId: true, user: { select: { firstName: true } } } }, trip: true },
   });
   if (!visit || !sameScope(visit.aine.sandboxId, operator.sandboxId)) return null;
   const since = new Date(now.getTime() - SOS_ACTIF_MS);
@@ -266,7 +270,10 @@ export async function getOperatorSosPosition(operator: TripActor, visitId: strin
     sosA: sos.createdAt,
     aine: visit.aine.firstName,
     accompagnant: visit.caregiver.user.firstName,
-    domicile: { latitude: visit.aine.latitude, longitude: visit.aine.longitude, approximatif: visit.aine.locationApproximate },
+    domicile: (() => {
+      const h = homePoint(visit.aine);
+      return { latitude: h.lat, longitude: h.lng, approximatif: h.approximate };
+    })(),
     position:
       trip && trip.latitude !== null && trip.longitude !== null && trip.positionAt
         ? { latitude: trip.latitude, longitude: trip.longitude, precisionMetres: trip.accuracyMeters ?? 110, majA: trip.positionAt }

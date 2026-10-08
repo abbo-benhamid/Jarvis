@@ -81,6 +81,8 @@ export async function createAineAction(_prev: ActionResult, formData: FormData):
         addressEnc: home.addressEnc,
         latitude: home.latitude,
         longitude: home.longitude,
+        // L1d (D3) : position précise chiffrée ; en clair, le centre de la commune.
+        homeGeoEnc: home.homeGeoEnc,
         locationApproximate: home.locationApproximate,
         geocodedAt: home.geocodedAt,
         phone: v.phone ?? null,
@@ -208,6 +210,7 @@ export async function updateAineAction(_prev: ActionResult, formData: FormData):
               addressEnc: home.addressEnc,
               latitude: home.latitude,
               longitude: home.longitude,
+              homeGeoEnc: home.homeGeoEnc,
               locationApproximate: home.locationApproximate,
               geocodedAt: home.geocodedAt,
             }

@@ -7,6 +7,7 @@ import { flushPendingPushSafe } from "@/server/notifications/push/service";
 import { testEndDate } from "@/server/env";
 import { isLaunchMode } from "@/server/launch";
 import { purgeLaunchData } from "@/server/launch-retention";
+import { encryptLegacyHomeLocations } from "@/server/presence/address";
 
 /**
  * Purge nocturne (Vercel Cron, vercel.json) : bacs à sable de plus de 30 jours (D2), puis durées de
@@ -25,7 +26,14 @@ export async function GET(req: NextRequest) {
   const app = await purgeAppData(now);
   // L11 / L1-A : en lancement, tous les restes de bac à sable ; jetons de compte, comptes jamais confirmés, demandes de rappel.
   const lancement = await purgeLaunchData(isLaunchMode(), now);
-  await db.auditLog.create({ data: { action: "sandbox.purged", entityType: "Sandbox", metadata: { purged, ...retention, app, lancement } } });
+  // L1d (D3) : positions précises géocodées avant L1d → chiffrées. Sans clé utilisable (préinscription), rien.
+  let domicilesChiffres = 0;
+  try {
+    domicilesChiffres = await encryptLegacyHomeLocations();
+  } catch {
+    domicilesChiffres = -1;
+  }
+  await db.auditLog.create({ data: { action: "sandbox.purged", entityType: "Sandbox", metadata: { purged, ...retention, app, lancement, domicilesChiffres } } });
   const push = await flushPendingPushSafe();
-  return NextResponse.json({ purged, ...retention, app, lancement, push });
+  return NextResponse.json({ purged, ...retention, app, lancement, domicilesChiffres, push });
 }

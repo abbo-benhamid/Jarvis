@@ -208,8 +208,14 @@ describe.runIf(enabled)("Lot L1-B (présence) sur une vraie base", async () => {
     const exact = await address.computeHomeLocation("12 rue Schoelcher", "LAMENTIN");
     expect(exact).toMatchObject({ locationApproximate: false });
     expect(exact.addressEnc).toMatch(/^a1:/);
+    // D3 (sécurité M2) : en clair, seulement le centre de la commune ; la position précise est chiffrée.
+    expect(exact).toMatchObject({ latitude: HOME.lat, longitude: HOME.lng });
+    expect(exact.homeGeoEnc).toMatch(/^g1:/);
+    const precise = address.homePoint(exact);
+    expect(precise.approximate).toBe(false);
+    expect(precise.lat).not.toBe(HOME.lat);
     const repli = await address.computeHomeLocation("adresse introuvable", "LAMENTIN");
-    expect(repli).toMatchObject({ locationApproximate: true, latitude: 14.6131, longitude: -60.9996 });
+    expect(repli).toMatchObject({ locationApproximate: true, latitude: 14.6131, longitude: -60.9996, homeGeoEnc: null });
     await db.aine.update({ where: { id: aineId }, data: { addressEnc: exact.addressEnc } });
     expect(JSON.stringify(await db.aine.findUniqueOrThrow({ where: { id: aineId } }))).not.toContain("Schoelcher");
 
@@ -223,6 +229,31 @@ describe.runIf(enabled)("Lot L1-B (présence) sur une vraie base", async () => {
     const intrus = await caregiver("Intrus");
     expect(await address.readAddressForCaregiver(intrus.user, today.id)).toBeNull();
     await db.aine.update({ where: { id: aineId }, data: { addressEnc: null } });
+  });
+
+  it("D3 : check-in comparé à la position précise chiffrée ; aucune coordonnée précise en clair ; reprise des anciennes fiches", async () => {
+    const address = await import("./address");
+    const { encryptHomeGeo } = await import("./address-crypto");
+    // Domicile précis à 400 m au nord du centre de la commune ; en clair : le centre seulement.
+    const exact = north(400);
+    const id = await aine("Précise", payeur.id);
+    await db.aine.update({ where: { id }, data: { homeGeoEnc: encryptHomeGeo({ lat: exact.latitude, lng: exact.longitude }) } });
+    const row = await db.aine.findUniqueOrThrow({ where: { id } });
+    expect(JSON.stringify(row)).not.toContain(String(exact.latitude).slice(0, 8));
+    const v = await visitFor(alice, -0.2, id);
+    // Position à 20 m du domicile PRÉCIS (donc à 420 m du centre en clair) : valide.
+    const near = { latitude: exact.latitude + 20 / 111_320, longitude: exact.longitude };
+    const [r] = await app.processAppEvents(alice.user, [checkIn(v.id, { qr: await qrOf(id), position: { ...near, precisionMetres: 10, consentement: true } })]);
+    expect(r!.preuves!.position).toMatchObject({ valide: true });
+
+    // Reprise : une fiche géocodée avant L1d (position précise en clair) est chiffrée par la purge nocturne.
+    const legacy = await aine("Ancienne", payeur.id);
+    await db.aine.update({ where: { id: legacy }, data: { latitude: exact.latitude, longitude: exact.longitude, geocodedAt: new Date() } });
+    expect(await address.encryptLegacyHomeLocations()).toBeGreaterThanOrEqual(1);
+    const after = await db.aine.findUniqueOrThrow({ where: { id: legacy } });
+    expect({ lat: after.latitude, lng: after.longitude }).toEqual(HOME);
+    expect(address.homePoint(after).lat).toBeCloseTo(exact.latitude, 9);
+    expect(address.homePoint(after).lng).toBeCloseTo(exact.longitude, 9);
   });
 
   // ─────────────── Trajet en direct (L6, R3, R4) ───────────────

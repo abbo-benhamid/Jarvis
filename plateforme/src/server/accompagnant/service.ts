@@ -13,6 +13,7 @@ import { evaluateGps, GPS_FAILURE_MESSAGES, verifyHomeCode } from "@/server/visi
 import { tokenFromQr } from "@/server/presence/qr-token";
 import { resolveHomeCardToken } from "@/server/presence/home-card";
 import { endTripForVisit } from "@/server/presence/trajet";
+import { homePoint } from "@/server/presence/address";
 import { recordProof, refreshVisitStatus } from "@/server/visits/service";
 import { formatTime } from "@/lib/format";
 import { lockCareRequests } from "@/server/matching/locks";
@@ -94,7 +95,21 @@ async function loadOwnedVisit(userId: string, visitId: string) {
   const visit = await db.visit.findFirst({
     where: ownedVisitWhere(userId, visitId),
     include: {
-      aine: { select: { id: true, firstName: true, latitude: true, longitude: true, locationApproximate: true, homeCode: true } },
+      aine: {
+        select: {
+          id: true,
+          firstName: true,
+          latitude: true,
+          longitude: true,
+          locationApproximate: true,
+          homeGeoEnc: true,
+          homeCode: true,
+          sandboxId: true,
+          accordEtat: true,
+          consentGiven: true,
+          consentAt: true,
+        },
+      },
       proofs: true,
       journal: { select: { id: true } },
       caregiver: { select: { validation: true } },
@@ -538,7 +553,8 @@ export async function checkInWithGps(actor: Actor, input: GpsCheckInInput, now: 
     if (input.latitude == null || input.longitude == null) throw new AccompagnantError("Position manquante.", "INVALIDE");
     evaluation = evaluateGps(
       { lat: input.latitude, lng: input.longitude, accuracy: input.accuracy ?? null, mocked: input.mocked ?? false },
-      { lat: visit.aine.latitude, lng: visit.aine.longitude, approximate: visit.aine.locationApproximate },
+      // L1d (D3) : point précis déchiffré en mémoire seulement.
+      homePoint(visit.aine),
     );
   }
   await markCheckIn(actor, visit, input.simulated ? "GPS_SIMULE" : "GPS", now);
