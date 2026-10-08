@@ -2,9 +2,12 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Linking, StyleSheet, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { api, ApiError, EMAIL_CONTACT, messageErreur, WEB_URL } from '@/api';
-import type { EtatVerification } from '@/compte/contratAccompagnant';
+import type { EtatVerification } from '@/contracts';
 import { Etapes } from '@/compte/Etapes';
-import { actionValidation, etapesValidation } from '@/compte/validation';
+import { DossierCarte } from '@/compte/DossierCarte';
+import { useDossier } from '@/compte/useDossier';
+import { actionValidation, demandeEnvoyee, etapesValidation } from '@/compte/validation';
+import { ecranItem, prochainItem } from '@/compte/verifications';
 import { emailAVerifier } from '@/session/compte';
 import { useSession } from '@/session/SessionProvider';
 import { fonts, useTheme } from '@/theme';
@@ -27,6 +30,7 @@ export default function CompteEnValidation() {
   const [actualisation, setActualisation] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
+  const dossierL2 = useDossier();
 
   const charger = useCallback(async () => {
     setChargement(true);
@@ -53,8 +57,22 @@ export default function CompteEnValidation() {
   if (!session) return null;
   const emailOk = !emailAVerifier(session);
   const entree = { emailOk, verification, routesAbsentes };
-  const action = actionValidation(entree);
   const ouvrirSite = (chemin: string) => void Linking.openURL(`${WEB_URL}${chemin}`).catch(() => undefined);
+
+  /**
+   * L2 : après l'orientation recommandée, le parcours passe par « Mes vérifications » (GET /verifications).
+   * Serveur sans les routes L2 (404) : parcours D15 seul (demande, puis appel de l'équipe).
+   * [À VÉRIFIER avec I-serveur] l'envoi passe par POST /verifications/soumettre quand le dossier L2 existe.
+   */
+  const parcoursL2 =
+    !!dossierL2.dossier &&
+    dossierL2.dossier.items.length > 0 &&
+    verification?.orientation?.issue === 'RECOMMANDE' &&
+    !demandeEnvoyee(verification) &&
+    verification.validation !== 'SUSPENDU';
+  const prochain = parcoursL2 && dossierL2.dossier ? prochainItem(dossierL2.dossier) : null;
+  const ecranProchain = prochain ? ecranItem(prochain) : null;
+  const action = parcoursL2 ? null : actionValidation(entree);
 
   const demander = async () => {
     if (envoi) return;
@@ -62,7 +80,10 @@ export default function CompteEnValidation() {
     setErreur(null);
     setInfo(null);
     try {
-      setVerification(await api.demanderVerification());
+      if (parcoursL2) {
+        await api.soumettreDossier();
+        await Promise.all([charger(), dossierL2.recharger()]);
+      } else setVerification(await api.demanderVerification());
       setInfo('Demande envoyée. L’équipe Koudmen vous appelle au numéro donné à l’inscription.');
     } catch (e) {
       setErreur(messageErreur(e));
@@ -77,7 +98,7 @@ export default function CompteEnValidation() {
     setInfo(null);
     try {
       await rafraichir();
-      await charger();
+      await Promise.all([charger(), dossierL2.recharger()]);
       setInfo('Votre profil n’est pas encore validé. Nous vous prévenons dès que c’est fait.');
     } catch (e) {
       setInfo(messageErreur(e));
@@ -129,8 +150,49 @@ export default function CompteEnValidation() {
         </View>
       ) : null}
 
+      {dossierL2.dossier && dossierL2.dossier.items.length > 0 && verification?.orientation?.issue === 'RECOMMANDE' ? (
+        <DossierCarte dossier={dossierL2.dossier} testID="mes-verifications" />
+      ) : null}
+
       <View style={{ marginTop: 18, gap: 10 }} testID="action-validation">
-        {chargement && !verification && !routesAbsentes ? (
+        {parcoursL2 && dossierL2.dossier ? (
+          prochain && ecranProchain ? (
+            <Button
+              testID="bouton-prochaine-verification"
+              large
+              trailing="right"
+              label={`Continuer : ${prochain.libelle}`}
+              // Retour d'une étape : on attend l'état relu, pour ne pas rouvrir une étape déjà faite.
+              loading={dossierL2.chargement}
+              onPress={() => router.push(ecranProchain)}
+            />
+          ) : dossierL2.dossier.peutSoumettre ? (
+            <>
+              <Text variant="body" style={{ fontSize: 16 }}>
+                Vos vérifications sont faites. Envoyez votre demande. Après l’envoi seulement, l’équipe Koudmen vous appelle pour une courte visio.
+              </Text>
+              <Button testID="bouton-demander-verification" large label="Demander la vérification" loading={envoi} onPress={() => void demander()} />
+            </>
+          ) : dossierL2.dossier.manque.length > 0 ? (
+            <View style={{ gap: 6 }} testID="manque-verifications">
+              <Text variant="bodyStrong" style={{ fontSize: 16 }}>
+                Il manque encore :
+              </Text>
+              {dossierL2.dossier.manque.map((m) => (
+                <Text key={m} variant="body" style={{ fontSize: 16 }}>
+                  • {m}
+                </Text>
+              ))}
+              {dossierL2.dossier.items.some((i) => i.surLeSite && i.etat === 'A_FOURNIR') || verification.manque.length > 0 ? (
+                <Button testID="bouton-profil-site" variant="quiet" icon="arrow" label="Compléter sur le site Koudmen" onPress={() => ouvrirSite('/accompagnant/profil')} />
+              ) : null}
+            </View>
+          ) : (
+            <Text variant="body" tone="muted" style={{ fontSize: 16 }} testID="texte-verifications-en-cours">
+              Koudmen vérifie vos pièces. Vous n’avez rien à faire pour l’instant.
+            </Text>
+          )
+        ) : chargement && !verification && !routesAbsentes ? (
           <ActivityIndicator color={c.mer} accessibilityLabel="Chargement de votre profil" />
         ) : action === 'orientation' ? (
           <Button testID="bouton-orientation" large trailing="right" label="Répondre aux 5 questions" onPress={() => router.push('/orientation')} />

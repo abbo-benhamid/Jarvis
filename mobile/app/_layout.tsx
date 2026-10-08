@@ -97,6 +97,14 @@ function Navigation() {
             <Stack.Screen name="compte-en-validation" />
             {/* D15 : orientation (5 questions) dans l'app, avant la demande de vérification. */}
             <Stack.Screen name="orientation" options={{ animation: 'slide_from_right' }} />
+            {/* L2 : vérifications (téléphone, identité, entreprise, adresse), après l'orientation. */}
+            <Stack.Screen name="dossier/telephone" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="dossier/identite" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="dossier/identite-simulee" options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="dossier/entreprise" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="dossier/adresse" options={{ animation: 'slide_from_right' }} />
+            {/* Lien profond koudmen://verification/retour (fin du parcours d'identité). */}
+            <Stack.Screen name="verification/retour" />
           </Stack.Protected>
           <Stack.Protected guard={!!session && compte === 'preinscription'}>
             <Stack.Screen name="bientot" />

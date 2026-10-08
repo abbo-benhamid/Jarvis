@@ -39,6 +39,8 @@ export interface CacheHorsLigne {
   lireVisites(): Promise<Visite[] | null>;
   garderVisite(v: ReponseVisite): Promise<void>;
   lireVisite(id: string): Promise<ReponseVisite | null>;
+  /** L1d (D9) : efface la fiche et la ligne de cette visite (accord manquant, préinscription). */
+  oublierVisite(id: string): Promise<void>;
 }
 
 export function creerCache(stockage: StockageHorsLigne, maintenant: () => number = Date.now): CacheHorsLigne {
@@ -83,6 +85,13 @@ export function creerCache(stockage: StockageHorsLigne, maintenant: () => number
     async lireVisite(id) {
       const v = await lire(cleVisite(id), reponseVisiteSchema, DUREE_CACHE_VISITES_MS);
       return v && estDuJour(v, maintenant()) ? v : null;
+    },
+
+    async oublierVisite(id) {
+      await stockage.effacerCache(cleVisite(id)).catch(() => undefined);
+      const liste = await lire(CLE_VISITES, z.array(visiteSchema), null);
+      // La liste entière est effacée (pas réécrite) : sa durée de 24 h ne repart pas à zéro.
+      if (liste?.some((v) => v.id === id)) await stockage.effacerCache(CLE_VISITES).catch(() => undefined);
     },
   };
 }

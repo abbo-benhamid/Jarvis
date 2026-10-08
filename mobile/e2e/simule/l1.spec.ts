@@ -113,7 +113,7 @@ test('créer un compte : erreurs près des champs, puis « Vérifiez votre e-mai
 test('D15 : orientation en 5 questions puis demande de vérification, dans l’app', async ({ page }) => {
   await connecter(page, 'en-validation@exemple.fr');
   const validation = page.getByTestId('ecran-validation');
-  await expect(page.getByTestId('etapes-validation')).toContainText('Mon statut en 5 questions');
+  await expect(page.getByTestId('etapes-validation')).toContainText('Répondre aux 5 questions');
   await expect(validation).not.toContainText(/vous appelle/i);
   await page.getByTestId('bouton-orientation').click();
 
@@ -144,17 +144,15 @@ test('D15 : orientation en 5 questions puis demande de vérification, dans l’a
   await page.getByTestId('bouton-orientation-continuer').click();
 
   await expect(page.getByTestId('etapes-validation')).toContainText('Payé par la famille, avec le CESU');
-  // Avant l'envoi : les étapes ne disent pas « l'équipe vous appelle » (le bouton dit ce qui se passe après l'envoi).
+  // Avant l'envoi : les étapes ne disent pas « l'équipe vous appelle ».
   await expect(page.getByTestId('etapes-validation')).not.toContainText(/vous appelle/i);
-  await expect(page.getByTestId('etapes-validation')).toContainText('À envoyer maintenant.');
-  await page.getByTestId('bouton-demander-verification').click();
-  await expect(page.getByTestId('etapes-validation')).toContainText('Demande envoyée.');
-  await expect(page.getByTestId('etapes-validation')).toContainText('L’équipe vous appelle');
-  await expect(page.getByTestId('texte-demande-envoyee')).toBeVisible();
-  await capture(page, '04d-demande-envoyee');
+  // L2 : après l'orientation, le parcours passe par « Mes vérifications » (suite : e2e/simule/l2.spec.ts).
+  await expect(page.getByTestId('etapes-validation')).toContainText('Mon téléphone');
+  await expect(page.getByTestId('mes-verifications')).toContainText('Mon identité');
+  await expect(page.getByTestId('bouton-prochaine-verification')).toHaveText(/Continuer : Mon téléphone/);
+  await expect(page.getByTestId('bouton-demander-verification')).toHaveCount(0);
   const j = await journal(page);
   expect(j?.orientations).toEqual([{ email: 'en-validation@exemple.fr', issue: 'RECOMMANDE' }]);
-  expect(j?.demandesVerification).toEqual(['en-validation@exemple.fr']);
 });
 
 test('préinscription : écran calme à la place des visites ; e-mail non vérifié : rappel', async ({ page }) => {

@@ -1,7 +1,7 @@
 import { View } from 'react-native';
 import { useTheme } from '@/theme';
 import { Badge, Card, Text } from '@/ui';
-import type { ResultatOrientation } from './contratAccompagnant';
+import type { ResultatOrientation } from './orientation';
 import { LIBELLES_NIVEAU, LIBELLES_PIECE, LIBELLES_STATUT, TITRES_ISSUE } from './orientation';
 
 /** Résultat de l'orientation (D15), mêmes textes que le site. Lisible au lecteur d'écran, de haut en bas. */

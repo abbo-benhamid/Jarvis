@@ -13,3 +13,4 @@ export * from "./visits-propositions";
 export * from "./appareils";
 export * from "./trajet";
 export * from "./accompagnant";
+export * from "./verifications";

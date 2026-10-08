@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import type { z } from 'zod';
 import {
   reponseAcceptationSchema,
@@ -24,7 +25,29 @@ import {
   reponseMoiSchema,
   reponseTrajetSchema,
 } from '@/contracts';
-import { etatVerificationSchema, reponseOrientationSchema, reponsesOrientationSchema } from '@/compte/contratAccompagnant';
+// L1d (F1) : orientation et vérification, contrat serveur synchronisé (réponses en français seulement).
+import { demandeOrientationSchema, etatVerificationSchema, resultatOrientationSchema } from '@/contracts';
+// L2 : vérification de l'accompagnant (contrat serveur verifications.ts).
+import {
+  confirmationTelephoneSchema,
+  demandeAdresseSchema,
+  demandeCodeTelephoneSchema,
+  demandeEntrepriseSchema,
+  demandeRecoursSchema,
+  demandeSessionIdentiteSchema,
+  demandeVisioSchema,
+  dossierVerificationSchema,
+  reponseAdresseSchema,
+  reponseCodeTelephoneSchema,
+  reponseConfirmationTelephoneSchema,
+  reponseDocumentSchema,
+  reponseEntrepriseSchema,
+  reponseRecoursSchema,
+  reponseSessionIdentiteSchema,
+  reponseSoumissionSchema,
+  reponseVisioSchema,
+} from '@/contracts';
+import { controlerFichier, mimeDepuisNom, type FichierChoisi } from '@/compte/verifications';
 import { creerHorsLigne, type HorsLigne } from '@/offline';
 import type { KoudmenApi } from './client';
 import { MESSAGES } from './messages';
@@ -60,7 +83,17 @@ const CODES_FIN_SESSION = new Set(['JETON_INVALIDE', 'JETON_REUTILISE', 'ACCES_R
 const CODES_PURGE = new Set(['JETON_REUTILISE', 'ACCES_REFUSE']);
 
 type Methode = 'GET' | 'POST' | 'DELETE';
-type Options = { methode?: Methode; corps?: unknown; jeton?: string | null };
+type Options = {
+  methode?: Methode;
+  corps?: unknown;
+  jeton?: string | null;
+  /** L2 : envoi multipart (document). Le navigateur ou le téléphone pose lui-même l'en-tête Content-Type. */
+  formulaire?: FormData;
+  /** Délai propre à cet appel (envoi d'un fichier : plus long). */
+  delaiMs?: number;
+};
+/** L2 : un justificatif de 5 Mo sur un réseau mobile lent. */
+const DELAI_ENVOI_FICHIER_MS = 90_000;
 
 /** Erreurs qui donnent la copie locale (lot M3) au lieu d'un message d'erreur. */
 const CODES_REPLI_CACHE = new Set(['RESEAU', 'ERREUR_INTERNE', 'TROP_DE_REQUETES']);
@@ -89,14 +122,14 @@ export function creerApiHttp(
 
     // Le délai couvre la requête ET la lecture du corps (revue m6) : un corps qui cale ne gèle plus la file.
     const ctrl = new AbortController();
-    const minuteur = setTimeout(() => ctrl.abort(), DELAI_RESEAU_MS);
+    const minuteur = setTimeout(() => ctrl.abort(), opts.delaiMs ?? DELAI_RESEAU_MS);
     let res: Response;
     let texte: string;
     try {
       res = await fetch(`${api}${chemin}`, {
         method: opts.methode ?? 'GET',
         headers: entetes,
-        body: opts.corps === undefined ? undefined : JSON.stringify(opts.corps),
+        body: opts.formulaire ?? (opts.corps === undefined ? undefined : JSON.stringify(opts.corps)),
         signal: ctrl.signal,
       });
       texte = res.status === 204 ? '' : await res.text();
@@ -118,7 +151,19 @@ export function creerApiHttp(
     if (!res.ok) {
       const err = reponseErreurSchema.safeParse(json);
       if (err.success) throw new ApiError(err.data.erreur.code, err.data.erreur.message, res.status);
-      const code = res.status === 401 ? 'NON_AUTHENTIFIE' : res.status === 404 ? 'INTROUVABLE' : res.status === 429 ? 'TROP_DE_REQUETES' : 'ERREUR_INTERNE';
+      // Proxy ou plateforme d'hébergement (ex. limite de taille du corps) : réponse sans le format v1.
+      const code =
+        res.status === 401
+          ? 'NON_AUTHENTIFIE'
+          : res.status === 404
+            ? 'INTROUVABLE'
+            : res.status === 413
+              ? 'FICHIER_TROP_GROS'
+              : res.status === 415
+                ? 'TYPE_NON_ACCEPTE'
+                : res.status === 429
+                  ? 'TROP_DE_REQUETES'
+                  : 'ERREUR_INTERNE';
       throw new ApiError(code, MESSAGES[code], res.status);
     }
     if (!schema) return json as z.infer<S>;
@@ -293,6 +338,30 @@ export function creerApiHttp(
     return appeler(chemin, schemaReponse, { methode: 'POST', corps: ok.data });
   }
 
+  /** L2 : appel protégé avec un corps vérifié avant l'envoi. */
+  async function appelerAuthVerifie<S extends z.ZodTypeAny>(chemin: string, schemaDemande: z.ZodTypeAny, corps: unknown, schemaReponse: S | null) {
+    const ok = schemaDemande.safeParse(corps);
+    if (!ok.success) throw new ApiError('REQUETE_INVALIDE', MESSAGES.REQUETE_INVALIDE, 400);
+    return appelerAuth(chemin, schemaReponse, { methode: 'POST', corps: ok.data });
+  }
+
+  /**
+   * L2 : fichier choisi → partie multipart. Sur le web, le contenu est lu depuis l'URI locale (blob:, data:).
+   * Sur iOS / Android, React Native lit le fichier lui-même depuis `{ uri, name, type }`.
+   */
+  async function partieFichier(f: FichierChoisi): Promise<Blob> {
+    const type = f.type || mimeDepuisNom(f.nom) || 'application/octet-stream';
+    if (Platform.OS === 'web') {
+      try {
+        const blob = await (await fetch(f.uri)).blob();
+        return blob.type ? blob : new Blob([blob], { type });
+      } catch {
+        throw new ApiError('TYPE_NON_ACCEPTE', 'Le fichier ne peut pas être lu. Choisissez-le de nouveau.');
+      }
+    }
+    return { uri: f.uri, name: f.nom, type } as unknown as Blob;
+  }
+
   /** Remet dans la fiche le Kayé encore dans la file (le texte écrit hors ligne n'est pas perdu à l'écran). */
   async function avecKayeEnAttente(v: ReponseVisite): Promise<ReponseVisite> {
     if (v.kayePublie) return v;
@@ -395,19 +464,43 @@ export function creerApiHttp(
       }
     },
 
-    // D15 : contrat côté app (src/compte/contratAccompagnant.ts) en attendant celui du serveur.
+    // D15 : contrat serveur `src/contracts/accompagnant.ts` (F1).
     lireVerification: () => appelerAuth('/accompagnant/verification', etatVerificationSchema),
     async envoyerOrientation(reponses) {
-      const ok = reponsesOrientationSchema.safeParse(reponses);
+      const ok = demandeOrientationSchema.safeParse(reponses);
       if (!ok.success) throw new ApiError('REQUETE_INVALIDE', MESSAGES.REQUETE_INVALIDE, 400);
-      return appelerAuth('/accompagnant/orientation', reponseOrientationSchema, { methode: 'POST', corps: ok.data });
+      return appelerAuth('/accompagnant/orientation', resultatOrientationSchema, { methode: 'POST', corps: ok.data });
     },
-    async demanderVerification() {
-      // Réponse vide (204) ou autre forme : on relit l'état, qui fait foi.
-      const r = await appelerAuth('/accompagnant/verification', null, { methode: 'POST', corps: {} });
-      const etat = etatVerificationSchema.safeParse(r);
-      return etat.success ? etat.data : appelerAuth('/accompagnant/verification', etatVerificationSchema);
+    demanderVerification: () => appelerAuth('/accompagnant/verification', etatVerificationSchema, { methode: 'POST', corps: {} }),
+
+    // L2 : contrat serveur `src/contracts/verifications.ts`.
+    lireDossier: () => appelerAuth('/accompagnant/verifications', dossierVerificationSchema),
+    envoyerCodeTelephone: (telephone, canal) =>
+      appelerAuthVerifie('/accompagnant/verifications/telephone/code', demandeCodeTelephoneSchema, { telephone, canal }, reponseCodeTelephoneSchema),
+    confirmerTelephone: (challengeId, code) =>
+      appelerAuthVerifie('/accompagnant/verifications/telephone/confirmer', confirmationTelephoneSchema, { challengeId, code }, reponseConfirmationTelephoneSchema),
+    ouvrirSessionIdentite: () =>
+      appelerAuthVerifie(
+        '/accompagnant/verifications/identite/session',
+        demandeSessionIdentiteSchema,
+        { plateforme: 'app', consentementBiometrie: true },
+        reponseSessionIdentiteSchema,
+      ),
+    demanderVisio: (demande) => appelerAuthVerifie('/accompagnant/verifications/identite/visio', demandeVisioSchema, demande, reponseVisioSchema),
+    declarerAdresse: (adresse) => appelerAuthVerifie('/accompagnant/verifications/adresse', demandeAdresseSchema, adresse, reponseAdresseSchema),
+    verifierEntreprise: (siret) => appelerAuthVerifie('/accompagnant/verifications/entreprise', demandeEntrepriseSchema, { siret }, reponseEntrepriseSchema),
+    async envoyerDocument(type, fichier) {
+      const probleme = controlerFichier(fichier);
+      if (probleme) throw new ApiError('TYPE_NON_ACCEPTE', probleme, 400);
+      const formulaire = new FormData();
+      formulaire.append('type', type);
+      formulaire.append('fichier', await partieFichier(fichier), fichier.nom);
+      return appelerAuth('/accompagnant/documents', reponseDocumentSchema, { methode: 'POST', formulaire, delaiMs: DELAI_ENVOI_FICHIER_MS });
     },
+    async soumettreDossier() {
+      await appelerAuth('/accompagnant/verifications/soumettre', reponseSoumissionSchema, { methode: 'POST', corps: {} });
+    },
+    demanderRecours: (motif) => appelerAuthVerifie('/accompagnant/verifications/recours', demandeRecoursSchema, { motifRecours: motif }, reponseRecoursSchema),
 
     checkIn: (visiteId, { qr, codeDomicile, position }) =>
       envoyer({

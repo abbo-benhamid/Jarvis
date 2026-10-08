@@ -4,7 +4,7 @@ import { creerApiHttp } from './http';
 import { creerApiSimulee } from './simule';
 
 export * from './types';
-export type { KoudmenApi } from './client';
+export type { DecisionIdentiteSimulee, KoudmenApi, MotifRecours } from './client';
 export { API_MODE, API_URL, EMAIL_CONTACT, SITE_URL, WEB_URL } from './config';
 export type { PositionTrajet, PreuveArrivee } from './client';
 export { MESSAGES } from './messages';

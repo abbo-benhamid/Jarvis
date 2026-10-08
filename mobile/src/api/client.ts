@@ -1,5 +1,25 @@
-import type { EtatVerification, ReponsesOrientation, ResultatOrientation } from '@/compte/contratAccompagnant';
+import type { DemandeOrientation as ReponsesOrientation, EtatVerification, ResultatOrientation } from '@/contracts';
 import type { HorsLigneVue } from '@/offline';
+import type {
+  DemandeAdresse,
+  DemandeVisio,
+  DossierVerification,
+  ReponseAdresse,
+  ReponseCodeTelephone,
+  ReponseConfirmationTelephone,
+  ReponseDocument,
+  ReponseEntreprise,
+  ReponseRecours,
+  ReponseSessionIdentite,
+  ReponseVisio,
+  TypeDocument,
+} from '@/contracts';
+import type { CanalCode, FichierChoisi } from '@/compte/verifications';
+
+/** L2 : motifs de recours (liste fermée du contrat). */
+export type MotifRecours = 'ERREUR_SUR_UN_DOCUMENT' | 'NOUVEAU_DOCUMENT' | 'SITUATION_CHANGEE' | 'AUTRE';
+/** L2 : décisions de la page simulée du prestataire (mêmes 4 cas que `/verification/simulee` du site). */
+export type DecisionIdentiteSimulee = 'APPROUVE' | 'REFUSE' | 'A_REPRENDRE' | 'NOM_DIFFERENT';
 import type {
   BrouillonKaye,
   DemandeInscription,
@@ -39,6 +59,16 @@ export type PositionTrajet = { latitude: number; longitude: number; precisionMet
  * | lireVerification     | GET  /accompagnant/verification (D15)          |
  * | envoyerOrientation   | POST /accompagnant/orientation (D15)           |
  * | demanderVerification | POST /accompagnant/verification (D15)          |
+ * | lireDossier          | GET  /accompagnant/verifications (L2)          |
+ * | envoyerCodeTelephone | POST …/verifications/telephone/code (L2)       |
+ * | confirmerTelephone   | POST …/verifications/telephone/confirmer (L2)  |
+ * | ouvrirSessionIdentite| POST …/verifications/identite/session (L2)     |
+ * | demanderVisio        | POST …/verifications/identite/visio (L2)       |
+ * | declarerAdresse      | POST …/verifications/adresse (L2)              |
+ * | verifierEntreprise   | POST …/verifications/entreprise (L2)           |
+ * | envoyerDocument      | POST /accompagnant/documents (L2, multipart)   |
+ * | soumettreDossier     | POST …/verifications/soumettre (L2)            |
+ * | demanderRecours      | POST …/verifications/recours (L2)              |
  * | listerVisites        | GET  /visites?jours=7                          |
  * | lireVisite           | GET  /visites/{id}                             |
  * | checkIn … sos        | POST /evenements (un `clientEventId` unique)   |
@@ -85,6 +115,29 @@ export interface KoudmenApi {
   envoyerOrientation(reponses: ReponsesOrientation): Promise<ResultatOrientation>;
   /** Envoie la demande. Après seulement, l'équipe a le dossier et appelle l'accompagnante. */
   demanderVerification(): Promise<EtatVerification>;
+
+  /**
+   * L2 : vérification (contrat `src/contracts/verifications.ts`).
+   * Route absente sur un serveur plus ancien : `ApiError('INTROUVABLE')`, l'écran garde le parcours D15 seul.
+   * Aucune photo de pièce d'identité ne passe par l'app : l'identité se fait sur la page du prestataire.
+   */
+  lireDossier(): Promise<DossierVerification>;
+  /** Code à 6 chiffres par SMS ou par appel vocal. Le serveur normalise le numéro. */
+  envoyerCodeTelephone(telephone: string, canal: CanalCode): Promise<ReponseCodeTelephone>;
+  confirmerTelephone(challengeId: string, code: string): Promise<ReponseConfirmationTelephone>;
+  /** Session chez le prestataire, après le consentement explicite à la biométrie. */
+  ouvrirSessionIdentite(): Promise<ReponseSessionIdentite>;
+  /** Repli humain : visio avec l'équipe, à la place du prestataire. */
+  demanderVisio(demande: DemandeVisio): Promise<ReponseVisio>;
+  declarerAdresse(adresse: DemandeAdresse): Promise<ReponseAdresse>;
+  verifierEntreprise(siret: string): Promise<ReponseEntreprise>;
+  /** Envoie un justificatif (multipart). L'app ne garde pas le fichier après l'envoi. */
+  envoyerDocument(type: TypeDocument, fichier: FichierChoisi): Promise<ReponseDocument>;
+  /** Envoie le dossier à l'équipe. `ELEMENTS_MANQUANTS` s'il manque une étape. */
+  soumettreDossier(): Promise<void>;
+  demanderRecours(motif: MotifRecours): Promise<ReponseRecours>;
+  /** Mode simulé SEULEMENT : remplace la page du prestataire (aucun serveur, aucune page à ouvrir). */
+  readonly simulation?: { decisionIdentite(decision: DecisionIdentiteSimulee): Promise<void> };
 
   /** Visites des 7 prochains jours (et des 12 dernières heures), triées par heure de début. */
   listerVisites(): Promise<Visite[]>;

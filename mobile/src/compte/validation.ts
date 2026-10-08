@@ -1,24 +1,34 @@
 /**
- * D15 : étapes de l'écran « Profil en cours de validation ». Module PUR (testable sans appareil).
+ * D15 + L2 : étapes de l'écran « Profil en cours de validation ». Module PUR (testable sans appareil).
  *
  * ```mermaid
  * flowchart LR
- *   A[Compte créé] --> B[E-mail confirmé] --> C[Statut en 5 questions] --> D[Demande de vérification]
- *   D --> E[Échange avec l'équipe] --> F[Profil validé]
+ *   A[Compte créé] --> B[E-mail confirmé] --> C[Étapes du serveur : etapes]
+ *   C --> D[Profil validé]
  * ```
  *
+ * Le SERVEUR fait foi (contrat `src/contracts/accompagnant.ts`, F1) :
+ * - `etapes` : la liste, l'ordre, les libellés et ce qui est fait ;
+ * - `peutDemander` : le bouton « Demander la vérification » ;
+ * - `manque` : ce que seul le site remplit.
+ * L'app ajoute seulement les deux étapes du compte (créé, e-mail) et des détails de lecture.
+ *
  * Règle UX (revue B3) : l'app ne dit « l'équipe vous appelle » qu'APRÈS l'envoi de la demande.
- * Avant, l'étape « Échange avec l'équipe » est seulement « à venir ».
  */
+import type { EtatVerification } from '../contracts';
 import type { Etape } from './Etapes';
-import { demandeEnvoyee, type EtatVerification } from './contratAccompagnant';
 import { LIBELLES_STATUT, TITRES_ISSUE } from './orientation';
+
+/** La demande est partie (l'équipe a le dossier) : seulement là, l'app peut dire « l'équipe vous appelle ». */
+export function demandeEnvoyee(e: Pick<EtatVerification, 'validation'>): boolean {
+  return e.validation === 'EN_ATTENTE' || e.validation === 'VALIDE';
+}
 
 /** Prochaine action proposée en bouton principal. */
 export type ActionValidation =
   /** Faire (ou refaire) l'orientation dans l'app. */
   | 'orientation'
-  /** Envoyer la demande de vérification. */
+  /** Envoyer la demande de vérification (`peutDemander` du serveur). */
   | 'demander'
   /** Il manque des informations du profil : à compléter sur le site (l'app ne les gère pas encore). */
   | 'completer_site'
@@ -41,48 +51,67 @@ export function actionValidation({ verification: v, routesAbsentes }: EntreeVali
   if (!v) return null;
   if (v.validation === 'SUSPENDU') return 'contacter';
   if (demandeEnvoyee(v)) return 'attendre';
+  if (v.peutDemander) return 'demander';
   if (v.orientation?.issue !== 'RECOMMANDE') return 'orientation';
   if (v.manque.length > 0) return 'completer_site';
-  return 'demander';
+  // Orientation faite, rien ne manque, mais le serveur refuse encore la demande : on attend son état suivant.
+  return null;
+}
+
+/** Détail ajouté par l'app à une étape du serveur (lecture seulement : jamais l'état). */
+function detailEtape(code: EtatVerification['etapes'][number]['code'], v: EtatVerification, faite: boolean, surLeSite: boolean): string | undefined {
+  const o = v.orientation;
+  switch (code) {
+    case 'ORIENTATION':
+      if (o?.issue === 'RECOMMANDE' && o.statut) return LIBELLES_STATUT[o.statut];
+      if (o) return `${TITRES_ISSUE[o.issue]}. Vous pouvez refaire l’orientation.`;
+      return 'Répondez à 5 questions courtes.';
+    case 'DEMANDE':
+      if (faite) return 'Demande envoyée.';
+      if (v.validation === 'REFUSE') return 'Corrigez ce qui est demandé, puis envoyez une nouvelle demande.';
+      return v.peutDemander ? 'À envoyer maintenant.' : 'Après les étapes au-dessus.';
+    case 'APPEL_EQUIPE':
+      if (faite) return undefined;
+      return demandeEnvoyee(v)
+        ? 'L’équipe vous appelle au numéro donné à l’inscription. Elle vérifie votre identité et vos références.'
+        : 'Après votre demande de vérification.';
+    case 'TELEPHONE':
+    case 'IDENTITE':
+    case 'ENTREPRISE':
+    case 'ADRESSE':
+      // L2 : le détail et l'action sont dans « Mes vérifications ».
+      if (faite) return undefined;
+      return surLeSite ? 'Sur le site Koudmen, avec le même compte.' : 'Dans l’app : voir « Mes vérifications », plus bas.';
+    default:
+      return surLeSite && !faite ? 'Sur le site Koudmen, avec le même compte.' : undefined;
+  }
 }
 
 export function etapesValidation({ emailOk, verification: v, routesAbsentes }: EntreeValidation): Etape[] {
-  const envoyee = !!v && demandeEnvoyee(v);
-  const orientation = v?.orientation ?? null;
-  const orientationOk = orientation?.issue === 'RECOMMANDE' && !!orientation.statut;
-
-  const etapeStatut: Etape = routesAbsentes
-    ? { titre: 'Mon statut en 5 questions', detail: 'À faire sur le site Koudmen.', etat: emailOk ? 'en_cours' : 'a_venir' }
-    : orientationOk && orientation?.statut
-      ? { titre: 'Mon statut en 5 questions', detail: LIBELLES_STATUT[orientation.statut], etat: 'fait' }
-      : orientation
-        ? { titre: 'Mon statut en 5 questions', detail: `${TITRES_ISSUE[orientation.issue]}. Vous pouvez refaire l’orientation.`, etat: 'en_cours' }
-        : { titre: 'Mon statut en 5 questions', detail: 'Répondez à 5 questions courtes.', etat: emailOk ? 'en_cours' : 'a_venir' };
-
-  const etapeDemande: Etape = envoyee
-    ? { titre: 'Demande de vérification', detail: 'Demande envoyée.', etat: 'fait' }
-    : v?.validation === 'REFUSE'
-      ? { titre: 'Demande de vérification', detail: 'Corrigez ce qui est demandé, puis envoyez une nouvelle demande.', etat: 'en_cours' }
-      : orientationOk
-        ? { titre: 'Demande de vérification', detail: 'À envoyer maintenant.', etat: 'en_cours' }
-        : { titre: 'Demande de vérification', detail: 'Après votre statut.', etat: 'a_venir' };
-
-  const etapeEchange: Etape = envoyee
-    ? {
-        titre: 'Échange avec l’équipe Koudmen',
-        detail: 'L’équipe vous appelle au numéro donné à l’inscription. Elle vérifie votre identité et vos références.',
-        etat: v?.validation === 'VALIDE' ? 'fait' : 'en_cours',
-      }
-    : { titre: 'Échange avec l’équipe Koudmen', detail: 'Après votre demande de vérification.', etat: 'a_venir' };
-
-  return [
+  const compte: Etape[] = [
     { titre: 'Compte créé', etat: 'fait' },
     emailOk
       ? { titre: 'E-mail confirmé', etat: 'fait' }
       : { titre: 'Confirmer votre e-mail', detail: 'Ouvrez le lien reçu par e-mail. Il marche 24 heures.', etat: 'en_cours' },
-    etapeStatut,
-    etapeDemande,
-    etapeEchange,
-    { titre: 'Profil validé', detail: 'Vos premières propositions de visite arrivent ici.', etat: v?.validation === 'VALIDE' ? 'fait' : 'a_venir' },
   ];
+  if (routesAbsentes) {
+    return [
+      ...compte,
+      { titre: 'Mon statut en 5 questions', detail: 'À faire sur le site Koudmen.', etat: emailOk ? 'en_cours' : 'a_venir' },
+      { titre: 'Demande de vérification', detail: 'Sur le site Koudmen.', etat: 'a_venir' },
+    ];
+  }
+  if (!v) return compte;
+
+  // Toutes les étapes du serveur, dans son ordre. La première étape non faite est « en cours ».
+  let courantePosee = !emailOk;
+  const serveur = v.etapes.map((e): Etape => {
+    let etat: Etape['etat'] = 'fait';
+    if (!e.faite) {
+      etat = courantePosee ? 'a_venir' : 'en_cours';
+      courantePosee = true;
+    }
+    return { titre: e.libelle, detail: detailEtape(e.code, v, e.faite, e.surLeSite), etat };
+  });
+  return [...compte, ...serveur];
 }

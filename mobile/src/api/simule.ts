@@ -7,7 +7,17 @@ import {
   PREFIXE_QR_SIGNE,
   type DomicileTrajet,
 } from './l1';
-import { reponsesOrientationSchema, type EtatVerification } from '@/compte/contratAccompagnant';
+import {
+  demandeAdresseSchema,
+  demandeCodeTelephoneSchema,
+  demandeOrientationSchema,
+  type DossierVerification,
+  type ElementVerification,
+  type EtatVerification,
+  type ResultatOrientation,
+  type TypeElement,
+} from '@/contracts';
+import { codeComplet, controlerFichier, MAX_SESSIONS_IDENTITE, normaliserSiret, normaliserTelephone } from '@/compte/verifications';
 import { orienterLocalement } from '@/compte/orientation';
 import { trouverCommune } from '@/lib/communes';
 import { distanceMetres } from '@/lib/geo';
@@ -63,11 +73,32 @@ export type JournalApiSimulee = {
   /** D15 : orientations envoyées (issue seulement) et demandes de vérification. */
   orientations: { email: string; issue: string }[];
   demandesVerification: string[];
+  /** L2 : jamais de code, de photo, d'adresse ni de contenu de fichier. Numéro réduit aux 4 derniers chiffres. */
+  codesTelephone: { canal: string; fin: string }[];
+  confirmationsTelephone: number;
+  sessionsIdentite: number;
+  decisionsIdentite: string[];
+  visios: string[];
+  adresses: number;
+  entreprises: string[];
+  documents: { type: string; mime: string; taille: number | null }[];
+  soumissions: string[];
 };
 
 function journalApi(): JournalApiSimulee {
   const g = globalThis as { __KOUDMEN_API_JOURNAL__?: JournalApiSimulee };
-  g.__KOUDMEN_API_JOURNAL__ ??= { inscriptions: [], motsDePasseOublies: [], trajets: [], positions: [], checkIns: [], orientations: [], demandesVerification: [] };
+  g.__KOUDMEN_API_JOURNAL__ ??= { inscriptions: [], motsDePasseOublies: [], trajets: [], positions: [], checkIns: [], orientations: [],
+    demandesVerification: [],
+    codesTelephone: [],
+    confirmationsTelephone: 0,
+    sessionsIdentite: 0,
+    decisionsIdentite: [],
+    visios: [],
+    adresses: 0,
+    entreprises: [],
+    documents: [],
+    soumissions: [],
+  };
   return g.__KOUDMEN_API_JOURNAL__;
 }
 
@@ -109,16 +140,141 @@ const COMPTES_TEST: Record<string, Partial<Moi>> = {
   'demande-envoyee@exemple.fr': { prenom: 'Gisèle', nom: 'Adèle', profilValide: false },
 };
 
+// ─────────────── L2 : vérification simulée ───────────────
+
+/** Code accepté par l'API simulée (§ 8.1 : code fixe `000000` en démo). */
+export const CODE_SMS_SIMULE = '000000';
+/**
+ * SIRET de test (clé de Luhn valable, numéros fictifs) :
+ * actif et siège = adresse déclarée ; cessé ; nom caché au registre ; nom différent.
+ * Tout autre SIRET valable : actif, nom conforme, siège différent (justificatif d'adresse demandé).
+ */
+export const SIRET_SIMULES = { conforme: '90100000000009', cesse: '90200000000007', nomCache: '90300000000005', nomDifferent: '90400000000003' } as const;
+
+/** Réglages des tests e2e (`globalThis.__KOUDMEN_VERIF__`). */
+function reglagesVerif(): { delaiRenvoiS: number } {
+  const g = globalThis as { __KOUDMEN_VERIF__?: { delaiRenvoiS?: number } };
+  return { delaiRenvoiS: g.__KOUDMEN_VERIF__?.delaiRenvoiS ?? 60 };
+}
+
+/** Éléments requis par statut (§ 6.1). B3 et références : à montrer en visio (déjà déclarés en mode simulé). */
+const ITEMS_PAR_STATUT: Record<string, TypeElement[]> = {
+  SALARIE_FAMILLE_CESU: ['TELEPHONE', 'IDENTITE', 'ADRESSE', 'CASIER_B3', 'REFERENCES'],
+  PROCHE_AIDANT_APA: ['TELEPHONE', 'IDENTITE', 'ADRESSE', 'CASIER_B3', 'REFERENCES'],
+  AUTO_ENTREPRENEUR_SAP: ['TELEPHONE', 'IDENTITE', 'ENTREPRISE', 'ADRESSE', 'CASIER_B3', 'REFERENCES', 'STATUT_PRO'],
+  BENEVOLE_ASSO: ['TELEPHONE'],
+  SAAD: ['TELEPHONE', 'IDENTITE', 'ENTREPRISE'],
+};
+const DANS_L_APP = ['TELEPHONE', 'IDENTITE', 'ENTREPRISE', 'ADRESSE'] as const;
+const LIBELLE_ELEMENT: Record<TypeElement, string> = {
+  TELEPHONE: 'Mon téléphone',
+  IDENTITE: 'Mon identité',
+  ADRESSE: 'Mon adresse',
+  ENTREPRISE: 'Mon entreprise (SIRET)',
+  CASIER_B3: 'Extrait de casier judiciaire (B3)',
+  REFERENCES: 'Deux références',
+  FORMATION: 'Formation Koudmen',
+  STATUT_PRO: 'Déclaration de services à la personne',
+  PSC1: 'Formation aux premiers secours',
+  DIPLOME: 'Diplôme d’aide à la personne',
+};
+const ACTION_DEPART: Record<TypeElement, ElementVerification['actionSuivante']> = {
+  TELEPHONE: 'VERIFIER_TELEPHONE',
+  IDENTITE: 'VERIFIER_IDENTITE',
+  ENTREPRISE: 'SAISIR_SIRET',
+  ADRESSE: 'SAISIR_ADRESSE',
+  CASIER_B3: 'MONTRER_EN_VISIO',
+  REFERENCES: 'MONTRER_EN_VISIO',
+  FORMATION: 'MONTRER_EN_VISIO',
+  STATUT_PRO: 'MONTRER_EN_VISIO',
+  PSC1: 'MONTRER_EN_VISIO',
+  DIPLOME: 'MONTRER_EN_VISIO',
+};
+/** Phrase neutre du serveur (simulée). Jamais « échec ». */
+function messageElement(i: Pick<ElementVerification, 'type' | 'etat' | 'actionSuivante' | 'methode'>): string {
+  if (i.etat === 'VALIDE') return 'C’est fait. Merci.';
+  if (i.etat === 'A_REVOIR') return 'Une personne de l’équipe relit ce point. Elle vous contacte si besoin.';
+  if (i.etat === 'DECLARE') return 'Vous le montrez à l’équipe pendant la visio.';
+  if (i.etat === 'EN_COURS') return i.methode === 'VISIO' ? 'L’équipe vous appelle pour fixer l’heure de la visio.' : 'Koudmen vérifie. Vous n’avez rien à faire.';
+  switch (i.actionSuivante) {
+    case 'TELEVERSER_JUSTIFICATIF':
+      return 'Envoyez un justificatif de domicile de moins de 3 mois.';
+    case 'TELEVERSER_DOCUMENT_ENTREPRISE':
+      return 'Envoyez un avis de situation Sirene, un extrait RNE ou un Kbis.';
+    default:
+      return 'À faire dans l’app.';
+  }
+}
+type EtatL2 = {
+  items: Map<TypeElement, ElementVerification>;
+  defi: { id: string; renvoiA: number; essais: number; numero: string } | null;
+  envoisSms: number;
+  sessions: number;
+  telephoneMasque: string | null;
+};
+function nouvelElement(type: TypeElement): ElementVerification {
+  const dansApp = (DANS_L_APP as readonly TypeElement[]).includes(type);
+  const base = {
+    id: `el${type.toLowerCase().replace(/_/g, '')}`,
+    type,
+    etat: (dansApp ? 'A_FOURNIR' : 'DECLARE') as ElementVerification['etat'],
+    methode: null,
+    obligatoire: true,
+    libelle: LIBELLE_ELEMENT[type],
+    expireLe: null,
+    actionSuivante: ACTION_DEPART[type],
+    motifComplement: null,
+    surLeSite: false,
+  };
+  return { ...base, message: messageElement(base) };
+}
+/** « +596 696 •• •• 56 ». */
+function masquer(e164: string): string {
+  const m = /^\+(\d{2,3})(\d{3})\d{4}(\d{2})$/.exec(e164);
+  return m ? `+${m[1]} ${m[2]} •• •• ${m[3]}` : '•• •• ••';
+}
+
+/**
+ * D15 : état de vérification simulé, même calcul que le serveur (`verification-app.ts`, F1).
+ * Le mode simulé n'a pas de profil web : communes, disponibilités, tarif et pièces comptent comme faits.
+ */
+type BaseVerification = { validation: EtatVerification['validation']; orientation: ResultatOrientation | null; raison: string | null };
+export function etatVerificationSimule(b: BaseVerification, elements: ElementVerification[] = []): EtatVerification {
+  const recommande = b.orientation?.issue === 'RECOMMANDE';
+  const envoyee = b.validation === 'EN_ATTENTE' || b.validation === 'VALIDE';
+  // L2 : une étape par élément fait dans l'app (TELEPHONE, IDENTITE, ENTREPRISE, ADRESSE), comme le serveur.
+  const fait = (e: ElementVerification) => e.etat === 'VALIDE' || e.etat === 'EN_COURS' || e.etat === 'A_REVOIR' || e.etat === 'DECLARE';
+  const etapesL2 = DANS_L_APP.flatMap((t) => {
+    const e = elements.find((x) => x.type === t);
+    return e ? [{ code: t, libelle: e.libelle, faite: fait(e), surLeSite: false }] : [];
+  });
+  const elementsOk = etapesL2.every((e) => e.faite);
+  return {
+    validation: b.validation,
+    orientation: b.orientation,
+    etapes: [
+      { code: 'ORIENTATION', libelle: 'Répondre aux 5 questions', faite: recommande, surLeSite: false },
+      { code: 'PROFIL', libelle: 'Communes, disponibilités et tarif', faite: recommande, surLeSite: true },
+      ...etapesL2,
+      { code: 'PIECES', libelle: 'Déclarer vos pièces', faite: recommande, surLeSite: true },
+      { code: 'DEMANDE', libelle: 'Demander la vérification', faite: envoyee, surLeSite: false },
+      { code: 'APPEL_EQUIPE', libelle: 'Appel de l’équipe Koudmen, puis validation', faite: b.validation === 'VALIDE', surLeSite: false },
+    ],
+    manque: [],
+    raison: b.validation === 'REFUSE' || b.validation === 'SUSPENDU' ? b.raison : null,
+    peutDemander: recommande && elementsOk && (b.validation === 'BROUILLON' || b.validation === 'REFUSE'),
+  };
+}
+
 /** D15 : état de vérification de départ des comptes de test. */
-const VERIFICATION_TEST: Record<string, EtatVerification> = {
+const VERIFICATION_TEST: Record<string, BaseVerification> = {
   'demande-envoyee@exemple.fr': {
     validation: 'EN_ATTENTE',
     orientation: orienterLocalement({ activity: 'LIEN', paid: true, existingStatus: 'AUCUN', situations: [], familyLink: 'AUCUN' }),
-    manque: [],
     raison: null,
   },
 };
-const VERIFICATION_VIDE: EtatVerification = { validation: 'BROUILLON', orientation: null, manque: [], raison: null };
+const VERIFICATION_VIDE: BaseVerification = { validation: 'BROUILLON', orientation: null, raison: null };
 
 function visite(id: string, debut: string, finMin: number, aine: Partial<Visite['aine']>, consignes: string, checkIn: boolean): Visite {
   return {
@@ -197,8 +353,49 @@ export function creerApiSimulee(): KoudmenApi {
   /** Trajets en cours : visite → fin automatique (ms). Aucune position gardée (L6 : pas d'historique). */
   const trajets = new Map<string, number>();
   /** D15 : état de vérification par e-mail (gardé après la déconnexion, comme sur le serveur). */
-  const verifications = new Map<string, EtatVerification>();
-  const verificationDe = (email: string): EtatVerification => verifications.get(email) ?? VERIFICATION_TEST[email] ?? VERIFICATION_VIDE;
+  const verifications = new Map<string, BaseVerification>();
+  const verificationDe = (email: string): BaseVerification => verifications.get(email) ?? VERIFICATION_TEST[email] ?? VERIFICATION_VIDE;
+  /** L2 : dossier de vérification par e-mail. */
+  const dossiers = new Map<string, EtatL2>();
+  const emailSession = () => {
+    exigerSession();
+    return (session as Moi).email;
+  };
+  /** Éléments selon le statut recommandé. Un changement de statut ajoute ou retire des éléments, garde les autres. */
+  const dossierDe = (email: string): EtatL2 => {
+    let d = dossiers.get(email);
+    if (!d) {
+      d = { items: new Map(), defi: null, envoisSms: 0, sessions: 0, telephoneMasque: null };
+      dossiers.set(email, d);
+    }
+    const o = verificationDe(email).orientation;
+    const types = o?.issue === 'RECOMMANDE' && o.statut ? (ITEMS_PAR_STATUT[o.statut] ?? []) : [];
+    for (const t of [...d.items.keys()]) if (!types.includes(t)) d.items.delete(t);
+    for (const t of types) if (!d.items.has(t)) d.items.set(t, nouvelElement(t));
+    return d;
+  };
+  const majItem = (email: string, type: TypeElement, patch: Partial<ElementVerification>) => {
+    const d = dossierDe(email);
+    const it = d.items.get(type);
+    if (!it) return;
+    const nv = { ...it, ...patch };
+    d.items.set(type, { ...nv, message: messageElement(nv) });
+  };
+  const vueDossier = (email: string): DossierVerification => {
+    const d = dossierDe(email);
+    const items = [...d.items.values()];
+    const manquants = items.filter((i) => i.obligatoire && (i.etat === 'A_FOURNIR' || i.etat === 'EXPIRE'));
+    const base = verificationDe(email);
+    return {
+      dossier: { etat: base.validation, motif: null, recoursPossible: false },
+      items,
+      peutSoumettre: base.orientation?.issue === 'RECOMMANDE' && manquants.length === 0 && (base.validation === 'BROUILLON' || base.validation === 'REFUSE'),
+      manque: manquants.map((i) => i.libelle),
+      sessionsIdentiteRestantes: Math.max(0, MAX_SESSIONS_IDENTITE - d.sessions),
+      telephoneMasque: d.telephoneMasque,
+    };
+  };
+  const etatD15 = (email: string) => etatVerificationSimule(verificationDe(email), [...dossierDe(email).items.values()]);
   const domicileDe = (v: Visite): DomicileTrajet | null => {
     if (v.id === 'vis_leonie_j0') return DOMICILE_SIMULE;
     const c = trouverCommune(v.aine.commune);
@@ -295,12 +492,12 @@ export function creerApiSimulee(): KoudmenApi {
     async lireVerification() {
       await attendre(200);
       exigerSession();
-      return verificationDe((session as Moi).email);
+      return etatD15((session as Moi).email);
     },
     async envoyerOrientation(reponses) {
       await attendre(350);
       exigerSession();
-      const ok = reponsesOrientationSchema.safeParse(reponses);
+      const ok = demandeOrientationSchema.safeParse(reponses);
       if (!ok.success) throw new ApiError('REQUETE_INVALIDE', MESSAGES.REQUETE_INVALIDE, 400);
       const email = (session as Moi).email;
       const avant = verificationDe(email);
@@ -323,9 +520,178 @@ export function creerApiSimulee(): KoudmenApi {
         throw new ApiError('ACTION_IMPOSSIBLE', 'Faites d’abord l’orientation (5 questions).', 422);
       }
       journalApi().demandesVerification.push(email);
-      const apres: EtatVerification = { ...avant, validation: 'EN_ATTENTE', raison: null };
+      const apres: BaseVerification = { ...avant, validation: 'EN_ATTENTE', raison: null };
       verifications.set(email, apres);
-      return apres;
+      return etatD15(email);
+    },
+
+
+    // ─────────────── L2 : vérification simulée ───────────────
+
+    async lireDossier() {
+      await attendre(200);
+      return vueDossier(emailSession());
+    },
+    async envoyerCodeTelephone(telephone, canal) {
+      await attendre(300);
+      const email = emailSession();
+      if (!demandeCodeTelephoneSchema.safeParse({ telephone, canal }).success) throw new ApiError('REQUETE_INVALIDE', MESSAGES.REQUETE_INVALIDE, 400);
+      const n = normaliserTelephone(telephone);
+      if ('erreur' in n) throw new ApiError('PREFIXE_NON_ACCEPTE', MESSAGES.PREFIXE_NON_ACCEPTE, 422);
+      if (n.genre === 'fixe' && canal === 'SMS') {
+        throw new ApiError('PREFIXE_NON_ACCEPTE', 'Ce numéro est un fixe : il ne reçoit pas de SMS. Choisissez « Recevoir un appel ».', 422);
+      }
+      const d = dossierDe(email);
+      if (d.items.get('TELEPHONE')?.etat === 'VALIDE') throw new ApiError('DEJA_VALIDE', MESSAGES.DEJA_VALIDE, 409);
+      if (d.defi && d.defi.renvoiA > Date.now()) throw new ApiError('TROP_DE_REQUETES', 'Attendez la fin du délai, puis demandez un nouveau code.', 429);
+      const renvoiA = Date.now() + reglagesVerif().delaiRenvoiS * 1000;
+      if (canal === 'SMS') d.envoisSms += 1;
+      d.defi = { id: `defi${journalApi().codesTelephone.length + 1}`, renvoiA, essais: 0, numero: n.e164 };
+      journalApi().codesTelephone.push({ canal, fin: n.e164.slice(-4) });
+      majItem(email, 'TELEPHONE', { etat: 'EN_COURS', methode: canal === 'APPEL' ? 'OTP_APPEL' : 'OTP_SMS' });
+      return {
+        challengeId: d.defi.id,
+        canal,
+        expireA: new Date(Date.now() + 10 * 60_000).toISOString(),
+        renvoiPossibleA: new Date(renvoiA).toISOString(),
+        appelPossible: d.envoisSms >= 2,
+      };
+    },
+    async confirmerTelephone(challengeId, code) {
+      await attendre(300);
+      const email = emailSession();
+      const d = dossierDe(email);
+      if (!codeComplet(code)) throw new ApiError('REQUETE_INVALIDE', 'Le code a 6 chiffres.', 400);
+      if (!d.defi || d.defi.id !== challengeId) throw new ApiError('CODE_EXPIRE', MESSAGES.CODE_EXPIRE, 422);
+      if (d.defi.essais >= 5) throw new ApiError('TROP_D_ESSAIS', MESSAGES.TROP_D_ESSAIS, 422);
+      if (code !== CODE_SMS_SIMULE) {
+        d.defi.essais += 1;
+        if (d.defi.essais >= 5) throw new ApiError('TROP_D_ESSAIS', MESSAGES.TROP_D_ESSAIS, 422);
+        throw new ApiError('CODE_FAUX', `Ce code n’est pas le bon. Il reste ${5 - d.defi.essais} essais.`, 422);
+      }
+      d.telephoneMasque = masquer(d.defi.numero);
+      d.defi = null;
+      journalApi().confirmationsTelephone += 1;
+      majItem(email, 'TELEPHONE', { etat: 'VALIDE', actionSuivante: 'AUCUNE' });
+      return { etat: 'VALIDE' as const, telephoneMasque: d.telephoneMasque };
+    },
+    async ouvrirSessionIdentite() {
+      await attendre(300);
+      const email = emailSession();
+      const d = dossierDe(email);
+      if (d.items.get('IDENTITE')?.etat === 'VALIDE') throw new ApiError('DEJA_VALIDE', MESSAGES.DEJA_VALIDE, 409);
+      if (d.sessions >= MAX_SESSIONS_IDENTITE) throw new ApiError('TROP_DE_REQUETES', 'Trois essais sont faits. Choisissez une visio avec l’équipe Koudmen.', 429);
+      d.sessions += 1;
+      journalApi().sessionsIdentite += 1;
+      majItem(email, 'IDENTITE', { etat: 'EN_COURS', methode: 'AUTO_PRESTATAIRE', actionSuivante: 'ATTENDRE', motifComplement: null });
+      return {
+        url: `https://verification.simulee.koudmen.invalid/session/${d.sessions}`,
+        expireA: new Date(Date.now() + 30 * 60_000).toISOString(),
+        retour: 'koudmen://verification/retour',
+      };
+    },
+    async demanderVisio(demande) {
+      await attendre(300);
+      const email = emailSession();
+      if (dossierDe(email).items.get('IDENTITE')?.etat === 'VALIDE') throw new ApiError('DEJA_VALIDE', MESSAGES.DEJA_VALIDE, 409);
+      journalApi().visios.push(`${demande.creneau}:${demande.raison}`);
+      majItem(email, 'IDENTITE', { etat: 'EN_COURS', methode: 'VISIO', actionSuivante: 'ATTENDRE', motifComplement: null });
+      return { demandeLe: new Date().toISOString(), creneau: demande.creneau };
+    },
+    async declarerAdresse(adresse) {
+      await attendre(300);
+      const email = emailSession();
+      if (!demandeAdresseSchema.safeParse(adresse).success) throw new ApiError('REQUETE_INVALIDE', 'Vérifiez l’adresse : numéro et rue, code postal à 5 chiffres, commune.', 400);
+      const d = dossierDe(email);
+      if (d.items.get('ADRESSE')?.etat === 'VALIDE') throw new ApiError('DEJA_VALIDE', MESSAGES.DEJA_VALIDE, 409);
+      journalApi().adresses += 1;
+      majItem(email, 'ADRESSE', { etat: 'A_FOURNIR', actionSuivante: 'TELEVERSER_JUSTIFICATIF' });
+      return { etat: 'A_FOURNIR' as const, justificatifRequis: true };
+    },
+    async verifierEntreprise(siret) {
+      await attendre(400);
+      const email = emailSession();
+      const n = normaliserSiret(siret);
+      if ('erreur' in n) throw new ApiError('ACTION_IMPOSSIBLE', n.erreur, 422);
+      journalApi().entreprises.push(n.siret);
+      const cas = n.siret;
+      if (cas === SIRET_SIMULES.cesse) {
+        majItem(email, 'ENTREPRISE', { etat: 'A_REVOIR', methode: 'AUTO_REGISTRE', actionSuivante: 'ATTENDRE' });
+        return {
+          etat: 'A_REVOIR' as const,
+          actif: false,
+          nomConforme: true,
+          adresseSiegeConforme: null,
+          documentRequis: false,
+          message: 'Le registre indique une entreprise fermée. L’équipe relit votre dossier et vous contacte.',
+        };
+      }
+      if (cas === SIRET_SIMULES.nomCache || cas === SIRET_SIMULES.nomDifferent) {
+        majItem(email, 'ENTREPRISE', { etat: 'A_FOURNIR', methode: 'AUTO_REGISTRE', actionSuivante: 'TELEVERSER_DOCUMENT_ENTREPRISE' });
+        return {
+          etat: 'A_FOURNIR' as const,
+          actif: true,
+          nomConforme: cas === SIRET_SIMULES.nomCache ? null : false,
+          adresseSiegeConforme: null,
+          documentRequis: true,
+          message:
+            cas === SIRET_SIMULES.nomCache
+              ? 'Le registre cache le nom de cette entreprise. Envoyez un document à votre nom.'
+              : 'Le nom du registre n’est pas celui de votre profil. Envoyez un document à votre nom.',
+        };
+      }
+      majItem(email, 'ENTREPRISE', { etat: 'VALIDE', methode: 'AUTO_REGISTRE', actionSuivante: 'AUCUNE' });
+      const siegeOk = cas === SIRET_SIMULES.conforme;
+      if (siegeOk) majItem(email, 'ADRESSE', { etat: 'VALIDE', methode: 'AUTO_REGISTRE', actionSuivante: 'AUCUNE' });
+      return {
+        etat: 'VALIDE' as const,
+        actif: true,
+        nomConforme: true,
+        adresseSiegeConforme: siegeOk,
+        documentRequis: false,
+        message: siegeOk
+          ? 'Votre entreprise est active et à votre nom. L’adresse du siège suffit : pas de justificatif.'
+          : 'Votre entreprise est active et à votre nom.',
+      };
+    },
+    async envoyerDocument(type, fichier) {
+      await attendre(500);
+      const email = emailSession();
+      const probleme = controlerFichier(fichier);
+      if (probleme) throw new ApiError(fichier.taille && fichier.taille > 5 * 1024 * 1024 ? 'FICHIER_TROP_GROS' : 'TYPE_NON_ACCEPTE', probleme, 415);
+      journalApi().documents.push({ type, mime: fichier.type, taille: fichier.taille ?? null });
+      const item: TypeElement = type === 'JUSTIFICATIF_DOMICILE' || type === 'ATTESTATION_HEBERGEMENT' ? 'ADRESSE' : 'ENTREPRISE';
+      majItem(email, item, { etat: 'EN_COURS', methode: 'MANUEL', actionSuivante: 'ATTENDRE', motifComplement: null });
+      return { documentId: `doc${journalApi().documents.length}`, etatItem: 'EN_COURS' as const, conservation: '30_JOURS_APRES_DECISION' as const };
+    },
+    async soumettreDossier() {
+      await attendre(350);
+      const email = emailSession();
+      const vue = vueDossier(email);
+      if (!vue.peutSoumettre) {
+        if (verificationDe(email).validation === 'EN_ATTENTE') throw new ApiError('CONFLIT', 'Votre demande est déjà envoyée.', 409);
+        throw new ApiError('ELEMENTS_MANQUANTS', `Il manque encore : ${vue.manque.join(', ')}.`.slice(0, 300), 422);
+      }
+      journalApi().soumissions.push(email);
+      verifications.set(email, { ...verificationDe(email), validation: 'EN_ATTENTE', raison: null });
+    },
+    async demanderRecours() {
+      await attendre(300);
+      emailSession();
+      throw new ApiError('ACTION_IMPOSSIBLE', 'Aucun refus à revoir sur votre dossier.', 422);
+    },
+    simulation: {
+      async decisionIdentite(decision) {
+        await attendre(250);
+        const email = emailSession();
+        journalApi().decisionsIdentite.push(decision);
+        if (decision === 'APPROUVE') majItem(email, 'IDENTITE', { etat: 'VALIDE', methode: 'AUTO_PRESTATAIRE', actionSuivante: 'AUCUNE' });
+        else if (decision === 'A_REPRENDRE') {
+          majItem(email, 'IDENTITE', { etat: 'A_FOURNIR', methode: 'AUTO_PRESTATAIRE', actionSuivante: 'VERIFIER_IDENTITE', motifComplement: 'REPRENDRE_PHOTO' });
+        }
+        // Refus du prestataire ou nom différent : jamais REFUSE direct, une personne relit (§ 6.2).
+        else majItem(email, 'IDENTITE', { etat: 'A_REVOIR', methode: 'AUTO_PRESTATAIRE', actionSuivante: 'ATTENDRE' });
+      },
     },
 
     async listerVisites() {
