@@ -508,7 +508,7 @@ File opérateur « Accompagnants à appeler » (`server/operateur/files-lancemen
 
 > Contrat : `plateforme/src/contracts/v1/verifications.ts` (`.strict()`, copié dans l'app par `sync-contracts`).
 > Décision : [ADR 0009](adr/0009-verification-identite.md). Étude : [`L2-verification-identite.md`](L2-verification-identite.md) § 8.3.
-> Statut : **contrat publié** (premier commit du lot L2-I). Les routes suivent dans les commits suivants.
+> Statut : **routes en place** (lot L2-I). Service : `plateforme/src/server/verifications/service.ts` (mêmes fonctions pour le site et l'app). Intégrations : [`integrations/verification.md`](integrations/verification.md).
 
 ### 14.1 Routes (jeton d'accès, rôle ACCOMPAGNANT)
 
@@ -539,3 +539,25 @@ File opérateur « Accompagnants à appeler » (`server/operateur/files-lancemen
 | Plafond SMS : « envois en file » | 503 SERVICE_INDISPONIBLE + alerte opérateur | Pas de file d'envoi différé en V1.1 |
 | Routes opérateur `/api/v1/operateur/**` | Server Actions du site + `GET /operateur/documents/{id}/apercu` | L'opérateur travaille sur le web seulement (ADR 0008) |
 | `etatVerification.validation` (L1d) | + `A_COMPLETER`, `EXPIRE` ; `etapes` + `TELEPHONE`, `IDENTITE`, `ENTREPRISE`, `ADRESSE` | Branchement L2 sur `GET /accompagnant/verification` |
+
+### 14.3 Comportements à connaître (app)
+
+| Point | Règle |
+|---|---|
+| Deux routes de demande | `POST /accompagnant/verification` (L1d, suit `peutDemander`) et `POST /accompagnant/verifications/soumettre` (L2, suit `peutSoumettre`) appellent **le même service** (`submitForReview`). Même résultat `EN_ATTENTE`, aucun doublon (mise à jour conditionnelle `BROUILLON`/`REFUSE` → `EN_ATTENTE`, sinon 409). `peutDemander` et `peutSoumettre` viennent du même calcul (`submissionProblems`) |
+| Éléments L2 | Créés selon le statut (téléphone ; adresse pour CESU, proche aidant, auto-entrepreneur ; entreprise pour auto-entrepreneur et SAAD). **Jamais** dans le bac à sable ni pour un compte de démonstration |
+| Prêt pour la demande | Chaque élément obligatoire est `VALIDE`, `EN_COURS`, `DECLARE` ou `A_REVOIR` |
+| Validation définitive | Opérateur seulement, quand **tous** les éléments obligatoires sont `VALIDE` |
+| Services simulés | Mode essai : code SMS `000000`, page d'identité simulée, SIRET de test. Mode lancement : fermés → 503 `SERVICE_INDISPONIBLE` ; l'app propose la visio ou l'appel de l'équipe |
+| Identité | 3 sessions au plus, puis 429 : proposer la visio. Retour app : `koudmen://verification/retour`, puis `GET /verifications` |
+| Documents | PDF, JPEG, PNG ; 5 Mo ; type réel contrôlé. **HEIC refusé (415)** : l'app convertit la photo en JPEG avant l'envoi (voir notes L2-I § 5) |
+| Refus | Jamais automatique. Un refus exige deux opérateurs. `dossier.recoursPossible` → `POST /verifications/recours` (30 jours) |
+
+### 14.4 Côté opérateur (site seulement)
+
+| Écran ou route | Rôle |
+|---|---|
+| `/operateur/verifications` | File « Vérifications à revoir » : documents à relire, doutes du prestataire, visios demandées, refus à confirmer, recours ; alerte du plafond SMS |
+| `/operateur/verifications/{itemId}` | Fiche de revue : résultats (sans image de pièce), document à ouvrir avec un motif, aperçu filigrané, liste de cases, décision (valider, complément, proposer un refus, confirmer ou annuler un refus) |
+| `GET /operateur/documents/{id}/apercu?motif=` | Flux déchiffré, `no-store`, `inline` ; motif obligatoire ; `DocumentAccessLog` + `AuditLog` |
+| `/operateur/accompagnants/{id}` | Validation bloquée tant qu'un élément manque ; refus du profil = motif fermé + second opérateur |

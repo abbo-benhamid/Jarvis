@@ -83,6 +83,41 @@ stateDiagram-v2
 - recommandé : crée une **nouvelle branche Neon vide** (ou une nouvelle base) pour le lancement, puis relie-la au projet ;
 - sinon : les bacs à sable sont effacés par la purge de la nuit ; les comptes démo sont refusés à la connexion, et `/api/sante` les compte. Demande à Claude de les effacer avec toi.
 
+### 4 quater. Vérification des accompagnants (lot L2, ADR 0009)
+
+Tous les services sont **simulés par défaut**. En lancement, un service simulé est **fermé** : l'équipe vérifie par appel ou en visio (écran opérateur **Vérifications à revoir**). Une clé absente donne un **avertissement** dans `/api/sante`, jamais la page « Configuration incomplète » en préinscription.
+
+```mermaid
+flowchart LR
+  A[Rien configuré] -->|repli humain| H[Opérateur : appel + visio]
+  B[ADAPTER_OTP=brevo<br/>+ BREVO_SMS_SENDER] --> S[Code SMS automatique]
+  C[ADAPTER_IDENTITY=veriff<br/>+ 2 clés + webhook] --> I[Identité automatique]
+  D[ADAPTER_SIRENE=recherche-entreprises] --> R[SIRET automatique, sans clé]
+  E[ADAPTER_DOCUMENTS=base-chiffree<br/>+ DOCUMENT_ENC_KEY] --> F[Dépôt de justificatifs]
+```
+
+| Variable | Valeur | Obligatoire ? |
+|---|---|---|
+| `ADAPTER_OTP` | `simule` (défaut) ou `brevo` | Non. `brevo` exige `BREVO_API_KEY` (déjà là) et `BREVO_SMS_SENDER` |
+| `BREVO_SMS_SENDER` | Expéditeur SMS, 11 caractères au plus (ex. `Koudmen`) [À VÉRIFIER acceptation aux Antilles] | Oui si `ADAPTER_OTP=brevo` |
+| `SMS_DAILY_BUDGET_CENTS` | Plafond quotidien SMS + appels en centimes (défaut `1000` = 10 €) | Non (recommandé) |
+| `ADAPTER_OTP_APPEL` | `simule` (défaut) ou `twilio` | Non |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` | Compte Twilio, numéro qui appelle (E.164) | Oui si `ADAPTER_OTP_APPEL=twilio` |
+| `ADAPTER_IDENTITY` | `simule` (défaut), `veriff` (principal) ou `stripe` (repli, décision humaine) | Non |
+| `VERIFF_API_KEY`, `VERIFF_SHARED_SECRET` | Clé d'intégration et clé partagée Veriff | Oui si `ADAPTER_IDENTITY=veriff`. Déclare le webhook `https://<ton-site>/api/webhooks/identite/veriff` dans Veriff |
+| `STRIPE_SECRET_KEY`, `STRIPE_IDENTITY_WEBHOOK_SECRET` | Clé secrète Stripe et secret du webhook Identity | Oui si `ADAPTER_IDENTITY=stripe`. Webhook : `https://<ton-site>/api/webhooks/identite/stripe` (événements `identity.verification_session.*`) |
+| `ADAPTER_SIRENE` | `simule` (défaut), `recherche-entreprises` (sans clé) ou `insee` | Non. **Conseil : `recherche-entreprises` dès le lancement** |
+| `INSEE_API_KEY` | Clé du portail API INSEE (gratuite) | Oui si `ADAPTER_SIRENE=insee` (sinon repli sur Recherche d'entreprises) |
+| `COMPANY_DOC_REQUIRED` | `si_doute` (défaut) ou `toujours` | Non |
+| `ADDRESS_PROOF_REQUIRED` | Vide ou `true` (défaut) ; `false` seulement après l'avis de l'avocat | Non |
+| `ADAPTER_DOCUMENTS` | `simule` (défaut) ou `base-chiffree` | Non |
+| `DOCUMENT_ENC_KEY` | 32 octets aléatoires : `openssl rand -base64 32`. **Différente** de `ADDRESS_ENC_KEY`. Copie dans un coffre | Oui si `ADAPTER_DOCUMENTS=base-chiffree`. Avec les données réelles ouvertes, une clé mal formée bloque le démarrage |
+| `PHONE_ALLOWED_PREFIXES`, `VERIFF_BASE_URL`, `VERIFICATION_HMAC_KEY`, `SIMULATED_WEBHOOK_SECRET` | Réglages fins (voir `.env.example`) | Non |
+
+**Vérifie après le déploiement :** `https://<ton-site>/api/sante` → bloc `"verifications"` : chaque service dit son adaptateur et `ouvert: true/false`. Lis les avertissements `ADAPTER_…`.
+
+> **ATTENTION** — Avant toute vérification d'identité réelle : DPA Veriff signé, AIPD à jour (biométrie chez un sous-traitant), registre des traitements complété (ADR 0009, porte G2).
+
 ### 4 ter. Sauvegarde et restauration (Neon)
 
 Neon garde l'historique de la base : la **restauration à un instant** (point-in-time restore) est possible pendant la fenêtre d'historique de ton offre (offre gratuite : 24 heures ; offres payantes : jusqu'à 7 à 30 jours [À VÉRIFIER] sur neon.tech/pricing).
