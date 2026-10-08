@@ -4,11 +4,14 @@ import { Icon, Text } from '@/ui';
 
 export type Etape = { titre: string; detail?: string; etat: 'fait' | 'en_cours' | 'a_venir' };
 
-/** Liste d'étapes numérotées (L1 : vérification de l'e-mail, validation du profil). Lisible au lecteur d'écran. */
+/**
+ * Liste d'étapes numérotées (L1 : vérification de l'e-mail, validation du profil). Lisible au lecteur d'écran.
+ * Revue UX m11 : `role="list"` et `role="listitem"` cohérents (axe `aria-required-children`).
+ */
 export function Etapes({ etapes, testID }: { etapes: Etape[]; testID?: string }) {
   const { c } = useTheme();
   return (
-    <View testID={testID} accessibilityRole="list">
+    <View testID={testID} role="list">
       {etapes.map((e, i) => {
         const fait = e.etat === 'fait';
         const courant = e.etat === 'en_cours';
@@ -17,6 +20,7 @@ export function Etapes({ etapes, testID }: { etapes: Etape[]; testID?: string })
           <View
             key={e.titre}
             style={styles.ligne}
+            role="listitem"
             accessible
             accessibilityLabel={`Étape ${i + 1} : ${e.titre}. ${statut}.${e.detail ? ` ${e.detail}` : ''}`}
             testID={testID ? `${testID}-${i + 1}` : undefined}

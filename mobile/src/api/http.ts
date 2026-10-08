@@ -24,6 +24,7 @@ import {
   reponseMoiSchema,
   reponseTrajetSchema,
 } from '@/contracts';
+import { etatVerificationSchema, reponseOrientationSchema, reponsesOrientationSchema } from '@/compte/contratAccompagnant';
 import { creerHorsLigne, type HorsLigne } from '@/offline';
 import type { KoudmenApi } from './client';
 import { MESSAGES } from './messages';
@@ -392,6 +393,20 @@ export function creerApiHttp(
         if (!copie) throw e;
         return avecKayeEnAttente(copie);
       }
+    },
+
+    // D15 : contrat côté app (src/compte/contratAccompagnant.ts) en attendant celui du serveur.
+    lireVerification: () => appelerAuth('/accompagnant/verification', etatVerificationSchema),
+    async envoyerOrientation(reponses) {
+      const ok = reponsesOrientationSchema.safeParse(reponses);
+      if (!ok.success) throw new ApiError('REQUETE_INVALIDE', MESSAGES.REQUETE_INVALIDE, 400);
+      return appelerAuth('/accompagnant/orientation', reponseOrientationSchema, { methode: 'POST', corps: ok.data });
+    },
+    async demanderVerification() {
+      // Réponse vide (204) ou autre forme : on relit l'état, qui fait foi.
+      const r = await appelerAuth('/accompagnant/verification', null, { methode: 'POST', corps: {} });
+      const etat = etatVerificationSchema.safeParse(r);
+      return etat.success ? etat.data : appelerAuth('/accompagnant/verification', etatVerificationSchema);
     },
 
     checkIn: (visiteId, { qr, codeDomicile, position }) =>

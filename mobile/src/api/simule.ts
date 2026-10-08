@@ -7,6 +7,8 @@ import {
   PREFIXE_QR_SIGNE,
   type DomicileTrajet,
 } from './l1';
+import { reponsesOrientationSchema, type EtatVerification } from '@/compte/contratAccompagnant';
+import { orienterLocalement } from '@/compte/orientation';
 import { trouverCommune } from '@/lib/communes';
 import { distanceMetres } from '@/lib/geo';
 import type { KoudmenApi } from './client';
@@ -58,11 +60,14 @@ export type JournalApiSimulee = {
   trajets: { visiteId: string; action: 'DEMARRER' | 'ARRETER' }[];
   positions: { visiteId: string; latitude: number; longitude: number; precisionMetres: number; simulee: boolean }[];
   checkIns: { visiteId: string; qr: boolean; code: boolean; position: boolean; simulee: boolean }[];
+  /** D15 : orientations envoyées (issue seulement) et demandes de vérification. */
+  orientations: { email: string; issue: string }[];
+  demandesVerification: string[];
 };
 
 function journalApi(): JournalApiSimulee {
   const g = globalThis as { __KOUDMEN_API_JOURNAL__?: JournalApiSimulee };
-  g.__KOUDMEN_API_JOURNAL__ ??= { inscriptions: [], motsDePasseOublies: [], trajets: [], positions: [], checkIns: [] };
+  g.__KOUDMEN_API_JOURNAL__ ??= { inscriptions: [], motsDePasseOublies: [], trajets: [], positions: [], checkIns: [], orientations: [], demandesVerification: [] };
   return g.__KOUDMEN_API_JOURNAL__;
 }
 
@@ -99,7 +104,21 @@ const COMPTES_TEST: Record<string, Partial<Moi>> = {
   'en-validation@exemple.fr': { prenom: 'Marius', nom: 'Rosette', emailVerifie: true, profilValide: false },
   'email-a-verifier@exemple.fr': { emailVerifie: false },
   'preinscription@exemple.fr': { preinscription: true },
+  // D15 : préinscription ET profil à valider (même parcours que « en validation », avec le bandeau « ouvre bientôt »).
+  'preinscription-validation@exemple.fr': { prenom: 'Lucette', nom: 'Boré', profilValide: false, preinscription: true },
+  'demande-envoyee@exemple.fr': { prenom: 'Gisèle', nom: 'Adèle', profilValide: false },
 };
+
+/** D15 : état de vérification de départ des comptes de test. */
+const VERIFICATION_TEST: Record<string, EtatVerification> = {
+  'demande-envoyee@exemple.fr': {
+    validation: 'EN_ATTENTE',
+    orientation: orienterLocalement({ activity: 'LIEN', paid: true, existingStatus: 'AUCUN', situations: [], familyLink: 'AUCUN' }),
+    manque: [],
+    raison: null,
+  },
+};
+const VERIFICATION_VIDE: EtatVerification = { validation: 'BROUILLON', orientation: null, manque: [], raison: null };
 
 function visite(id: string, debut: string, finMin: number, aine: Partial<Visite['aine']>, consignes: string, checkIn: boolean): Visite {
   return {
@@ -177,6 +196,9 @@ export function creerApiSimulee(): KoudmenApi {
   const comptes = new Map<string, { motDePasse: string; moi: Moi }>();
   /** Trajets en cours : visite → fin automatique (ms). Aucune position gardée (L6 : pas d'historique). */
   const trajets = new Map<string, number>();
+  /** D15 : état de vérification par e-mail (gardé après la déconnexion, comme sur le serveur). */
+  const verifications = new Map<string, EtatVerification>();
+  const verificationDe = (email: string): EtatVerification => verifications.get(email) ?? VERIFICATION_TEST[email] ?? VERIFICATION_VIDE;
   const domicileDe = (v: Visite): DomicileTrajet | null => {
     if (v.id === 'vis_leonie_j0') return DOMICILE_SIMULE;
     const c = trouverCommune(v.aine.commune);
@@ -269,6 +291,42 @@ export function creerApiSimulee(): KoudmenApi {
       brouillons.clear();
     },
     surSessionPerdue: () => () => undefined,
+
+    async lireVerification() {
+      await attendre(200);
+      exigerSession();
+      return verificationDe((session as Moi).email);
+    },
+    async envoyerOrientation(reponses) {
+      await attendre(350);
+      exigerSession();
+      const ok = reponsesOrientationSchema.safeParse(reponses);
+      if (!ok.success) throw new ApiError('REQUETE_INVALIDE', MESSAGES.REQUETE_INVALIDE, 400);
+      const email = (session as Moi).email;
+      const avant = verificationDe(email);
+      if (avant.validation === 'VALIDE' || avant.validation === 'SUSPENDU') {
+        throw new ApiError('ACTION_IMPOSSIBLE', 'Votre profil est validé. Pour changer de statut, écrivez à l’équipe Koudmen.', 422);
+      }
+      const orientation = orienterLocalement(ok.data);
+      journalApi().orientations.push({ email, issue: orientation.issue });
+      // Comme le site : refaire l'orientation pendant la vérification renvoie le profil en brouillon.
+      verifications.set(email, { ...avant, orientation, validation: avant.validation === 'EN_ATTENTE' ? 'BROUILLON' : avant.validation });
+      return orientation;
+    },
+    async demanderVerification() {
+      await attendre(350);
+      exigerSession();
+      const email = (session as Moi).email;
+      const avant = verificationDe(email);
+      if (avant.validation === 'EN_ATTENTE') throw new ApiError('CONFLIT', 'Votre demande est déjà envoyée.', 409);
+      if (avant.orientation?.issue !== 'RECOMMANDE') {
+        throw new ApiError('ACTION_IMPOSSIBLE', 'Faites d’abord l’orientation (5 questions).', 422);
+      }
+      journalApi().demandesVerification.push(email);
+      const apres: EtatVerification = { ...avant, validation: 'EN_ATTENTE', raison: null };
+      verifications.set(email, apres);
+      return apres;
+    },
 
     async listerVisites() {
       await attendre();

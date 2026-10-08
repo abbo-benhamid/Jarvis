@@ -95,6 +95,8 @@ function Navigation() {
           {/* L1 : compte connecté, mais pas encore actif (profil en validation, service en préinscription). */}
           <Stack.Protected guard={!!session && compte === 'validation'}>
             <Stack.Screen name="compte-en-validation" />
+            {/* D15 : orientation (5 questions) dans l'app, avant la demande de vérification. */}
+            <Stack.Screen name="orientation" options={{ animation: 'slide_from_right' }} />
           </Stack.Protected>
           <Stack.Protected guard={!!session && compte === 'preinscription'}>
             <Stack.Screen name="bientot" />

@@ -77,7 +77,8 @@ test('GET /me : contrat serveur strict ; état du compte et rappel e-mail', () =
   expect(reponseMoiSchema.safeParse(base).success).toBe(false);
   expect(etatCompte({})).toBe('actif');
   expect(etatCompte({ profilValide: false })).toBe('validation');
-  expect(etatCompte({ profilValide: false, preinscription: true })).toBe('preinscription');
+  expect(etatCompte({ profilValide: false, preinscription: true })).toBe('validation');
+  expect(etatCompte({ profilValide: true, preinscription: true })).toBe('preinscription');
   expect(emailAVerifier({})).toBe(false);
   expect(emailAVerifier({ emailVerifie: false })).toBe(true);
 });

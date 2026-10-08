@@ -1,3 +1,4 @@
+import type { EtatVerification, ReponsesOrientation, ResultatOrientation } from '@/compte/contratAccompagnant';
 import type { HorsLigneVue } from '@/offline';
 import type {
   BrouillonKaye,
@@ -35,6 +36,9 @@ export type PositionTrajet = { latitude: number; longitude: number; precisionMet
  * | restaurer            | POST /auth/refresh (jeton du stockage sûr)     |
  * | moi                  | GET  /me                                       |
  * | deconnecter          | POST /auth/logout                              |
+ * | lireVerification     | GET  /accompagnant/verification (D15)          |
+ * | envoyerOrientation   | POST /accompagnant/orientation (D15)           |
+ * | demanderVerification | POST /accompagnant/verification (D15)          |
  * | listerVisites        | GET  /visites?jours=7                          |
  * | lireVisite           | GET  /visites/{id}                             |
  * | checkIn … sos        | POST /evenements (un `clientEventId` unique)   |
@@ -72,6 +76,15 @@ export interface KoudmenApi {
   deconnecter(): Promise<void>;
   /** Appelé quand la connexion est perdue (jeton révoqué ou réutilisé). Renvoie la fonction de désabonnement. */
   surSessionPerdue(cb: (message: string) => void): () => void;
+
+  /**
+   * D15 : orientation et demande de vérification, dans l'app (profil pas encore validé).
+   * Route absente sur un serveur plus ancien : `ApiError('INTROUVABLE')`, l'écran propose alors le site.
+   */
+  lireVerification(): Promise<EtatVerification>;
+  envoyerOrientation(reponses: ReponsesOrientation): Promise<ResultatOrientation>;
+  /** Envoie la demande. Après seulement, l'équipe a le dossier et appelle l'accompagnante. */
+  demanderVerification(): Promise<EtatVerification>;
 
   /** Visites des 7 prochains jours (et des 12 dernières heures), triées par heure de début. */
   listerVisites(): Promise<Visite[]>;
