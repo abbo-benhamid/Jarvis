@@ -365,6 +365,18 @@ describe("confirmVisitAction", () => {
     await expect(actions.confirmVisitAction(empty, fd({ visitId: VISIT }))).rejects.toThrow("REDIRECT:/famille/visites?confirmee=validee");
     expect(confirmElderSimulated).toHaveBeenCalledWith(VISIT, user);
   });
+
+  it("L1d (code m4) : inaccessible en mode lancement (pas d'appel simulé)", async () => {
+    launch.on = true;
+    try {
+      const r = await actions.confirmVisitAction(empty, fd({ visitId: VISIT }));
+      expect(r.ok).toBe(false);
+      expect(db.visit.findUnique).not.toHaveBeenCalled();
+      expect(confirmElderSimulated).not.toHaveBeenCalled();
+    } finally {
+      launch.on = false;
+    }
+  });
 });
 
 // ─────────── F9 ───────────

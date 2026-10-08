@@ -440,6 +440,8 @@ export async function chooseProfileAction(_prev: ActionResult, formData: FormDat
 /** F7 : « L'aîné a confirmé (appel simulé) » → facteur (c) de la preuve 2 sur 3. */
 export async function confirmVisitAction(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const user = await requireRole("FAMILLE");
+  // L1d (code m4) : appel « tapez 1 » SIMULÉ. Jamais en lancement (R7 : pas de fausse preuve de l'aîné).
+  if (isLaunchMode()) return { ok: false, error: "Cette action n'existe pas sur le site." };
   const parsed = confirmVisitSchema.safeParse(formDataToObject(formData));
   if (!parsed.success) return { ok: false, error: NOT_FOUND };
   const visit = await db.visit.findUnique({

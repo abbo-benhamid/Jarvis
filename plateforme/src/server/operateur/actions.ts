@@ -14,6 +14,7 @@ import { confirmElderSimulated } from "@/server/visits/service";
 import { MatchingError, proposeProfile, releaseCaregiver } from "@/server/matching/service";
 import { isConcurrencyError } from "@/server/matching/locks";
 import { REAL_WORLD, sameScope } from "@/server/scope";
+import { isLaunchMode } from "@/server/config-check";
 import { VALIDATION_LABELS } from "@/lib/labels";
 import { fail, type ActionResult } from "@/lib/action-result";
 import {
@@ -226,7 +227,8 @@ export async function confirmElderAction(_prev: ActionResult, formData: FormData
   const parsed = visitSchema.safeParse(formToObject(formData));
   if (!parsed.success) return fail("Visite invalide.");
   // L1-B (R7) : désactivé. Le code ci-dessous reste pour un retour arrière décidé par l'orchestrateur.
-  if (process.env.KOUDMEN_OPERATEUR_CONFIRME !== "true") return fail(OPERATOR_CONFIRM_DISABLED);
+  // L1d (code m4) : jamais en lancement, même avec KOUDMEN_OPERATEUR_CONFIRME (refusée aussi par config-check).
+  if (process.env.KOUDMEN_OPERATEUR_CONFIRME !== "true" || isLaunchMode()) return fail(OPERATOR_CONFIRM_DISABLED);
   const visit = await db.visit.findUnique({
     where: { id: parsed.data.visitId },
     select: { id: true, aineId: true, status: true, aine: { select: { sandboxId: true } }, proofs: { select: { factor: true, valid: true } } },

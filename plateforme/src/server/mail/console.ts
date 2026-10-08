@@ -1,6 +1,6 @@
 import { appendFileSync } from "node:fs";
 import { isStrictProduction } from "@/server/config-check";
-import { maskEmail, type MailMessage, type MailPort, type MailResult } from "./port";
+import type { MailMessage, MailPort, MailResult } from "./port";
 
 /**
  * Adaptateur `console` : aucun e-mail ne part.
@@ -20,7 +20,8 @@ export class ConsoleMailAdapter implements MailPort {
     if (process.env.NODE_ENV !== "production") {
       console.info(`[mail:console] à ${message.to} · ${message.subject}\n${message.text}`);
     } else {
-      console.info(`[mail:console] e-mail non envoyé (pas de BREVO_API_KEY) · modèle ${message.template} · ${maskEmail(message.to)}`);
+      // L1d : aucune adresse (même masquée) dans le journal de production.
+      console.info(`[mail:console] e-mail non envoyé (pas de BREVO_API_KEY) · modèle ${message.template}`);
     }
     return { ok: true, adapter: this.name };
   }

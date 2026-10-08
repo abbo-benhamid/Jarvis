@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/server/db";
+import { brevoHealth } from "@/server/mail/brevo";
 import { configWarnings, productionConfigProblems, realDataAllowedFrom, siteMode } from "@/server/config-check";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +29,13 @@ export async function GET() {
     const code = (e as { code?: string; errorCode?: string }).code ?? (e as { errorCode?: string }).errorCode;
     database = { ok: false, erreur: code ? `Prisma ${code}` : (e as Error).name };
   }
+  // L1d : la clé Brevo est-elle acceptée ? (lecture du compte, aucun envoi, aucune donnée du compte renvoyée).
+  const brevoKey = process.env.BREVO_API_KEY?.trim();
+  const brevo = brevoKey ? await brevoHealth(brevoKey) : null;
+  if (brevo && !brevo.cleAcceptee) {
+    warnings.push(brevo.repond ? `Brevo refuse la clé (HTTP ${brevo.statut}) : aucun e-mail ne part.` : "Brevo ne répond pas : les e-mails peuvent ne pas partir.");
+  }
+  // Un problème d'e-mail ne coupe pas le site (pas de 503) : avertissement seulement.
   const ok = config.length === 0 && database.ok;
   return NextResponse.json(
     {
@@ -37,6 +45,7 @@ export async function GET() {
       configuration: config.length === 0 ? "ok" : config,
       avertissements: warnings,
       baseDeDonnees: database,
+      email: brevo ? { adaptateur: "brevo", repond: brevo.repond, cleAcceptee: brevo.cleAcceptee } : { adaptateur: "console", repond: false, cleAcceptee: false },
       variables: {
         DATABASE_URL: Boolean(process.env.DATABASE_URL),
         DIRECT_URL: Boolean(process.env.DIRECT_URL || process.env.DATABASE_URL_UNPOOLED),
