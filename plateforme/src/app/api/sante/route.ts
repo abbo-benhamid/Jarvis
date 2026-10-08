@@ -3,6 +3,7 @@ import { db } from "@/server/db";
 import { brevoHealth } from "@/server/mail/brevo";
 import { configWarnings, productionConfigProblems, realDataAllowedFrom, siteMode } from "@/server/config-check";
 import { verificationServicesState } from "@/server/verifications/config";
+import { redactionFailures } from "@/server/verifications/review";
 
 export const dynamic = "force-dynamic";
 
@@ -17,9 +18,13 @@ export async function GET() {
   const mode = siteMode();
   const warnings = configWarnings();
   let database: { ok: boolean; erreur?: string; migrations?: number } = { ok: false };
+  let redactFailures: number | null = null;
   try {
     const rows = await db.$queryRaw<{ n: bigint }[]>`SELECT count(*)::bigint AS n FROM "_prisma_migrations" WHERE finished_at IS NOT NULL`;
     database = { ok: true, migrations: Number(rows[0]?.n ?? 0) };
+    // L2b (M4) : suppressions chez le prestataire d'identité en échec depuis 3 nuits (biométrie gardée trop longtemps).
+    redactFailures = await redactionFailures();
+    if (redactFailures > 0) warnings.push(`${redactFailures} suppression(s) des images et de la biométrie chez le prestataire d'identité échouent depuis 3 nuits. Vérifiez les clés et prévenez le DPO.`);
     if (mode === "lancement") {
       // L11 : aucune donnée de démo ni de bac à sable en lancement (la purge nocturne efface les bacs à sable).
       const [demo, sandboxes] = await Promise.all([db.user.count({ where: { isDemo: true } }), db.sandbox.count()]);
@@ -48,7 +53,7 @@ export async function GET() {
       baseDeDonnees: database,
       email: brevo ? { adaptateur: "brevo", repond: brevo.repond, cleAcceptee: brevo.cleAcceptee } : { adaptateur: "console", repond: false, cleAcceptee: false },
       // L2 : adaptateur et ouverture de chaque service de vérification (aucune valeur secrète). Jamais de 503 pour ces clés.
-      verifications: verificationServicesState(),
+      verifications: { ...verificationServicesState(), suppressionsPrestataireEnEchec: redactFailures },
       variables: {
         DATABASE_URL: Boolean(process.env.DATABASE_URL),
         DIRECT_URL: Boolean(process.env.DIRECT_URL || process.env.DATABASE_URL_UNPOOLED),
@@ -65,6 +70,7 @@ export async function GET() {
         TWILIO_ACCOUNT_SID: Boolean(process.env.TWILIO_ACCOUNT_SID),
         INSEE_API_KEY: Boolean(process.env.INSEE_API_KEY),
         DOCUMENT_ENC_KEY: Boolean(process.env.DOCUMENT_ENC_KEY),
+        VERIFICATION_HMAC_KEY: Boolean(process.env.VERIFICATION_HMAC_KEY),
       },
     },
     { status: ok ? 200 : 503, headers: { "cache-control": "no-store" } },
