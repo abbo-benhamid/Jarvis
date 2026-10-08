@@ -20,7 +20,7 @@ export function EmptyState({
   /** Illustration personnalisée ; `false` pour n'en mettre aucune. Par défaut : case créole et soleil. */
   illustration?: ReactNode | false;
   /** Balise du titre (p par défaut, pour ne pas casser la hiérarchie de la page). */
-  titleAs?: "p" | "h2" | "h3";
+  titleAs?: "p" | "h1" | "h2" | "h3";
   className?: string;
 }) {
   const T = titleAs;

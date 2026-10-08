@@ -35,13 +35,13 @@ export function FormField({
         ) : null}
       </label>
       {hint ? (
-        <p id={`${htmlFor}-hint`} className="text-sm text-muted">
+        <p id={`${htmlFor}-hint`} className="text-[15px] leading-snug text-muted">
           {hint}
         </p>
       ) : null}
       {children}
       {list.length > 0 ? (
-        <p id={`${htmlFor}-error`} className="text-sm font-semibold text-hibiscus" role="alert">
+        <p id={`${htmlFor}-error`} className="text-[15px] font-semibold text-hibiscus" role="alert">
           {list.join(" ")}
         </p>
       ) : null}
@@ -77,10 +77,10 @@ export function Fieldset({
   return (
     <fieldset className={cn("flex flex-col gap-1", className)}>
       <legend className="mb-1 font-semibold">{legend}</legend>
-      {hint ? <p className="text-sm text-muted">{hint}</p> : null}
+      {hint ? <p className="text-[15px] leading-snug text-muted">{hint}</p> : null}
       {children}
       {errors && errors.length > 0 ? (
-        <p className="text-sm font-semibold text-hibiscus" role="alert">
+        <p className="text-[15px] font-semibold text-hibiscus" role="alert">
           {errors.join(" ")}
         </p>
       ) : null}

@@ -102,7 +102,11 @@ export function MoreLink({ href, children, className }: { href: string; children
   );
 }
 
-/** Tableau du back-office : en-tête discret en majuscules, lignes aérées, défilement horizontal si besoin. */
+/**
+ * Tableau du back-office : en-tête discret en majuscules, lignes aérées.
+ * L1d (M11) : sous 640 px, chaque ligne devient une CARTE (libellé au-dessus de chaque valeur, action en bas).
+ * Les rôles ARIA gardent la structure de tableau pour les lecteurs d'écran.
+ */
 export function DataTable({
   head,
   rows,
@@ -112,27 +116,40 @@ export function DataTable({
   head: string[];
   rows: ReactNode[][];
   caption?: string;
-  /** Largeur minimale (ex. « 40rem ») : au-dessous, le tableau défile dans son cadre, jamais la page. */
+  /** Largeur minimale à partir de 640 px (ex. « 40rem ») : le tableau défile dans son cadre, jamais la page. */
   minWidth?: string;
 }) {
   return (
-    <div className="-mx-1 overflow-x-auto px-1">
-      <table className="w-full border-collapse text-left text-[15px]" style={minWidth ? { minWidth } : undefined}>
+    <div className="sm:-mx-1 sm:overflow-x-auto sm:px-1">
+      <table
+        role="table"
+        className="w-full border-collapse text-left text-[15px] max-sm:block sm:min-w-[var(--kd-table-min)]"
+        style={minWidth ? ({ "--kd-table-min": minWidth } as React.CSSProperties) : undefined}
+      >
         {caption ? <caption className="sr-only">{caption}</caption> : null}
-        <thead>
-          <tr className="border-b border-line">
+        <thead className="max-sm:sr-only">
+          <tr role="row" className="border-b border-line">
             {head.map((h) => (
-              <th key={h} scope="col" className="py-2.5 pr-4 text-[12.5px] font-semibold tracking-[.08em] whitespace-nowrap text-muted uppercase">
+              <th key={h} role="columnheader" scope="col" className="py-2.5 pr-4 text-[12.5px] font-semibold tracking-[.08em] whitespace-nowrap text-muted uppercase">
                 {h}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody>
+        <tbody className="max-sm:flex max-sm:flex-col max-sm:gap-3">
           {rows.map((r, i) => (
-            <tr key={i} className="border-b border-line align-top last:border-0">
+            <tr
+              key={i}
+              role="row"
+              className="border-b border-line align-top last:border-0 max-sm:flex max-sm:flex-col max-sm:gap-2 max-sm:rounded-card max-sm:border-0 max-sm:bg-surface-2/60 max-sm:p-4"
+            >
               {r.map((c, j) => (
-                <td key={j} className="num py-3 pr-4 break-words">
+                <td
+                  key={j}
+                  role="cell"
+                  data-label={head[j]}
+                  className="num py-3 pr-4 break-words max-sm:block max-sm:p-0 max-sm:before:mb-0.5 max-sm:before:block max-sm:before:text-[13.5px] max-sm:before:font-semibold max-sm:before:tracking-[.04em] max-sm:before:text-muted max-sm:before:uppercase max-sm:before:content-[attr(data-label)]"
+                >
                   {c}
                 </td>
               ))}

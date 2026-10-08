@@ -22,7 +22,7 @@ import {
   DISTANCE_ARRIVEE_M,
   DUREE_MAX_TRAJET_MIN,
   type DomicileTrajet,
-} from '../contrats-l1';
+} from '../api/l1';
 import { arrondir, distanceMetres } from '../lib/geo';
 import type { PositionTrajet } from '../api/client';
 import { ApiError, type EtatTrajetServeur } from '../api/types';
@@ -30,9 +30,16 @@ import type { LectureTrajet } from '../native/types';
 
 export type RaisonFin = 'manuel' | 'arrivee' | 'check_in' | 'duree' | 'arriere_plan' | 'serveur' | 'deconnexion' | 'session';
 
+/** Message de fin du partage. Arrivée : « Vous êtes presque chez Léonie. » (revue UX m9). */
+export function messageFin(raison: RaisonFin, prenom?: string | null): string {
+  if (raison === 'arrivee' && prenom) return `Vous êtes presque chez ${prenom}. Le partage s’arrête tout seul.`;
+  return MESSAGES_FIN[raison];
+}
+
 export const MESSAGES_FIN: Record<RaisonFin, string> = {
   manuel: 'Partage arrêté. Votre position n’est plus envoyée.',
-  arrivee: 'Vous êtes presque arrivé. Le partage s’arrête tout seul.',
+  // Revue UX m9 : texte neutre (pas d'accord masculin) ; `messageFin` y met le prénom de l'aîné.
+  arrivee: 'Vous êtes presque chez la personne visitée. Le partage s’arrête tout seul.',
   check_in: 'Arrivée enregistrée. Le partage du trajet est arrêté.',
   duree: 'Le partage s’arrête après 60 minutes. Vous pouvez le relancer.',
   arriere_plan: 'Le partage s’arrête quand Koudmen n’est plus à l’écran. Vous pouvez le relancer.',
@@ -137,9 +144,10 @@ export function creerGestionnaireTrajet(o: OptionsTrajet) {
   function terminer(raison: RaisonFin, prevenirServeur = raison !== 'check_in' && raison !== 'serveur' && raison !== 'session') {
     if (etat.statut === 'inactif') return;
     const visiteId = etat.visiteId;
+    const prenom = etat.prenom;
     numero += 1;
     nettoyer();
-    publier({ statut: 'inactif', fin: { raison, message: MESSAGES_FIN[raison], visiteId } });
+    publier({ statut: 'inactif', fin: { raison, message: messageFin(raison, prenom), visiteId } });
     if (prevenirServeur) void o.api.arreterTrajet(visiteId).catch(() => undefined);
   }
 

@@ -14,9 +14,9 @@ import { confirmElderSimulated } from "@/server/visits/service";
 import { MatchingError, proposeProfile, releaseCaregiver } from "@/server/matching/service";
 import { isConcurrencyError } from "@/server/matching/locks";
 import { REAL_WORLD, sameScope } from "@/server/scope";
-import { isLaunchMode } from "@/server/config-check";
 import { VALIDATION_LABELS } from "@/lib/labels";
 import { fail, type ActionResult } from "@/lib/action-result";
+import { isLaunchMode } from "@/server/launch";
 import {
   allowedDecisions,
   DECISION_RESULT,
@@ -130,7 +130,7 @@ export async function decideCaregiverAction(_prev: ActionResult, formData: FormD
   }
 
   revalidatePath("/operateur", "layout");
-  return { ok: true, message: `Décision enregistrée : ${VALIDATION_LABELS[to]}. L'accompagnant reçoit un message (simulé).` };
+  return { ok: true, message: `Décision enregistrée : ${VALIDATION_LABELS[to]}. ${isLaunchMode() ? "Koudmen prévient l'accompagnant." : "L'accompagnant reçoit un message (simulé)."}` };
 }
 
 // ─────────────── O3 Revue d'une vérification ───────────────
@@ -212,7 +212,7 @@ export async function proposeCaregiverAction(_prev: ActionResult, formData: Form
     return fail(e.message);
   }
   revalidatePath("/operateur", "layout");
-  return { ok: true, message: `Profil de ${name} proposé à la famille. La famille choisit. Message simulé dans la boîte d'envoi.` };
+  return { ok: true, message: `Profil de ${name} proposé à la famille. La famille choisit.${isLaunchMode() ? "" : " Message simulé dans la boîte d'envoi."}` };
 }
 
 // ─────────────── O6 Confirmation simulée de l'aîné ───────────────

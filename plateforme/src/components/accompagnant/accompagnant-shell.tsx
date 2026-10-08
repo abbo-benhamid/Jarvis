@@ -7,7 +7,6 @@ import { SandboxPanel } from "@/components/sandbox/sandbox-panel";
 import { AccountStatus } from "@/components/account/account-status";
 import { Badge } from "@/components/ui/badge";
 import { BrandMark } from "@/components/ui/illustrations";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { AccompagnantNav } from "./accompagnant-nav";
 import { InstallCapture } from "./install-prompt";
 
@@ -45,9 +44,7 @@ export function AccompagnantShell({ user, children }: { user: CurrentUser; child
         {user.sandboxId ? <SandboxPanel user={user} /> : null}
         <AccountStatus user={user} />
         {children}
-        <div className="mt-12 flex justify-center">
-          <ThemeToggle />
-        </div>
+        {/* L1d (m3) : un seul sélecteur Clair / Sombre, dans le pied de page. */}
       </main>
 
       <SiteFooter />

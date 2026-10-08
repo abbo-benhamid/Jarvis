@@ -6,7 +6,13 @@ const NAME_RULE = "Lettres, espaces, tirets et apostrophes seulement.";
 export const personNameSchema = (label: string) =>
   z.string().trim().min(1, `${label} obligatoire.`).max(NOM_PERSONNE_MAX, `${NOM_PERSONNE_MAX} caractères maximum.`).regex(NOM_PERSONNE_REGEX, NAME_RULE);
 
-export const emailSchema = z.string().trim().toLowerCase().email("Adresse email invalide.").max(200);
+export const emailSchema = z
+  .string({ message: "Entrez votre adresse e-mail." })
+  .trim()
+  .toLowerCase()
+  .min(1, "Entrez votre adresse e-mail.")
+  .email("Adresse e-mail invalide.")
+  .max(200);
 
 export const loginSchema = z.object({
   email: emailSchema,

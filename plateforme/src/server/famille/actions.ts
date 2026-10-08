@@ -270,7 +270,10 @@ export async function inviteLakouAction(
   revalidatePath(`/famille/aines/${v.aineId}/cercle`);
   return {
     ok: true,
-    message: v.email ? "Lien créé. Un email simulé est parti. Vous pouvez aussi copier le lien." : "Lien créé. Copiez-le et envoyez-le à votre proche.",
+    message: v.email
+      ? isLaunchMode()
+        ? "Lien créé. Koudmen l'envoie par e-mail. Vous pouvez aussi copier le lien."
+        : "Lien créé. Un email simulé est parti. Vous pouvez aussi copier le lien." : "Lien créé. Copiez-le et envoyez-le à votre proche.",
     data: { link, expiresAt: expiresAt.toISOString() },
   };
 }

@@ -21,6 +21,9 @@ import { LevelBadge, RequestStatusBadge } from "@/components/status-badges";
 import { CancelRequestForm } from "@/components/famille/cancel-request-form";
 import { employerSentence, requestAuthorText } from "@/components/famille/request-texts";
 import { Term } from "@/components/ui/term";
+import { isLaunchMode } from "@/server/launch";
+import { PreinscriptionClosedPage } from "@/components/account/preinscription";
+import { realDataAllowed } from "@/server/launch";
 
 export const metadata: Metadata = { title: "Demandes d'accompagnement" };
 
@@ -53,6 +56,8 @@ function slotsText(slots: RequestRow["slots"]): string {
 /** F5 : demandes par aîné, avec statut et annulation. */
 export default async function Page({ searchParams }: { searchParams: Promise<{ envoyee?: string; annulee?: string; choisi?: string }> }) {
   const user = await requireRole("FAMILLE");
+  // L1d (M3) : en préinscription, page fermée avec la raison. Pas de bouton « Ajouter un aîné ».
+  if (!realDataAllowed()) return <PreinscriptionClosedPage title="Les demandes" />;
   const { envoyee, annulee, choisi } = await searchParams;
   const [requests, aines] = await Promise.all([getFamilyRequests(user.id), getFamilyAines(user.id)]);
   const active = requests.filter((r) => r.status !== "ANNULEE");
@@ -81,7 +86,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ e
         ) : null}
         {choisi ? (
           <Alert tone="succes" title={`Vous avez choisi ${choisi}.`}>
-            Cette personne reçoit un message (simulé). Elle est libre d&apos;accepter ou de refuser, sans pénalité.
+            {isLaunchMode() ? "Koudmen prévient cette personne." : "Cette personne reçoit un message (simulé)."} Elle est libre d&apos;accepter ou de refuser, sans pénalité.
           </Alert>
         ) : null}
         {annulee ? <Alert tone="succes" title="Demande annulée.">Les propositions en attente sont annulées aussi.</Alert> : null}

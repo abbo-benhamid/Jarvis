@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { FormMessage } from "@/components/ui/form-message";
 import { PlanRadio, type PlanOption } from "@/components/ui/plan-radio";
 import { PlanCostExample } from "./plan-cost";
+import { CallbackRequest, type CreneauOption } from "./callback-request";
 
 /** « dès 149 € par mois » → préfixe, prix, suffixe : mêmes mots, mise en forme de la maquette (écran e). */
 function splitPrice(label: string): Pick<PlanOption, "price" | "pricePrefix" | "priceSuffix"> {
@@ -35,7 +36,20 @@ function toOption(p: PlanInfo, current: Plan | null, locked: boolean): PlanOptio
  * F9 (maquette, écran e) : les 3 formules en cartes radio. Seul le payeur choisit (sinon lecture seule).
  * Un choix demande une confirmation (erreur de doigt sur mobile). Paiement simulé.
  */
-export function PlanChooser({ aineId, current, canChange, launch = false }: { aineId: string; current: Plan | null; canChange: boolean; launch?: boolean }) {
+export function PlanChooser({
+  aineId,
+  current,
+  canChange,
+  launch = false,
+  callback: cb,
+}: {
+  aineId: string;
+  current: Plan | null;
+  canChange: boolean;
+  launch?: boolean;
+  /** L1d (M4) : numéro, créneaux et demandes ouvertes pour le formulaire « Demander un appel ». */
+  callback?: { phone: string | null; creneaux: CreneauOption[]; pendingSince: Record<"KOZE" | "SERENITE", string | null> };
+}) {
   // L4 / R8 : en lancement, une formule payante = demande de rappel par un conseiller (aucun paiement).
   const callback = (p: PlanInfo) => launch && p.priceCents > 0;
   const [state, action, pending] = useActionState(changePlanAction, initialActionState);
@@ -44,7 +58,9 @@ export function PlanChooser({ aineId, current, canChange, launch = false }: { ai
   const plan = PLANS.find((p) => p.plan === selected) ?? PLANS[0]!;
   const isCurrent = selected === current;
 
+  const showCallback = canChange && !isCurrent && callback(plan) && cb && (plan.plan === "KOZE" || plan.plan === "SERENITE");
   return (
+    <>
     <form action={action} className="flex flex-col gap-4">
       <input type="hidden" name="aineId" value={aineId} />
       <PlanRadio
@@ -66,7 +82,7 @@ export function PlanChooser({ aineId, current, canChange, launch = false }: { ai
 
       <FormMessage state={state} />
 
-      {canChange ? (
+      {canChange && !showCallback ? (
         isCurrent ? (
           <p className="rounded-md bg-surface-2 p-3.5 text-center text-[15px] font-semibold">La formule {plan.name} est votre formule actuelle.</p>
         ) : confirming ? (
@@ -94,5 +110,17 @@ export function PlanChooser({ aineId, current, canChange, launch = false }: { ai
         )
       ) : null}
     </form>
+    {showCallback ? (
+      <CallbackRequest
+        key={plan.plan}
+        plan={plan.plan as "KOZE" | "SERENITE"}
+        label={`Demander un appel pour la formule ${plan.name}`}
+        aineId={aineId}
+        defaultPhone={cb.phone}
+        creneaux={cb.creneaux}
+        pendingSince={cb.pendingSince[plan.plan as "KOZE" | "SERENITE"]}
+      />
+    ) : null}
+    </>
   );
 }

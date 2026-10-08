@@ -2,7 +2,8 @@
  * Règles du formulaire d'inscription accompagnant (L1). Module PUR : testable sans appareil.
  * Les messages disent ce qui manque, près du champ (V1c, UX M8). Style ASD-STE100 : phrases courtes.
  */
-import { ageEnAnnees, AGE_MIN_ACCOMPAGNANT, MOT_DE_PASSE_MIN, type DemandeInscription } from '@/contrats-l1';
+import type { DemandeInscription } from '@/contracts';
+import { ageEnAnnees, AGE_MIN_ACCOMPAGNANT, MOT_DE_PASSE_MIN } from '@/api/l1';
 import { trouverCommune } from '@/lib/communes';
 
 export type ChampsInscription = {

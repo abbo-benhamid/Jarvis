@@ -4,6 +4,7 @@ import "./globals.css";
 import { FeedbackButton } from "@/components/feedback/feedback-button";
 import { UsageTracker } from "@/components/sandbox/usage-tracker";
 import { THEME_INIT_SCRIPT } from "@/components/ui/theme";
+import { isLaunchMode } from "@/server/launch";
 
 // Direction artistique § 4 : Figtree (interface, chiffres) + Fraunces (titres, créole). Polices auto-hébergées par next/font.
 const sans = Figtree({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-figtree", display: "swap" });
@@ -45,7 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         <div className="flex flex-1 flex-col">{children}</div>
         {/* A9 : « Donner mon avis » est dans le flux, en bas de page : il ne masque plus le contenu. */}
-        <FeedbackButton />
+        <FeedbackButton launch={isLaunchMode()} />
         <UsageTracker />
       </body>
     </html>

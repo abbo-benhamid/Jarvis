@@ -20,6 +20,18 @@ export const reponseMoiSchema = z
     demo: z.boolean(),
     /** Compte de test isolé (bac à sable). L'app affiche le bandeau « Version de test ». */
     bacASable: z.boolean(),
+    /** L1 : adresse e-mail confirmée (lien reçu, ou opérateur). */
+    emailVerifie: z.boolean(),
+    /**
+     * L2 : profil validé par l'opérateur. Accompagnant : validation « Validé ». Famille et opérateur : toujours vrai.
+     * Faux → l'app affiche « Profil en cours de validation ».
+     */
+    profilValide: z.boolean(),
+    /**
+     * R1 : le service est en préinscription (données réelles des aînés fermées : pas de fiche aîné, de QR,
+     * de Kayé ni de trajet). Vrai seulement en mode lancement sans DONNEES_REELLES_AUTORISEES.
+     */
+    preinscription: z.boolean(),
   })
   .strict();
 export type ReponseMoi = z.infer<typeof reponseMoiSchema>;

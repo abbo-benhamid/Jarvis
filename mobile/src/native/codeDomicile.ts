@@ -9,7 +9,7 @@
  * | `koudmen:domicile:s2:…` et plus  | erreur `VERSION_INCONNUE` (app à mettre à jour) |
  * | autre chose                      | erreur `INCONNU`                             |
  *
- * L1 (§ 2.3) : le jeton signé part dans `qr` de l'événement CHECK_IN (contrat provisoire `src/contrats-l1`).
+ * L1 (§ 2.3) : le jeton signé part dans `qr` de l'événement CHECK_IN (contrat `src/contracts/visits.ts`).
  * Le serveur vérifie signature, version, aîné, fenêtre et distance (L10).
  * Ni le code ni le jeton ne sont gardés sur le téléphone : ils restent en mémoire jusqu'à l'envoi.
  */

@@ -9,7 +9,6 @@ import { AccountStatus } from "@/components/account/account-status";
 import { Badge } from "@/components/ui/badge";
 import { BottomNav, type BottomNavItem } from "@/components/ui/bottom-nav";
 import { BrandMark } from "@/components/ui/illustrations";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 /** Le Kayé vient en 2e : c'est ce que la famille lit le plus. 5 onglets (direction artistique § 10). */
 const NAV: BottomNavItem[] = [
@@ -26,7 +25,9 @@ const NAV: BottomNavItem[] = [
  * La barre est « sticky » (et non « fixed ») : en fin de page, elle remonte et laisse voir le pied de page
  * et « Donner mon avis ». Aucun contenu n'est masqué.
  */
-export function FamilleShell({ user, children }: { user: CurrentUser; children: React.ReactNode }) {
+export function FamilleShell({ user, children, preinscription = false }: { user: CurrentUser; children: React.ReactNode; preinscription?: boolean }) {
+  // L1d (M3) : en préinscription, seulement Accueil et Formule (les autres pages s'ouvrent au lancement).
+  const nav = preinscription ? NAV.filter((i) => i.href === "/famille" || i.href === "/famille/formule") : NAV;
   return (
     <div className="flex flex-1 flex-col">
       <ArrivalFocus />
@@ -55,16 +56,14 @@ export function FamilleShell({ user, children }: { user: CurrentUser; children: 
         {user.sandboxId ? <SandboxPanel user={user} /> : null}
         <AccountStatus user={user} />
         {children}
-        <div className="mt-12 flex justify-center">
-          <ThemeToggle />
-        </div>
+        {/* L1d (m3) : un seul sélecteur Clair / Sombre, dans le pied de page. */}
       </main>
 
       <SiteFooter />
 
       {/* mt-auto : en bas de l'écran même quand la page est courte. */}
       <div className="sticky bottom-0 z-30 mt-auto print:hidden">
-        <BottomNav items={NAV} position="static" />
+        <BottomNav items={nav} position="static" />
       </div>
     </div>
   );

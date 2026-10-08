@@ -11,6 +11,8 @@ import { MoreLink, OPS_CARD, Panel, StatTile } from "@/components/operateur/disp
 import { CAREGIVER_STATUS_LABELS, LEVEL_LABELS, proofCountLabel } from "@/lib/labels";
 import { communeLabel } from "@/lib/communes";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { launchQueueCounts } from "@/server/operateur/files-lancement";
+import { isLaunchMode } from "@/server/launch";
 
 export const metadata: Metadata = { title: "Tableau de bord opérateur" };
 export const dynamic = "force-dynamic";
@@ -21,9 +23,10 @@ const ROW_LINK = "inline-flex min-h-11 items-center font-semibold text-mer no-un
 
 export default async function Page() {
   await requireRole("OPERATEUR");
-  const d = await getDashboard();
+  const [d, q] = await Promise.all([getDashboard(), launchQueueCounts()]);
+  const launch = isLaunchMode();
   const c = d.counts;
-  const total = c.caregiversPending + c.requestsOpen + c.visitsToCheck + c.alerts + c.feedbackNew;
+  const total = q.accords + q.rappels + q.emails + q.accompagnants + c.caregiversPending + c.requestsOpen + c.visitsToCheck + c.alerts + c.feedbackNew;
 
   return (
     <>
@@ -46,9 +49,22 @@ export default async function Page() {
         </p>
       )}
 
-      <section aria-labelledby="titre-compteurs" className="mt-4">
-        <h2 id="titre-compteurs" className="sr-only">
-          Compteurs
+      {/* L1d (M10, D15) : les files du lancement d'abord. */}
+      <section aria-labelledby="titre-lancement" className="mt-4">
+        <h2 id="titre-lancement" className="mb-3 font-sans text-[17px] font-semibold tracking-normal">
+          Appels à passer
+        </h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatTile label="Aînés à appeler (accord)" count={q.accords} href="/operateur/aines" hint="Lire la notice, recueillir la réponse." />
+          <StatTile label="Familles à rappeler" count={q.rappels} href="/operateur/activations" hint="Dans le créneau choisi." />
+          <StatTile label="E-mails à confirmer" count={q.emails} href="/operateur/comptes" hint="Effacés après 7 jours sans confirmation." />
+          <StatTile label="Accompagnants à appeler" count={q.accompagnants} href="/operateur/accompagnants/a-appeler" hint="Vérification demandée, ou profil incomplet." />
+        </div>
+      </section>
+
+      <section aria-labelledby="titre-compteurs" className="mt-8">
+        <h2 id="titre-compteurs" className="mb-3 font-sans text-[17px] font-semibold tracking-normal">
+          Suivi du service
         </h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <StatTile label="Accompagnants à vérifier" count={c.caregiversPending} href="/operateur/accompagnants?validation=EN_ATTENTE" />
@@ -65,14 +81,14 @@ export default async function Page() {
             href="/operateur/visites?signal=surveiller"
             hint={`${ALERT_WINDOW_DAYS} derniers jours. Signal non médical.`}
           />
-          <StatTile label="Retours testeurs non lus" count={c.feedbackNew} href="/operateur/retours?statut=NOUVEAU" />
+          <StatTile label={launch ? "Avis non lus" : "Retours testeurs non lus"} count={c.feedbackNew} href="/operateur/retours?statut=NOUVEAU" />
           <Link
             href="/operateur/notifications"
             className={`${OPS_CARD} flex min-h-28 flex-col justify-between gap-3 bg-surface-2/60 p-5 no-underline shadow-none transition-colors duration-[120ms] hover:bg-surface-2`}
           >
-            <span className="text-[15px] leading-snug font-semibold">Messages simulés (24 h)</span>
+            <span className="text-[15px] leading-snug font-semibold">{launch ? "Messages (24 h)" : "Messages simulés (24 h)"}</span>
             <span className="num text-[40px] leading-none font-semibold tracking-[-.02em]">{c.outboxToday}</span>
-            <span className="text-sm text-muted">Information. Rien n&apos;est envoyé.</span>
+            <span className="text-sm text-muted">{launch ? "Information." : "Information. Rien n'est envoyé."}</span>
           </Link>
         </div>
       </section>
@@ -163,12 +179,12 @@ export default async function Page() {
 
         <Panel
           id="t-ret"
-          title="Derniers retours testeurs non lus"
+          title={launch ? "Derniers avis non lus" : "Derniers retours testeurs non lus"}
           className="lg:col-span-2"
-          action={<MoreLink href="/operateur/retours">Ouvrir tous les retours</MoreLink>}
+          action={<MoreLink href="/operateur/retours">{launch ? "Ouvrir tous les avis" : "Ouvrir tous les retours"}</MoreLink>}
         >
           {d.feedbackList.length === 0 ? (
-            <p className="text-muted">Aucun retour non lu.</p>
+            <p className="text-muted">{launch ? "Aucun avis non lu." : "Aucun retour non lu."}</p>
           ) : (
             <ul className={LIST}>
               {d.feedbackList.map((f) => (

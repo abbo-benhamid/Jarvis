@@ -1,35 +1,88 @@
-import { useState } from 'react';
-import { Linking, StyleSheet, View } from 'react-native';
-import { router } from 'expo-router';
-import { EMAIL_CONTACT, messageErreur } from '@/api';
-import { emailAVerifier } from '@/session/compte';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, Linking, StyleSheet, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { api, ApiError, EMAIL_CONTACT, messageErreur, WEB_URL } from '@/api';
+import type { EtatVerification } from '@/compte/contratAccompagnant';
 import { Etapes } from '@/compte/Etapes';
+import { actionValidation, etapesValidation } from '@/compte/validation';
+import { emailAVerifier } from '@/session/compte';
 import { useSession } from '@/session/SessionProvider';
 import { fonts, useTheme } from '@/theme';
 import { Badge, Button, Card, Em, Icon, Logo, MadrasLine, Screen, Text } from '@/ui';
 
 /**
- * « Profil en cours de validation » (L2) : l'accompagnant est connecté, mais l'équipe n'a pas encore validé son profil
- * (`profilValide: false` dans GET /me). Pas de visites ici. Étapes, contact, actualisation.
+ * « Profil en cours de validation » (L2, D15) : l'accompagnante est connectée, son profil n'est pas encore validé
+ * (`profilValide: false` dans GET /me). Elle fait ICI son orientation et sa demande de vérification.
+ * L'écran montre les étapes faites et à faire. « L'équipe vous appelle » seulement après l'envoi de la demande.
+ *
+ * Préinscription (revue UX M14) : même écran, avec un encadré « Koudmen ouvre bientôt en Martinique ».
  */
 export default function CompteEnValidation() {
   const { c } = useTheme();
   const { session, rafraichir, deconnecter } = useSession();
-  const [chargement, setChargement] = useState(false);
+  const [verification, setVerification] = useState<EtatVerification | null>(null);
+  const [routesAbsentes, setRoutesAbsentes] = useState(false);
+  const [chargement, setChargement] = useState(true);
+  const [envoi, setEnvoi] = useState(false);
+  const [actualisation, setActualisation] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  const charger = useCallback(async () => {
+    setChargement(true);
+    setErreur(null);
+    try {
+      setVerification(await api.lireVerification());
+      setRoutesAbsentes(false);
+    } catch (e) {
+      // Serveur sans les routes de l'app (404) : on propose le site, sans impasse.
+      if (e instanceof ApiError && e.code === 'INTROUVABLE') setRoutesAbsentes(true);
+      else setErreur(messageErreur(e));
+    } finally {
+      setChargement(false);
+    }
+  }, []);
+
+  // Relit l'état à chaque retour sur l'écran (après l'orientation, par exemple).
+  useFocusEffect(
+    useCallback(() => {
+      void charger();
+    }, [charger]),
+  );
+
   if (!session) return null;
   const emailOk = !emailAVerifier(session);
+  const entree = { emailOk, verification, routesAbsentes };
+  const action = actionValidation(entree);
+  const ouvrirSite = (chemin: string) => void Linking.openURL(`${WEB_URL}${chemin}`).catch(() => undefined);
+
+  const demander = async () => {
+    if (envoi) return;
+    setEnvoi(true);
+    setErreur(null);
+    setInfo(null);
+    try {
+      setVerification(await api.demanderVerification());
+      setInfo('Demande envoyée. L’équipe Koudmen vous appelle au numéro donné à l’inscription.');
+    } catch (e) {
+      setErreur(messageErreur(e));
+      void charger();
+    } finally {
+      setEnvoi(false);
+    }
+  };
 
   const actualiser = async () => {
-    setChargement(true);
+    setActualisation(true);
     setInfo(null);
     try {
       await rafraichir();
-      setInfo('Votre profil est toujours en validation. Nous vous prévenons dès que c’est fait.');
+      await charger();
+      setInfo('Votre profil n’est pas encore validé. Nous vous prévenons dès que c’est fait.');
     } catch (e) {
       setInfo(messageErreur(e));
     } finally {
-      setChargement(false);
+      setActualisation(false);
     }
   };
 
@@ -54,23 +107,87 @@ export default function CompteEnValidation() {
         L’équipe Koudmen rencontre chaque accompagnant avant ses premières visites. Les familles ont ainsi confiance.
       </Text>
 
+      {session.preinscription ? (
+        <View style={[styles.encadre, { backgroundColor: c.soleilSoft }]} testID="encadre-preinscription">
+          <Icon name="sun" size={20} color={c.soleilInk} />
+          <Text variant="body" style={{ flex: 1, fontSize: 16, lineHeight: 23, color: c.soleilInk }}>
+            Koudmen ouvre bientôt en Martinique. Préparez votre profil maintenant : vos premières visites arrivent après l’ouverture.
+          </Text>
+        </View>
+      ) : null}
+
       <Card style={{ marginTop: 22 }}>
-        <Etapes
-          testID="etapes-validation"
-          etapes={[
-            { titre: 'Compte créé', etat: 'fait' },
-            emailOk
-              ? { titre: 'E-mail vérifié', etat: 'fait' }
-              : { titre: 'Vérifier votre e-mail', detail: 'Ouvrez le lien reçu par e-mail. Il marche 24 heures.', etat: 'en_cours' },
-            {
-              titre: 'Échange avec l’équipe Koudmen',
-              detail: 'Nous vous appelons. Nous vérifions votre identité et vos références.',
-              etat: emailOk ? 'en_cours' : 'a_venir',
-            },
-            { titre: 'Profil validé', detail: 'Vos premières propositions de visite arrivent ici.', etat: 'a_venir' },
-          ]}
-        />
+        <Etapes testID="etapes-validation" etapes={etapesValidation(entree)} />
       </Card>
+
+      {verification?.validation === 'REFUSE' && verification.raison ? (
+        <View style={[styles.encadre, { backgroundColor: c.hibiscusSoft }]} testID="raison-refus">
+          <Icon name="info" size={20} color={c.hibiscus} />
+          <Text variant="body" style={{ flex: 1, fontSize: 16, lineHeight: 23, color: c.hibiscus }}>
+            Votre profil n’est pas validé : {verification.raison}
+          </Text>
+        </View>
+      ) : null}
+
+      <View style={{ marginTop: 18, gap: 10 }} testID="action-validation">
+        {chargement && !verification && !routesAbsentes ? (
+          <ActivityIndicator color={c.mer} accessibilityLabel="Chargement de votre profil" />
+        ) : action === 'orientation' ? (
+          <Button testID="bouton-orientation" large trailing="right" label="Répondre aux 5 questions" onPress={() => router.push('/orientation')} />
+        ) : action === 'demander' ? (
+          <>
+            <Text variant="body" style={{ fontSize: 16 }}>
+              Envoyez votre demande. Après l’envoi seulement, l’équipe Koudmen vous appelle au numéro donné à l’inscription.
+            </Text>
+            <Button testID="bouton-demander-verification" large label="Demander la vérification" loading={envoi} onPress={() => void demander()} />
+          </>
+        ) : action === 'completer_site' && verification ? (
+          <>
+            <Text variant="bodyStrong" style={{ fontSize: 16 }}>
+              Il manque encore :
+            </Text>
+            {verification.manque.map((m) => (
+              <Text key={m} variant="body" style={{ fontSize: 16 }}>
+                • {m}
+              </Text>
+            ))}
+            <Button testID="bouton-profil-site" variant="quiet" icon="arrow" label="Compléter sur le site Koudmen" onPress={() => ouvrirSite('/accompagnant/profil')} />
+          </>
+        ) : action === 'site' ? (
+          <>
+            <Text variant="body" style={{ fontSize: 16 }} testID="texte-site">
+              Faites votre statut en 5 questions et votre demande de vérification sur le site Koudmen, avec le même compte.
+            </Text>
+            <Button testID="bouton-orientation-site" variant="quiet" icon="arrow" label="Ouvrir le site Koudmen" onPress={() => ouvrirSite('/accompagnant/orientation')} />
+          </>
+        ) : action === 'contacter' ? (
+          <Text variant="body" style={{ fontSize: 16 }} testID="texte-suspendu">
+            Votre profil est suspendu. Écrivez à l’équipe Koudmen.
+          </Text>
+        ) : action === 'attendre' ? (
+          <Text variant="body" style={{ fontSize: 16 }} testID="texte-demande-envoyee">
+            Demande envoyée. Gardez votre téléphone près de vous : l’équipe Koudmen vous appelle.
+          </Text>
+        ) : null}
+
+        {erreur ? (
+          <Text variant="body" tone="hibiscus" role="alert" accessibilityLiveRegion="polite" style={{ fontSize: 16 }} testID="erreur-validation">
+            {erreur}
+          </Text>
+        ) : null}
+        {erreur && !verification ? <Button variant="quiet" label="Réessayer" onPress={() => void charger()} /> : null}
+
+        {verification?.orientation && action !== 'orientation' && action !== 'contacter' && verification.validation !== 'VALIDE' ? (
+          <View style={{ gap: 4 }}>
+            <Button testID="bouton-revoir-statut" variant="link" label="Revoir mon statut" onPress={() => router.push('/orientation')} />
+            {verification.validation === 'EN_ATTENTE' ? (
+              <Text variant="body" tone="muted" style={{ fontSize: 16 }}>
+                Si vous refaites l’orientation, vous devez redemander la vérification.
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
 
       <View style={[styles.contact, { borderColor: c.line }]} testID="contact-validation">
         <Icon name="mail" size={20} color={c.mer} />
@@ -96,7 +213,7 @@ export default function CompteEnValidation() {
         </Text>
       ) : null}
       <View style={{ marginTop: 18, gap: 10 }}>
-        <Button testID="bouton-actualiser" variant="quiet" icon="clock" label="Voir si mon profil est validé" loading={chargement} onPress={() => void actualiser()} />
+        <Button testID="bouton-actualiser" variant="quiet" icon="clock" label="Voir si mon profil est validé" loading={actualisation} onPress={() => void actualiser()} />
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap' }}>
           <Button variant="link" label="À propos et confidentialité" onPress={() => router.push('/a-propos')} />
           <Button testID="bouton-deconnexion-validation" variant="link" label="Me déconnecter" onPress={() => void deconnecter().then(() => router.replace('/connexion'))} />
@@ -108,5 +225,6 @@ export default function CompteEnValidation() {
 
 const styles = StyleSheet.create({
   brand: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 56 },
+  encadre: { flexDirection: 'row', gap: 10, marginTop: 18, padding: 14, borderRadius: 16, alignItems: 'flex-start' },
   contact: { flexDirection: 'row', gap: 12, marginTop: 16, padding: 16, borderRadius: 20, borderWidth: 1 },
 });

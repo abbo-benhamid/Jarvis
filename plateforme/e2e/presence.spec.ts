@@ -61,7 +61,7 @@ test("L6/L7/R4 — « Où en est la visite » : en route (liste textuelle), hors
   await page.getByRole("link", { name: "Où en est la visite ?" }).first().click();
   await expect(page).toHaveURL(new RegExp(`/famille/visites/${visit.id}/trajet`));
   // Hors trajet : l'heure prévue seulement, jamais « non partagé ».
-  await expect(page.getByText(/Visite prévue à \d{2}:\d{2} avec Josiane\./)).toBeVisible();
+  await expect(page.getByText(/Visite prévue à \d{1,2} h( \d{2})? \(heure de Martinique\) avec Josiane\./)).toBeVisible();
   await expect(page.getByText(/non partagé/i)).toHaveCount(0);
 
   // Trajet en cours, 2 km du domicile, départ à plus de 500 m.

@@ -33,6 +33,11 @@ test("O1 — le tableau de bord montre ce qui demande une action", async ({ page
   await expect(page).toHaveURL(/\/operateur$/);
   await expect(page.getByRole("heading", { level: 1, name: "Tableau de bord" })).toBeVisible();
   for (const name of [
+    // L1d (M10, D15) : les files du lancement d'abord.
+    /Aînés à appeler \(accord\)/,
+    /Familles à rappeler/,
+    /E-mails à confirmer/,
+    /Accompagnants à appeler/,
     /Accompagnants à vérifier/,
     /Demandes à matcher/,
     /Visites à vérifier/,
@@ -187,8 +192,11 @@ test("O6/O7 (L1-B, R7) — visite à vérifier : l'opérateur ne tranche pas, la
   await page.context().clearCookies();
   await login(page, fam.user.email);
   await page.goto("/famille/visites");
-  const review = page.getByRole("form", { name: new RegExp(`Trancher la visite chez ${fam.aine.firstName}`) });
+  const review = page.getByRole("form", { name: new RegExp(`Vérifier la visite chez ${fam.aine.firstName}`) });
+  // L1d (M7) : question neutre, nombre exact de preuves, puis un geste de confirmation.
+  await expect(review.getByText(/a-t-elle eu lieu chez/)).toBeVisible();
   await review.getByRole("button", { name: "Oui, la visite a eu lieu" }).click();
+  await review.getByRole("button", { name: "Confirmer" }).click();
   // La page se recharge : la visite affiche « Validée » et le formulaire disparaît.
   await expect(review).toHaveCount(0);
   expect((await prisma.visit.findUniqueOrThrow({ where: { id: visit.id } })).status).toBe("VALIDEE");

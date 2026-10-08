@@ -1007,7 +1007,12 @@ model PlanActivationRequest {
   /// Aîné concerné (null en préinscription : pas de fiche aîné).
   aineId      String?
   aine        Aine?            @relation(fields: [aineId], references: [id], onDelete: SetNull)
-  plan        Plan
+  /// L1d (M4) : null = « poser une question », sans formule payante.
+  plan        Plan?
+  /// L1d (M4) : numéro à appeler, donné ou confirmé dans la demande (obligatoire dans le formulaire).
+  phone       String?
+  /// L1d (M4) : créneau souhaité, heure de Martinique : MATIN (8-11 h), MIDI (11-14 h), APRES_MIDI (14-17 h).
+  creneau     String?
   status      ActivationStatus @default(NOUVELLE)
   handledById String?
   handledBy   User?            @relation("ActivationHandler", fields: [handledById], references: [id], onDelete: SetNull)

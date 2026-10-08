@@ -15,7 +15,7 @@ export function LoginForm({ next }: { next?: string }) {
     <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
       {next ? <input type="hidden" name="next" value={next} /> : null}
       <FormMessage state={state} />
-      <FormField label="Email" htmlFor="email" errors={fe?.email} required>
+      <FormField label="Adresse e-mail" htmlFor="email" errors={fe?.email} required>
         <Input {...fieldA11y("email", fe?.email)} type="email" autoComplete="email" required />
       </FormField>
       <FormField label="Mot de passe" htmlFor="password" errors={fe?.password} required>

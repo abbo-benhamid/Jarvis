@@ -1,10 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { demandeInscriptionSchema, lireControle, reponseMoiL1Schema, demandeEvenementsL1Schema } from '../../contrats-l1';
+import { demandeEvenementsSchema, demandeInscriptionSchema, reponseMoiSchema } from '../../contracts';
+import { lireControle } from '../../api/l1';
+import { heureTexte, horsFuseauMartinique, libelleJour, memeJour, plageAvecFuseau } from '../../lib/format';
 import { lienItineraire } from '../../lib/geo';
 import { emailAVerifier, etatCompte } from '../../session/compte';
 import { CHAMPS_VIDES, dateVersIso, formaterSaisieDate, validerInscription } from '../formulaire';
 
-/** L1-C : formulaire d'inscription, contrats provisoires, état du compte, lien d'itinéraire (modules purs). */
+/** L1 : formulaire d'inscription, contrats serveur synchronisés (D13), état du compte, lien d'itinéraire (modules purs). */
 
 const AUJOURDHUI = new Date('2026-10-07T12:00:00Z');
 const OK = {
@@ -67,18 +69,22 @@ test('inscription : 18 ans minimum, 10 caractères minimum, téléphone de 10 ch
   expect(!commune.ok && commune.erreurs.commune).toBeTruthy();
 });
 
-test('GET /me : serveur d’avant L1 accepté ; état du compte et rappel e-mail', () => {
+test('GET /me : contrat serveur strict ; état du compte et rappel e-mail', () => {
   const base = { id: 'u1', role: 'ACCOMPAGNANT', prenom: 'J', nom: 'M', email: 'j@exemple.fr', demo: false, bacASable: false };
-  expect(reponseMoiL1Schema.safeParse(base).success).toBe(true);
-  expect(reponseMoiL1Schema.safeParse({ ...base, emailVerifie: false, profilValide: false, champFutur: 1 }).success).toBe(true);
+  const l1 = { ...base, emailVerifie: false, profilValide: false, preinscription: false };
+  expect(reponseMoiSchema.safeParse(l1).success).toBe(true);
+  // RGPD : liste fermée. Un champ en plus ou un champ L1 absent est refusé (versions différentes).
+  expect(reponseMoiSchema.safeParse({ ...l1, champFutur: 1 }).success).toBe(false);
+  expect(reponseMoiSchema.safeParse(base).success).toBe(false);
   expect(etatCompte({})).toBe('actif');
   expect(etatCompte({ profilValide: false })).toBe('validation');
-  expect(etatCompte({ profilValide: false, preinscription: true })).toBe('preinscription');
+  expect(etatCompte({ profilValide: false, preinscription: true })).toBe('validation');
+  expect(etatCompte({ profilValide: true, preinscription: true })).toBe('preinscription');
   expect(emailAVerifier({})).toBe(false);
   expect(emailAVerifier({ emailVerifie: false })).toBe(true);
 });
 
-test('CHECK_IN L1 : qr signé + position (consentement, simulee) ; contrôle lu où qu’il soit', () => {
+test('CHECK_IN L1 : qr signé + position (consentement, simulee) ; contrôle du serveur', () => {
   const ev = {
     type: 'CHECK_IN',
     visiteId: 'vis_1',
@@ -87,13 +93,13 @@ test('CHECK_IN L1 : qr signé + position (consentement, simulee) ; contrôle lu 
     qr: 'koudmen:domicile:s1:eyJhIjoiYSJ9.c2ln',
     position: { latitude: 14.6, longitude: -61.07, precisionMetres: 12, consentement: true, simulee: false },
   };
-  expect(demandeEvenementsL1Schema.safeParse({ evenements: [ev] }).success).toBe(true);
-  expect(demandeEvenementsL1Schema.safeParse({ evenements: [{ ...ev, qr: 'koudmen:domicile:LKW7Q3' }] }).success).toBe(false);
+  expect(demandeEvenementsSchema.safeParse({ evenements: [ev] }).success).toBe(true);
+  expect(demandeEvenementsSchema.safeParse({ evenements: [{ ...ev, champFutur: 1 }] }).success).toBe(false);
   const { qr: _qr, position: _p, ...vide } = ev;
-  expect(demandeEvenementsL1Schema.safeParse({ evenements: [vide] }).success).toBe(false);
+  expect(demandeEvenementsSchema.safeParse({ evenements: [vide] }).success).toBe(false);
 
   expect(lireControle({ controle: { statut: 'VALIDE', raison: null } })?.statut).toBe('VALIDE');
-  expect(lireControle({ preuves: { qr: { statut: 'A_VERIFIER', raison: 'Loin' } } })?.raison).toBe('Loin');
+  expect(lireControle({ controle: { statut: 'A_VERIFIER', raison: 'Loin' } })?.raison).toBe('Loin');
   expect(lireControle({})).toBeNull();
 });
 
@@ -102,4 +108,16 @@ test('itinéraire : Apple Plans sur iOS, Google Maps ailleurs ; texte si domicil
   expect(lienItineraire('ios', { point, texte: '' })).toBe('https://maps.apple.com/?daddr=14.6085%2C-61.068&dirflg=d');
   expect(lienItineraire('android', { point, texte: '' })).toBe('https://www.google.com/maps/dir/?api=1&destination=14.6085%2C-61.068&travelmode=driving');
   expect(lienItineraire('web', { point: null, texte: 'Bourg, Rivière-Pilote, Martinique' })).toContain('destination=Bourg%2C%20Rivi%C3%A8re-Pilote%2C%20Martinique');
+});
+
+test('heures : heure de Martinique partout, format « 9 h 30 », heure locale ajoutée hors fuseau (D16, m7)', () => {
+  // 13 h 30 UTC = 9 h 30 à la Martinique (UTC−4, pas d'heure d'été).
+  expect(heureTexte('2026-10-08T13:30:00Z')).toBe('9 h 30');
+  expect(heureTexte('2026-10-08T14:00:00Z')).toBe('10 h');
+  // 2 h 30 UTC le 9 = 22 h 30 le 8 à la Martinique : même jour que 13 h UTC le 8.
+  expect(memeJour('2026-10-09T02:30:00Z', '2026-10-08T13:00:00Z')).toBe(true);
+  expect(libelleJour('2026-10-09T02:30:00Z', new Date('2026-10-08T13:00:00Z'))).toBe('Aujourd’hui');
+  const plage = plageAvecFuseau('2026-10-08T13:30:00Z', '2026-10-08T15:30:00Z');
+  expect(plage.startsWith('9 h 30 – 11 h 30, heure de Martinique')).toBe(true);
+  expect(plage.includes('chez vous')).toBe(horsFuseauMartinique());
 });

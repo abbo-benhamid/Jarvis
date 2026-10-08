@@ -14,6 +14,8 @@ type Journal = {
   trajets: { visiteId: string; action: string }[];
   positions: { latitude: number; longitude: number; precisionMetres: number }[];
   checkIns: { qr: boolean; code: boolean; position: boolean; simulee: boolean }[];
+  orientations: { email: string; issue: string }[];
+  demandesVerification: string[];
 };
 
 async function capture(page: Page, nom: string) {
@@ -97,18 +99,74 @@ test('créer un compte : erreurs près des champs, puis « Vérifiez votre e-mai
   await page.getByTestId('bouton-connexion').click();
   const validation = page.getByTestId('ecran-validation');
   await expect(validation).toContainText('Profil en cours de');
-  await expect(page.getByTestId('etapes-validation')).toContainText('Vérifier votre e-mail');
+  await expect(page.getByTestId('etapes-validation')).toContainText('Confirmer votre e-mail');
+  // D15 (revue UX B3) : pas de promesse d'appel avant la demande de vérification.
+  await expect(validation).not.toContainText(/vous appelle|nous vous appelons/i);
+  await expect(page.getByTestId('bouton-orientation')).toBeVisible();
   await expect(page.getByTestId('contact-validation')).toContainText('@');
   await expect(page.getByTestId('ecran-visites')).toHaveCount(0);
   await capture(page, '04-profil-en-validation');
   await page.getByTestId('bouton-actualiser').click();
-  await expect(page.getByTestId('info-validation')).toContainText('toujours en validation');
+  await expect(page.getByTestId('info-validation')).toContainText('pas encore validé');
+});
+
+test('D15 : orientation en 5 questions puis demande de vérification, dans l’app', async ({ page }) => {
+  await connecter(page, 'en-validation@exemple.fr');
+  const validation = page.getByTestId('ecran-validation');
+  await expect(page.getByTestId('etapes-validation')).toContainText('Mon statut en 5 questions');
+  await expect(validation).not.toContainText(/vous appelle/i);
+  await page.getByTestId('bouton-orientation').click();
+
+  const q = page.getByTestId('orientation-question');
+  await expect(q).toHaveText('Que voulez-vous faire ?');
+  await expect(page.getByTestId('q1-LIEN')).toHaveAttribute('aria-checked', 'false');
+  await page.getByTestId('bouton-orientation-suivant').click();
+  await expect(page.getByTestId('orientation-manque')).toContainText('Choisissez une réponse');
+  await page.getByTestId('q1-PRESENCE').click();
+  await capture(page, '04b-orientation-q1');
+  await page.getByTestId('bouton-orientation-suivant').click();
+  await expect(q).toHaveText('Voulez-vous être payé(e) ?');
+  await page.getByTestId('q2-oui').click();
+  await page.getByTestId('bouton-orientation-suivant').click();
+  await page.getByTestId('q3-AUCUN').click();
+  await page.getByTestId('bouton-orientation-suivant').click();
+  await expect(q).toHaveText('Quelle est votre situation aujourd’hui ?');
+  await page.getByTestId('q4-ETUDIANT').click();
+  await page.getByTestId('bouton-orientation-suivant').click();
+  await page.getByTestId('q5-AUCUN').click();
+  await page.getByTestId('bouton-orientation-suivant').click();
+
+  const resultat = page.getByTestId('resultat-orientation');
+  await expect(resultat).toContainText('Statut recommandé');
+  await expect(resultat).toContainText('Payé par la famille, avec le CESU');
+  await expect(resultat).toContainText('Étudiant');
+  await capture(page, '04c-orientation-resultat');
+  await page.getByTestId('bouton-orientation-continuer').click();
+
+  await expect(page.getByTestId('etapes-validation')).toContainText('Payé par la famille, avec le CESU');
+  // Avant l'envoi : les étapes ne disent pas « l'équipe vous appelle » (le bouton dit ce qui se passe après l'envoi).
+  await expect(page.getByTestId('etapes-validation')).not.toContainText(/vous appelle/i);
+  await expect(page.getByTestId('etapes-validation')).toContainText('À envoyer maintenant.');
+  await page.getByTestId('bouton-demander-verification').click();
+  await expect(page.getByTestId('etapes-validation')).toContainText('Demande envoyée.');
+  await expect(page.getByTestId('etapes-validation')).toContainText('L’équipe vous appelle');
+  await expect(page.getByTestId('texte-demande-envoyee')).toBeVisible();
+  await capture(page, '04d-demande-envoyee');
+  const j = await journal(page);
+  expect(j?.orientations).toEqual([{ email: 'en-validation@exemple.fr', issue: 'RECOMMANDE' }]);
+  expect(j?.demandesVerification).toEqual(['en-validation@exemple.fr']);
 });
 
 test('préinscription : écran calme à la place des visites ; e-mail non vérifié : rappel', async ({ page }) => {
+  // Revue UX M14 : profil à valider en préinscription → même parcours de validation, avec « ouvre bientôt ».
+  await connecter(page, 'preinscription-validation@exemple.fr');
+  await expect(page.getByTestId('encadre-preinscription')).toContainText('Koudmen ouvre bientôt en Martinique');
+  await expect(page.getByTestId('bouton-orientation')).toBeVisible();
+  await page.getByTestId('bouton-deconnexion-validation').click();
+
   await connecter(page, 'preinscription@exemple.fr');
   await expect(page.getByTestId('ecran-bientot')).toContainText('Koudmen ouvre bientôt');
-  await expect(page.getByTestId('ecran-bientot')).toContainText('Votre compte est prêt');
+  await expect(page.getByTestId('ecran-bientot')).toContainText('Votre profil est validé');
   await expect(page.getByTestId('ecran-visites')).toHaveCount(0);
   await capture(page, '05-bientot');
   await page.getByTestId('bouton-deconnexion-bientot').click();

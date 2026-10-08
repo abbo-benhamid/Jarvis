@@ -41,7 +41,7 @@ async function register(page: Page, role: "FAMILLE" | "ACCOMPAGNANT", email: str
   await page.getByLabel(role === "FAMILLE" ? /^Famille/ : /^Accompagnant/).check();
   await page.locator("#firstName").fill("Rose");
   await page.locator("#lastName").fill(`E2E-${uid()}`);
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Adresse e-mail").fill(email);
   await page.locator("#phone").fill("+596 696 12 34 56");
   await page.getByLabel("Mot de passe").fill(PASSWORD);
   if (role === "ACCOMPAGNANT") {
@@ -80,6 +80,14 @@ test("L1 : démo, bac à sable et offre factice fermés ; accueil « Créer un c
   await expect(page.getByText("L'inscription et l'usage de Koudmen sont gratuits pour vous.")).toBeVisible();
   await page.goto("/confidentialite");
   await expect(page.getByText(/code testeur|bac à sable/i)).toHaveCount(0);
+});
+
+test("L1d (M2) : aucune marque [À VÉRIFIER] ni texte de démonstration sur les pages légales publiques", async ({ page }) => {
+  for (const path of ["/confidentialite", "/mentions-legales", "/cgu", "/conditions-accompagnants"]) {
+    await page.goto(path);
+    await expect(page.locator("main")).not.toContainText("VÉRIFIER");
+    await expect(page.locator("main")).not.toContainText(/simulé|testeurs invités|Ce site est une démo/);
+  }
 });
 
 test("L1 : /api/sante (mode, avertissement Brevo, préinscription) ; API v1 : démo refusée, inscription sans fuite", async ({ request }) => {
@@ -124,7 +132,7 @@ test("L3 : mot de passe oublié → nouveau mot de passe → l'ancien ne marche 
   const email = `famille-mdp-${uid()}@${E2E_DOMAIN}`;
   await register(page, "FAMILLE", email);
   await page.goto("/mot-de-passe-oublie");
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Adresse e-mail").fill(email);
   await page.getByRole("button", { name: "Recevoir un lien" }).click();
   await expect(page.getByText(/Si un compte existe avec cette adresse/)).toBeVisible();
   const link = await mailLink(email, "MOT_DE_PASSE_OUBLIE");
@@ -136,7 +144,7 @@ test("L3 : mot de passe oublié → nouveau mot de passe → l'ancien ne marche 
   await page.goto(link);
   await expect(page.getByText("Ce lien ne marche plus.")).toBeVisible();
   await page.goto("/connexion");
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Adresse e-mail").fill(email);
   await page.getByLabel("Mot de passe").fill(PASSWORD);
   await page.getByRole("button", { name: "Se connecter" }).click();
   await expect(page.getByText("Email ou mot de passe incorrect.")).toBeVisible();
@@ -155,8 +163,23 @@ test("R1 / L4 : préinscription — pas de fiche aîné ; demande de rappel visi
   await page.goto("/famille/formule");
   await expect(page.getByText(/simulé/)).toHaveCount(0);
   await expect(page.getByText("Non éligible au crédit d'impôt.", { exact: false }).first()).toBeVisible();
-  await page.getByRole("button", { name: "Être appelé pour Sérénité" }).click();
+  // L1d (M4) : numéro obligatoire (prérempli), créneau avec l'heure de Paris, aucune formule nécessaire pour une question.
+  await expect(page.getByRole("button", { name: "Demander un appel pour poser une question" })).toBeVisible();
+  await page.getByRole("button", { name: "Demander un appel pour la formule Sérénité" }).click();
+  const form = page.getByRole("form", { name: "Demander un appel pour la formule Sérénité" });
+  await expect(form.getByLabel("Numéro où le conseiller vous appelle")).toHaveValue("+596 696 12 34 56");
+  await form.getByRole("button", { name: "Envoyer la demande" }).click();
+  await expect(form.getByText("Choisissez un créneau.")).toBeVisible();
+  await form.getByLabel(/^8 h – 11 h en Martinique \(1[34] h – 1[67] h à Paris\)$/).check();
+  await form.getByRole("button", { name: "Envoyer la demande" }).click();
   await expect(page.getByText(/Demande envoyée pour la formule Sérénité/)).toBeVisible();
+  // L1d (M3) : préinscription sans impasse « Ajouter un aîné » ; barre réduite à Accueil et Formule.
+  await page.goto("/famille/kaye");
+  await expect(page.getByText("Cette page s'ouvre au lancement de Koudmen.", { exact: false })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Ajouter un aîné" })).toHaveCount(0);
+  await expect(page.getByRole("navigation").getByRole("link", { name: "Visites" })).toHaveCount(0);
+  await page.goto("/famille");
+  await expect(page.getByText(/Demande d'appel envoyée le/)).toBeVisible();
   await page.goto("/famille/visite-decouverte");
   await expect(page).toHaveURL(/\/famille\/formule$/);
 

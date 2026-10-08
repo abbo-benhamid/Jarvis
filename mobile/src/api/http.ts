@@ -15,17 +15,16 @@ import {
   type ResultatEvenement as Resultat,
 } from '@/contracts';
 import {
-  demandeEvenementsL1Schema,
+  demandeEvenementsSchema,
   demandeInscriptionSchema,
   demandeMotDePasseOublieSchema,
-  demandePositionTrajetSchema,
-  reponseEvenementsL1Schema,
+  demandePositionSchema,
+  reponseEvenementsSchema,
   reponseInscriptionSchema,
-  reponseMoiL1Schema as reponseMoiSchema,
+  reponseMoiSchema,
   reponseTrajetSchema,
-  type EvenementL1,
-  type ResultatEvenementL1,
-} from '@/contrats-l1';
+} from '@/contracts';
+import { etatVerificationSchema, reponseOrientationSchema, reponsesOrientationSchema } from '@/compte/contratAccompagnant';
 import { creerHorsLigne, type HorsLigne } from '@/offline';
 import type { KoudmenApi } from './client';
 import { MESSAGES } from './messages';
@@ -255,11 +254,11 @@ export function creerApiHttp(
 
   // ─────────────── Événements ───────────────
 
-  type SansEnveloppe<E> = E extends EvenementL1 ? Omit<E, 'clientEventId' | 'survenuA'> : never;
+  type SansEnveloppe<E> = E extends Evenement ? Omit<E, 'clientEventId' | 'survenuA'> : never;
 
   /** Transport de la file (lot M3) : POST /evenements avec UN événement. */
   async function transporter(evenement: Evenement): Promise<Resultat> {
-    const reponse = await appelerAuth('/evenements', reponseEvenementsL1Schema, { methode: 'POST', corps: { evenements: [evenement] } });
+    const reponse = await appelerAuth('/evenements', reponseEvenementsSchema, { methode: 'POST', corps: { evenements: [evenement] } });
     const r = reponse.resultats[0];
     if (!r || r.clientEventId !== evenement.clientEventId) throw new ApiError('REPONSE_INVALIDE', MESSAGES.REPONSE_INVALIDE);
     return r;
@@ -271,16 +270,15 @@ export function creerApiHttp(
    * - Refus métier : `ApiError` avec le motif et le message du serveur.
    * - Pas de réseau : `ApiError('EN_ATTENTE')`. La file le renvoie plus tard avec le MÊME identifiant.
    */
-  async function envoyer(e: SansEnveloppe<EvenementL1>): Promise<ResultatEvenementL1> {
+  async function envoyer(e: SansEnveloppe<Evenement>): Promise<Resultat> {
     const evenement = { ...e, clientEventId: nouvelIdEvenement(), survenuA: new Date().toISOString() };
-    const corps = demandeEvenementsL1Schema.safeParse({ evenements: [evenement] });
+    const corps = demandeEvenementsSchema.safeParse({ evenements: [evenement] });
     const valide = corps.success ? corps.data.evenements[0] : undefined;
     if (!corps.success || !valide) {
       throw new ApiError('REQUETE_INVALIDE', (corps.success ? null : corps.error.issues[0]?.message) ?? MESSAGES.REQUETE_INVALIDE, 400);
     }
-    // L1 : le transport lit la réponse avec le contrat L1 (`controle`) ; la file la rend telle quelle.
-    // Un CHECK_IN avec `qr` est un `Evenement` élargi (contrat provisoire, § 2.3).
-    return (await horsLigne.file.soumettre(valide as Evenement)) as ResultatEvenementL1;
+    // L1 : la réponse contient `controle` (contrat serveur) ; la file la rend telle quelle.
+    return horsLigne.file.soumettre(valide);
   }
 
   /** L1 : réponse du trajet → état pour l'écran. */
@@ -397,6 +395,20 @@ export function creerApiHttp(
       }
     },
 
+    // D15 : contrat côté app (src/compte/contratAccompagnant.ts) en attendant celui du serveur.
+    lireVerification: () => appelerAuth('/accompagnant/verification', etatVerificationSchema),
+    async envoyerOrientation(reponses) {
+      const ok = reponsesOrientationSchema.safeParse(reponses);
+      if (!ok.success) throw new ApiError('REQUETE_INVALIDE', MESSAGES.REQUETE_INVALIDE, 400);
+      return appelerAuth('/accompagnant/orientation', reponseOrientationSchema, { methode: 'POST', corps: ok.data });
+    },
+    async demanderVerification() {
+      // Réponse vide (204) ou autre forme : on relit l'état, qui fait foi.
+      const r = await appelerAuth('/accompagnant/verification', null, { methode: 'POST', corps: {} });
+      const etat = etatVerificationSchema.safeParse(r);
+      return etat.success ? etat.data : appelerAuth('/accompagnant/verification', etatVerificationSchema);
+    },
+
     checkIn: (visiteId, { qr, codeDomicile, position }) =>
       envoyer({
         type: 'CHECK_IN',
@@ -429,7 +441,7 @@ export function creerApiHttp(
       return etatTrajet(r);
     },
     async envoyerPosition(visiteId, position) {
-      const ok = demandePositionTrajetSchema.safeParse(position);
+      const ok = demandePositionSchema.safeParse(position);
       if (!ok.success) throw new ApiError('REQUETE_INVALIDE', MESSAGES.REQUETE_INVALIDE, 400);
       // Hors file : une position perdue n'est pas renvoyée (seule la dernière compte, L6).
       await appelerAuth(`/visites/${encodeURIComponent(visiteId)}/position`, null, { methode: 'POST', corps: ok.data });

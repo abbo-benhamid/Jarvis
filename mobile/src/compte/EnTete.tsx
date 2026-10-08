@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { IconButton, Text } from '@/ui';
 
 /** Barre du haut des écrans de compte (L1) : retour + titre court. */
-export function EnTeteRetour({ titre, retour = '/connexion' }: { titre: string; retour?: '/connexion' | '/' }) {
+export function EnTeteRetour({ titre, retour = '/connexion' }: { titre: string; retour?: '/connexion' | '/' | '/compte-en-validation' }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 56, gap: 8 }}>
       <IconButton

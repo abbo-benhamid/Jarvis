@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { reponseVisiteSchema, visiteSchema, type ReponseVisite, type Visite } from '../contracts';
 // L1 : compte avec `emailVerifie`, `profilValide`, `preinscription` (contrat provisoire).
-import { reponseMoiL1Schema as reponseMoiSchema, type MoiL1 as ReponseMoi } from '../contrats-l1';
+import { reponseMoiSchema, type ReponseMoi } from '../contracts';
 import type { StockageHorsLigne } from './types';
 
 /**

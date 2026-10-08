@@ -13,12 +13,17 @@ import { PageHeader } from "@/components/ui/page-header";
 import { VisitStatusBadge } from "@/components/status-badges";
 import { ProofFactors } from "@/components/famille/proof-factors";
 import { FilterTabs } from "@/components/famille/filter-tabs";
-import { capitalize, dayLong, dayNumber, hourLabel, weekdayShort } from "@/components/famille/format";
+import { capitalize, dayLong, dayNumber, weekdayShort } from "@/components/famille/format";
 import { Term } from "@/components/ui/term";
+import { isLaunchMode } from "@/server/launch";
+import { PreinscriptionClosedPage } from "@/components/account/preinscription";
+import { realDataAllowed } from "@/server/launch";
+import { ZonedTime } from "@/components/ui/zoned-time";
+import { reportedVisits } from "@/server/presence/review-trace";
 
 export const metadata: Metadata = { title: "Visites" };
 
-type VisitRow = Awaited<ReturnType<typeof getFamilyVisits>>[number];
+type VisitRow = Awaited<ReturnType<typeof getFamilyVisits>>[number] & { reportedOn: string | null };
 
 /**
  * F7 : visites à venir et passées, preuve 2 sur 3.
@@ -26,10 +31,14 @@ type VisitRow = Awaited<ReturnType<typeof getFamilyVisits>>[number];
  */
 export default async function Page({ searchParams }: { searchParams: Promise<{ aine?: string }> }) {
   const user = await requireRole("FAMILLE");
+  // L1d (M3) : en préinscription, page fermée avec la raison. Pas de bouton « Ajouter un aîné ».
+  if (!realDataAllowed()) return <PreinscriptionClosedPage title="Les visites" />;
   const { aine: aineFilter } = await searchParams;
   const aines = await getFamilyAines(user.id);
   const selected = aines.find((a) => a.id === aineFilter)?.id;
-  const visits = await getFamilyVisits(user.id, selected);
+  const rawVisits = await getFamilyVisits(user.id, selected);
+  const reported = await reportedVisits(rawVisits.map((v) => v.id));
+  const visits = rawVisits.map((v) => ({ ...v, reportedOn: reported.get(v.id) ?? null }));
   const employerIds = new Set(aines.filter((a) => a.isPayer).map((a) => a.id));
   const followIds = await tripViewableAineIds(user.id);
   const now = new Date();
@@ -125,10 +134,10 @@ function VisitItem({ v, showAine, employer, canFollow }: { v: VisitRow; showAine
           <DateBox day={weekdayShort(v.scheduledStart)} date={dayNumber(v.scheduledStart)} label={dayLong(v.scheduledStart)} />
           <div className="min-w-0 flex-1">
             <h3 className="font-sans text-[17px] leading-snug font-semibold tracking-normal">
-              {hourLabel(v.scheduledStart)} – {hourLabel(v.scheduledEnd)} · avec {v.caregiver.user.firstName}
+              {capitalize(dayLong(v.scheduledStart))}, avec {v.caregiver.user.firstName}
             </h3>
             <p className="text-[15px] leading-[1.4] text-muted">
-              {capitalize(dayLong(v.scheduledStart))}
+              <ZonedTime start={v.scheduledStart} end={v.scheduledEnd} />
               {showAine ? `, chez ${v.aine.firstName}` : null}
             </p>
             <div className="mt-2">
@@ -146,7 +155,13 @@ function VisitItem({ v, showAine, employer, canFollow }: { v: VisitRow; showAine
         {/* L1-B (R7) : la famille employeur tranche une visite « À vérifier » ; les autres membres sont informés. */}
         {v.status === "A_VERIFIER" && !v.proofs.some((p) => p.factor === "CONFIRMATION_AINE" && p.valid) ? (
           employer ? (
-            <VisitReviewForm visitId={v.id} firstName={v.aine.firstName} caregiver={v.caregiver.user.firstName} />
+            <VisitReviewForm
+              visitId={v.id}
+              firstName={v.aine.firstName}
+              caregiver={v.caregiver.user.firstName}
+              valid={v.proofs.filter((p) => p.valid).length}
+              reportedOn={v.reportedOn}
+            />
           ) : (
             <p className="rounded-md bg-soleil-soft p-3.5 text-[15px] leading-[1.45]">
               <strong>À vérifier :</strong> il manque une preuve. Le gestionnaire principal du profil confirme la visite.
@@ -175,12 +190,14 @@ function isSoon(start: Date, now: Date = new Date()): boolean {
   return diff < 3 * 3_600_000 && diff > -6 * 3_600_000;
 }
 
-/** Schéma de la preuve « 2 sur 3 ». Le testeur l'ouvre avant la question. */
+/** Schéma de la preuve « 2 sur 3 ». */
 function ProofExplainer({ children }: { children?: React.ReactNode }) {
   const items = [
     { icon: MapPin, title: "Position à l'arrivée", text: "L'accompagnant donne sa position une seule fois, à l'arrivée." },
     { icon: KeyRound, title: "Carte domicile", text: "Il scanne le QR code de la carte domicile, ou saisit son code de secours." },
-    { icon: PhoneCall, title: "Confirmation de l'aîné", text: "Koudmen appelle l'aîné. Il tape 1 pour confirmer la visite (simulé dans la démo)." },
+    isLaunchMode()
+      ? { icon: PhoneCall, title: "Confirmation", text: "Si une preuve manque, la famille employeur confirme la visite, ou signale un problème." }
+      : { icon: PhoneCall, title: "Confirmation de l'aîné", text: "Koudmen appelle l'aîné. Il tape 1 pour confirmer la visite (simulé dans la démo)." },
   ];
   return (
     <details className="group rounded-card bg-surface px-5 shadow-card">

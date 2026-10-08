@@ -19,12 +19,15 @@ const ROWS: Row[] = [
   { data: "Compte jamais confirmé (e-mail non vérifié)", why: "Éviter les comptes créés au nom d'une autre personne", basis: "Contrat (art. 6.1.b)", keep: "Effacé après 7 jours" },
   { data: "Lien de vérification de l'e-mail, lien « mot de passe oublié » (empreinte seulement)", why: "Vérifier votre adresse, changer votre mot de passe", basis: "Contrat (art. 6.1.b)", keep: "24 heures / 1 heure, puis effacement" },
   { data: "Candidature d'accompagnant : identité, date de naissance, statut déduit des 5 questions, « casier B3 vu le … »", why: "Vérifier qu'un accompagnant peut rendre visite à des aînés", basis: "Mesures précontractuelles (art. 6.1.b) ; intérêt légitime : la sécurité des aînés (art. 6.1.f)", keep: "Refus : 6 mois. Profil validé : vie du compte. Les réponses aux 5 questions sont effacées à la validation ; aucune copie du casier n'est gardée" },
-  { data: "Fiche de l'aîné (seulement quand le service est ouvert) : prénom, commune, téléphone, puis adresse et besoins après son accord", why: "Organiser les visites", basis: "Consentement explicite de l'aîné, recueilli par un conseiller au téléphone (art. 9.2.a)", keep: "Fin de l'accord + 1 an [À VÉRIFIER]" },
-  { data: "Kayé (seulement quand le service est ouvert) : humeur, appétit, texte court", why: "Donner des nouvelles au cercle Lakou", basis: "Consentement explicite de l'aîné (art. 9.2.a)", keep: "Fin de l'accord + 1 an [À VÉRIFIER]" },
-  { data: "Preuve de visite : résultat, distance arrondie, heure", why: "Prouver les heures de visite à l'employeur", basis: "Intérêt légitime de l'employeur [À VÉRIFIER AVEC UN AVOCAT]", keep: "Fin de l'accord + 1 an" },
-  { data: "Trajet en direct (option de l'accompagnant) : dernière position approchée", why: "Montrer l'arrivée à l'employeur pendant le trajet", basis: "Accord de l'accompagnant, donné une fois avant le premier partage, retirable à tout moment (art. 6.1.a)", keep: "Effacée à l'arrivée, au plus tard la nuit suivante" },
+  // [À VÉRIFIER] (L1d M2 : marque gardée dans le code, retirée de l'écran)
+  { data: "Fiche de l'aîné (seulement quand le service est ouvert) : prénom, commune, téléphone, puis adresse et besoins après son accord", why: "Organiser les visites", basis: "Consentement explicite de l'aîné, recueilli par un conseiller au téléphone (art. 9.2.a)", keep: "Fin de l'accord + 1 an" },
+  // [À VÉRIFIER] (L1d M2 : marque gardée dans le code, retirée de l'écran)
+  { data: "Kayé (seulement quand le service est ouvert) : humeur, appétit, texte court", why: "Donner des nouvelles au cercle Lakou", basis: "Consentement explicite de l'aîné (art. 9.2.a)", keep: "Fin de l'accord + 1 an" },
+  // [À VÉRIFIER AVEC UN AVOCAT] (L1d M2 : marque gardée dans le code, retirée de l'écran)
+  { data: "Preuve de visite : résultat, distance arrondie, heure", why: "Prouver les heures de visite à l'employeur", basis: "Intérêt légitime de l'employeur", keep: "Fin de l'accord + 1 an" },
   // L1d (D7, agent F1) : texte aligné sur le code (effacement paresseux à chaque appel + purge de nuit).
   // [À VÉRIFIER] durée des copies de sauvegarde (fenêtre de restauration Neon, pg_dump) : à écrire avec le DPO.
+  { data: "Trajet en direct (option de l'accompagnant) : dernière position approchée", why: "Montrer l'arrivée à l'employeur pendant le trajet", basis: "Accord de l'accompagnant, donné une fois avant le premier partage, retirable à tout moment (art. 6.1.a)", keep: "Effacée à l'arrivée, au plus tard la nuit suivante" },
   { data: "Demande de rappel pour une formule : contact, formule visée", why: "Vous appeler pour expliquer la formule", basis: "Mesures précontractuelles (art. 6.1.b)", keep: "3 mois sans suite, puis effacement" },
   { data: "E-mails d'information (case facultative)", why: "Vous donner des nouvelles de Koudmen", basis: "Consentement (art. 6.1.a), retirable à tout moment", keep: "Jusqu'au retrait de l'accord" },
   { data: "Journal de sécurité : connexions, actions sensibles, empreinte de l'adresse IP pour les limites d'essais", why: "Protéger les comptes et les aînés", basis: "Obligation de sécurité (art. 32) ; intérêt légitime (art. 6.1.f)", keep: "12 mois (limites d'essais : 24 heures au plus)" },
@@ -90,8 +93,10 @@ export default function ConfidentialitePage() {
             "Hébergement : Vercel Inc. (application, région de Francfort, UE) et Neon Inc. (base de données, région de Francfort, UE). Adresses : page Mentions légales.",
             "E-mails de compte (vérification, mot de passe oublié) : Brevo (Sendinblue SAS, France). Le texte ne contient jamais le prénom d'un aîné ni une donnée de santé.",
             "Notifications de l'application : Expo (650 Industries Inc., États-Unis), puis Apple ou Google. Voir « Application mobile Koudmen ».",
-            "Recherche d'adresse et fonds de carte (quand le service est ouvert) : API Adresse de l'État (France) et tuiles de carte OpenFreeMap. [À VÉRIFIER]",
-            "Vercel, Neon et Expo sont des sociétés américaines : un transfert hors UE reste possible. Il repose sur le cadre UE–États-Unis (DPF) ou sur des clauses types. [À VÉRIFIER AVEC UN AVOCAT]",
+            // [À VÉRIFIER] (L1d M2 : marque gardée dans le code, retirée de l'écran)
+            "Recherche d'adresse et fonds de carte (quand le service est ouvert) : API Adresse de l'État (France) et tuiles de carte OpenFreeMap.",
+            // [À VÉRIFIER AVEC UN AVOCAT] (L1d M2 : marque gardée dans le code, retirée de l'écran)
+            "Vercel, Neon et Expo sont des sociétés américaines : un transfert hors UE reste possible. Il repose sur le cadre UE–États-Unis (DPF) ou sur des clauses types.",
           ]}
         />
       </LegalSection>
@@ -123,7 +128,8 @@ export default function ConfidentialitePage() {
             "Connexion : un jeton d'accès (en mémoire, 15 minutes) et un jeton de renouvellement, gardé dans le stockage sécurisé du téléphone (trousseau iOS, Keystore Android). Le serveur garde seulement son empreinte (30 jours sans usage ; effacée 7 jours après).",
             "Visites du jour et envois en attente sans réseau : sur le téléphone, chiffrés (AES-256), jusqu'à l'envoi ou la déconnexion.",
             "Journal des envois de l'app (type, heure, résultat ; jamais le texte du Kayé) : 30 jours. Brouillon de Kayé : effacé à l'envoi, et au plus 7 jours.",
-            "Notifications : le titre est toujours générique (« Koudmen · Nouvelles de votre proche »). Jamais le prénom de l'aîné, jamais l'humeur. Elles passent par Expo (650 Industries, États-Unis), puis Apple ou Google, seulement après l'accord de notre DPO. [À VÉRIFIER AVEC UN AVOCAT]",
+            // [À VÉRIFIER AVEC UN AVOCAT] (L1d M2 : marque gardée dans le code, retirée de l'écran)
+            "Notifications : le titre est toujours générique (« Koudmen · Nouvelles de votre proche »). Jamais le prénom de l'aîné, jamais l'humeur. Elles passent par Expo (650 Industries, États-Unis), puis Apple ou Google, seulement après l'accord de notre DPO.",
             "Caméra : seulement pour lire la carte du domicile (QR code). Aucune photo n'est prise ni gardée.",
             "La déconnexion efface les données de l'app sur le téléphone.",
           ]}

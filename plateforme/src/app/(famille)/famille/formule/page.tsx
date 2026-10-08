@@ -14,8 +14,8 @@ import { OFFER_TEST_NOTICE } from "@/lib/plans";
 import { Term } from "@/components/ui/term";
 import { DISCOVERY_PRICE_LABEL } from "@/lib/measure";
 import { NO_PAYMENT_NOTICE, PLANS, priceLines } from "@/lib/plans";
-import { isLaunchMode } from "@/server/launch";
-import { openActivationsFor } from "@/server/offre/activation";
+import { isLaunchMode, realDataAllowed } from "@/server/launch";
+import { callbackContext } from "@/server/offre/rappel";
 import { CallbackRequest } from "@/components/famille/callback-request";
 
 export const metadata: Metadata = { title: "Formule" };
@@ -30,7 +30,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
   const { aine: aineParam } = await searchParams;
   const aines = await getFamilyAines(user.id);
   const launch = isLaunchMode();
-  const requested = launch ? await openActivationsFor(user.id) : [];
+  const cb = launch ? await callbackContext(user.id) : null;
 
   if (launch && aines.length === 0) {
     return (
@@ -40,6 +40,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
           <Alert tone="info" title="Aucun paiement aujourd'hui">
             {NO_PAYMENT_NOTICE}
           </Alert>
+          {/* L1d (M4) : un appel sans choisir de formule payante. */}
+          <QuestionCard cb={cb!} />
           {PLANS.map((p) => (
             <Card key={p.plan} className="flex flex-col gap-3">
               <CardTitle className="mb-0">
@@ -51,9 +53,17 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
                 <li>{priceLines(p).hours}</li>
               </ul>
               {p.plan === "LAKOU" ? (
-                <p className="text-sm text-muted">Gratuite. Elle s&apos;active seule avec le profil de l&apos;aîné.</p>
+                <p className="text-sm text-muted">
+                  {realDataAllowed() ? "Gratuite. Elle s'active avec le profil de l'aîné." : "Gratuite. Elle s'ouvre au lancement."}
+                </p>
               ) : (
-                <CallbackRequest plan={p.plan} planName={p.name} pending={requested.some((r) => r.plan === p.plan && r.aineId === null)} />
+                <CallbackRequest
+                  plan={p.plan}
+                  label={`Demander un appel pour la formule ${p.name}`}
+                  defaultPhone={cb!.phone}
+                  creneaux={cb!.creneaux}
+                  pendingSince={cb!.pendingSince(p.plan)}
+                />
               )}
             </Card>
           ))}
@@ -97,7 +107,6 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
         {launch ? (
           <Alert tone="info" title="Activation par un conseiller Koudmen">
             {NO_PAYMENT_NOTICE}
-            {requested.some((r) => r.aineId === aine.id) ? <p className="mt-1 font-semibold">Votre demande est envoyée. Un conseiller vous appelle.</p> : null}
           </Alert>
         ) : (
           <Alert tone="attention" title={OFFER_TEST_NOTICE}>
@@ -118,7 +127,23 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
           </Alert>
         ) : null}
 
-        <PlanChooser aineId={aine.id} current={aine.subscription?.plan ?? null} canChange={isPayer} launch={launch} />
+        <PlanChooser
+          aineId={aine.id}
+          current={aine.subscription?.plan ?? null}
+          canChange={isPayer}
+          launch={launch}
+          callback={
+            cb
+              ? {
+                  phone: cb.phone,
+                  creneaux: cb.creneaux,
+                  pendingSince: { KOZE: cb.pendingSince("KOZE", aine.id), SERENITE: cb.pendingSince("SERENITE", aine.id) },
+                }
+              : undefined
+          }
+        />
+
+        {cb ? <QuestionCard cb={cb} /> : null}
 
         <Alert tone="info" title="Comment se calcule le prix ?">
           <ul className="mt-1 flex list-disc flex-col gap-1 pl-5">
@@ -162,5 +187,22 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ a
         ) : null}
       </div>
     </>
+  );
+}
+
+/** L1d (M4) : « Demander un appel pour poser une question », sans formule payante. */
+function QuestionCard({ cb }: { cb: Awaited<ReturnType<typeof callbackContext>> }) {
+  return (
+    <Card id="rappel" className="flex flex-col gap-3">
+      <CardTitle className="mb-0">Une question ?</CardTitle>
+      <p className="text-[15px] leading-[1.45] text-muted">Un conseiller Koudmen vous appelle. Vous ne choisissez pas de formule. Vous ne vous engagez à rien.</p>
+      <CallbackRequest
+        plan="QUESTION"
+        label="Demander un appel pour poser une question"
+        defaultPhone={cb.phone}
+        creneaux={cb.creneaux}
+        pendingSince={cb.pendingSince("QUESTION")}
+      />
+    </Card>
   );
 }

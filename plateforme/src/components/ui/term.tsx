@@ -25,7 +25,7 @@ export function Term({ id, children }: { id: GlossaryKey; children?: React.React
         onKeyDown={(e) => {
           if (e.key === "Escape") setOpen(false);
         }}
-        className="ml-1 inline-flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-mer bg-surface align-middle font-sans text-sm leading-none font-bold text-mer"
+        className="relative ml-1 inline-flex size-6 before:absolute before:-inset-2.5 before:content-[''] shrink-0 items-center justify-center rounded-full border-2 border-mer bg-surface align-middle font-sans text-sm leading-none font-bold text-mer"
       >
         <span aria-hidden="true">?</span>
         <span className="sr-only">Qu&apos;est-ce que « {entry.term} » ?</span>

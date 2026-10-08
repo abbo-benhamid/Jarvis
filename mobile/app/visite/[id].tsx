@@ -10,11 +10,11 @@ import {
   type PositionPonctuelle,
   type ReponseVisite,
   type ControleCheckIn,
-  type ResultatEvenementL1,
+  type ResultatEvenement,
 } from '@/api';
-import { heureTexte, libelleJour, NBSP, plageHoraire } from '@/lib/format';
+import { heureTexte, libelleJour, NBSP, plageAvecFuseau, plageHoraire } from '@/lib/format';
 import { useAsync } from '@/lib/useAsync';
-import { lireControle, PREFIXE_QR_SIGNE } from '@/contrats-l1';
+import { lireControle, PREFIXE_QR_SIGNE } from '@/api/l1';
 import { lireQrDomicile, natif, normaliserCode, type NumeroUrgence } from '@/native';
 import { retourAuxVisites } from '@/session/navigation';
 import { fonts, radius, useTheme } from '@/theme';
@@ -117,7 +117,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
   const [erreur, setErreur] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [accordPosition, setAccordPosition] = useState(false);
-  const [retour, setRetour] = useState<ResultatEvenementL1 | null>(null);
+  const [retour, setRetour] = useState<ResultatEvenement | null>(null);
   /** L1 : QR signé lu (`koudmen:domicile:s1:…`), en mémoire jusqu'à l'envoi. */
   const [qrSigne, setQrSigne] = useState<string | null>(null);
   /** L1 (L10) : résultat du contrôle du check-in (VALIDE, A_VERIFIER, REFUSE) et sa raison. */
@@ -138,6 +138,8 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
   // L1 : « Je pars chez … » tant que l'arrivée n'est pas faite, le jour de la visite.
   const surLaRoute = trajetPossible(v);
   const trajet = useTrajet();
+  /** Le trajet de CETTE visite est partagé (ou en démarrage) : le texte de la lecture d'arrivée change (M12). */
+  const trajetIci = trajet.etat.statut !== 'inactif' && trajet.etat.visiteId === v.id;
   const scanPossible = natif.scanner.disponible();
   const Scanner = natif.scanner.Vue;
 
@@ -276,7 +278,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
       <>
         <Button large label="Arrivée possible à l’heure de la visite" icon="clock" disabled accessibilityHint="Ce bouton s’active à l’heure de la visite." />
         <Text variant="small" tone="muted" center style={styles.hint}>
-          Visite prévue {libelleJour(v.debut).toLowerCase()}, {plageHoraire(v.debut, v.fin)}.
+          Visite prévue {libelleJour(v.debut).toLowerCase()}, {plageAvecFuseau(v.debut, v.fin)}.
         </Text>
       </>
     );
@@ -386,7 +388,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
                     variant="quiet"
                     icon="scan"
                     label="Scanner"
-                    accessibilityLabel="Scanner le QR de la feuille du domicile"
+                    accessibilityLabel="Scanner le QR de la carte domicile"
                     accessibilityHint="Ouvre la caméra pour lire le QR"
                     style={{ flex: 1 }}
                     onPress={() => {
@@ -457,7 +459,12 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
                 <SwitchRow
                   testID="accord-position"
                   label="Partager ma position, une fois"
-                  detail="Une seule lecture, maintenant. Koudmen ne vous suit pas."
+                  detail={
+                    // Revue UX M12 : pendant un trajet partagé, « Koudmen ne vous suit pas » contredit le bandeau.
+                    trajetIci
+                      ? 'Une seule lecture, maintenant. La lecture d’arrivée remplace le partage du trajet, qui s’arrête.'
+                      : 'Une seule lecture, maintenant. Koudmen ne vous suit pas.'
+                  }
                   value={accordPosition}
                   onChange={setAccordPosition}
                 />
@@ -470,7 +477,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
               </View>
             ) : (
               <Text variant="small" tone="muted">
-                Position : pas encore disponible dans cette version de l’app. Le code du domicile suffit pour commencer.
+                Position : pas disponible sur cet appareil. Le code du domicile suffit pour commencer.
               </Text>
             )}
           </Card>
@@ -479,7 +486,8 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
 
       {controle ? <ResultatControle controle={controle} /> : null}
 
-      {retour?.preuves ? (
+      {/* Revue UX m10 : un seul encadré. Avec le contrôle du serveur, le détail par preuve ne s'affiche pas. */}
+      {retour?.preuves && !controle ? (
         <Apparition style={{ marginTop: 12, gap: 8 }}>
           <View style={{ gap: 8 }} accessibilityLiveRegion="polite" testID="retour-arrivee">
             {(['code', 'position'] as const).map((k) => {

@@ -63,7 +63,7 @@ export function RegisterForm({ defaultRole, next }: { defaultRole: RoleChoice; n
           <Input {...fieldA11y("lastName", fe?.lastName)} autoComplete="family-name" required />
         </FormField>
       </div>
-      <FormField label="Email" htmlFor="email" errors={fe?.email} required>
+      <FormField label="Adresse e-mail" htmlFor="email" errors={fe?.email} required>
         <Input {...fieldA11y("email", fe?.email)} type="email" autoComplete="email" required />
       </FormField>
       <FormField

@@ -14,7 +14,7 @@ import { randomBytes } from 'node:crypto';
 const i = process.argv.indexOf('--port');
 const port = Number(i >= 0 ? process.argv[i + 1] : 4331);
 
-const MOI = { id: 'acc_e2e', role: 'ACCOMPAGNANT', prenom: 'Josiane', nom: 'Mathurin', email: 'accompagnant@demo.koudmen.test', demo: true, bacASable: false };
+const MOI = { id: 'acc_e2e', role: 'ACCOMPAGNANT', prenom: 'Josiane', nom: 'Mathurin', email: 'accompagnant@demo.koudmen.test', demo: true, bacASable: false, emailVerifie: true, profilValide: true, preinscription: false };
 const jeton = (p) => p + randomBytes(24).toString('hex');
 
 let etat;

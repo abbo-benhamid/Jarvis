@@ -8,6 +8,8 @@ import { Button, CaseIllustration, Em, Icon, Kreyol, Logo, MadrasLine, Screen, T
 /**
  * Service en PRÉINSCRIPTION (décision de l'orchestrateur après la critique juridique) :
  * pas de données réelles autorisées. Écran calme à la place des visites. Aucune donnée d'aîné n'est chargée.
+ * D15 / revue UX M14 : seulement pour un profil VALIDÉ. Un profil à valider voit « Profil en cours de validation »
+ * (avec l'encadré « Koudmen ouvre bientôt »), donc toujours la prochaine action concrète.
  */
 export default function Bientot() {
   const { c } = useTheme();
@@ -29,7 +31,7 @@ export default function Bientot() {
         Koudmen ouvre bientôt <Em>en Martinique.</Em>
       </Text>
       <Text variant="body" style={{ marginTop: 12 }}>
-        Votre compte est prêt, {session.prenom}. Nous vous contactons pour la suite.
+        Votre profil est validé, {session.prenom}. Nous vous prévenons dès l’ouverture.
       </Text>
       {emailAVerifier(session) ? (
         <View style={[styles.rappel, { backgroundColor: c.soleilSoft }]} testID="rappel-email">

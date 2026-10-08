@@ -31,7 +31,7 @@ export default async function Page() {
         description="Ces personnes n'ont pas encore confirmé leur adresse e-mail. Sans confirmation, le compte est effacé après 7 jours."
       />
       {mailDeliveryConfigured() ? null : (
-        <Alert tone="attention" title="Aucun e-mail ne part (BREVO_API_KEY absente).">
+        <Alert tone="attention" title="Les e-mails ne partent pas encore. Appelez la personne.">
           Appelez la personne au numéro du compte. Vérifiez son nom et son adresse e-mail. Ensuite seulement, validez l&apos;adresse ici.
         </Alert>
       )}
@@ -50,13 +50,19 @@ export default async function Page() {
               <br />
               {r.email}
             </span>,
-            <OpsAction
-              key="a"
-              action={verifyEmailManuallyAction}
-              fields={{ userId: r.id }}
-              label="Valider l'adresse"
-              confirm="J'ai appelé la personne au numéro du compte. Elle confirme son nom et cette adresse."
-            />,
+            r.phone ? (
+              <OpsAction
+                key="a"
+                action={verifyEmailManuallyAction}
+                fields={{ userId: r.id }}
+                label="Valider l'adresse"
+                confirm="J'ai appelé la personne au numéro du compte. Elle confirme son nom et cette adresse."
+              />
+            ) : (
+              <a key="a" href={`mailto:${r.email}`} className="inline-flex min-h-11 items-center font-semibold text-mer underline underline-offset-4">
+                Écrire à la personne
+              </a>
+            ),
           ])}
         />
       )}

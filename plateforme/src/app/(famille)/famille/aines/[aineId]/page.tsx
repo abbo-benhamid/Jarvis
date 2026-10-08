@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BookOpen, CalendarDays, HandHeart, HeartHandshake, Navigation, Pencil, QrCode, ShieldCheck, UserPlus, Users } from "lucide-react";
+import { BookOpen, CalendarDays, HandHeart, HeartHandshake, Lock, Pencil, QrCode, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { requireRole } from "@/server/auth/guards";
 import { getAineForFamily } from "@/server/famille/queries";
 import { communeLabel } from "@/lib/communes";
+import type { AccordAine, ConsentBy } from "@prisma/client";
 import { deName, formatDate, fullName, initialWithDot } from "@/lib/format";
 import { LEVEL_DESCRIPTIONS, NEED_LABELS, PLAN_LABELS } from "@/lib/labels";
 import { Alert } from "@/components/ui/alert";
@@ -16,7 +17,6 @@ import { LevelBadge } from "@/components/status-badges";
 import { CaregiverLinkForm } from "@/components/famille/caregiver-link-form";
 import { TopBar } from "@/components/famille/top-bar";
 import { readAddress } from "@/server/presence/address";
-import { TripViewerForm } from "@/components/presence/trip-viewer-form";
 
 export const metadata: Metadata = { title: "Fiche de l'aîné" };
 
@@ -33,6 +33,10 @@ export default async function Page({ params, searchParams }: Props) {
   const payer = aine.members.find((m) => m.isPayer);
   const name = `${aine.firstName} ${initialWithDot(aine.lastInitial)}`.trim();
   const address = readAddress(aine);
+  // M5 : avant l'accord, les actions liées aux visites sont fermées (avec la raison), jamais un formulaire refusé d'avance.
+  const accordOk = aine.accordEtat === "ACCORD_RECUEILLI";
+  const lockedReason = `Disponible après l'accord ${deName(aine.firstName)}`;
+  const viewer = aine.tripViewerId ? aine.members.find((m) => m.user.id === aine.tripViewerId) : null;
 
   return (
     <>
@@ -58,19 +62,21 @@ export default async function Page({ params, searchParams }: Props) {
 
       <div className="flex flex-col gap-3">
         {sp.cree ? (
-          <Alert tone="succes" title={`Le profil de ${aine.firstName} est créé.`}>
-            Prochaines étapes : invitez vos proches, puis demandez un accompagnement.
+          <Alert tone="succes" title={`Le profil ${deName(aine.firstName)} est créé.`}>
+            {accordOk
+              ? "Prochaines étapes : invitez vos proches, puis demandez un accompagnement."
+              : `Prochaine étape : un conseiller Koudmen appelle ${aine.firstName} pour recueillir son accord.`}
           </Alert>
         ) : null}
         {sp.modifie ? <Alert tone="succes">Modifications enregistrées.</Alert> : null}
-        {/* R5 (J5) : état de l'accord de l'aîné, recueilli par un conseiller au téléphone. */}
+        {/* R5 (J5), L1d (D14) : état de l'accord, lu dans `accordEtat`. Jamais « donné » avant l'appel. */}
         {aine.accordEtat === "EN_ATTENTE_ACCORD" ? (
-          <Alert tone="info" title="En attente de l'accord de l'aîné">
-            Un conseiller Koudmen appelle {aine.firstName} au numéro donné. Il lui lit une notice simple et lui demande son accord. Les demandes
-            d&apos;accompagnement s&apos;ouvrent après son accord.
+          <Alert tone="info" title={`Accord ${deName(aine.firstName)} : en attente de l'appel`}>
+            Un conseiller Koudmen appelle {aine.firstName} au numéro donné. Il lit une notice simple et demande son accord. Les demandes
+            d&apos;accompagnement et la carte domicile s&apos;ouvrent après son accord.
           </Alert>
         ) : aine.accordEtat === "ACCORD_REFUSE" || aine.accordEtat === "ACCORD_RETIRE" ? (
-          <Alert tone="attention" title={`${aine.firstName} n'a pas donné son accord`}>
+          <Alert tone="attention" title={aine.accordEtat === "ACCORD_REFUSE" ? `${aine.firstName} a dit non` : `${aine.firstName} a retiré son accord`}>
             Koudmen respecte ce choix. Aucune visite n&apos;est organisée. Pour en parler, écrivez à l&apos;équipe Koudmen.
           </Alert>
         ) : null}
@@ -80,7 +86,7 @@ export default async function Page({ params, searchParams }: Props) {
           </Alert>
         ) : null}
 
-        <NextSteps aineId={aine.id} firstName={aine.firstName} members={aine.members.length} requests={aine._count.requests} />
+        <NextSteps aineId={aine.id} firstName={aine.firstName} members={aine.members.length} requests={aine._count.requests} accordOk={accordOk} />
       </div>
 
       <SectionHeader title={`Pour ${aine.firstName}`} />
@@ -89,18 +95,23 @@ export default async function Page({ params, searchParams }: Props) {
           <Shortcut href={`/famille/aines/${aine.id}/cercle`} icon={<Users />} label={`Cercle Lakou (${aine.members.length})`} detail="Les proches qui lisent les nouvelles" />
           <Shortcut href={`/famille/kaye?aine=${aine.id}`} icon={<BookOpen />} label="Lire le Kayé" detail="Le cahier des visites" />
           <Shortcut href={`/famille/visites?aine=${aine.id}`} icon={<CalendarDays />} label="Voir les visites" detail="À venir, passées, preuves" />
-          <Shortcut
-            href={`/famille/demandes/nouvelle?aine=${aine.id}`}
-            icon={<HandHeart />}
-            label="Demander un accompagnement"
-            detail="Koudmen vous propose 1 à 3 profils"
-          />
+          {accordOk ? (
+            <Shortcut
+              href={`/famille/demandes/nouvelle?aine=${aine.id}`}
+              icon={<HandHeart />}
+              label="Demander un accompagnement"
+              detail="Koudmen vous propose 1 à 3 profils"
+            />
+          ) : (
+            <LockedShortcut icon={<HandHeart />} label="Demander un accompagnement" detail={lockedReason} />
+          )}
         </ul>
       </nav>
 
       <SectionHeader title="Profil" />
       <div className="flex flex-col gap-3">
         {/* L1-B (L9) : la carte domicile signée remplace l'affichage du code seul. */}
+        {accordOk ? (
         <CardLink href={`/famille/aines/${aine.id}/carte-domicile`}>
           <span className="flex items-center gap-3.5">
             <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-full bg-mer-soft text-mer [&_svg]:size-5 [&_svg]:[stroke-width:1.6]">
@@ -114,6 +125,9 @@ export default async function Page({ params, searchParams }: Props) {
             </span>
           </span>
         </CardLink>
+        ) : (
+          <LockedCard icon={<QrCode />} label="Carte domicile" detail={`QR code et code de secours. ${lockedReason}.`} />
+        )}
 
         <Card className="flex flex-col gap-3">
           <CardTitle className="mb-0">Accompagnement</CardTitle>
@@ -145,13 +159,16 @@ export default async function Page({ params, searchParams }: Props) {
         <Card className="flex flex-col gap-2">
           <CardTitle className="mb-0 inline-flex items-center gap-2">
             <ShieldCheck aria-hidden="true" className="size-[18px] text-feuille" strokeWidth={1.6} />
-            Accord de l&apos;aîné
+            Accord {deName(aine.firstName)}
           </CardTitle>
-          <p className="text-[15px] leading-[1.45]">
-            Donné par <strong className="font-semibold">{aine.consentByName}</strong> (
-            {aine.consentByType === "AINE" ? "l'aîné lui-même" : "son représentant"}).
-          </p>
-          <p className="text-sm text-muted">Enregistré le {formatDate(aine.consentAt)}.</p>
+          <AccordText firstName={aine.firstName} etat={aine.accordEtat} byName={aine.consentByName} byType={aine.consentByType} at={aine.accordAt} />
+          {accordOk ? (
+            <p className="border-t border-line pt-2 text-[15px] leading-[1.45]">
+              <span className="text-muted">Personne désignée par {aine.firstName} pour voir le trajet : </span>
+              <strong className="font-semibold">{viewer ? fullName(viewer.user) : `l'employeur${payer ? ` (${fullName(payer.user)})` : ""}`}</strong>.
+              <span className="block text-sm text-muted">Pour changer, {aine.firstName} appelle Koudmen.</span>
+            </p>
+          ) : null}
         </Card>
 
         <CardLink href={`/famille/formule?aine=${aine.id}`}>
@@ -160,25 +177,6 @@ export default async function Page({ params, searchParams }: Props) {
           <span className="block text-[15px] text-muted">Payeur : {payer ? fullName(payer.user) : "—"}</span>
           <span className="mt-1 block font-semibold text-mer">{isPayer ? "Changer de formule" : "Voir les formules"}</span>
         </CardLink>
-
-        {/* L1-B (R4) : qui voit le trajet en direct de l'accompagnant (payeur seulement). */}
-        {isPayer ? (
-          <Card className="flex flex-col gap-2">
-            <CardTitle className="mb-0 inline-flex items-center gap-2">
-              <Navigation aria-hidden="true" className="size-[18px] text-mer" strokeWidth={1.6} />
-              Suivi du trajet
-            </CardTitle>
-            <p className="text-[15px] leading-[1.45] text-muted">
-              Si l&apos;accompagnant partage son trajet, vous voyez où il en est. Personne d&apos;autre, sauf la personne désignée ci-dessous.
-            </p>
-            <TripViewerForm
-              aineId={aine.id}
-              firstName={aine.firstName}
-              current={aine.tripViewerId}
-              members={aine.members.filter((m) => !m.isPayer).map((m) => ({ userId: m.user.id, label: `${fullName(m.user)} (${m.relation})` }))}
-            />
-          </Card>
-        ) : null}
 
         {/* A6 (D7) : rattacher un proche aidant à cet aîné (payeur seulement). */}
         {isPayer ? (
@@ -214,7 +212,7 @@ function Shortcut({ href, icon, label, detail }: { href: string; icon: React.Rea
 }
 
 /** Guide de démarrage : visible tant que le cercle n'a qu'un membre ou qu'aucune demande n'existe. */
-function NextSteps({ aineId, firstName, members, requests }: { aineId: string; firstName: string; members: number; requests: number }) {
+function NextSteps({ aineId, firstName, members, requests, accordOk }: { aineId: string; firstName: string; members: number; requests: number; accordOk: boolean }) {
   if (members > 1 && requests > 0) return null;
   const inviteDone = members > 1;
   const requestDone = requests > 0;
@@ -240,10 +238,66 @@ function NextSteps({ aineId, firstName, members, requests }: { aineId: string; f
           {
             state: requestDone ? "done" : inviteDone ? "current" : "todo",
             icon: <HandHeart />,
-            label: requestDone ? "Demander un accompagnement" : link(`/famille/demandes/nouvelle?aine=${aineId}`, "Demander un accompagnement"),
+            label: requestDone
+              ? "Demander un accompagnement"
+              : accordOk
+                ? link(`/famille/demandes/nouvelle?aine=${aineId}`, "Demander un accompagnement")
+                : `Demander un accompagnement (après l'accord ${deName(firstName)})`,
           },
         ]}
       />
     </Card>
+  );
+}
+
+/** M5 : raccourci fermé avant l'accord. Pas un lien : la raison est écrite. */
+function LockedShortcut({ icon, label, detail }: { icon: React.ReactNode; label: string; detail: string }) {
+  return (
+    <li>
+      <LockedCard icon={icon} label={label} detail={detail} />
+    </li>
+  );
+}
+
+function LockedCard({ icon, label, detail }: { icon: React.ReactNode; label: string; detail: string }) {
+  return (
+    <div className="rounded-card bg-surface-2 px-5 py-4" aria-disabled="true">
+      <span className="flex items-center gap-3.5">
+        <span aria-hidden="true" className="grid size-11 shrink-0 place-items-center rounded-full bg-surface text-muted [&_svg]:size-5 [&_svg]:[stroke-width:1.6]">
+          {icon}
+        </span>
+        <span className="min-w-0 flex-1">
+          <b className="block font-semibold">{label}</b>
+          <span className="block text-[15px] text-muted">{detail}</span>
+        </span>
+        <Lock aria-hidden="true" className="size-5 shrink-0 text-muted" strokeWidth={1.6} />
+      </span>
+    </div>
+  );
+}
+
+/** B1 : texte de l'accord selon `accordEtat`. Jamais de nom vide, jamais « donné » avant l'appel. */
+function AccordText({ firstName, etat, byName, byType, at }: { firstName: string; etat: AccordAine; byName: string; byType: ConsentBy; at: Date | null }) {
+  if (etat === "EN_ATTENTE_ACCORD") {
+    return (
+      <p className="text-[15px] leading-[1.45]">
+        <strong className="font-semibold">Accord de l&apos;aîné : en attente de l&apos;appel.</strong> Un conseiller Koudmen appelle {firstName}.
+      </p>
+    );
+  }
+  if (etat === "ACCORD_REFUSE" || etat === "ACCORD_RETIRE") {
+    return (
+      <p className="text-[15px] leading-[1.45]">
+        <strong className="font-semibold">{etat === "ACCORD_REFUSE" ? "Accord refusé" : "Accord retiré"}</strong>
+        {at ? `, le ${formatDate(at)}` : ""}. Aucune visite n&apos;est organisée.
+      </p>
+    );
+  }
+  const name = byName.trim();
+  const who = name ? `${name} (${byType === "AINE" ? "en personne" : "son représentant légal"})` : byType === "AINE" ? firstName : "son représentant légal";
+  return (
+    <p className="text-[15px] leading-[1.45]">
+      Accord donné par <strong className="font-semibold">{who}</strong>, au téléphone{at ? `, le ${formatDate(at)}` : ""}.
+    </p>
   );
 }

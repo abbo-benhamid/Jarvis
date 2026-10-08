@@ -1,6 +1,6 @@
 import type { IconName } from '@/ui/Icon';
 import { trouverCommune } from '@/lib/communes';
-import type { DomicileTrajet } from '@/contrats-l1';
+import type { DomicileTrajet } from '@/api/l1';
 
 /**
  * Information AVANT le premier partage du trajet (décision de l'orchestrateur après la critique juridique).
