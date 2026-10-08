@@ -444,3 +444,62 @@ pnpm vitest run src/app/api/v1/auth src/contracts                               
 KOUDMEN_DB_TESTS=1 pnpm vitest run src/server/auth/registration.db.test.ts          # base réelle
 pnpm build:local && RATE_LIMIT_DISABLED=true E2E_PORT=3270 pnpm e2e --project=lancement   # serveur en mode lancement
 ```
+
+## 13. Lot L1d — orientation et vérification de l'accompagnant dans l'app (D15), changements L1d
+
+> Contrat : `plateforme/src/contracts/v1/accompagnant.ts` (`.strict()`, copié dans l'app par `sync-contracts`).
+> Service : `plateforme/src/server/accompagnant/verification-app.ts` (mêmes règles que le site : `saveOrientation`, `submitForReview`).
+
+### 13.1 Routes (jeton d'accès, rôle ACCOMPAGNANT)
+
+| Route | Corps | Réponse | Erreurs |
+|---|---|---|---|
+| `GET /api/v1/accompagnant/verification` | — | 200 `EtatVerification` | 401, 403, 429 |
+| `POST /api/v1/accompagnant/orientation` | `DemandeOrientation` | 200 `ResultatOrientation` | 400, 401, 403, 422 (profil validé ou suspendu), 429 |
+| `POST /api/v1/accompagnant/verification` | `{}` | 200 `EtatVerification` (`validation: EN_ATTENTE`) | 400, 401, 403, 409 (déjà envoyée), 422 (orientation non faite, profil incomplet : le message liste ce qui manque), 429 |
+
+`DemandeOrientation` reprend les clés du site et de l'app : `activity` (LIEN, COUPS_DE_MAIN, PRESENCE, AIDE_RENFORCEE), `paid`, `existingStatus` (AUCUN, AUTO_ENTREPRENEUR_SAP, SALARIE_SAAD), `situations` (7 valeurs, doublons ignorés), `familyLink` (AUCUN, ENFANT_OU_PARENT, CONJOINT).
+
+`ResultatOrientation` : `issue` (RECOMMANDE, REFUSE, LISTE_ATTENTE, ORIENTATION_EXTERNE), `statut` (ou null), `explication`, `avertissements`, `pieces`, `niveaux`.
+
+`EtatVerification` :
+
+| Champ | Sens |
+|---|---|
+| `validation` | BROUILLON, EN_ATTENTE, VALIDE, REFUSE, SUSPENDU |
+| `orientation` | Résultat enregistré (null avant l'orientation). Après la validation, les réponses brutes sont effacées (R6) : statut seul |
+| `etapes` | ORIENTATION, PROFIL, PIECES, DEMANDE, APPEL_EQUIPE, avec `faite` et `surLeSite` |
+| `manque` | Éléments que seul le site remplit (communes, disponibilités, tarif, association, SIRET, déclaration des pièces). Vide avant l'orientation |
+| `raison` | Raison d'un refus ou d'une suspension |
+| `peutDemander` | Orientation RECOMMANDE, rien ne manque, demande pas encore envoyée |
+
+```mermaid
+sequenceDiagram
+  participant App as App accompagnante
+  participant API as API v1
+  participant Op as File opérateur
+  App->>API: POST /accompagnant/orientation
+  API-->>App: ResultatOrientation
+  App->>API: GET /accompagnant/verification
+  API-->>App: etapes + manque (site)
+  Note over Op: PROFIL_A_FINIR : l'opérateur aide à finir
+  App->>API: POST /accompagnant/verification
+  API-->>App: EN_ATTENTE
+  Note over Op: DEMANDE_ENVOYEE : entretien, « casier vu le », validation
+```
+
+File opérateur « Accompagnants à appeler » (`server/operateur/files-lancement.ts`, `caregiverCallReason`) : `DEMANDE_ENVOYEE` (EN_ATTENTE), `PROFIL_A_FINIR` (orientation faite, BROUILLON), `SANS_SUITE` (inscrit depuis plus de 48 h sans orientation).
+
+**Écarts avec `mobile/src/compte/contratAccompagnant.ts` (provisoire de F3)** : le serveur répond en français seulement (l'app accepte aussi l'anglais) ; `EtatVerification` porte en plus `etapes` et `peutDemander` (l'app les ignore tant qu'elle n'importe pas le contrat serveur) ; `manque` est une liste de chaînes (l'app accepte aussi `{ label }`).
+
+### 13.2 Autres changements de contrat L1d
+
+| Contrat | Changement | Décision |
+|---|---|---|
+| `inscription.ts` | `prenom`, `nom` : lettres, espaces, tirets, apostrophes ; 40 caractères ; pas d'URL | D6 |
+| `visits.ts` | `statutVisite` + `PRESENCE_PROBABLE` (QR ou code + position, sans la confirmation de l'aîné ; contestation 48 h par la famille employeur) | D4 |
+| `visits.ts` | `motifRefus` + `PREINSCRIPTION` (données réelles fermées : rien n'est gardé, pas même en brouillon) et `ACCORD_MANQUANT` (accord absent, refusé ou retiré) | D8, D9 |
+| `trajet.ts` | Commentaire : `domicile` toujours présent dans la réponse à DEMARRER | m6 |
+| `POST /visites/:id/position` | 409 CONFLIT (plus 429) si le trajet a été effacé entre-temps (check-in, ARRETER, expiration) ; 403 INTERDIT si la mission, le profil ou l'accord ne permet plus le trajet | m3 |
+| `GET /visites`, `GET /visites/:id` | Visites masquées en préinscription et sans accord de l'aîné (404 pour `/:id`) | D9 |
+| `POST /auth/inscription` | E-mail connu d'un opérateur : même 201, aucun e-mail ; course (double appui) : 201, jamais 500 | D5, m2 |
