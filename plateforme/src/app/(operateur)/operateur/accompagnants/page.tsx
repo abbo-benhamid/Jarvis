@@ -10,6 +10,7 @@ import { ValidationBadge } from "@/components/status-badges";
 import { FilterForm, pickEnum } from "@/components/operateur/filter-form";
 import { CAREGIVER_STATUS_LABELS, VALIDATION_LABELS } from "@/lib/labels";
 import { communeLabel } from "@/lib/communes";
+import { MoreLink } from "@/components/operateur/display";
 
 export const metadata: Metadata = { title: "Accompagnants" };
 export const dynamic = "force-dynamic";
@@ -30,6 +31,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<Rec
         eyebrow="Opérateur"
         title="Accompagnants"
         description="Vérifiez chaque profil. Une décision de refus ou de suspension demande toujours un motif."
+        actions={<MoreLink href="/operateur/accompagnants/a-appeler">Accompagnants à appeler</MoreLink>}
       />
       <FilterForm
         action="/operateur/accompagnants"

@@ -33,6 +33,11 @@ test("O1 — le tableau de bord montre ce qui demande une action", async ({ page
   await expect(page).toHaveURL(/\/operateur$/);
   await expect(page.getByRole("heading", { level: 1, name: "Tableau de bord" })).toBeVisible();
   for (const name of [
+    // L1d (M10, D15) : les files du lancement d'abord.
+    /Aînés à appeler \(accord\)/,
+    /Familles à rappeler/,
+    /E-mails à confirmer/,
+    /Accompagnants à appeler/,
     /Accompagnants à vérifier/,
     /Demandes à matcher/,
     /Visites à vérifier/,
