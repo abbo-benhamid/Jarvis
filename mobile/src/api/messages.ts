@@ -22,6 +22,9 @@ export const MESSAGES: Record<CodeErreurApp, string> = {
   COMPTE_INACTIF: 'Votre profil n’est pas actif. Contactez l’équipe Koudmen.',
   INTERDIT: 'Cette action n’est pas permise pour cette visite.',
   INVALIDE: 'Cette information n’est pas acceptée. Vérifiez, puis réessayez.',
+  // L1d (agent F1, contrat serveur D8/D9) : minimum pour la copie synchronisée des contrats.
+  PREINSCRIPTION: 'Koudmen ouvre bientôt. Nous vous contactons dès l’ouverture.',
+  ACCORD_MANQUANT: 'L’accord de l’aîné n’est pas recueilli. Rien n’est enregistré pour cette visite.',
   RESEAU: 'Pas de connexion au service. Vérifiez votre réseau, puis réessayez.',
   REPONSE_INVALIDE: 'L’app doit être mise à jour. Réessayez plus tard.',
   POSITION_INDISPONIBLE: 'La position n’est pas disponible. Utilisez le code du domicile.',

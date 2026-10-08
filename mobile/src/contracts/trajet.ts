@@ -38,7 +38,8 @@ export const reponseTrajetSchema = z
       .strict(),
     /**
      * Domicile de l'aîné pour la carte d'itinéraire de l'app (DEMARRER seulement), arrondi à 3 décimales.
-     * Absent si l'accord de l'aîné n'est pas enregistré. `approximatif` : centre de la commune.
+     * Code m6 (L1d) : toujours présent dans la réponse à DEMARRER (sans accord de l'aîné, DEMARRER est refusé avant),
+     * absent dans la réponse à ARRETER. `approximatif` : centre de la commune.
      */
     domicile: z
       .object({ latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180), approximatif: z.boolean() })

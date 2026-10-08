@@ -25,6 +25,15 @@ export const telephoneSchema = z
   .trim()
   .regex(/^\+?[0-9 .-]{6,20}$/);
 
+/** L1d (D6) : longueur maximale d'un prénom ou d'un nom. */
+export const NOM_PERSONNE_MAX = 40;
+/**
+ * L1d (D6) : prénom ou nom = lettres (accents compris), espaces, tirets, apostrophes. Pas de chiffre, de point,
+ * de « / », de « : » ni de « @ » : aucune URL ni numéro de téléphone ne passe dans un e-mail de Koudmen.
+ */
+export const NOM_PERSONNE_REGEX = /^[\p{L}\p{M}][\p{L}\p{M} '’-]*$/u;
+export const nomPersonneSchema = z.string().trim().min(1).max(NOM_PERSONNE_MAX).regex(NOM_PERSONNE_REGEX);
+
 /** Date au format AAAA-MM-JJ. */
 export const dateJourSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
@@ -32,8 +41,9 @@ export const demandeInscriptionSchema = z
   .object({
     /** L'app est réservée aux accompagnants (ADR 0008). Une famille s'inscrit sur le site web. */
     role: z.literal("ACCOMPAGNANT"),
-    prenom: z.string().trim().min(1).max(80),
-    nom: z.string().trim().min(1).max(80),
+    /** D6 : lettres, espaces, tirets, apostrophes ; 40 caractères au plus. */
+    prenom: nomPersonneSchema,
+    nom: nomPersonneSchema,
     email: z.string().trim().toLowerCase().email().max(254),
     telephone: telephoneSchema,
     motDePasse: motDePasseSchema,

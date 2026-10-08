@@ -63,5 +63,8 @@ export function libelleStatut(v: Visite): string {
       return 'validée';
     case 'A_VERIFIER':
       return 'à vérifier';
+    // L1d (agent F1, D4) : carte du domicile + position, sans la confirmation de l'aîné.
+    case 'PRESENCE_PROBABLE':
+      return 'présence probable';
   }
 }
