@@ -16,6 +16,9 @@ import { decryptDocument, documentMasterKey, encryptDocument } from "@/server/ve
 
 type Env = Record<string, string | undefined>;
 
+/** L2b (M5) : un justificatif jamais décidé est effacé 90 jours après le dépôt. */
+export const UNDECIDED_DOCUMENT_DAYS = 90;
+
 /** cuid-like : identifiant opaque créé avant le chiffrement (il entre dans les données associées). */
 function newId(): string {
   return `c${Date.now().toString(36)}${randomBytes(9).toString("hex")}`.slice(0, 25);
@@ -55,6 +58,8 @@ export class DbEncryptedDocumentAdapter implements DocumentStoragePort {
         sha256,
         mime: input.mime,
         sizeBytes: input.bytes.length,
+        // L2b (M5) : toujours une date d'effacement. Sans décision, le fichier part à J+90 (étude § 6.6).
+        deleteAfter: new Date(Date.now() + UNDECIDED_DOCUMENT_DAYS * 86_400_000),
       },
     });
     return { documentId: id, sha256 };

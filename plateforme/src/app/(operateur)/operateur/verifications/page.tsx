@@ -43,6 +43,11 @@ export default async function Page() {
           Les codes par SMS sont suspendus jusqu&apos;à demain (SMS_DAILY_BUDGET_CENTS). Vérifiez s&apos;il s&apos;agit d&apos;une attaque, puis vérifiez les numéros par appel.
         </Alert>
       ) : null}
+      {q.redactAlerts > 0 ? (
+        <Alert tone="attention" title="Suppression chez le prestataire en échec" className="mb-4">
+          {q.redactAlerts} demande(s) de suppression des images et de la biométrie échouent depuis au moins 3 nuits. Le prestataire ne répond pas ou refuse. Vérifiez les clés, puis prévenez le DPO.
+        </Alert>
+      ) : null}
       {q.items.length === 0 ? (
         <EmptyState title="Aucun élément à revoir." />
       ) : (
@@ -83,6 +88,26 @@ export default async function Page() {
         )}
       </section>
 
+      <section aria-labelledby="t-conflits" className="mt-8">
+        <h2 id="t-conflits" className="mb-3 font-sans text-[17px] font-semibold">
+          Conflits : numéro ou SIRET déjà pris (30 jours)
+        </h2>
+        <p className="mb-2 text-sm text-muted">La personne a reçu un message neutre. Appelez-la, puis comparez avec le compte qui a déjà ce numéro ou ce SIRET.</p>
+        {q.conflicts.length === 0 ? (
+          <p className="text-muted">Aucun.</p>
+        ) : (
+          <ul className="m-0 flex list-none flex-col gap-2 p-0">
+            {q.conflicts.map((c) => (
+              <li key={`${c.caregiverId}-${c.type}-${c.at.toISOString()}`}>
+                <Link href={`/operateur/accompagnants/${c.caregiverId}`} className="inline-flex min-h-11 items-center font-semibold text-mer underline underline-offset-4">
+                  {c.name} — {c.type === "ENTREPRISE" ? "SIRET déjà pris" : "Numéro déjà pris"} ({ageLabel(c.at).toLowerCase()})
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <section aria-labelledby="t-recours" className="mt-8">
         <h2 id="t-recours" className="mb-3 font-sans text-[17px] font-semibold">
           Demandes de réexamen (recours)
@@ -102,7 +127,10 @@ export default async function Page() {
                 <Link href={`/operateur/accompagnants/${a.caregiver.id}`} className="font-semibold text-mer underline">
                   Ouvrir la fiche
                 </Link>
-                <p className="text-sm text-muted">Un autre opérateur que ceux du refus fait le réexamen, sous 7 jours.</p>
+                <p className="text-sm text-muted">
+                  Un autre opérateur que ceux du refus fait le réexamen, sous 7 jours. Un réexamen favorable demande deux opérateurs.
+                  {a.acceptProposedById ? " Réexamen favorable déjà proposé : un second opérateur confirme." : ""}
+                </p>
                 <AppealDecisionForm appealId={a.id} />
               </Card>
             ))}

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
+import { Prisma, type VerificationStatus } from "@prisma/client";
 import { ageInYears } from "@/server/rules/status-levels";
 import { requireRole } from "@/server/auth/guards";
 import { assertAineAccess } from "@/server/access";
@@ -20,6 +20,8 @@ import { isLaunchMode } from "@/server/launch";
 import { blockersFor, proposeOrConfirmDossierRefusal } from "@/server/verifications/review";
 import { isL2Type } from "@/server/verifications/rules";
 import { refreshDossier } from "@/server/verifications/service";
+import { VerificationError } from "@/server/verifications/errors";
+import { writeItemStatus } from "@/server/verifications/transition";
 import {
   allowedDecisions,
   DECISION_RESULT,
@@ -173,41 +175,54 @@ export async function reviewVerificationAction(_prev: ActionResult, formData: Fo
   // R6 (J6) : casier B3 → aucun texte libre, seulement la date « vu le » et le verdict.
   const b3 = item.type === "CASIER_B3";
   const note = b3 ? null : parsed.data.note || null;
+  // L2b (B1, M1) : un REFUS exige deux opérateurs, ici aussi. Le premier « Refuser » PROPOSE (élément à revoir) ;
+  // un AUTRE opérateur confirme en choisissant aussi « Refuser ». Pendant la proposition, personne ne valide.
+  const proposal = verdict === "REFUSE" && !item.refusalProposedById;
+  if (verdict === "REFUSE" && item.refusalProposedById === user.id) return fail("Vous avez proposé ce refus. Un autre opérateur doit le confirmer.");
+  if (verdict === "VALIDE" && item.refusalProposedById) return fail("Un refus est proposé : un autre opérateur le confirme, ou deux opérateurs l'annulent (Vérifications à revoir).");
+  const to: VerificationStatus = proposal ? "A_REVOIR" : verdict;
 
-  await db.$transaction(async (tx) => {
-    await tx.verificationItem.update({
-      where: { id: item.id },
-      data: {
-        status: verdict,
-        reviewNote: note,
-        reviewedById: user.id,
-        reviewedAt: new Date(),
-        ...(b3 ? { seenOn: new Date(`${seenOn}T00:00:00Z`), declaration: null } : {}),
-        // L2 (étude § 6.6) : le casier B3 vaut 1 an ; à l'échéance, l'élément passe EXPIRE (purge nocturne).
-        ...(b3 && verdict === "VALIDE" ? { expiresAt: new Date(new Date(`${seenOn}T00:00:00Z`).getTime() + 365 * 86_400_000) } : {}),
-      },
-    });
+  try {
+    await db.$transaction(async (tx) => {
+      await writeItemStatus(tx, item, to, proposal || verdict === "VALIDE" ? "OPERATEUR" : "SECOND_OPERATEUR", {
+        ...(verdict === "VALIDE" ? { validatedWith: "operateur" as const } : {}),
+        ...(verdict === "REFUSE" && !proposal ? { where: { refusalProposedById: item.refusalProposedById } } : {}),
+        data: {
+          reviewNote: note,
+          reviewedById: user.id,
+          reviewedAt: new Date(),
+          ...(proposal ? { refusalProposedById: user.id, refusalProposedAt: new Date() } : {}),
+          ...(b3 ? { seenOn: new Date(`${seenOn}T00:00:00Z`), declaration: null } : {}),
+          // L2 (étude § 6.6) : le casier B3 vaut 1 an ; à l'échéance, l'élément passe EXPIRE (purge nocturne).
+          ...(b3 && verdict === "VALIDE" ? { expiresAt: new Date(new Date(`${seenOn}T00:00:00Z`).getTime() + 365 * 86_400_000) } : {}),
+        },
+      });
     // Le diplôme VALIDÉ ouvre le niveau 4 (salarié famille, proche aidant). Niveaux recalculés côté serveur.
-    if (item.type === "DIPLOME") {
-      const after = item.caregiver.verifications.map((v) => (v.id === item.id ? { ...v, status: verdict } : v));
-      const levels = recomputeLevels(item.caregiver.status, after, item.caregiver.birthDate ? ageInYears(item.caregiver.birthDate) : null);
-      await tx.caregiverProfile.update({ where: { id: item.caregiver.id }, data: levels });
-    }
-    await logAudit(
-      {
-        actor: user,
-        action: "verification.reviewed",
-        entityType: "VerificationItem",
-        entityId: item.id,
-        metadata: { caregiverId: item.caregiver.id, type: item.type, verdict },
-      },
-      tx,
-    );
-  });
+      if (item.type === "DIPLOME") {
+        const after = item.caregiver.verifications.map((v) => (v.id === item.id ? { ...v, status: to } : v));
+        const levels = recomputeLevels(item.caregiver.status, after, item.caregiver.birthDate ? ageInYears(item.caregiver.birthDate) : null);
+        await tx.caregiverProfile.update({ where: { id: item.caregiver.id }, data: levels });
+      }
+      await logAudit(
+        {
+          actor: user,
+          action: proposal ? "verification.refusal_proposed" : "verification.reviewed",
+          entityType: "VerificationItem",
+          entityId: item.id,
+          metadata: { caregiverId: item.caregiver.id, type: item.type, verdict },
+        },
+        tx,
+      );
+    });
+  } catch (e) {
+    if (e instanceof VerificationError) return fail(e.message);
+    throw e;
+  }
 
   await refreshDossier(item.caregiver.id);
   revalidatePath(`/operateur/accompagnants/${item.caregiver.id}`);
-  return { ok: true, message: verdict === "VALIDE" ? "Vérification validée." : "Vérification refusée." };
+  if (proposal) return { ok: true, message: "Refus proposé. Un autre opérateur doit le confirmer : il choisit aussi « Refuser »." };
+  return { ok: true, message: verdict === "VALIDE" ? "Vérification validée." : "Vérification refusée (second avis)." };
 }
 
 // ─────────────── O5 Proposition à la famille (matching manuel, flux D6) ───────────────

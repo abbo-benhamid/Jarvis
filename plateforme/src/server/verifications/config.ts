@@ -14,7 +14,7 @@
  * Repli humain : l'opérateur valide après un appel ou une visio (méthode MANUEL ou VISIO).
  * RÈGLE (préinscription) : une clé absente donne un AVERTISSEMENT dans /api/sante, jamais une page 503.
  */
-import { isLaunchMode, realDataAllowedFrom } from "../config-check";
+import { isLaunchMode, isStrictProduction, realDataAllowedFrom } from "../config-check";
 import { decodeBase64Any, weakKeyBytes } from "../presence/config";
 
 type Env = Record<string, string | undefined>;
@@ -103,6 +103,48 @@ export function smsDailyBudgetCents(env: Env = process.env): number {
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : 1_000;
 }
 
+/** L2b (m2) : plafond quotidien PAR COMPTE (centimes). Défaut 60 (environ 8 SMS). */
+export function smsAccountDailyBudgetCents(env: Env = process.env): number {
+  const n = Number(env.SMS_ACCOUNT_DAILY_BUDGET_CENTS ?? "");
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 60;
+}
+
+/**
+ * L2b (M6) : un adaptateur réel qui crée des empreintes ou touche des données de la pièce est actif
+ * (code SMS, appel vocal, identité, documents). Le registre (sans secret ni empreinte) n'en fait pas partie.
+ */
+export function realVerificationAdapterActive(env: Env = process.env): boolean {
+  return smsAdapterName(env) !== "simule" || voiceAdapterName(env) !== "simule" || identityAdapterName(env) !== "simule" || documentsAdapterName(env) !== "simule";
+}
+
+/** L2b (M6) : la clé HMAC dédiée est exigée (aucun repli) en lancement, en production stricte ou avec un adaptateur réel. */
+export function hmacKeyRequired(env: Env = process.env): boolean {
+  return isLaunchMode(env) || isStrictProduction(env) || realVerificationAdapterActive(env);
+}
+
+/** L2b (M6) : problème de `VERIFICATION_HMAC_KEY` (null si correcte). Jamais la valeur. */
+export function hmacKeyProblem(env: Env = process.env): string | null {
+  const k = env.VERIFICATION_HMAC_KEY?.trim();
+  if (!k) return "VERIFICATION_HMAC_KEY manquante (empreintes des numéros, des pièces et des codes). Générez-la : openssl rand -base64 32";
+  if (k.length < 32) return "VERIFICATION_HMAC_KEY trop courte (32 caractères minimum). Générez-la : openssl rand -base64 32";
+  if (new Set(k).size < 12) return "VERIFICATION_HMAC_KEY n'est pas assez aléatoire. Générez-la : openssl rand -base64 32";
+  for (const other of ["SESSION_SECRET", "CRON_SECRET", "DOCUMENT_ENC_KEY", "ADDRESS_ENC_KEY"]) {
+    if (env[other]?.trim() === k) return `VERIFICATION_HMAC_KEY doit être différente de ${other}.`;
+  }
+  if (env.VERIFICATION_HMAC_KEY_VERSION?.trim() && !/^[1-9]\d{0,2}$/.test(env.VERIFICATION_HMAC_KEY_VERSION.trim())) return "VERIFICATION_HMAC_KEY_VERSION doit être un entier de 1 à 999.";
+  return null;
+}
+
+/**
+ * L2b (M6) : problème BLOQUANT (page 503) dès qu'un adaptateur réel est actif ou que les données réelles sont ouvertes.
+ * Appelé aussi hors production stricte (préversion, Clever Cloud).
+ */
+export function verificationHmacProblems(env: Env = process.env): string[] {
+  if (!realVerificationAdapterActive(env) && !(isLaunchMode(env) && realDataAllowedFrom(env))) return [];
+  const p = hmacKeyProblem(env);
+  return p ? [p] : [];
+}
+
 /** Secret de la page d'identité simulée (essai seulement). Clé de développement publique si absente. */
 export const DEV_SIMULATED_WEBHOOK_SECRET = "koudmen-dev-identite-simulee-ne-pas-utiliser-en-production";
 export function simulatedWebhookSecret(env: Env = process.env): string {
@@ -149,6 +191,12 @@ export function verificationConfigWarnings(env: Env = process.env): string[] {
   } else if (launch) out.push("ADAPTER_DOCUMENTS=simule en lancement : le dépôt de documents est fermé. Repli : document montré en visio.");
   if (env.DOCUMENT_ENC_KEY?.trim() && env.DOCUMENT_ENC_KEY.trim() === env.ADDRESS_ENC_KEY?.trim()) out.push("DOCUMENT_ENC_KEY doit être différente de ADDRESS_ENC_KEY.");
   if (env.SMS_DAILY_BUDGET_CENTS?.trim() && !(Number(env.SMS_DAILY_BUDGET_CENTS) > 0)) out.push("SMS_DAILY_BUDGET_CENTS n'est pas un nombre positif : le plafond par défaut (10 €) s'applique.");
+  // L2b (M6) : en lancement sans adaptateur réel (préinscription), la clé n'est pas bloquante ; sans elle,
+  // la validation manuelle du téléphone par l'opérateur est fermée.
+  if (launch && verificationHmacProblems(env).length === 0) {
+    const p = hmacKeyProblem(env);
+    if (p) out.push(`${p} En attendant, l'opérateur ne peut pas valider un numéro.`);
+  }
   return out;
 }
 
@@ -157,8 +205,8 @@ export function verificationConfigWarnings(env: Env = process.env): string[] {
  * Une clé de documents PRÉSENTE mais fausse ou égale à la clé d'adresse est alors refusée.
  */
 export function verificationConfigProblems(env: Env = process.env): string[] {
-  if (!isLaunchMode(env) || !realDataAllowedFrom(env)) return [];
-  const out: string[] = [];
+  const out: string[] = [...verificationHmacProblems(env)];
+  if (!isLaunchMode(env) || !realDataAllowedFrom(env)) return out;
   const key = env.DOCUMENT_ENC_KEY?.trim();
   if (key && !parseDocumentKey(key)) out.push("DOCUMENT_ENC_KEY n'a pas la bonne forme (32 octets aléatoires en base64). Générez-la : openssl rand -base64 32");
   if (key && key === env.ADDRESS_ENC_KEY?.trim()) out.push("DOCUMENT_ENC_KEY doit être différente de ADDRESS_ENC_KEY.");

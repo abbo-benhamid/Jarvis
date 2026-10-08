@@ -39,7 +39,7 @@ export default async function Page({ params, searchParams }: { params: Promise<{
   const { itemId } = await params;
   const sp = await searchParams;
   if (!z.string().cuid().safeParse(itemId).success) notFound();
-  const r = await getReviewItem(itemId);
+  const r = await getReviewItem(itemId, user);
   if (!r || !isL2Type(r.item.type)) notFound();
   const { item, evidence: ev, address } = r;
   const cg = item.caregiver;
@@ -196,6 +196,8 @@ export default async function Page({ params, searchParams }: { params: Promise<{
               refusals={Object.entries(REFUSAL_LABELS).map(([code, label]) => ({ code, label }))}
               pendingRefusal={item.refusalProposedAt ? (REFUSAL_LABELS[item.decisionCode ?? ""] ?? "motif") : null}
               canConfirm={item.refusalProposedById !== user.id}
+              cancelProposed={item.refusalCancelProposedById !== null}
+              cancelProposedByMe={item.refusalCancelProposedById === user.id}
             />
           )}
         </Card>

@@ -222,7 +222,11 @@ export async function cancelDossierRefusalAction(_prev: ActionResult, fd: FormDa
   const user = await requireRole("OPERATEUR");
   const id = z.string().cuid().safeParse(str(fd, "caregiverId"));
   if (!id.success) return fail("Accompagnant introuvable.");
-  await cancelDossierRefusal(user, id.data);
-  revalidatePath("/operateur", "layout");
-  return { ok: true, message: "Refus annulé. Le dossier reste en attente." };
+  try {
+    const message = await cancelDossierRefusal(user, id.data);
+    revalidatePath("/operateur", "layout");
+    return { ok: true, message };
+  } catch (e) {
+    return toFailure(e);
+  }
 }

@@ -3,6 +3,8 @@ import {
   appealPossible,
   canConfirmRefusal,
   canTransition,
+  lockedForCaregiver,
+  countsAsValidated,
   checklistComplete,
   ADDRESS_CHECKLIST,
   elementView,
@@ -45,13 +47,34 @@ describe("L2 : transitions (étude § 6.2)", () => {
     expect(canTransition("A_REVOIR", "REFUSE", "SECOND_OPERATEUR")).toBe(true);
     expect(canTransition("EN_COURS", "REFUSE", "SECOND_OPERATEUR")).toBe(false);
   });
-  it("l'accompagnant ne valide pas ; un refus se rouvre seulement par un opérateur", () => {
+  it("l'accompagnant ne valide pas ; un refus se rouvre seulement par un recours à deux opérateurs (L2b B1)", () => {
     expect(canTransition("EN_COURS", "VALIDE", "ACCOMPAGNANT")).toBe(false);
     expect(canTransition("EN_COURS", "VALIDE", "SYSTEME")).toBe(true);
     expect(canTransition("REFUSE", "A_FOURNIR", "ACCOMPAGNANT")).toBe(false);
-    expect(canTransition("REFUSE", "A_FOURNIR", "OPERATEUR")).toBe(true);
+    expect(canTransition("REFUSE", "A_FOURNIR", "OPERATEUR")).toBe(false);
+    expect(canTransition("REFUSE", "A_FOURNIR", "SECOND_OPERATEUR")).toBe(true);
+    expect(canTransition("REFUSE", "VALIDE", "SYSTEME")).toBe(false);
+    expect(canTransition("REFUSE", "VALIDE", "SECOND_OPERATEUR")).toBe(false);
     expect(canTransition("VALIDE", "EXPIRE", "SYSTEME")).toBe(true);
     expect(canTransition("VALIDE", "EN_COURS", "SYSTEME")).toBe(false);
+  });
+  it("L2b B1 : un élément en revue humaine (A_REVOIR) ne bouge que par un opérateur", () => {
+    for (const to of ["VALIDE", "A_FOURNIR", "A_REVOIR"] as const) {
+      expect(canTransition("A_REVOIR", to, "SYSTEME")).toBe(false);
+      expect(canTransition("A_REVOIR", to, "ACCOMPAGNANT")).toBe(false);
+      expect(canTransition("A_REVOIR", to, "OPERATEUR")).toBe(true);
+    }
+    expect(lockedForCaregiver("A_REVOIR")).toBe(true);
+    expect(lockedForCaregiver("REFUSE")).toBe(true);
+    expect(lockedForCaregiver("EN_COURS")).toBe(false);
+  });
+  it("L2b M7 : en lancement, une validation simulée ou sans adaptateur connu ne compte pas", () => {
+    expect(countsAsValidated({ status: "VALIDE", validatedWith: "simule" }, false)).toBe(true);
+    expect(countsAsValidated({ status: "VALIDE", validatedWith: "simule" }, true)).toBe(false);
+    expect(countsAsValidated({ status: "VALIDE", validatedWith: null }, true)).toBe(false);
+    expect(countsAsValidated({ status: "VALIDE", validatedWith: "brevo" }, true)).toBe(true);
+    expect(countsAsValidated({ status: "VALIDE", validatedWith: "operateur" }, true)).toBe(true);
+    expect(countsAsValidated({ status: "EN_COURS", validatedWith: "veriff" }, true)).toBe(false);
   });
   it("second avis : jamais la même personne", () => {
     expect(canConfirmRefusal("op1", "op1")).toBe(false);

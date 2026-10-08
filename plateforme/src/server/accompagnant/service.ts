@@ -23,6 +23,8 @@ import { MOOD_LABELS } from "@/lib/labels";
 import { planVisits } from "./schedule";
 import { addressProofRequired } from "@/server/verifications/config";
 import { l2TypesFor } from "@/server/verifications/rules";
+import { VerificationError } from "@/server/verifications/errors";
+import { writeItemStatus } from "@/server/verifications/transition";
 import { ensureRequiredItems, l2Applies, loadProfile as loadVerificationProfile, submissionProblems } from "@/server/verifications/service";
 import {
   MAX_CODE_ATTEMPTS,
@@ -270,11 +272,16 @@ export async function declareVerification(actor: Actor, itemId: string, declarat
   if (!canDeclare(item.status)) throw new AccompagnantError("Cette vérification est déjà validée.", "CONFLIT");
   const problem = declarationProblem(item.type, declaration);
   if (problem) throw new AccompagnantError(problem, "INVALIDE");
-  await db.verificationItem.update({
-    where: { id: item.id },
-    // R6 (J6) : casier B3 → aucun texte stocké. L'accompagnant montre l'extrait au rendez-vous ; l'opérateur note « vu le ».
-    data: { status: "DECLARE", declaration: item.type === "CASIER_B3" ? null : declaration, declaredAt: new Date() },
-  });
+  try {
+    // L2b (B1) : règle des transitions ; un élément refusé à deux opérateurs ou en revue ne se redéclare pas.
+    await writeItemStatus(db, item, "DECLARE", "ACCOMPAGNANT", {
+      // R6 (J6) : casier B3 → aucun texte stocké. L'accompagnant montre l'extrait au rendez-vous ; l'opérateur note « vu le ».
+      data: { declaration: item.type === "CASIER_B3" ? null : declaration, declaredAt: new Date() },
+    });
+  } catch (e) {
+    if (e instanceof VerificationError) throw new AccompagnantError(e.message, "CONFLIT");
+    throw e;
+  }
   await logAudit({
     actor,
     action: "verification.declared",

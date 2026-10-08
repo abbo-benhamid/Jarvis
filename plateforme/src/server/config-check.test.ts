@@ -37,7 +37,7 @@ function prodEnv(over: Record<string, string | undefined> = {}) {
 
 /** Production en mode LANCEMENT (défaut sur Vercel production). */
 /** L1-B : clés de la carte domicile et de l'adresse (32 octets en base64). */
-const PRESENCE_KEYS = { QR_SIGNING_KEY: "jIFap7/9yWO0DJl/S2PvASG4xcd3hgd7q+0ccZQ+pow=", ADDRESS_ENC_KEY: "Irx0YGksVDcEh69UBRXldm7oy3x0BJoXwJNYVvDPfBk=" };
+const PRESENCE_KEYS = { QR_SIGNING_KEY: "jIFap7/9yWO0DJl/S2PvASG4xcd3hgd7q+0ccZQ+pow=", ADDRESS_ENC_KEY: "Irx0YGksVDcEh69UBRXldm7oy3x0BJoXwJNYVvDPfBk=", VERIFICATION_HMAC_KEY: "Vh3m9Qx2LpZ7rT4wK8sN1bJ6dF0gY5cA" };
 
 function launchEnv(over: Record<string, string | undefined> = {}) {
   return { VERCEL_ENV: "production", SESSION_SECRET: STRONG_A, CRON_SECRET: STRONG_B, ...EDITOR, ...PRESENCE_KEYS, ...over };
@@ -201,6 +201,22 @@ describe("configuration de production (B1, B3)", () => {
     const zeros = Buffer.alloc(32).toString("base64");
     expect(productionConfigProblems({ ...preview, ...PRESENCE_KEYS, ADDRESS_ENC_KEY: zeros }).join(" ")).toContain("ADDRESS_ENC_KEY n'est pas assez aléatoire");
     expect(productionConfigProblems(launchEnv({ QR_SIGNING_KEY: zeros })).join(" ")).toContain("QR_SIGNING_KEY n'est pas assez aléatoire");
+  });
+
+  it("L2b M6 : VERIFICATION_HMAC_KEY bloquante dès un adaptateur réel ou les données réelles ; jamais égale à SESSION_SECRET", () => {
+    const real = { DONNEES_REELLES_AUTORISEES: "true", HEBERGEUR_HDS: "Clever Cloud HDS", AIPD_DATE: "2026-12-01", DPO_CONTACT: "dpo@koudmen.fr" };
+    const noHmac = { VERIFICATION_HMAC_KEY: undefined };
+    // Préinscription, adaptateurs simulés : pas de page 503.
+    expect(productionConfigProblems(launchEnv(noHmac))).toEqual([]);
+    // Données réelles ouvertes : bloquant.
+    expect(productionConfigProblems(launchEnv({ ...noHmac, ...real })).join(" ")).toContain("VERIFICATION_HMAC_KEY manquante");
+    // Un adaptateur réel actif (même en préinscription, même en préversion non stricte) : bloquant.
+    expect(productionConfigProblems(launchEnv({ ...noHmac, ADAPTER_OTP: "brevo" })).join(" ")).toContain("VERIFICATION_HMAC_KEY manquante");
+    expect(productionConfigProblems({ NODE_ENV: "production", VERCEL_ENV: "preview", ADAPTER_IDENTITY: "veriff" }).join(" ")).toContain("VERIFICATION_HMAC_KEY manquante");
+    // Égale à SESSION_SECRET, ou trop courte : refusée.
+    expect(productionConfigProblems(launchEnv({ ...real, VERIFICATION_HMAC_KEY: STRONG_A })).join(" ")).toContain("VERIFICATION_HMAC_KEY doit être différente de SESSION_SECRET");
+    expect(productionConfigProblems(launchEnv({ ...real, VERIFICATION_HMAC_KEY: "court" })).join(" ")).toContain("VERIFICATION_HMAC_KEY trop courte");
+    expect(productionConfigProblems(launchEnv(real))).toEqual([]);
   });
 
   it("PM1 : TRUST_PROXY inconnu refusé en production ; vercel, clevercloud et aucun acceptés", () => {

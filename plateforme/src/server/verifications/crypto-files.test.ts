@@ -1,10 +1,11 @@
 import { randomBytes } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { decryptDocument, decryptField, documentMasterKey, encryptDocument, encryptField, hmacHex } from "./crypto";
+import { decryptDocument, decryptField, documentMasterKey, encryptDocument, encryptField, hmacHex, hmacLookup, HmacKeyMissingError } from "./crypto";
 import { checkUpload, detectMime, stripJpeg, stripPng } from "./files";
 import { companyDocAlways, documentsAvailable, identityAvailable, smsAvailable, verificationConfigProblems, verificationConfigWarnings } from "./config";
 
 const KEY = randomBytes(32);
+const HMAC = randomBytes(32).toString("base64");
 
 describe("L2 : chiffrement des documents (enveloppe AES-256-GCM)", () => {
   it("aller-retour ; illisible avec une autre clé ou un autre identifiant", () => {
@@ -23,10 +24,29 @@ describe("L2 : chiffrement des documents (enveloppe AES-256-GCM)", () => {
     expect(documentMasterKey({ ADAPTER_DOCUMENTS: "base-chiffree", DOCUMENT_ENC_KEY: KEY.toString("base64") })).toEqual(new Uint8Array(KEY));
     expect(documentMasterKey({ ADAPTER_DOCUMENTS: "base-chiffree", DOCUMENT_ENC_KEY: Buffer.alloc(32).toString("base64") })).toBeNull();
   });
-  it("empreintes HMAC distinctes par usage", () => {
-    const env = { SESSION_SECRET: "s".repeat(40) };
+  it("empreintes HMAC distinctes par usage, versionnées", () => {
+    const env = { VERIFICATION_HMAC_KEY: HMAC };
     expect(hmacHex("telephone", "+596696123456", env)).not.toBe(hmacHex("otp-code", "+596696123456", env));
-    expect(hmacHex("telephone", "+596696123456", env)).toHaveLength(64);
+    expect(hmacHex("telephone", "+596696123456", env)).toMatch(/^h1:[0-9a-f]{64}$/);
+    expect(hmacHex("telephone", "+596696123456", { ...env, VERIFICATION_HMAC_KEY_VERSION: "2" })).toMatch(/^h2:/);
+  });
+  it("L2b M6 : aucun repli sur SESSION_SECRET ; clé de développement seulement en essai sans adaptateur réel", () => {
+    // Essai, simulé : clé de développement (version 0), jamais égale à une empreinte réelle.
+    expect(hmacHex("telephone", "+596696123456", { KOUDMEN_MODE: "essai" })).toMatch(/^h0:/);
+    // SESSION_SECRET ne change rien : plus de repli.
+    expect(hmacHex("telephone", "+596696123456", { KOUDMEN_MODE: "essai", SESSION_SECRET: "a".repeat(40) })).toBe(hmacHex("telephone", "+596696123456", { KOUDMEN_MODE: "essai", SESSION_SECRET: "b".repeat(40) }));
+    // Lancement, production stricte ou adaptateur réel : la clé est exigée.
+    expect(() => hmacHex("telephone", "+596696123456", { KOUDMEN_MODE: "lancement", SESSION_SECRET: "s".repeat(40) })).toThrow(HmacKeyMissingError);
+    expect(() => hmacHex("telephone", "+596696123456", { KOUDMEN_MODE: "essai", ADAPTER_OTP: "brevo" })).toThrow(HmacKeyMissingError);
+    expect(() => hmacHex("telephone", "+596696123456", { VERCEL_ENV: "production", KOUDMEN_MODE: "essai" })).toThrow(HmacKeyMissingError);
+  });
+  it("L2b M6 : rotation : l'ancienne clé reste cherchée pendant la migration", () => {
+    const old = { VERIFICATION_HMAC_KEY: HMAC };
+    const stored = hmacHex("telephone", "+596696123456", old);
+    const rotated = { VERIFICATION_HMAC_KEY: randomBytes(32).toString("base64"), VERIFICATION_HMAC_KEY_VERSION: "2", VERIFICATION_HMAC_KEY_PREVIOUS: HMAC, VERIFICATION_HMAC_KEY_PREVIOUS_VERSION: "1" };
+    expect(hmacHex("telephone", "+596696123456", rotated)).not.toBe(stored);
+    expect(hmacLookup("telephone", "+596696123456", rotated)).toContain(stored);
+    expect(hmacLookup("telephone", "+596696123456", rotated)[0]).toMatch(/^h2:/);
   });
 });
 
@@ -76,7 +96,7 @@ describe("L2 : configuration (simulé par défaut, avertissements, jamais de 503
     expect(documentsAvailable({ KOUDMEN_MODE: "lancement", ADAPTER_DOCUMENTS: "base-chiffree", DOCUMENT_ENC_KEY: KEY.toString("base64") })).toBe(true);
     expect(companyDocAlways({ COMPANY_DOC_REQUIRED: "toujours" })).toBe(true);
   });
-  it("lancement en préinscription : avertissements, aucun problème bloquant", () => {
+  it("lancement en préinscription : avertissements ; seule la clé HMAC bloque (adaptateur réel actif, L2b M6)", () => {
     const env = { KOUDMEN_MODE: "lancement", ADAPTER_OTP: "brevo", BREVO_API_KEY: "k", ADAPTER_IDENTITY: "veriff", ADAPTER_DOCUMENTS: "base-chiffree", DOCUMENT_ENC_KEY: "court" };
     const w = verificationConfigWarnings(env).join("\n");
     expect(w).toMatch(/ADAPTER_OTP=brevo sans BREVO_SMS_SENDER/);
@@ -84,10 +104,11 @@ describe("L2 : configuration (simulé par défaut, avertissements, jamais de 503
     expect(w).toMatch(/DOCUMENT_ENC_KEY n'a pas la bonne forme/);
     expect(w).toMatch(/ADAPTER_SIRENE=simule en lancement/);
     expect(w).not.toMatch(/court|"k"/);
-    expect(verificationConfigProblems(env)).toEqual([]);
+    expect(verificationConfigProblems(env).join(" ")).toMatch(/^VERIFICATION_HMAC_KEY manquante/);
+    expect(verificationConfigProblems({ ...env, VERIFICATION_HMAC_KEY: HMAC })).toEqual([]);
   });
   it("données réelles ouvertes : une clé de documents fausse bloque", () => {
-    const env = { KOUDMEN_MODE: "lancement", DONNEES_REELLES_AUTORISEES: "true", HEBERGEUR_HDS: "x", AIPD_DATE: "2026-01-01", DPO_CONTACT: "d", DOCUMENT_ENC_KEY: "court" };
+    const env = { KOUDMEN_MODE: "lancement", DONNEES_REELLES_AUTORISEES: "true", HEBERGEUR_HDS: "x", AIPD_DATE: "2026-01-01", DPO_CONTACT: "d", DOCUMENT_ENC_KEY: "court", VERIFICATION_HMAC_KEY: HMAC };
     expect(verificationConfigProblems(env)).toHaveLength(1);
     expect(verificationConfigWarnings({ KOUDMEN_MODE: "essai" })).toEqual([]);
   });

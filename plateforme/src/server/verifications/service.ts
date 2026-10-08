@@ -8,7 +8,6 @@ import "server-only";
  */
 import { randomInt, randomBytes } from "node:crypto";
 import { Prisma, type CaregiverStatus, type Role, type VerificationItem, type VerificationType } from "@prisma/client";
-import type { CodeErreur } from "@/contracts/v1/erreurs";
 import {
   RETOUR_APP_IDENTITE,
   motifRefusDossierSchema,
@@ -31,6 +30,7 @@ import { db, type DbClient } from "@/server/db";
 import { logAudit } from "@/server/audit";
 import { notifyUser } from "@/server/outbox";
 import { appUrl } from "@/server/env";
+import { isLaunchMode } from "@/server/config-check";
 import { hitRateLimits } from "@/server/rate-limit";
 import { ageInYears } from "@/server/rules/status-levels";
 import { missingProfileItems } from "@/server/accompagnant/rules";
@@ -40,8 +40,8 @@ import { buildSimulatedWebhook, type SimulatedScenario } from "@/server/adapters
 import { registryPort } from "@/server/adapters/registry";
 import { documentPort } from "@/server/adapters/documents";
 import { ProviderUnavailableError, WebhookSignatureError, type CompanyLookup, type IdentityDecisionEvent } from "@/server/ports/verification";
-import { addressProofRequired, companyDocAlways, documentsAvailable, smsDailyBudgetCents, voiceAvailable } from "./config";
-import { decryptField, documentMasterKey, encryptField, hmacHex, safeEqual } from "./crypto";
+import { addressProofRequired, companyDocAlways, documentsAvailable, smsAccountDailyBudgetCents, smsDailyBudgetCents, voiceAvailable } from "./config";
+import { decryptField, documentMasterKey, encryptField, hmacHex, hmacLookup, safeEqual } from "./crypto";
 import { checkUpload } from "./files";
 import { addressesMatch, personNamesMatch, registryNameMatches, type PersonName } from "./name-match";
 import { allowedPrefixes, formatPhone, maskPhone, normalizePhone, PHONE_MESSAGES } from "./phone";
@@ -50,7 +50,9 @@ import {
   L2_LABELS,
   MAX_IDENTITY_SESSIONS,
   appealPossible,
+  canTransition,
   elementView,
+  lockedForCaregiver,
   identityItemStatus,
   itemsNotReady,
   l2TypesFor,
@@ -60,20 +62,12 @@ import {
   type ElementContext,
 } from "./rules";
 import { apeExpected, normalizeSiret, siretChecksumOk } from "./siret";
+import { VerificationError } from "./errors";
+import { transitionRefusedMessage, writeItemStatus, type ValidationAdapter } from "./transition";
 
 export type Actor = { id: string; role: Role; firstName: string };
 
-/** Erreur métier : `message` s'affiche tel quel ; `code` est le code de l'API v1. */
-export class VerificationError extends Error {
-  constructor(
-    message: string,
-    readonly code: CodeErreur = "ACTION_IMPOSSIBLE",
-    readonly retryAfterSeconds?: number,
-  ) {
-    super(message);
-    this.name = "VerificationError";
-  }
-}
+export { VerificationError };
 
 // ─────────────── Chargement, éléments requis, état du dossier ───────────────
 
@@ -189,7 +183,9 @@ export function submissionProblems(p: LoadedProfile, items: VerificationItem[], 
 // ─────────────── GET /verifications ───────────────
 
 export async function getDossier(userId: string, now: Date = new Date()): Promise<DossierVerification> {
-  const p = await loadProfile(userId);
+  let p = await loadProfile(userId);
+  // L2b (M7) : en lancement, une validation simulée redevient « à faire » avant l'affichage.
+  if (isLaunchMode() && (await resetSimulatedValidations(p.id)) > 0) p = await loadProfile(userId);
   const items = await ensureRequiredItems(p);
   const ctx = elementContext(p, items);
   const sorted = [...items].sort((a, b) => ITEM_ORDER.indexOf(a.type) - ITEM_ORDER.indexOf(b.type));
@@ -234,6 +230,20 @@ function assertOpenDossier(p: LoadedProfile): void {
   if (p.validation === "REFUSE" && reapplyBlocked(p)) throw new VerificationError("Votre dossier est refusé. Demandez un réexamen, ou une nouvelle demande après 6 mois.");
 }
 
+/** L2b (m1) : messages NEUTRES. Ils ne disent pas qu'un autre compte Koudmen a ce numéro ou ce SIRET. */
+export const TAKEN_MESSAGES = {
+  TELEPHONE: "Ce numéro ne peut pas être utilisé. Contactez l'équipe Koudmen.",
+  ENTREPRISE: "Ce SIRET ne peut pas être utilisé pour le moment. L'équipe Koudmen regarde votre situation et vous contacte.",
+} as const;
+
+/** L2b (m1) : un conflit (numéro ou SIRET déjà pris) va dans la file opérateur. Une ligne par jour et par point. */
+export async function recordConflict(caregiverId: string, type: "TELEPHONE" | "ENTREPRISE", now: Date = new Date()): Promise<void> {
+  const already = await db.auditLog.count({
+    where: { action: "verification.conflict", entityId: caregiverId, createdAt: { gte: new Date(now.getTime() - 86_400_000) }, metadata: { path: ["type"], equals: type } },
+  });
+  if (already === 0) await logAudit({ action: "verification.conflict", entityType: "CaregiverProfile", entityId: caregiverId, metadata: { type } });
+}
+
 // ─────────────── Téléphone (lot I3, étude § 5.3) ───────────────
 
 export const OTP_TTL_MS = 10 * 60_000;
@@ -256,12 +266,18 @@ export async function sendPhoneCode(actor: Actor, input: DemandeCodeTelephone, i
   const p = await loadProfile(actor.id);
   assertOpenDossier(p);
   const { item } = await requireItem(p, "TELEPHONE");
+  // L2b (B1) : un numéro en revue ou refusé à deux opérateurs ne se « revalide » pas par un nouveau code.
+  if (lockedForCaregiver(item.status)) throw new VerificationError(transitionRefusedMessage(item.status));
   const phone = normalizePhone(input.telephone, allowedPrefixes());
   if (!phone.ok) throw new VerificationError(PHONE_MESSAGES[phone.reason], phone.reason === "PREFIXE" ? "PREFIXE_NON_ACCEPTE" : "ACTION_IMPOSSIBLE");
   const phoneHash = hmacHex("telephone", phone.e164);
   if (item.status === "VALIDE" && p.phoneHash === phoneHash) throw new VerificationError("Ce numéro est déjà vérifié.", "DEJA_VALIDE");
-  const other = await db.caregiverProfile.findFirst({ where: { phoneHash, id: { not: p.id } }, select: { id: true } });
-  if (other) throw new VerificationError("Ce numéro sert déjà à un autre compte accompagnant. Contactez l'équipe Koudmen.", "NUMERO_DEJA_UTILISE");
+  const other = await db.caregiverProfile.findFirst({ where: { phoneHash: { in: hmacLookup("telephone", phone.e164) }, id: { not: p.id } }, select: { id: true } });
+  if (other) {
+    // L2b (m1) : message NEUTRE (aucune fuite « ce numéro est chez Koudmen ») ; le conflit va dans la file opérateur.
+    await recordConflict(p.id, "TELEPHONE", now);
+    throw new VerificationError(TAKEN_MESSAGES.TELEPHONE);
+  }
   if (input.canal === "SMS" && !phone.mobile) throw new VerificationError(PHONE_MESSAGES.FIXE);
 
   const since = new Date(now.getTime() - 24 * 3_600_000);
@@ -285,10 +301,22 @@ export async function sendPhoneCode(actor: Actor, input: DemandeCodeTelephone, i
   }
   const cost = port.estimatedCostCents(phone.e164);
   if (cost > 0) {
-    const spent = await db.phoneChallenge.aggregate({ _sum: { costCents: true }, where: { createdAt: { gte: startOfUtcDay(now) } } });
-    if ((spent._sum.costCents ?? 0) + cost > smsDailyBudgetCents()) {
-      await logAudit({ action: "otp.budget_reached", entityType: "PhoneChallenge", metadata: { plafondCentimes: smsDailyBudgetCents() } });
+    const day = startOfUtcDay(now);
+    // L2b (m2) : plafond PAR COMPTE d'abord : un compte seul ne coupe pas le SMS pour tous.
+    const mine = await db.phoneChallenge.aggregate({ _sum: { costCents: true }, where: { caregiverId: p.id, createdAt: { gte: day } } });
+    if ((mine._sum.costCents ?? 0) + cost > smsAccountDailyBudgetCents()) {
+      await logAudit({ actor, action: "otp.account_budget_reached", entityType: "CaregiverProfile", entityId: p.id, metadata: { plafondCentimes: smsAccountDailyBudgetCents() } });
+      throw new VerificationError("Trop d'envois pour votre compte aujourd'hui. Réessayez demain, ou attendez l'appel de l'équipe Koudmen.", "TROP_DE_REQUETES", 3600);
+    }
+    const spent = (await db.phoneChallenge.aggregate({ _sum: { costCents: true }, where: { createdAt: { gte: day } } }))._sum.costCents ?? 0;
+    const budget = smsDailyBudgetCents();
+    if (spent + cost > budget) {
+      await logAudit({ action: "otp.budget_reached", entityType: "PhoneChallenge", metadata: { plafondCentimes: budget } });
       throw new VerificationError("L'envoi de codes est suspendu pour aujourd'hui. L'équipe Koudmen est prévenue. Réessayez demain.", "SERVICE_INDISPONIBLE");
+    }
+    // Alerte dès 50 % du plafond global (une ligne par jour).
+    if (spent < budget / 2 && spent + cost >= budget / 2) {
+      await logAudit({ action: "otp.budget_half", entityType: "PhoneChallenge", metadata: { plafondCentimes: budget } });
     }
   }
 
@@ -330,10 +358,15 @@ export async function confirmPhoneCode(actor: Actor, input: { challengeId: strin
   await limits([["otp-essai:compte", actor.id]]);
   const ch = await db.phoneChallenge.findFirst({ where: { id: input.challengeId, caregiver: { userId: actor.id } } });
   if (!ch) throw new VerificationError("Code introuvable. Demandez un nouveau code.", "INTROUVABLE");
+  // L2b (m10) : profil suspendu ou refusé : pas de nouveau numéro. (B1) Élément en revue ou refusé : rien ne change.
+  const owner = await loadProfile(actor.id);
+  assertOpenDossier(owner);
+  const current = itemOf(owner.verifications, "TELEPHONE");
+  if (current && lockedForCaregiver(current.status)) throw new VerificationError(transitionRefusedMessage(current.status));
   if (ch.consumedAt) throw new VerificationError("Ce code n'est plus valable. Demandez un nouveau code.", "CODE_EXPIRE");
   if (ch.expiresAt < now) throw new VerificationError("Ce code a expiré (10 minutes). Demandez un nouveau code.", "CODE_EXPIRE");
   if (ch.attempts >= OTP_MAX_ATTEMPTS) throw new VerificationError("Trop d'essais. Demandez un nouveau code.", "TROP_D_ESSAIS");
-  if (!safeEqual(hmacHex("otp-code", `${ch.id}:${input.code.trim()}`), ch.codeHash)) {
+  if (!hmacLookup("otp-code", `${ch.id}:${input.code.trim()}`).some((h) => safeEqual(h, ch.codeHash))) {
     const n = ch.attempts + 1;
     await db.phoneChallenge.update({ where: { id: ch.id }, data: { attempts: { increment: 1 }, ...(n >= OTP_MAX_ATTEMPTS ? { consumedAt: now } : {}) } });
     if (n >= OTP_MAX_ATTEMPTS) throw new VerificationError("Trop d'essais. Ce code est annulé. Demandez un nouveau code.", "TROP_D_ESSAIS");
@@ -352,14 +385,14 @@ export async function confirmPhoneCode(actor: Actor, input: { challengeId: strin
       });
       const item = await tx.verificationItem.findUnique({ where: { caregiverId_type: { caregiverId: prof.id, type: "TELEPHONE" } } });
       if (item) {
-        await tx.verificationItem.update({
-          where: { id: item.id },
+        // L2b (B1) : la règle des transitions refuse A_REVOIR → VALIDE et REFUSE → VALIDE par le système.
+        await writeItemStatus(tx, item, "VALIDE", "SYSTEME", {
+          validatedWith: ch.provider as ValidationAdapter,
           data: {
-            status: "VALIDE",
             method: ch.channel === "APPEL" ? "OTP_APPEL" : "OTP_SMS",
             decisionCode: null,
             reviewedAt: now,
-            evidence: merge(item, { masque: maskPhone(ch.phoneE164), territoire: territoire.ok ? territoire.territoire : null, canal: ch.channel, verifieLe: now.toISOString() }),
+            evidence: merge(item, { masque: maskPhone(ch.phoneE164), territoire: territoire.ok ? territoire.territoire : null, canal: ch.channel, adaptateur: ch.provider, verifieLe: now.toISOString() }),
           },
         });
       }
@@ -367,7 +400,8 @@ export async function confirmPhoneCode(actor: Actor, input: { challengeId: strin
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      throw new VerificationError("Ce numéro sert déjà à un autre compte accompagnant. Contactez l'équipe Koudmen.", "NUMERO_DEJA_UTILISE");
+      await recordConflict(ch.caregiverId, "TELEPHONE", now);
+      throw new VerificationError(TAKEN_MESSAGES.TELEPHONE);
     }
     throw e;
   }
@@ -408,7 +442,7 @@ export async function createIdentitySession(actor: Actor, input: DemandeSessionI
   }
   await db.$transaction(async (tx) => {
     await tx.identityCheck.create({ data: { verificationItemId: item.id, provider: port.provider, providerSessionId: session.providerSessionId, returnUrl, expiresAt: session.expiresAt } });
-    await tx.verificationItem.update({ where: { id: item.id }, data: { status: "EN_COURS", method: "AUTO_PRESTATAIRE", decisionCode: null, attempts: { increment: 1 } } });
+    await writeItemStatus(tx, item, "EN_COURS", "ACCOMPAGNANT", { data: { method: "AUTO_PRESTATAIRE", decisionCode: null, attempts: { increment: 1 } } });
     // Consentement explicite à la biométrie (art. 9.2.a) : journalisé avec l'heure.
     await logAudit({ actor, action: "identity.session_created", entityType: "VerificationItem", entityId: item.id, metadata: { prestataire: port.provider, plateforme: input.plateforme, consentementBiometrie: true, consentementLe: now.toISOString() } }, tx);
   });
@@ -422,8 +456,8 @@ export async function requestVisio(actor: Actor, input: DemandeVisio, now: Date 
   const { item } = await requireItem(p, "IDENTITE");
   if (item.status === "VALIDE") throw new VerificationError("Votre identité est déjà vérifiée.", "DEJA_VALIDE");
   await db.$transaction(async (tx) => {
-    if (item.status !== "A_REVOIR" && item.status !== "REFUSE") {
-      await tx.verificationItem.update({ where: { id: item.id }, data: { status: "DECLARE", method: "VISIO", evidence: merge(item, { visio: { creneau: input.creneau, raison: input.raison, demandeLe: now.toISOString() } }) } });
+    if (!lockedForCaregiver(item.status)) {
+      await writeItemStatus(tx, item, "DECLARE", "ACCOMPAGNANT", { data: { method: "VISIO", evidence: merge(item, { visio: { creneau: input.creneau, raison: input.raison, demandeLe: now.toISOString() } }) } });
     }
     await tx.caregiverProfile.update({ where: { id: p.id }, data: { visioRequestedAt: now, visioCreneau: input.creneau } });
     await logAudit({ actor, action: "identity.visio_requested", entityType: "VerificationItem", entityId: item.id, metadata: { creneau: input.creneau, raison: input.raison } }, tx);
@@ -478,64 +512,90 @@ export async function processIdentityWebhook(provider: "simule" | "veriff" | "st
     : false;
   const decision = identityItemStatus({ outcome: event.outcome, nameMatch, birthDateMatch, adult, duplicate, riskCodes: event.riskCodes });
   const final = event.outcome !== "EN_REVUE";
-  // Une décision humaine (VALIDE, REFUSE, revue en cours) n'est jamais écrasée par le prestataire.
-  const applies = item.status === "EN_COURS" || item.status === "A_FOURNIR" || item.status === "EXPIRE";
+  const decisionId = `${provider}:${event.providerEventId}`.slice(0, 200);
+
+  // L2b (M2, M3) : une décision du prestataire s'applique SEULEMENT si :
+  // - elle n'a jamais été appliquée (identifiant gardé sur l'élément : anti-rejeu durable, même après la purge des WebhookEvent) ;
+  // - la session n'est pas déjà décidée (un « EN_REVUE » ou un « approuvé » tardif ne change rien) ;
+  // - c'est la DERNIÈRE session de l'élément ;
+  // - l'élément attend le prestataire (EN_COURS). Complément demandé, refus proposé, revue en cours, recours : décision humaine.
+  const sessionDecided = check.outcome !== null && check.outcome !== "EN_REVUE";
+  const latest = await db.identityCheck.findFirst({ where: { verificationItemId: item.id }, orderBy: { createdAt: "desc" }, select: { id: true } });
+  const ignoreReason = item.appliedDecisionIds.includes(decisionId)
+    ? "DEJA_APPLIQUEE"
+    : sessionDecided
+      ? "SESSION_DEJA_DECIDEE"
+      : latest?.id !== check.id
+        ? "SESSION_ANCIENNE"
+        : item.status !== "EN_COURS"
+          ? "DECISION_HUMAINE"
+          : null;
+  const checkData = {
+    outcome: event.outcome,
+    documentType: event.documentType ?? null,
+    documentCountry: event.documentCountry ?? null,
+    documentExpiresOn: event.documentExpiresOn ? new Date(`${event.documentExpiresOn}T00:00:00Z`) : null,
+    documentNumberLast4: event.documentNumberLast4 ?? null,
+    documentNumberHmac: event.documentNumberHmac ?? null,
+    nameMatch,
+    birthDateMatch,
+    riskCodes: [...event.riskCodes, ...(duplicate ? ["COMPTE_EN_DOUBLE_POSSIBLE"] : [])].slice(0, 10),
+    // L2b (M4) : `decidedAt` n'est JAMAIS remis à nul.
+    decidedAt: final ? now : check.decidedAt,
+  };
+
+  if (ignoreReason) {
+    await db.$transaction(async (tx) => {
+      if (sessionDecided || ignoreReason === "DEJA_APPLIQUEE") {
+        // Trace seulement : la décision appliquée reste celle de la session.
+        await tx.identityCheck.update({ where: { id: check.id }, data: { lateOutcomes: [...check.lateOutcomes, `${event.outcome}@${now.toISOString()}`].slice(-10) } });
+      } else {
+        // Session ancienne ou élément en décision humaine : on garde le résultat de CETTE session (historique, suppression à J+30).
+        await tx.identityCheck.update({ where: { id: check.id }, data: checkData });
+      }
+      await logAudit({ action: "identity.decision_ignoree", entityType: "VerificationItem", entityId: item.id, metadata: { prestataire: provider, resultat: event.outcome, raison: ignoreReason, etat: item.status } }, tx);
+    });
+    return finish(`IGNORE:${ignoreReason}`);
+  }
 
   await db.$transaction(async (tx) => {
-    await tx.identityCheck.update({
-      where: { id: check.id },
+    await tx.identityCheck.update({ where: { id: check.id }, data: checkData });
+    await writeItemStatus(tx, item, decision.status, "SYSTEME", {
+      validatedWith: provider,
       data: {
-        outcome: event.outcome,
-        documentType: event.documentType ?? null,
-        documentCountry: event.documentCountry ?? null,
-        documentExpiresOn: event.documentExpiresOn ? new Date(`${event.documentExpiresOn}T00:00:00Z`) : null,
-        documentNumberLast4: event.documentNumberLast4 ?? null,
-        documentNumberHmac: event.documentNumberHmac ?? null,
-        nameMatch,
-        birthDateMatch,
-        riskCodes: [...event.riskCodes, ...(duplicate ? ["COMPTE_EN_DOUBLE_POSSIBLE"] : [])].slice(0, 10),
-        decidedAt: final ? now : null,
+        decisionCode: decision.decisionCode,
+        appliedDecisionIds: [...item.appliedDecisionIds, decisionId].slice(-20),
+        evidence: merge(item, {
+          prestataire: provider,
+          adaptateur: provider,
+          resultat: event.outcome,
+          nomConforme: nameMatch,
+          dateNaissanceConforme: birthDateMatch,
+          majeur: adult,
+          typePiece: event.documentType ?? null,
+          paysPiece: event.documentCountry ?? null,
+          riskCodes: event.riskCodes,
+          decideLe: now.toISOString(),
+        }),
+        ...(decision.status === "VALIDE" ? { reviewedAt: now } : {}),
       },
     });
-    if (applies) {
-      await tx.verificationItem.update({
-        where: { id: item.id },
+    if (decision.status === "VALIDE" && verified) {
+      await tx.caregiverProfile.update({
+        where: { id: profile.id },
         data: {
-          status: decision.status,
-          decisionCode: decision.decisionCode,
-          evidence: merge(item, {
-            prestataire: provider,
-            resultat: event.outcome,
-            nomConforme: nameMatch,
-            dateNaissanceConforme: birthDateMatch,
-            majeur: adult,
-            typePiece: event.documentType ?? null,
-            paysPiece: event.documentCountry ?? null,
-            riskCodes: event.riskCodes,
-            decideLe: now.toISOString(),
-          }),
-          ...(decision.status === "VALIDE" ? { reviewedAt: now } : {}),
+          verifiedGivenNames: verified.givenNames,
+          verifiedFamilyName: verified.familyName,
+          verifiedBirthDate: event.verifiedBirthDate ? new Date(`${event.verifiedBirthDate}T00:00:00Z`) : null,
+          identityVerifiedAt: now,
         },
       });
-      if (decision.status === "VALIDE" && verified) {
-        await tx.caregiverProfile.update({
-          where: { id: profile.id },
-          data: {
-            verifiedGivenNames: verified.givenNames,
-            verifiedFamilyName: verified.familyName,
-            verifiedBirthDate: event.verifiedBirthDate ? new Date(`${event.verifiedBirthDate}T00:00:00Z`) : null,
-            identityVerifiedAt: now,
-          },
-        });
-      }
     }
-    await logAudit({ action: "identity.decision", entityType: "VerificationItem", entityId: item.id, metadata: { prestataire: provider, resultat: event.outcome, etat: applies ? decision.status : item.status, appliquee: applies } }, tx);
+    await logAudit({ action: "identity.decision", entityType: "VerificationItem", entityId: item.id, metadata: { prestataire: provider, resultat: event.outcome, etat: decision.status, appliquee: true } }, tx);
   });
-  if (applies) {
-    await refreshDossier(profile.id);
-    if (final) await notifyUser(profile.user.id, "VERIFICATION_TERMINEE", { prenom: profile.user.firstName, element: "Identité" }, { type: "VerificationItem", id: item.id });
-  }
-  return finish(`IDENTITE:${applies ? decision.status : "INCHANGE"}`);
+  await refreshDossier(profile.id);
+  if (final) await notifyUser(profile.user.id, "VERIFICATION_TERMINEE", { prenom: profile.user.firstName, element: "Identité" }, { type: "VerificationItem", id: item.id });
+  return finish(`IDENTITE:${decision.status}`);
 }
 
 /** Page simulée : session en cours (prénom seulement), ou null. */
@@ -564,17 +624,20 @@ export async function simulateIdentityDecision(sessionId: string, scenario: Simu
 
 // ─────────────── Adresse ───────────────
 
-function seatOf(items: VerificationItem[]): { line: string; postalCode: string; city: string } | null {
+function seatOf(items: VerificationItem[]): { line: string; postalCode: string; city: string; source: ValidationAdapter } | null {
   const ent = itemOf(items, "ENTREPRISE");
   if (!ent || ent.status !== "VALIDE") return null;
   const siege = evidenceOf(ent).siege as { line?: string; postalCode?: string; city?: string } | undefined;
-  return siege?.line && siege.postalCode ? { line: siege.line, postalCode: siege.postalCode, city: siege.city ?? "" } : null;
+  const source = (ent.validatedWith ?? "simule") as ValidationAdapter;
+  return siege?.line && siege.postalCode ? { line: siege.line, postalCode: siege.postalCode, city: siege.city ?? "", source } : null;
 }
 
 export async function saveDeclaredAddress(actor: Actor, input: DemandeAdresse, now: Date = new Date()): Promise<ReponseAdresse> {
   const p = await loadProfile(actor.id);
   assertOpenDossier(p);
   const { item, items } = await requireItem(p, "ADRESSE");
+  // L2b (B1) : adresse en revue ou refusée à deux opérateurs : l'adresse du siège ne la valide pas.
+  if (lockedForCaregiver(item.status)) throw new VerificationError(transitionRefusedMessage(item.status));
   const key = documentsAvailable() ? documentMasterKey() : null;
   if (!key) throw new VerificationError("L'enregistrement de l'adresse ouvre bientôt. L'équipe Koudmen vérifie votre adresse pendant la visio.", "SERVICE_INDISPONIBLE");
   const before = declaredAddress(p);
@@ -586,11 +649,13 @@ export async function saveDeclaredAddress(actor: Actor, input: DemandeAdresse, n
   else if (changed && (item.status === "VALIDE" || item.status === "EXPIRE")) status = "A_FOURNIR";
   await db.$transaction(async (tx) => {
     await tx.caregiverProfile.update({ where: { id: p.id }, data: { addressEnc: encryptField(JSON.stringify(input), key), addressPostalCode: input.codePostal } });
-    if (status !== item.status || seatOk) {
-      await tx.verificationItem.update({
-        where: { id: item.id },
-        data: { status, decisionCode: null, ...(seatOk ? { method: "AUTO_REGISTRE" as const, reviewedAt: now, evidence: merge(item, { siegeSirene: true, verifieLe: now.toISOString() }) } : {}) },
+    if (seatOk && seat) {
+      await writeItemStatus(tx, item, "VALIDE", "SYSTEME", {
+        validatedWith: seat.source,
+        data: { decisionCode: null, method: "AUTO_REGISTRE", reviewedAt: now, evidence: merge(item, { siegeSirene: true, adaptateur: seat.source, verifieLe: now.toISOString() }) },
       });
+    } else if (status !== item.status) {
+      await writeItemStatus(tx, item, status, "ACCOMPAGNANT", { data: { decisionCode: null } });
     }
     await logAudit({ actor, action: "address.declared", entityType: "VerificationItem", entityId: item.id, metadata: { siegeConforme: seatOk, change: changed } }, tx);
   });
@@ -609,9 +674,13 @@ export async function checkCompany(actor: Actor, input: { siret: string }, now: 
   const siret = normalizeSiret(input.siret);
   if (!siret || !siretChecksumOk(siret)) throw new VerificationError("Ce SIRET n'est pas valide. Vérifiez les 14 chiffres.");
   if (item.status === "VALIDE" && p.siret === siret) throw new VerificationError("Ce SIRET est déjà vérifié.", "DEJA_VALIDE");
-  if (item.status === "A_REVOIR" || item.status === "REFUSE") throw new VerificationError("L'équipe Koudmen vérifie déjà votre entreprise. Vous n'avez rien à faire.");
+  if (lockedForCaregiver(item.status)) throw new VerificationError(transitionRefusedMessage(item.status));
   const dup = await db.caregiverProfile.findFirst({ where: { siret, id: { not: p.id }, validation: { not: "REFUSE" }, user: { sandboxId: null, isDemo: false } }, select: { id: true } });
-  if (dup) throw new VerificationError("Ce SIRET sert déjà à un autre compte accompagnant. Contactez l'équipe Koudmen.", "NUMERO_DEJA_UTILISE");
+  if (dup) {
+    // L2b (m1) : message neutre ; un opérateur tranche (un faux compte a pu saisir le SIRET public d'un autre).
+    await recordConflict(p.id, "ENTREPRISE", now);
+    throw new VerificationError(TAKEN_MESSAGES.ENTREPRISE);
+  }
 
   const person = personOf(p);
   const address = declaredAddress(p);
@@ -675,15 +744,25 @@ export async function checkCompany(actor: Actor, input: { siret: string }, now: 
 
   // Auto-entrepreneur : siège = adresse déclarée → adresse vérifiée sans justificatif (étude § 3.2.6).
   const addrItem = itemOf(items, "ADRESSE");
-  const seatValidatesAddress = p.status === "AUTO_ENTREPRENEUR_SAP" && status === "VALIDE" && reply.adresseSiegeConforme === true && addrItem && addrItem.status !== "VALIDE";
+  // L2b (B1) : le siège valide l'adresse seulement si la règle des transitions le permet (jamais depuis A_REVOIR ni REFUSE).
+  const seatValidatesAddress =
+    p.status === "AUTO_ENTREPRENEUR_SAP" && status === "VALIDE" && reply.adresseSiegeConforme === true && addrItem && addrItem.status !== "VALIDE" && canTransition(addrItem.status, "VALIDE", "SYSTEME");
+  const source = (lookup?.source ?? registryPort().name) as ValidationAdapter;
   await db.$transaction(async (tx) => {
     await tx.caregiverProfile.update({ where: { id: p.id }, data: { siret } });
-    await tx.verificationItem.update({
-      where: { id: item.id },
-      data: { status, decisionCode, method: "AUTO_REGISTRE", evidence: merge(item, evidence), ...(status === "VALIDE" ? { reviewedAt: now } : {}) },
-    });
+    const data = { decisionCode, method: "AUTO_REGISTRE" as const, evidence: merge(item, { ...evidence, adaptateur: source }), ...(status === "VALIDE" ? { reviewedAt: now } : {}) };
+    let ref: { id: string; status: VerificationItem["status"] } = item;
+    // Nouveau SIRET sur un élément vérifié ou expiré : l'accompagnant le remet d'abord « à faire », puis le registre décide.
+    if ((item.status === "VALIDE" || item.status === "EXPIRE") && status !== "VALIDE") {
+      await writeItemStatus(tx, ref, "A_FOURNIR", "ACCOMPAGNANT", { data: { decisionCode: null } });
+      ref = { id: item.id, status: "A_FOURNIR" };
+    }
+    await writeItemStatus(tx, ref, status, "SYSTEME", { data, ...(status === "VALIDE" ? { validatedWith: source } : {}) });
     if (seatValidatesAddress) {
-      await tx.verificationItem.update({ where: { id: addrItem.id }, data: { status: "VALIDE", method: "AUTO_REGISTRE", decisionCode: null, reviewedAt: now, evidence: merge(addrItem, { siegeSirene: true, verifieLe: now.toISOString() }) } });
+      await writeItemStatus(tx, addrItem, "VALIDE", "SYSTEME", {
+        validatedWith: source,
+        data: { method: "AUTO_REGISTRE", decisionCode: null, reviewedAt: now, evidence: merge(addrItem, { siegeSirene: true, adaptateur: source, verifieLe: now.toISOString() }) },
+      });
     }
     await logAudit(
       {
@@ -732,9 +811,8 @@ export async function uploadDocument(actor: Actor, input: { type: TypeDocument; 
   for (const d of previous) await port.delete(d.id);
   const { documentId } = await port.put({ verificationItemId: item.id, kind: input.type, bytes: checked.bytes, mime: checked.mime });
   await db.$transaction(async (tx) => {
-    await tx.verificationItem.update({
-      where: { id: item.id },
-      data: { status: "EN_COURS", method: "MANUEL", decisionCode: null, evidence: merge(item, { document: { type: input.type, deposeLe: now.toISOString() } }) },
+    await writeItemStatus(tx, item, "EN_COURS", "ACCOMPAGNANT", {
+      data: { method: "MANUEL", decisionCode: null, evidence: merge(item, { document: { type: input.type, deposeLe: now.toISOString() } }) },
     });
     await logAudit({ actor, action: "document.uploaded", entityType: "SensitiveDocument", entityId: documentId, metadata: { type: input.type, mime: checked.mime, octets: checked.bytes.length, remplaces: previous.length } }, tx);
   });
@@ -751,5 +829,42 @@ export async function createAppeal(actor: Actor, motif: string, now: Date = new 
   }
   const a = await db.verificationAppeal.create({ data: { caregiverId: p.id, motif }, select: { id: true } });
   await logAudit({ actor, action: "caregiver.appeal_created", entityType: "VerificationAppeal", entityId: a.id, metadata: { motif } });
+  // L2b : les opérateurs du monde réel sont prévenus (réponse sous 7 jours). Aucun nom dans le message.
+  const operators = await db.user.findMany({ where: { role: "OPERATEUR", sandboxId: null, isDemo: false }, select: { id: true, firstName: true }, take: 20 });
+  for (const o of operators) await notifyUser(o.id, "RECOURS_A_TRAITER", { prenom: o.firstName }, { type: "VerificationAppeal", id: a.id });
   return { recoursId: a.id, etat: "EN_ATTENTE" };
 }
+// ─────────────── M7 : validations simulées en lancement ───────────────
+
+/**
+ * L2b (M7) : en lancement, un élément VALIDE par un adaptateur simulé (ou sans adaptateur connu) est remis
+ * « à faire » (A_FOURNIR, journalisé). Un dossier VALIDE concerné passe EXPIRE (plus de nouvelles propositions)
+ * jusqu'à la nouvelle vérification. Monde réel seulement.
+ */
+export async function resetSimulatedValidations(caregiverId?: string): Promise<number> {
+  if (!isLaunchMode()) return 0;
+  const rows = await db.verificationItem.findMany({
+    where: {
+      status: "VALIDE",
+      OR: [{ validatedWith: null }, { validatedWith: "simule" }],
+      caregiver: { ...(caregiverId ? { id: caregiverId } : {}), user: { sandboxId: null, isDemo: false } },
+    },
+    select: { id: true, status: true, type: true, caregiverId: true, validatedWith: true },
+    take: 500,
+  });
+  let n = 0;
+  for (const r of rows) {
+    try {
+      await db.$transaction(async (tx) => {
+        await writeItemStatus(tx, r, "A_FOURNIR", "SYSTEME", { data: { decisionCode: "VALIDATION_ESSAI" } });
+        await tx.caregiverProfile.updateMany({ where: { id: r.caregiverId, validation: "VALIDE" }, data: { validation: "EXPIRE" } });
+        await logAudit({ action: "verification.reset_simulated", entityType: "VerificationItem", entityId: r.id, metadata: { type: r.type, adaptateur: r.validatedWith ?? "inconnu" } }, tx);
+      });
+      n += 1;
+    } catch (e) {
+      if (!(e instanceof VerificationError)) throw e;
+    }
+  }
+  return n;
+}
+

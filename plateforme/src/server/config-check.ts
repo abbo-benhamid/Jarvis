@@ -8,7 +8,7 @@
  */
 
 import { presenceConfigProblems } from "./presence/config";
-import { verificationConfigProblems, verificationConfigWarnings } from "./verifications/config";
+import { verificationConfigProblems, verificationConfigWarnings, verificationHmacProblems } from "./verifications/config";
 
 type Env = Record<string, string | undefined>;
 
@@ -182,7 +182,8 @@ export function testerCodeProblem(code: string): string | null {
 export function productionConfigProblems(env: Env = process.env): string[] {
   // D2 : hors production stricte, seules les clés de la présence sont contrôlées, et seulement quand
   // NODE_ENV=production ouvre les données réelles (Preview Vercel, Clever Cloud HDS). Vide sinon (local, CI, e2e).
-  if (!isStrictProduction(env)) return presenceConfigProblems(env);
+  // L2b (M6) : clé HMAC des vérifications, dès qu'un adaptateur réel est actif (préversion comprise).
+  if (!isStrictProduction(env)) return [...presenceConfigProblems(env), ...verificationHmacProblems(env)];
   const out: string[] = [];
   // L1d (D1, sécurité S1) : la démo et le bac à sable n'existent jamais en production stricte.
   // `KOUDMEN_MODE=essai` ouvrirait les données réelles sans HDS ni AIPD ; c'est un problème BLOQUANT (page 503).

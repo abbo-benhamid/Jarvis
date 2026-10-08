@@ -29,6 +29,8 @@ export function ItemDecisionForm({
   refusals,
   pendingRefusal,
   canConfirm,
+  cancelProposed = false,
+  cancelProposedByMe = false,
 }: {
   itemId: string;
   checklist: readonly Option[];
@@ -38,6 +40,10 @@ export function ItemDecisionForm({
   pendingRefusal: string | null;
   /** Vrai si cet opérateur n'est pas l'auteur de la proposition. */
   canConfirm: boolean;
+  /** L2b (M1) : une annulation du refus est déjà proposée. */
+  cancelProposed?: boolean;
+  /** L2b (M1) : c'est cet opérateur qui a proposé l'annulation. */
+  cancelProposedByMe?: boolean;
 }) {
   const { state, onSubmit, pending } = useFormAction(decideItemAction, initialActionState);
   const [decision, setDecision] = useState<string>("");
@@ -45,7 +51,9 @@ export function ItemDecisionForm({
   const options = pendingRefusal
     ? [
         ...(canConfirm ? [["CONFIRMER_REFUS", `Confirmer le refus (${pendingRefusal})`]] : []),
-        ["ANNULER_REFUS", "Annuler le refus proposé"],
+        ...(cancelProposedByMe
+          ? []
+          : [["ANNULER_REFUS", cancelProposed ? "Confirmer l'annulation du refus (proposée par un autre opérateur)" : "Proposer l'annulation du refus (un autre opérateur confirme)"]]),
       ]
     : [
         ["VALIDE", "Valider"],
@@ -57,6 +65,7 @@ export function ItemDecisionForm({
       <input type="hidden" name="itemId" value={itemId} />
       <FormMessage state={state} />
       {pendingRefusal && !canConfirm ? <p className="text-[15px]">Vous avez proposé ce refus. Un autre opérateur doit le confirmer.</p> : null}
+      {cancelProposedByMe ? <p className="text-[15px]">Vous avez proposé d&apos;annuler ce refus. Un autre opérateur doit confirmer l&apos;annulation.</p> : null}
       <Fieldset legend="Votre décision">
         {options.map(([v, l]) => (
           <Radio key={v} id={`d-${v}`} name="decision" value={v} label={l} checked={decision === v} onChange={() => setDecision(v!)} />
@@ -98,7 +107,7 @@ export function AppealDecisionForm({ appealId }: { appealId: string }) {
       <input type="hidden" name="appealId" value={appealId} />
       <FormMessage state={state} />
       <Fieldset legend="Réexamen">
-        <Radio id={`ap-ok-${appealId}`} name="outcome" value="ACCEPTE" label="Favorable : rouvrir le dossier" />
+        <Radio id={`ap-ok-${appealId}`} name="outcome" value="ACCEPTE" label="Favorable : rouvrir le dossier (un second opérateur confirme)" />
         <Radio id={`ap-no-${appealId}`} name="outcome" value="MAINTENU" label="Refus maintenu" />
       </Fieldset>
       <div>
@@ -110,7 +119,7 @@ export function AppealDecisionForm({ appealId }: { appealId: string }) {
   );
 }
 
-export function CancelRefusalForm({ caregiverId }: { caregiverId: string }) {
+export function CancelRefusalForm({ caregiverId, cancelProposed = false }: { caregiverId: string; cancelProposed?: boolean }) {
   const { state, onSubmit, pending } = useFormAction(cancelDossierRefusalAction, initialActionState);
   if (state.ok) return <Done message={state.message} />;
   return (
@@ -118,7 +127,7 @@ export function CancelRefusalForm({ caregiverId }: { caregiverId: string }) {
       <input type="hidden" name="caregiverId" value={caregiverId} />
       <FormMessage state={state} />
       <PendingButton pending={pending} variant="quiet" pendingLabel="Annulation…">
-        Annuler le refus proposé
+        {cancelProposed ? "Confirmer l'annulation du refus" : "Proposer l'annulation du refus (un autre opérateur confirme)"}
       </PendingButton>
     </form>
   );

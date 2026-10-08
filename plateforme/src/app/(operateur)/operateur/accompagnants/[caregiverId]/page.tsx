@@ -81,7 +81,11 @@ export default async function Page({ params }: { params: Promise<{ caregiverId: 
             {cg.refusalProposedById === me.id ? "Vous avez proposé ce refus : un autre opérateur doit le confirmer." : "Pour confirmer, choisissez « Refuser le profil » ci-dessous."}
           </p>
           <div className="mt-2">
-            <CancelRefusalForm caregiverId={cg.id} />
+            {cg.refusalCancelProposedById === me.id ? (
+              <p>Vous avez proposé d&apos;annuler ce refus : un autre opérateur doit confirmer l&apos;annulation.</p>
+            ) : (
+              <CancelRefusalForm caregiverId={cg.id} cancelProposed={cg.refusalCancelProposedById !== null} />
+            )}
           </div>
         </Alert>
       ) : null}

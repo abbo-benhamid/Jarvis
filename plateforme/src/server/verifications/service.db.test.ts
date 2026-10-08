@@ -85,7 +85,10 @@ describe.runIf(enabled)("vérification L2 (base réelle, adaptateurs simulés)",
     expect(row.codeHash).not.toContain("000000");
     // Un second compte ne peut pas prendre ce numéro.
     const b = await caregiver("SALARIE_FAMILLE_CESU", "Marie");
-    await expect(svc.sendPhoneCode(b.actor, { telephone: phone, canal: "SMS" }, "1.1.1.2")).rejects.toMatchObject({ code: "NUMERO_DEJA_UTILISE" });
+    // L2b (m1) : message neutre (aucune fuite), conflit dans la file opérateur.
+    await expect(svc.sendPhoneCode(b.actor, { telephone: phone, canal: "SMS" }, "1.1.1.2")).rejects.toMatchObject({ code: "ACTION_IMPOSSIBLE", message: svc.TAKEN_MESSAGES.TELEPHONE });
+    const pb = await db.caregiverProfile.findUniqueOrThrow({ where: { userId: b.u.id } });
+    expect(await db.auditLog.count({ where: { action: "verification.conflict", entityId: pb.id } })).toBe(1);
   });
 
   it("téléphone : 5 essais faux annulent le code ; code expiré", async () => {
@@ -155,7 +158,7 @@ describe.runIf(enabled)("vérification L2 (base réelle, adaptateurs simulés)",
     await expect(svc.checkCompany(c.actor, { siret: "12345678901234" })).rejects.toMatchObject({ code: "ACTION_IMPOSSIBLE" });
     // Un SIRET = un compte.
     const d = await caregiver("AUTO_ENTREPRENEUR_SAP", "Luc");
-    await expect(svc.checkCompany(d.actor, { siret: valid })).rejects.toMatchObject({ code: "NUMERO_DEJA_UTILISE" });
+    await expect(svc.checkCompany(d.actor, { siret: valid })).rejects.toMatchObject({ code: "ACTION_IMPOSSIBLE", message: svc.TAKEN_MESSAGES.ENTREPRISE });
   });
 
   it("document : type réel contrôlé, chiffré en base, revue opérateur avec motif journalisé, complément puis validation", async () => {

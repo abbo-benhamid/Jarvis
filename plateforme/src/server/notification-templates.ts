@@ -27,7 +27,10 @@ export type TemplateKey =
   | "VISITE_SIGNALEE"
   | "VISITE_PRESENCE_PROBABLE"
   | "VERIFICATION_COMPLEMENT"
-  | "VERIFICATION_TERMINEE";
+  | "VERIFICATION_TERMINEE"
+  | "VERIFICATION_REFUSEE"
+  | "RECOURS_DECIDE"
+  | "RECOURS_A_TRAITER";
 
 type Vars = Record<string, string | number>;
 
@@ -134,6 +137,20 @@ const TEMPLATES: Record<TemplateKey, { subject: string; body: string }> = {
   VERIFICATION_TERMINEE: {
     subject: "Koudmen : vérification reçue",
     body: "Bonjour {prenom}, la vérification « {element} » est terminée. Ouvrez Koudmen pour voir la suite de votre dossier.",
+  },
+  // L2b (m12) : refus confirmé par deux opérateurs ; motif fermé et voie de recours.
+  VERIFICATION_REFUSEE: {
+    subject: "Koudmen : décision sur votre dossier",
+    body: "Bonjour {prenom}, après une revue par deux personnes de l'équipe, « {element} » n'est pas accepté. Motif : {motif}. Vous pouvez demander un réexamen dans votre espace Koudmen.",
+  },
+  RECOURS_DECIDE: {
+    subject: "Koudmen : réponse à votre demande de réexamen",
+    body: "Bonjour {prenom}, l'équipe Koudmen a réexaminé votre dossier. Réponse {resultat}. Ouvrez Koudmen pour voir la suite.",
+  },
+  // L2b : opérateurs prévenus d'un nouveau recours (réponse sous 7 jours). Aucun nom dans le message.
+  RECOURS_A_TRAITER: {
+    subject: "Koudmen : un recours à traiter",
+    body: "Bonjour {prenom}, un accompagnant demande un réexamen de son dossier. Répondez sous 7 jours : Opérateur → Vérifications à revoir.",
   },
   PAIEMENT_SIMULE: {
     subject: "Formule {formule} activée",

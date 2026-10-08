@@ -58,24 +58,37 @@ export function requiredTypes(
 export type TransitionActor = "SYSTEME" | "ACCOMPAGNANT" | "OPERATEUR" | "SECOND_OPERATEUR";
 
 const TRANSITIONS: Record<VerificationStatus, readonly VerificationStatus[]> = {
-  A_FOURNIR: ["EN_COURS", "DECLARE", "A_REVOIR", "VALIDE"],
-  EN_COURS: ["EN_COURS", "VALIDE", "A_REVOIR", "A_FOURNIR"],
+  A_FOURNIR: ["A_FOURNIR", "EN_COURS", "DECLARE", "A_REVOIR", "VALIDE"],
+  // L2b : EN_COURS → DECLARE (session d'identité abandonnée, puis visio demandée).
+  EN_COURS: ["EN_COURS", "DECLARE", "VALIDE", "A_REVOIR", "A_FOURNIR"],
   DECLARE: ["DECLARE", "EN_COURS", "VALIDE", "A_REVOIR", "A_FOURNIR"],
   A_REVOIR: ["A_REVOIR", "VALIDE", "A_FOURNIR", "REFUSE"],
-  VALIDE: ["EXPIRE", "A_FOURNIR"],
+  // L2b : VALIDE → VALIDE (nouveau numéro ou nouveau SIRET vérifié par le système).
+  VALIDE: ["VALIDE", "EXPIRE", "A_FOURNIR"],
   EXPIRE: ["A_FOURNIR", "EN_COURS", "DECLARE", "VALIDE"],
   REFUSE: ["A_FOURNIR"],
 };
 
+/**
+ * L2b (B1) : SEULE règle des transitions. Toute écriture d'état passe par `writeItemStatus` (transition.ts),
+ * qui l'appelle.
+ * - `REFUSE` : seulement par un SECOND opérateur (le premier propose).
+ * - `VALIDE` : jamais par l'accompagnant seul.
+ * - Depuis `A_REVOIR` (revue humaine en cours) : seulement un opérateur. Ni un code SMS, ni le registre, ni le prestataire.
+ * - Depuis `REFUSE` (refus confirmé à deux) : seulement un SECOND opérateur (recours accepté à deux).
+ */
 export function canTransition(from: VerificationStatus, to: VerificationStatus, by: TransitionActor): boolean {
   if (!TRANSITIONS[from].includes(to)) return false;
-  // Règle 1 et 2 : seul un SECOND opérateur met REFUSE.
   if (to === "REFUSE") return by === "SECOND_OPERATEUR";
-  // L'accompagnant ne valide jamais seul.
   if (to === "VALIDE" && by === "ACCOMPAGNANT") return false;
-  // Après un refus, seul un opérateur rouvre l'élément (recours accepté).
-  if (from === "REFUSE") return by === "OPERATEUR" || by === "SECOND_OPERATEUR";
+  if (from === "REFUSE") return by === "SECOND_OPERATEUR";
+  if (from === "A_REVOIR") return by === "OPERATEUR" || by === "SECOND_OPERATEUR";
   return true;
+}
+
+/** L2b (B1) : l'accompagnant (ou le système à sa demande) ne touche pas un élément en revue ou refusé. */
+export function lockedForCaregiver(status: VerificationStatus): boolean {
+  return status === "A_REVOIR" || status === "REFUSE";
 }
 
 /** Second avis : le confirmateur d'un refus n'est jamais celui qui l'a proposé. */
@@ -140,6 +153,16 @@ export function itemsNotReady(required: readonly VerificationType[], items: read
 /** Éléments obligatoires absents ou pas encore VALIDE (validation définitive). */
 export function itemsNotValidated(required: readonly VerificationType[], items: readonly ItemSnapshot[]): VerificationType[] {
   return required.filter((t) => items.find((i) => i.type === t)?.status !== "VALIDE");
+}
+
+/**
+ * L2b (M7) : un élément compte comme validé. En lancement, une validation par un adaptateur SIMULÉ
+ * (code 000000, page d'identité simulée, registre simulé) ou par un adaptateur inconnu ne compte pas.
+ */
+export function countsAsValidated(item: { status: VerificationStatus; validatedWith: string | null }, launch: boolean): boolean {
+  if (item.status !== "VALIDE") return false;
+  if (!launch) return true;
+  return item.validatedWith !== null && item.validatedWith !== "simule";
 }
 
 /**
