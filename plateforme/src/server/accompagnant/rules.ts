@@ -71,8 +71,9 @@ const optionalText = (max: number) =>
 
 export const profileSchema = z.object({
   communes: z
-    .array(z.enum(COMMUNE_CODES, { errorMap: () => ({ message: "Commune inconnue." }) }))
-    .max(34)
+    // T1 : communes des territoires OUVERTS seulement (le service contrôle aussi « un seul territoire »).
+    .array(z.enum(COMMUNE_CODES, { errorMap: () => ({ message: "Commune inconnue ou hors d'un territoire ouvert." }) }))
+    .max(COMMUNE_CODES.length)
     .transform((a) => [...new Set(a)]),
   availabilities: z
     .array(z.string())

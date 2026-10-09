@@ -7,7 +7,7 @@ import { presenceRefusal } from "./launch-guards";
 import { logAudit } from "@/server/audit";
 import { notifyUser } from "@/server/outbox";
 import { formatTime } from "@/lib/format";
-import { communeLabel } from "@/lib/communes";
+import { communeLabel, fuseauDe } from "@/lib/territoires";
 import {
   AccompagnantError,
   assertAineDataOpen,
@@ -453,7 +453,13 @@ export async function listAppProposals(userId: string, now: Date = new Date()): 
     id: p.id,
     message: p.message,
     creeLe: p.createdAt.toISOString(),
-    aine: { prenom: p.request.aine.firstName, commune: p.request.aine.commune, communeLibelle: communeLabel(p.request.aine.commune) },
+    fuseau: fuseauDe(p.request.aine.territoire),
+    aine: {
+      prenom: p.request.aine.firstName,
+      territoire: p.request.aine.territoire,
+      commune: p.request.aine.commune,
+      communeLibelle: communeLabel(p.request.aine.commune),
+    },
     demande: {
       niveau: p.request.level,
       frequence: p.request.frequency,

@@ -35,7 +35,9 @@ export const ROLE_HOME: Record<Role, string> = {
 };
 
 export const FAMILY_LOCATION_LABELS: Record<FamilyLocation, string> = {
+  GUADELOUPE: "En Guadeloupe",
   MARTINIQUE: "En Martinique",
+  GUYANE: "En Guyane",
   HEXAGONE: "Dans l'Hexagone",
   AUTRE: "Ailleurs",
 };
