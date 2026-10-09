@@ -8,7 +8,10 @@ import { deName, initialWithDot } from "@/lib/format";
 import { PLAN_LABELS } from "@/lib/labels";
 import { CardLink, DateBox, SectionHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PreinscriptionNotice } from "@/components/account/preinscription";
+import { PreinscriptionHome } from "@/components/famille/preinscription-home";
+import { ouvertureFamille, rangFamille } from "@/server/preinscription/queries";
+import { appUrl } from "@/server/env";
+import { TERRITOIRES_OUVERTS, territoire } from "@/lib/territoires";
 import { realDataAllowed } from "@/server/launch";
 import { LinkButton } from "@/components/ui/button";
 import { StatusCard } from "@/components/ui/status-card";
@@ -72,7 +75,11 @@ export default async function Page() {
       ) : null}
 
       {memberships.length === 0 ? (
-        <EmptyHome requestedOn={realDataAllowed() ? null : ((await callbackContext(user.id)).latest?.createdAt ?? null)} />
+        realDataAllowed() ? (
+          <EmptyHome />
+        ) : (
+          <Preinscription userId={user.id} />
+        )
       ) : (
         <div className="flex flex-col gap-10">
           {memberships.map((m) => (
@@ -234,9 +241,27 @@ const STEPS = [
   { title: "Demandez un accompagnement", text: "Koudmen vous propose 1 à 3 profils près de chez lui. Vous choisissez." },
 ] as const;
 
-function EmptyHome({ requestedOn }: { requestedOn: string | null }) {
-  // R1 : en préinscription, aucune fiche aîné. On propose l'appel d'un conseiller (L1d M4 : et on dit s'il est demandé).
-  if (!realDataAllowed()) return <PreinscriptionNotice requestedOn={requestedOn} />;
+/**
+ * R1 + P1 : en préinscription, aucune fiche aîné. L'accueil montre la place sur la liste d'ouverture, l'appel d'un conseiller
+ * (et son état), la visite guidée, la liste « Préparer l'arrivée » et le partage du lien d'inscription.
+ */
+async function Preinscription({ userId }: { userId: string }) {
+  const [rang, cb] = await Promise.all([rangFamille(userId), callbackContext(userId)]);
+  const t = territoire(TERRITOIRES_OUVERTS[0]!);
+  return (
+    <PreinscriptionHome
+      rang={rang}
+      ouverture={ouvertureFamille()}
+      territoire={{ nom: t.nom, enNom: t.enNom }}
+      demande={cb.latest}
+      phone={cb.phone}
+      creneaux={cb.creneaux}
+      inviteUrl={`${appUrl()}/inscription`}
+    />
+  );
+}
+
+function EmptyHome() {
   return (
     <EmptyState
       titleAs="h2"
