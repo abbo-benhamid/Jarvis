@@ -3,11 +3,12 @@ import { randomBytes } from "node:crypto";
 import type { CaregiverStatus, Prisma, ProofFactor, TimeSlot } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { db } from "@/server/db";
-import { getCommune } from "@/lib/communes";
+import { fuseauDe, getCommune, TERRITOIRE_LANCEMENT } from "@/lib/territoires";
 import { allowedLevelsFor } from "@/server/rules/status-levels";
 import { requiredVerificationsFor } from "@/server/rules/orientation";
 import { generateUniqueHomeCode } from "@/server/visits/service";
 import { computeVisitProof } from "@/server/visits/proof";
+import { addLocalDays, zonedToUtc } from "@/lib/fuseau";
 
 /**
  * Construction du « monde » fictif d'un bac à sable (D2). TOUTES les données sont fictives.
@@ -31,10 +32,10 @@ export function sandboxEmail(sandboxId: string, slug: string): string {
   return `${slug}.${sandboxId}@bac-a-sable.koudmen.test`;
 }
 
-/** Date à J+offset, à l'heure de Martinique donnée (UTC−4). */
-export function mqDate(now: Date, dayOffset: number, hour: number, minute = 0): Date {
-  const local = new Date(now.getTime() - 4 * 3_600_000 + dayOffset * DAY);
-  return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate(), hour + 4, minute));
+/** Date à J+offset, à l'heure locale donnée du territoire (T4 : fuseau IANA, Guadeloupe par défaut). */
+export function localDate(now: Date, dayOffset: number, hour: number, minute = 0, tz: string = fuseauDe(TERRITOIRE_LANCEMENT)): Date {
+  const { year, month, day } = addLocalDays(now, dayOffset, tz);
+  return zonedToUtc(year, month, day, hour, minute, tz);
 }
 
 function position(code: string, dLat = 0.0012, dLng = -0.0009) {
@@ -334,8 +335,8 @@ export async function buildFamilyWorld(sandboxId: string, tester: { firstName: s
         { day: -3, factors: [{ factor: "GPS", valid: false }] },
       ];
       for (const v of past) {
-        const start = mqDate(now, v.day, 9);
-        const end = mqDate(now, v.day, 11);
+        const start = localDate(now, v.day, 9);
+        const end = localDate(now, v.day, 11);
         const proof = computeVisitProof(v.factors);
         const visit = await tx.visit.create({
           data: {
@@ -383,8 +384,8 @@ export async function buildFamilyWorld(sandboxId: string, tester: { firstName: s
           missionId: mission.id,
           aineId: leonie.id,
           caregiverId: josiane.profileId,
-          scheduledStart: mqDate(now, 4, 9),
-          scheduledEnd: mqDate(now, 4, 11),
+          scheduledStart: localDate(now, 4, 9),
+          scheduledEnd: localDate(now, 4, 11),
           status: "PREVUE",
         },
       });

@@ -7,6 +7,8 @@ import { Checkbox, Input, Select } from "@/components/ui/input";
 import { FormMessage } from "@/components/ui/form-message";
 import { PendingButton, useFormAction } from "@/components/ui/use-form-action";
 import type { CircleMember } from "./accord-form";
+import { territoire } from "@/lib/territoires";
+import { TERRITOIRE_EQUIPE } from "@/lib/rappel";
 
 /**
  * L1d (D11, suite F2) : lors d'un NOUVEL appel, l'aîné change sa personne désignée pour voir le trajet.
@@ -30,7 +32,7 @@ export function TripViewerChoiceForm({ aineId, firstName, members, currentId }: 
       <form onSubmit={onSubmit} className="mt-3 flex flex-col gap-3" noValidate>
         <input type="hidden" name="aineId" value={aineId} />
         <FormMessage state={state} />
-        <FormField label="Date et heure de l'appel (heure de Martinique)" htmlFor={p("appelLe")} errors={fe?.appelLe} required>
+        <FormField label={`Date et heure de l'appel (${territoire(TERRITOIRE_EQUIPE).libelleHeure})`} htmlFor={p("appelLe")} errors={fe?.appelLe} required>
           <Input {...fieldA11y(p("appelLe"), fe?.appelLe)} name="appelLe" type="datetime-local" required />
         </FormField>
         <FormField

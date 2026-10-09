@@ -16,7 +16,7 @@ import { VisitMap } from "@/components/accompagnant/visit-map";
 import { VisitProofBadge, VisitRow, aineShortName, hourRange, kayeIsDue, type VisitRowData } from "@/components/accompagnant/visit-display";
 import { capitalize, dayLong, hourLabel, relativeDay } from "@/components/famille/format";
 import { CAREGIVER_STATUS_LABELS, VALIDATION_LABELS } from "@/lib/labels";
-import { communeLabel } from "@/lib/communes";
+import { communeLabel, fuseauDe } from "@/lib/territoires";
 import { formatEuros } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
@@ -106,7 +106,7 @@ export default async function Page() {
                       i === 0 ? "bg-surface text-mer shadow-[inset_0_0_0_1.5px_var(--mer)]" : "bg-surface-2 text-fg",
                     )}
                   >
-                    <b className="num text-[17px] font-semibold">{hourLabel(v.scheduledStart)}</b>
+                    <b className="num text-[17px] font-semibold">{hourLabel(v.scheduledStart, fuseauDe(v.aine.territoire))}</b>
                     <span className={cn("truncate text-sm", i === 0 ? "text-fg" : "text-muted")}>
                       {v.aine.firstName}
                       {v.checkInAt ? " · en cours" : ""}
@@ -252,7 +252,7 @@ function FocusVisit({ visit, now }: { visit: VisitRowData; now: Date }) {
       </div>
       <div className="mt-3.5 border-t border-line pt-3.5">
         <p className="num text-[15px] text-muted">
-          {when} · {hourRange(visit.scheduledStart, visit.scheduledEnd)}
+          {when} · {hourRange(visit.scheduledStart, visit.scheduledEnd, fuseauDe(visit.aine.territoire))}
           {visit.checkInAt ? " · en cours" : ""}
         </p>
         <div className="mt-2 flex flex-wrap gap-1.5">

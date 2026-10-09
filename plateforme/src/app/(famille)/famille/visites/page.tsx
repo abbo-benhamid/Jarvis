@@ -139,7 +139,7 @@ function VisitItem({ v, showAine, employer, canFollow }: { v: VisitRow; showAine
               {capitalize(dayLong(v.scheduledStart))}, avec {v.caregiver.user.firstName}
             </h3>
             <p className="text-[15px] leading-[1.4] text-muted">
-              <ZonedTime start={v.scheduledStart} end={v.scheduledEnd} />
+              <ZonedTime start={v.scheduledStart} end={v.scheduledEnd} territoire={v.aine.territoire} />
               {showAine ? `, chez ${v.aine.firstName}` : null}
             </p>
             <div className="mt-2">

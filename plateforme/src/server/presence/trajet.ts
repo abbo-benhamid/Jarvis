@@ -206,6 +206,7 @@ export async function getFamilyTripView(user: TripActor, visitId: string, now: D
       aine: {
         select: {
           sandboxId: true,
+          territoire: true,
           latitude: true,
           longitude: true,
           locationApproximate: true,
@@ -226,6 +227,7 @@ export async function getFamilyTripView(user: TripActor, visitId: string, now: D
   const home = homePoint(visit.aine);
   const base = {
     heurePrevue: visit.scheduledStart.toISOString(),
+    territoire: visit.aine.territoire,
     accompagnant: { prenom: visit.caregiver.user.firstName },
     domicile: { latitude: home.lat, longitude: home.lng, approximatif: home.approximate },
   };

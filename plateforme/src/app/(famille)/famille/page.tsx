@@ -142,7 +142,7 @@ function AineBlock({ m, kaye, several, now, canFollow }: { m: Membership; kaye: 
                 {capitalize(dayLong(next.scheduledStart))}, avec {next.caregiver.user.firstName}
               </b>
               <span className="block text-[15px] leading-[1.4] text-muted">
-                À <ZonedTime start={next.scheduledStart} />, chez {aine.firstName}
+                À <ZonedTime start={next.scheduledStart} territoire={aine.territoire} />, chez {aine.firstName}
               </span>
             </span>
           </span>

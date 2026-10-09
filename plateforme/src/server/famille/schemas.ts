@@ -4,6 +4,7 @@
  */
 import { z } from "zod";
 import { COMMUNE_CODES } from "@/lib/communes";
+import { DEFAULT_TZ } from "@/lib/format";
 
 /** A6 : lien de rattachement d'un proche aidant à un aîné. */
 export const caregiverLinkSchema = z.object({ aineId: z.string().cuid() });
@@ -192,7 +193,7 @@ export function formDataToObject(formData: FormData, arrays: readonly string[] =
   return out;
 }
 
-/** Date du jour « AAAA-MM-JJ » dans le fuseau donné (Martinique par défaut). */
-export function todayIso(now: Date = new Date(), tz = "America/Martinique"): string {
+/** Date du jour « AAAA-MM-JJ » dans le fuseau donné (territoire de lancement par défaut, T4). */
+export function todayIso(now: Date = new Date(), tz = DEFAULT_TZ): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
 }

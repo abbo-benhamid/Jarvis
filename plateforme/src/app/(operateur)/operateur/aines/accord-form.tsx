@@ -8,6 +8,8 @@ import { Checkbox, Input, Radio, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FormMessage } from "@/components/ui/form-message";
 import { PendingButton, useFormAction } from "@/components/ui/use-form-action";
+import { territoire } from "@/lib/territoires";
+import { TERRITOIRE_EQUIPE } from "@/lib/rappel";
 
 export type CircleMember = { userId: string; label: string; isPayer: boolean };
 
@@ -93,7 +95,7 @@ export function AccordForm({
             </div>
           )}
         </Fieldset>
-        <FormField label="Date et heure de l'appel (heure de Martinique)" htmlFor={p("appelLe")} errors={fe?.appelLe} required>
+        <FormField label={`Date et heure de l'appel (${territoire(TERRITOIRE_EQUIPE).libelleHeure})`} htmlFor={p("appelLe")} errors={fe?.appelLe} required>
           <Input {...fieldA11y(p("appelLe"), fe?.appelLe)} name="appelLe" type="datetime-local" required />
         </FormField>
         <Fieldset legend="Qui a répondu ?" errors={fe?.qui}>

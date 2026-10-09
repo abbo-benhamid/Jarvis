@@ -6,13 +6,13 @@ import type { ReponseTrajetFamille } from "@/contracts/v1/trajet";
 import { Card } from "@/components/ui/card";
 import { TripMapClient } from "./trip-map-client";
 import { hourIn, ZonedTime } from "@/components/ui/zoned-time";
-import { MARTINIQUE_TZ } from "@/lib/format";
+import { fuseauDe, territoire, TERRITOIRE_LANCEMENT, type CodeTerritoire } from "@/lib/territoires";
 
 /** Intervalle d'interrogation (L7 : pas de WebSocket sur Vercel). */
 export const POLL_MS = 10_000;
 
-/** L1d (m7) : format unique « 9 h 30 », heure de Martinique. */
-const time = (iso: string) => hourIn(new Date(iso), MARTINIQUE_TZ);
+/** L1d (m7) : format unique « 9 h 30 », heure du territoire de l'aîné (T4). */
+const time = (iso: string, territoire?: CodeTerritoire) => hourIn(new Date(iso), fuseauDe(territoire));
 
 function distanceLabel(m: number): string {
   return m < 1000 ? `${m} m` : `${(m / 1000).toFixed(1).replace(".", ",")} km`;
@@ -29,7 +29,7 @@ export function tripHeadline(v: ReponseTrajetFamille): string {
     case "TERMINEE":
       return "La visite est terminée.";
     default:
-      return `Visite prévue à ${time(v.heurePrevue)} (heure de Martinique) avec ${p}.`;
+      return `Visite prévue à ${time(v.heurePrevue, v.territoire)} (${territoire(v.territoire ?? TERRITOIRE_LANCEMENT).libelleHeure}) avec ${p}.`;
   }
 }
 
@@ -91,7 +91,7 @@ export function TripLive({ visitId, initial }: { visitId: string; initial: Repon
           <li className="flex gap-3">
             <Clock aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-mer" strokeWidth={1.6} />
             <span>
-              Heure prévue : <ZonedTime start={view.heurePrevue} />
+              Heure prévue : <ZonedTime start={view.heurePrevue} territoire={view.territoire} />
             </span>
           </li>
           {enRoute ? (
@@ -105,7 +105,7 @@ export function TripLive({ visitId, initial }: { visitId: string; initial: Repon
               <li className="flex gap-3">
                 <MapPin aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-mer" strokeWidth={1.6} />
                 <span>
-                  Position mise à jour à <ZonedTime start={view.position!.majA} />, précise à environ {view.position!.precisionMetres} m.
+                  Position mise à jour à <ZonedTime start={view.position!.majA} territoire={view.territoire} />, précise à environ {view.position!.precisionMetres} m.
                 </span>
               </li>
             </>

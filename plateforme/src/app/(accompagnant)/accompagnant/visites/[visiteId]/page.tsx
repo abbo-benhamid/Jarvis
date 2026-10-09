@@ -13,7 +13,7 @@ import { capitalize, dayLong, hourLabel, relativeDay } from "@/components/famill
 import { CheckInPanel } from "@/components/accompagnant/checkin-panel";
 import { VisitMap } from "@/components/accompagnant/visit-map";
 import { aineShortName, hourRange } from "@/components/accompagnant/visit-display";
-import { communeLabel } from "@/lib/communes";
+import { communeLabel, fuseauDe } from "@/lib/territoires";
 import { db } from "@/server/db";
 import { readAddressForCaregiver } from "@/server/presence/address";
 
@@ -74,7 +74,7 @@ export default async function Page({ params }: { params: Promise<{ visiteId: str
           ) : null}
           <div className="mt-3.5 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3.5">
             <p className="num text-[15px] text-muted">
-              {day} · {hourRange(visit.scheduledStart, visit.scheduledEnd)}
+              {day} · {hourRange(visit.scheduledStart, visit.scheduledEnd, fuseauDe(visit.aine.territoire))}
             </p>
             <VisitStatusBadge status={visit.status} />
           </div>
@@ -117,7 +117,7 @@ export default async function Page({ params }: { params: Promise<{ visiteId: str
         aineConfirmed={aineConfirmed}
         score={visit.proofScore}
         checkedIn={visit.checkInAt !== null}
-        checkInLabel={visit.checkInAt ? hourLabel(visit.checkInAt) : null}
+        checkInLabel={visit.checkInAt ? hourLabel(visit.checkInAt, fuseauDe(visit.aine.territoire)) : null}
         checkedOut={visit.checkOutAt !== null}
         hasJournal={visit.journal !== null}
         testMode={testMode}

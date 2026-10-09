@@ -36,7 +36,7 @@ const VISIT_LIST_SELECT = {
   proofScore: true,
   checkInAt: true,
   checkOutAt: true,
-  aine: { select: { firstName: true, lastInitial: true, commune: true } },
+  aine: { select: { firstName: true, lastInitial: true, territoire: true, commune: true } },
   journal: { select: { id: true } },
 } as const;
 
@@ -131,7 +131,7 @@ export async function getOwnedVisit(userId: string, visitId: string) {
       proofScore: true,
       checkInAt: true,
       checkOutAt: true,
-      aine: { select: { firstName: true, lastInitial: true, commune: true, addressHint: true } },
+      aine: { select: { firstName: true, lastInitial: true, territoire: true, commune: true, addressHint: true } },
       proofs: { select: { factor: true, valid: true, simulated: true, distanceMeters: true, details: true } },
       journal: {
         select: {
