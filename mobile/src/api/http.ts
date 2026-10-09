@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import type { z } from 'zod';
+import { demandeInscriptionTerritoireSchema } from '@/territoires';
 import {
   reponseAcceptationSchema,
   reponseAppareilSchema,
@@ -17,7 +18,7 @@ import {
 } from '@/contracts';
 import {
   demandeEvenementsSchema,
-  demandeInscriptionSchema,
+
   demandeMotDePasseOublieSchema,
   demandePositionSchema,
   reponseEvenementsSchema,
@@ -386,7 +387,7 @@ export function creerApiHttp(
     horsLigne,
 
     async inscrire(demande) {
-      await appelerPublic('/auth/inscription', demandeInscriptionSchema, { role: 'ACCOMPAGNANT', ...demande }, reponseInscriptionSchema);
+      await appelerPublic('/auth/inscription', demandeInscriptionTerritoireSchema, { role: 'ACCOMPAGNANT', ...demande }, reponseInscriptionSchema);
     },
     async motDePasseOublie(email) {
       await appelerPublic('/auth/mot-de-passe-oublie', demandeMotDePasseOublieSchema, { email }, null);

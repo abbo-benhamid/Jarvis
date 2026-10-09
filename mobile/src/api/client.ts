@@ -1,5 +1,6 @@
 import type { DemandeOrientation as ReponsesOrientation, EtatVerification, ResultatOrientation } from '@/contracts';
 import type { HorsLigneVue } from '@/offline';
+import type { DemandeInscriptionApp } from '@/territoires';
 import type {
   DemandeAdresse,
   DemandeVisio,
@@ -22,7 +23,7 @@ export type MotifRecours = 'ERREUR_SUR_UN_DOCUMENT' | 'NOUVEAU_DOCUMENT' | 'SITU
 export type DecisionIdentiteSimulee = 'APPROUVE' | 'REFUSE' | 'A_REPRENDRE' | 'NOM_DIFFERENT';
 import type {
   BrouillonKaye,
-  DemandeInscription,
+
   EtatTrajetServeur,
   KayePublie,
   Moi,
@@ -93,7 +94,8 @@ export interface KoudmenApi {
    * L1 : crée un compte accompagnant. Réponse identique si l'e-mail existe déjà (pas de fuite).
    * L'accompagnant reçoit un lien de vérification par e-mail.
    */
-  inscrire(demande: Omit<DemandeInscription, 'role'>): Promise<void>;
+  /** T1 : la demande porte le territoire (forme provisoire, voir `src/territoires/types.ts`). */
+  inscrire(demande: DemandeInscriptionApp): Promise<void>;
   /** L1 : envoie un lien de nouveau mot de passe (1 h). Répond toujours pareil. */
   motDePasseOublie(email: string): Promise<void>;
 

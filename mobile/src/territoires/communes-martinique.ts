@@ -1,17 +1,11 @@
+import type { Commune, ZoneCommunes } from './types';
+
 /**
  * Les 34 communes de Martinique (copie de `plateforme/src/lib/communes.ts`, mêmes codes).
- * Usage dans l'app : choix de la commune à l'inscription, et centre APPROXIMATIF du domicile sur la carte
- * quand le serveur ne donne pas la position du domicile.
- * [À VÉRIFIER] Coordonnées approximatives (± 1 km). À remplacer par un contrat partagé si le serveur en publie un.
+ * Territoire « Bientôt » (T1, arbitrage T6) : la liste reste dans la configuration.
+ * [À VÉRIFIER] Coordonnées approximatives (± 1 km). À remplacer par le contrat partagé du serveur (G1).
  */
-export type Commune = {
-  code: string;
-  label: string;
-  lat: number;
-  lng: number;
-};
-
-export const COMMUNES: readonly Commune[] = [
+export const COMMUNES_MARTINIQUE: readonly Commune[] = [
   { code: 'AJOUPA_BOUILLON', label: 'L’Ajoupa-Bouillon', lat: 14.8167, lng: -61.1417 },
   { code: 'ANSES_D_ARLET', label: 'Les Anses-d’Arlet', lat: 14.4886, lng: -61.0814 },
   { code: 'BASSE_POINTE', label: 'Basse-Pointe', lat: 14.8717, lng: -61.115 },
@@ -48,10 +42,8 @@ export const COMMUNES: readonly Commune[] = [
   { code: 'VAUCLIN', label: 'Le Vauclin', lat: 14.545, lng: -60.8381 },
 ] as const;
 
-export const COMMUNE_CODES = COMMUNES.map((c) => c.code) as [string, ...string[]];
-
 /** Regroupement simple pour l'affichage (S1b-ux m8) : 4 zones, 34 communes. */
-export const COMMUNE_ZONES: readonly { label: string; codes: readonly string[] }[] = [
+export const ZONES_MARTINIQUE: readonly ZoneCommunes[] = [
   { label: 'Centre', codes: ['FORT_DE_FRANCE', 'SCHOELCHER', 'LAMENTIN', 'SAINT_JOSEPH'] },
   {
     label: 'Nord Atlantique',
@@ -92,7 +84,3 @@ export const COMMUNE_ZONES: readonly { label: string; codes: readonly string[] }
     ],
   },
 ];
-
-export function trouverCommune(code: string): Commune | undefined {
-  return COMMUNES.find((c) => c.code === code);
-}

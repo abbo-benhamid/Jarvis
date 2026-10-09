@@ -21,6 +21,26 @@ import {
 
 /** L2 : parcours de vérification dans l'app (module pur). */
 
+test('téléphone T1 : Guadeloupe d’abord (+590 690, +590 691, fixe +590 590), exemple du territoire', () => {
+  expect(normaliserTelephone('0690 12 34 56')).toEqual({ e164: '+590690123456', genre: 'mobile' });
+  expect(normaliserTelephone('0691 12 34 56')).toEqual({ e164: '+590691123456', genre: 'mobile' });
+  expect(normaliserTelephone('+590 691 12 34 56')).toEqual({ e164: '+590691123456', genre: 'mobile' });
+  expect(normaliserTelephone('0590 12 34 56')).toEqual({ e164: '+590590123456', genre: 'fixe' });
+  expect(normaliserTelephone('+590590123456')).toEqual({ e164: '+590590123456', genre: 'fixe' });
+  // Guyane, Hexagone.
+  expect(normaliserTelephone('0694 12 34 56')).toEqual({ e164: '+594694123456', genre: 'mobile' });
+  expect(normaliserTelephone('0594 12 34 56')).toEqual({ e164: '+594594123456', genre: 'fixe' });
+  expect(normaliserTelephone('07 12 34 56 78')).toEqual({ e164: '+33712345678', genre: 'mobile' });
+  expect(normaliserTelephone('01 23 45 67 89')).toEqual({ e164: '+33123456789', genre: 'fixe' });
+  // Aide : exemple de Guadeloupe par défaut, exemple du territoire choisi sinon.
+  expect(normaliserTelephone('0690 12')).toMatchObject({ erreur: 'Ce numéro n’est pas complet. Exemple : 0690 12 34 56.' });
+  expect(normaliserTelephone('06 12', '06 12 34 56 78')).toMatchObject({ erreur: 'Ce numéro n’est pas complet. Exemple : 06 12 34 56 78.' });
+  expect(normaliserTelephone('+44 7700 900123')).toMatchObject({ erreur: expect.stringContaining('Guadeloupe') });
+  expect(formaterTelephone('+590690123456')).toBe('+590 690 12 34 56');
+  expect(formaterTelephone('+590590123456')).toBe('+590 590 12 34 56');
+  expect(formaterTelephone('+594694123456')).toBe('+594 694 12 34 56');
+});
+
 test('téléphone : formats des Antilles, de la diaspora, préfixes refusés', () => {
   expect(normaliserTelephone('0696 12 34 56')).toEqual({ e164: '+596696123456', genre: 'mobile' });
   expect(normaliserTelephone('+596 697 12 34 56')).toEqual({ e164: '+596697123456', genre: 'mobile' });
@@ -29,7 +49,7 @@ test('téléphone : formats des Antilles, de la diaspora, préfixes refusés', (
   // Fixe : pas de SMS, appel vocal.
   expect(normaliserTelephone('0596 12 34 56')).toEqual({ e164: '+596596123456', genre: 'fixe' });
   expect(normaliserTelephone('0596 12 34')).toMatchObject({ erreur: expect.stringContaining('pas complet') });
-  expect(normaliserTelephone('+44 7700 900123')).toMatchObject({ erreur: expect.stringContaining('Antilles') });
+  expect(normaliserTelephone('+44 7700 900123')).toMatchObject({ erreur: expect.stringContaining('Martinique') });
   expect(normaliserTelephone('')).toMatchObject({ erreur: 'Entrez votre numéro de téléphone.' });
   expect(formaterTelephone('+596696123456')).toBe('+596 696 12 34 56');
   expect(formaterTelephone('+33612345678')).toBe('+33 6 12 34 56 78');

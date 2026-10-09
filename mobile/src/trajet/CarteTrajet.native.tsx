@@ -1,6 +1,7 @@
 import { Component, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import MapView, { Circle, Marker, type Region } from 'react-native-maps';
+import { territoireLancement } from '@/territoires';
 import { radius, useTheme } from '@/theme';
 import { Text } from '@/ui';
 import type { ProprietesCarte } from './carteTypes';
@@ -10,9 +11,10 @@ import { PlanSchematique } from './PlanSchematique';
 const DELAI_CHARGEMENT_MS = 10_000;
 
 /** Région qui montre le domicile ET la position, avec une marge. */
-function region({ domicile, position }: ProprietesCarte): Region {
+function region({ domicile, position, centre = territoireLancement().carte }: ProprietesCarte): Region {
   const pts = [domicile, position].filter((x): x is NonNullable<typeof x> => !!x);
-  if (!pts.length) return { latitude: 14.64, longitude: -61.02, latitudeDelta: 0.6, longitudeDelta: 0.6 }; // Martinique
+  // Aucun point : territoire de la visite (Guadeloupe par défaut, T1).
+  if (!pts.length) return { latitude: centre.latitude, longitude: centre.longitude, latitudeDelta: centre.delta, longitudeDelta: centre.delta };
   const lats = pts.map((p) => p.latitude);
   const lngs = pts.map((p) => p.longitude);
   const [minLat, maxLat, minLng, maxLng] = [Math.min(...lats), Math.max(...lats), Math.min(...lngs), Math.max(...lngs)];
@@ -47,8 +49,8 @@ export function CarteTrajet(p: ProprietesCarte) {
   const carte = useRef<MapView>(null);
   const [prete, setPrete] = useState(false);
   const [echec, setEchec] = useState(false);
-  const { domicile, position } = p;
-  const r = useMemo(() => region({ domicile, position, prenom: '' }), [domicile, position]);
+  const { domicile, position, centre } = p;
+  const r = useMemo(() => region({ domicile, position, prenom: '', centre }), [domicile, position, centre]);
 
   useEffect(() => {
     if (prete) return;

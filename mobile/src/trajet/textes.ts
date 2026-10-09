@@ -1,5 +1,5 @@
 import type { IconName } from '@/ui/Icon';
-import { trouverCommune } from '@/lib/communes';
+import { trouverCommune, TERRITOIRE_LANCEMENT, type CodeTerritoire } from '@/territoires';
 import type { DomicileTrajet } from '@/api/l1';
 
 /**
@@ -19,7 +19,7 @@ export function pointsAccordTrajet(prenom: string | null): { icone: IconName; ti
 }
 
 /** Domicile de repli pour la carte : centre de la commune (« approximatif »). */
-export function domicileRepli(communeCode: string): DomicileTrajet | null {
-  const c = trouverCommune(communeCode);
+export function domicileRepli(communeCode: string, territoire: CodeTerritoire = TERRITOIRE_LANCEMENT): DomicileTrajet | null {
+  const c = trouverCommune(communeCode, territoire);
   return c ? { latitude: c.lat, longitude: c.lng, approximatif: true } : null;
 }

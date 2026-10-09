@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { COMMUNE_ZONES, trouverCommune } from '@/lib/communes';
+import { TERRITOIRES, trouverCommune, type CodeTerritoire } from '@/territoires';
 import { fonts, radius, useTheme } from '@/theme';
 import { Icon, Text } from '@/ui';
 
 /**
- * Choix de la commune (L1, inscription) : 34 communes en 4 zones.
+ * Choix de la commune (L1, inscription), DANS le territoire choisi (T1) : 32 communes de Guadeloupe en 4 zones.
  * Fermé : un champ qui montre la commune choisie. Ouvert : liste par zone, rôle `radio`, lignes de 48 px.
  */
 export function ChoixCommune({
+  territoire,
   value,
   onChange,
   erreur,
   testID = 'choix-commune',
 }: {
+  territoire: CodeTerritoire;
   value: string | null;
   onChange: (code: string) => void;
   erreur?: string | null;
@@ -21,20 +23,21 @@ export function ChoixCommune({
 }) {
   const { c } = useTheme();
   const [ouvert, setOuvert] = useState(false);
-  const choisie = value ? trouverCommune(value) : undefined;
+  const t = TERRITOIRES[territoire];
+  const choisie = value ? trouverCommune(value, territoire) : undefined;
   const bord = erreur ? c.hibiscus : ouvert ? c.mer : c.lineStrong;
 
   return (
     <View style={{ gap: 8 }}>
       <Text variant="smallStrong" style={{ fontSize: 16 }}>
-        Votre commune
+        Votre commune {t.enNom}
       </Text>
       <Pressable
         testID={testID}
         onPress={() => setOuvert((o) => !o)}
         accessibilityRole="button"
         accessibilityLabel={`Votre commune : ${choisie?.label ?? 'pas encore choisie'}`}
-        accessibilityHint={ouvert ? 'Ferme la liste' : 'Ouvre la liste des 34 communes'}
+        accessibilityHint={ouvert ? 'Ferme la liste' : `Ouvre la liste des ${t.communes.length} communes`}
         accessibilityState={{ expanded: ouvert }}
         aria-invalid={!!erreur}
         style={[styles.champ, { borderColor: bord, borderWidth: ouvert || erreur ? 2 : 1.5, backgroundColor: c.surface }]}
@@ -46,7 +49,7 @@ export function ChoixCommune({
       </Pressable>
       {ouvert ? (
         <View style={[styles.liste, { borderColor: c.line, backgroundColor: c.surface }]} testID={`${testID}-liste`}>
-          {COMMUNE_ZONES.map((z) => (
+          {t.zones.map((z) => (
             <View key={z.label} accessibilityRole="radiogroup" accessibilityLabel={z.label}>
               <Text variant="eyebrow" tone="muted" style={styles.zone}>
                 {z.label}
@@ -67,7 +70,7 @@ export function ChoixCommune({
                     style={({ pressed }) => [styles.option, { backgroundColor: on ? c.merSoft : pressed ? c.surface2 : 'transparent' }]}
                   >
                     <Text style={{ flex: 1, fontFamily: on ? fonts.sansSemiBold : fonts.sans, fontSize: 17, color: on ? c.mer : c.fg }}>
-                      {trouverCommune(code)?.label ?? code}
+                      {trouverCommune(code, territoire)?.label ?? code}
                     </Text>
                     {on ? <Icon name="check" size={18} color={c.mer} /> : null}
                   </Pressable>

@@ -4,6 +4,7 @@ import { api, messageErreur } from '@/api';
 import { lienItineraire, texteDistance } from '@/lib/geo';
 import { useAsync } from '@/lib/useAsync';
 import { CarteTrajet } from '@/trajet/CarteTrajet';
+import { territoireDe } from '@/territoires';
 import { domicileRepli } from '@/trajet/textes';
 import { useTrajet } from '@/trajet/TrajetProvider';
 import { useTheme } from '@/theme';
@@ -45,8 +46,9 @@ export default function Itineraire() {
     );
   }
 
-  const domicile = enCours?.domicile ?? domicileRepli(v.aine.commune);
-  const texteDestination = [v.aine.adresseApproximative, v.aine.communeLibelle, 'Martinique'].filter(Boolean).join(', ');
+  const terr = territoireDe(v);
+  const domicile = enCours?.domicile ?? domicileRepli(v.aine.commune, terr.code);
+  const texteDestination = [v.aine.adresseApproximative, v.aine.communeLibelle, terr.nom].filter(Boolean).join(', ');
   // Domicile précis : coordonnées. Approximatif : le texte (quartier, commune) donne un meilleur itinéraire.
   const lien = lienItineraire(Platform.OS, { point: domicile && !domicile.approximatif ? domicile : null, texte: texteDestination });
   const nomApp = Platform.OS === 'ios' ? 'Plans' : 'Google Maps';
@@ -72,7 +74,7 @@ export default function Itineraire() {
       }
     >
       <View style={{ marginTop: 8 }}>
-        <CarteTrajet domicile={domicile} position={enCours?.derniere ?? null} prenom={v.aine.prenom} />
+        <CarteTrajet domicile={domicile} position={enCours?.derniere ?? null} prenom={v.aine.prenom} centre={terr.carte} />
       </View>
 
       <Card style={{ marginTop: 14, gap: 10 }} testID="infos-itineraire">

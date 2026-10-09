@@ -1,4 +1,5 @@
-import { demandeInscriptionSchema, type ControleCheckIn } from '@/contracts';
+import { type ControleCheckIn } from '@/contracts';
+import { demandeInscriptionTerritoireSchema, TERRITOIRES, trouverCommune, type CodeTerritoire } from '@/territoires';
 import {
   ageEnAnnees,
   AGE_MIN_ACCOMPAGNANT,
@@ -19,7 +20,7 @@ import {
 } from '@/contracts';
 import { codeComplet, controlerFichier, MAX_SESSIONS_IDENTITE, normaliserSiret, normaliserTelephone } from '@/compte/verifications';
 import { orienterLocalement } from '@/compte/orientation';
-import { trouverCommune } from '@/lib/communes';
+
 import { distanceMetres } from '@/lib/geo';
 import type { KoudmenApi } from './client';
 import { MESSAGES } from './messages';
@@ -440,7 +441,7 @@ export function creerApiSimulee(): KoudmenApi {
 
     async inscrire(demande) {
       await attendre(400);
-      const ok = demandeInscriptionSchema.safeParse({ role: 'ACCOMPAGNANT', ...demande });
+      const ok = demandeInscriptionTerritoireSchema.safeParse({ role: 'ACCOMPAGNANT', ...demande });
       if (!ok.success) throw new ApiError('REQUETE_INVALIDE', ok.error.issues[0]?.message ?? MESSAGES.REQUETE_INVALIDE, 400);
       if (ageEnAnnees(ok.data.dateNaissance) < AGE_MIN_ACCOMPAGNANT) {
         throw new ApiError('REQUETE_INVALIDE', 'Il faut avoir 18 ans ou plus pour devenir accompagnant.', 400);
