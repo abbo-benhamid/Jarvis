@@ -7,7 +7,7 @@ import { territoireSchema } from "@/contracts/v1/territoires";
 import type { ActionResult } from "@/lib/action-result";
 
 /** Message unique (aucune fuite : même texte si l'adresse est déjà inscrite). */
-export const WAITLIST_DONE =
+const WAITLIST_DONE =
   "C'est noté. Si l'adresse est valide, Koudmen vous écrit à l'ouverture dans ce territoire. Vous pouvez retirer votre accord à tout moment : écrivez-nous.";
 
 const schema = z.object({

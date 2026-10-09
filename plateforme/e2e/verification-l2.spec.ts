@@ -28,7 +28,7 @@ test("L2 : l'accompagnant vérifie son téléphone, son identité et son adresse
   // Téléphone : code simulé 000000.
   await page.goto("/accompagnant/verifications/telephone");
   const n = String(Date.now()).slice(-6);
-  await page.getByLabel("Votre numéro de mobile").fill(`0696 ${n.slice(0, 2)} ${n.slice(2, 4)} ${n.slice(4, 6)}`);
+  await page.getByLabel("Votre numéro de mobile").fill(`0690 ${n.slice(0, 2)} ${n.slice(2, 4)} ${n.slice(4, 6)}`);
   await page.getByRole("button", { name: "Recevoir un code par SMS" }).click();
   await page.getByLabel("Code à 6 chiffres").fill("123456");
   await page.getByRole("button", { name: "Vérifier le code" }).click();
@@ -52,7 +52,7 @@ test("L2 : l'accompagnant vérifie son téléphone, son identité et son adresse
   // Adresse + justificatif (PDF), contrôlé et chiffré.
   await page.goto("/accompagnant/verifications/adresse");
   await page.getByLabel("Numéro et voie").fill("12 rue des Flamboyants");
-  await page.getByLabel("Code postal").fill("97232");
+  await page.getByLabel("Code postal").fill("97139");
   await page.getByLabel("Commune").fill("Les Abymes");
   await page.getByRole("button", { name: "Enregistrer mon adresse" }).click();
   await expect(page.getByText(/Adresse enregistrée/)).toBeVisible();
@@ -74,7 +74,7 @@ test("L2 : l'accompagnant vérifie son téléphone, son identité et son adresse
   const row = op.getByRole("row").filter({ hasText: "Josiane Bellemare" }).filter({ hasText: "Document à relire" });
   await row.getByRole("link", { name: "Revoir" }).click();
   await expect(op.getByRole("heading", { level: 1, name: "Adresse" })).toBeVisible();
-  await expect(op.getByText("12 rue des Flamboyants, 97232 Le Lamentin")).toBeVisible();
+  await expect(op.getByText("12 rue des Flamboyants, 97139 Les Abymes")).toBeVisible();
   await op.getByRole("button", { name: "Ouvrir l'aperçu" }).click();
   await expect(op.getByRole("link", { name: "Ouvrir le PDF dans un nouvel onglet" })).toBeVisible();
   const doc = await prisma.sensitiveDocument.findFirstOrThrow({ where: { verificationItem: { caregiverId: cg.profile.id } } });

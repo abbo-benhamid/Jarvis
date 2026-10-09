@@ -59,7 +59,7 @@ test("O2/O3 — valider un accompagnant : revue de chaque vérification, motif o
     firstName: "Candidat",
     status: "SALARIE_FAMILLE_CESU",
     validation: "EN_ATTENTE",
-    communes: ["ROBERT"],
+    communes: ["MOULE"],
     avail: [[2, "MATIN"]],
     verifications: ["IDENTITE", "CASIER_B3", "DIPLOME"],
   });
@@ -125,21 +125,21 @@ test("O2/O3 — valider un accompagnant : revue de chaque vérification, motif o
 });
 
 test("O4/O5 — matching manuel (D6) : compatibles d'abord, profil proposé À LA FAMILLE, refus serveur d'un auto-entrepreneur sur un niveau 3", async ({ page }) => {
-  // Le Marin : aucune personne de la démo ne dessert cette commune.
-  const fam = await createFamilyWithAine({ aineFirstName: `Aîné${uid()}`, commune: "MARIN", activityLevel: 3 });
+  // Deshaies : aucune personne de la démo ne dessert cette commune.
+  const fam = await createFamilyWithAine({ aineFirstName: `Aîné${uid()}`, commune: "DESHAIES", activityLevel: 3 });
   const req = await createRequest({ aineId: fam.aine.id, createdById: fam.user.id, level: 3, slots: [[2, "MATIN"]] });
   const ae = await createCaregiver({
     firstName: "Autoentrepreneur",
     status: "AUTO_ENTREPRENEUR_SAP",
     validation: "VALIDE",
-    communes: ["MARIN"],
+    communes: ["DESHAIES"],
     avail: [[2, "MATIN"]],
   });
   const ok = await createCaregiver({
     firstName: "Salariee",
     status: "SALARIE_FAMILLE_CESU",
     validation: "VALIDE",
-    communes: ["MARIN"],
+    communes: ["DESHAIES"],
     avail: [[2, "MATIN"]],
   });
 
@@ -185,9 +185,9 @@ test("O4/O5 — matching manuel (D6) : compatibles d'abord, profil proposé À L
 });
 
 test("O6/O7 (L1-B, R7) — visite à vérifier : l'opérateur ne tranche pas, la famille employeur confirme", async ({ page }) => {
-  const fam = await createFamilyWithAine({ aineFirstName: `Visite${uid()}`, commune: "MARIN" });
+  const fam = await createFamilyWithAine({ aineFirstName: `Visite${uid()}`, commune: "DESHAIES" });
   const req = await createRequest({ aineId: fam.aine.id, createdById: fam.user.id, level: 1, slots: [] });
-  const cg = await createCaregiver({ firstName: "Visiteuse", status: "BENEVOLE_ASSO", validation: "VALIDE", communes: ["MARIN"], avail: [] });
+  const cg = await createCaregiver({ firstName: "Visiteuse", status: "BENEVOLE_ASSO", validation: "VALIDE", communes: ["DESHAIES"], avail: [] });
   const visit = await createVisitToCheck({ aineId: fam.aine.id, requestId: req.id, caregiverId: cg.profile.id, operatorId: await operatorId() });
 
   await loginOperateur(page);
@@ -260,7 +260,7 @@ test("O9 — journal d'audit filtrable, en lecture seule", async ({ page }) => {
 });
 
 test("Accès — une famille ne peut ouvrir aucun écran opérateur, ni l'export", async ({ page }) => {
-  const fam = await createFamilyWithAine({ aineFirstName: `Acces${uid()}`, commune: "MARIN" });
+  const fam = await createFamilyWithAine({ aineFirstName: `Acces${uid()}`, commune: "DESHAIES" });
   await login(page, fam.user.email);
   for (const path of ["/operateur/accompagnants", "/operateur/retours", "/operateur/journal-audit"]) {
     await page.goto(path);
