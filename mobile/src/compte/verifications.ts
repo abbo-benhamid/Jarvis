@@ -41,13 +41,12 @@ export type CanalCode = z.infer<typeof canalCodeSchema>;
  * Préfixes autorisés (§ 5.1, `PHONE_ALLOWED_PREFIXES` côté serveur). Le serveur fait foi : l'app filtre seulement
  * pour dire tout de suite ce qui ne marchera pas.
  * T1 (arbitrage T5) : les préfixes viennent de la configuration des territoires (Guadeloupe +590 690/691 et
- * +590 590, Martinique +596, Guyane +594, Hexagone +33). La Réunion et Mayotte (+262) restent acceptées, comme
- * sur le serveur (numéro libre pour l'accompagnant).
+ * +590 590, Martinique +596, Guyane +594, Hexagone +33). La Réunion et Mayotte (+262) sont REFUSÉES, comme
+ * sur le serveur (`plateforme/src/server/verifications/phone.ts`).
  */
-const PREFIXES_HORS_TERRITOIRES = { mobiles: ['+262692', '+262693', '+262639', '+262269'], fixes: ['+262262'] } as const;
-export const PREFIXES_MOBILES: readonly string[] = [...ORDRE_TERRITOIRES.flatMap((t) => TERRITOIRES[t].telephone.mobiles), ...PREFIXES_HORS_TERRITOIRES.mobiles];
+export const PREFIXES_MOBILES: readonly string[] = [...ORDRE_TERRITOIRES.flatMap((t) => TERRITOIRES[t].telephone.mobiles)];
 /** Fixes : pas de SMS, le code arrive par un appel vocal. */
-export const PREFIXES_FIXES: readonly string[] = [...ORDRE_TERRITOIRES.flatMap((t) => TERRITOIRES[t].telephone.fixes), ...PREFIXES_HORS_TERRITOIRES.fixes];
+export const PREFIXES_FIXES: readonly string[] = [...ORDRE_TERRITOIRES.flatMap((t) => TERRITOIRES[t].telephone.fixes)];
 
 /** Exemple de numéro pour les aides et les erreurs (territoire de lancement : « 0690 12 34 56 »). */
 export const EXEMPLE_TELEPHONE = TERRITOIRES[TERRITOIRE_LANCEMENT].telephone.exemple;
@@ -57,6 +56,7 @@ const INDICATIFS_NATIONAUX: { debut: RegExp; indicatif: string }[] = [
   { debut: /^0(590|690|691)/, indicatif: '+590' },
   { debut: /^0(596|696|697)/, indicatif: '+596' },
   { debut: /^0(594|694|695)/, indicatif: '+594' },
+  // +262 : reconnu pour être REFUSÉ, et non pris pour un fixe de l'Hexagone (0262…).
   { debut: /^0(262|269|692|693|639)/, indicatif: '+262' },
   { debut: /^0[1-79]/, indicatif: '+33' },
 ];
@@ -85,7 +85,7 @@ export function normaliserTelephone(saisie: string, exemple: string = EXEMPLE_TE
   }
   if (PREFIXES_MOBILES.some((p) => e164.startsWith(p))) return { e164, genre: 'mobile' };
   if (PREFIXES_FIXES.some((p) => e164.startsWith(p))) return { e164, genre: 'fixe' };
-  return { erreur: 'Koudmen accepte les numéros de Guadeloupe, de Martinique, de Guyane, de La Réunion, de Mayotte et de l’Hexagone.' };
+  return { erreur: 'Koudmen accepte les numéros de Guadeloupe, de Martinique, de Guyane et de l’Hexagone.' };
 }
 
 /** Affichage lisible : +590 690 12 34 56. */

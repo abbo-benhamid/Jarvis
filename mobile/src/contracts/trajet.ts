@@ -14,6 +14,7 @@
  */
 import { z } from "zod";
 import { dateIsoSchema } from "./visits";
+import { territoireSchema } from "./territoires";
 
 /** Durée maximale d'un trajet (minutes). */
 export const TRAJET_DUREE_MAX_MIN = 60;
@@ -77,6 +78,8 @@ export const reponseTrajetFamilleSchema = z
   .object({
     etat: etatTrajetFamilleSchema,
     heurePrevue: dateIsoSchema,
+    /** T1 (T4) : territoire de l'aîné ; l'heure prévue s'affiche dans son fuseau. */
+    territoire: territoireSchema.optional(),
     accompagnant: z.object({ prenom: z.string() }).strict(),
     position: z
       .object({ latitude: z.number(), longitude: z.number(), precisionMetres: z.number(), majA: dateIsoSchema })

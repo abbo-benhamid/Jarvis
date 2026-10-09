@@ -228,7 +228,7 @@ export const reponseSessionIdentiteSchema = z
   .strict();
 export type ReponseSessionIdentite = z.infer<typeof reponseSessionIdentiteSchema>;
 
-/** Créneaux de visio (heure de Martinique), mêmes valeurs que la demande de rappel. */
+/** Créneaux de visio (heure du territoire de l'équipe Koudmen : Guadeloupe au lancement), mêmes valeurs que la demande de rappel. */
 export const creneauVisioSchema = z.enum(["MATIN", "MIDI", "APRES_MIDI"]);
 
 /** Pourquoi la personne préfère une visio (statistique seulement, jamais une sanction). */

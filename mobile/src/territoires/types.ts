@@ -1,21 +1,17 @@
 /**
  * T1 (arbitrage Guadeloupe) : le territoire est une DONNÉE, plus un texte en dur.
  *
- * FORME PROVISOIRE côté app (G2). Le serveur (G1) publie le contrat dans `plateforme/src/contracts/v1/`.
- * Quand il arrive dans `src/contracts/` (npm run sync:contracts), ces types s'alignent sur lui.
- * Écarts notés dans `docs/tech/T1-G2-notes.md`.
+ * Codes et états : contrat du serveur (`src/contracts/territoires.ts`, synchronisé depuis G1).
+ * Le reste (textes, exemple de téléphone, zones, delta de carte) est propre à l'app.
  *
  * Module PUR : `zod` et les contrats (testable sous Node, sans appareil).
  */
-import { z } from 'zod';
+import type { z } from 'zod';
 import { demandeInscriptionSchema } from '../contracts/inscription';
+import { territoireSchema, TERRITOIRES as CODES_CONTRAT, type CodeTerritoire, type EtatTerritoire } from '../contracts/territoires';
 
-export const CODES_TERRITOIRE = ['GUADELOUPE', 'MARTINIQUE', 'GUYANE', 'HEXAGONE'] as const;
-export const territoireSchema = z.enum(CODES_TERRITOIRE);
-export type CodeTerritoire = z.infer<typeof territoireSchema>;
-
-/** OUVERT : missions possibles. BIENTOT : liste d'attente seulement. */
-export type EtatTerritoire = 'OUVERT' | 'BIENTOT';
+export { territoireSchema, type CodeTerritoire, type EtatTerritoire };
+export const CODES_TERRITOIRE = CODES_CONTRAT;
 
 export type Commune = {
   /** Code unique sur tous les territoires (ex. « POINTE_A_PITRE », « SAINTE_ANNE_GP »), comme le serveur. */
@@ -59,15 +55,15 @@ export type Territoire = {
 };
 
 /**
- * POST /auth/inscription : contrat L1 + `territoire` (FORME PROVISOIRE T1, arbitrage T3 : le profil
- * accompagnant porte un territoire). Contrat de G1 : `territoire` facultatif, seul un territoire OUVERT passe.
+ * POST /auth/inscription. Le contrat rend `territoire` facultatif (seul un territoire OUVERT passe) ;
+ * l'app l'envoie TOUJOURS (choix du territoire avant la commune).
  */
 export const demandeInscriptionTerritoireSchema = demandeInscriptionSchema.extend({ territoire: territoireSchema });
 export type DemandeInscriptionApp = Omit<z.infer<typeof demandeInscriptionTerritoireSchema>, 'role'>;
 
 /**
- * Champs PROVISOIRES attendus sur une visite ou une proposition (G1, arbitrage T3 et T4).
- * Tous facultatifs : l'app marche avec l'ancien serveur (repli sur le territoire de lancement).
+ * Champs territoire d'une visite ou d'une proposition : `fuseau` (racine) et `aine.territoire` (contrat).
+ * Facultatifs ici pour accepter aussi un objet partiel (paramètres d'écran, tests).
  */
 export type ChampsTerritoire = {
   territoire?: CodeTerritoire | string | null;

@@ -13,6 +13,7 @@
  */
 import { z } from "zod";
 import { dateIsoSchema, frequenceSchema, identifiantSchema } from "./visits";
+import { territoireSchema } from "./territoires";
 
 export const creneauSchema = z.enum(["MATIN", "APRES_MIDI", "SOIR"]);
 
@@ -22,9 +23,13 @@ export const propositionSchema = z
     /** Message de l'équipe Koudmen (facultatif). */
     message: z.string().nullable(),
     creeLe: dateIsoSchema,
+    /** T1 (T4) : fuseau IANA du territoire de l'aîné. Les créneaux (MATIN 9 h, APRES_MIDI 14 h, SOIR 18 h) sont dans CE fuseau. */
+    fuseau: z.string(),
     aine: z
       .object({
         prenom: z.string(),
+        /** T1 : toujours le territoire de l'accompagnant (matching dans le même territoire). */
+        territoire: territoireSchema,
         commune: z.string(),
         communeLibelle: z.string(),
       })

@@ -22,7 +22,7 @@ flowchart LR
 | Ouverture | — | Guadeloupe `OUVERT` ; Martinique, Guyane, Hexagone `BIENTOT` |
 | Communes | 34 de Martinique | 32 de Guadeloupe en 3 zones, codes de G1 (+ les 34 de Martinique gardées) |
 | Heures | décalage fixe UTC−4, « heure de Martinique » | fuseau IANA de la visite, « heure de Guadeloupe », « heure de Guyane », « heure de Paris » ; heure du téléphone ajoutée si différente |
-| Téléphone | exemple 0696 | préfixes depuis la configuration ; exemple du territoire (0690 12 34 56) |
+| Téléphone | exemple 0696, +262 accepté | préfixes depuis la configuration (+262 refusé, comme le serveur) ; exemple du territoire (0690 12 34 56) |
 | Carte | centre Martinique | centre du territoire de la visite (Guadeloupe par défaut) |
 | Mode simulé | Léonie à Fort-de-France | Léonie à Pointe-à-Pitre (Carénage), autres aînés aux Abymes, Sainte-Anne, Gosier, Baie-Mahault ; code `LKW7Q3` inchangé |
 
@@ -50,33 +50,36 @@ flowchart TD
 - Un test compare le calcul à `Intl` de Node sur 5 instants × 4 fuseaux (changements d'heure compris).
 - `plageAvecFuseau(debut, fin, fuseau)` : « 9 h 30 – 11 h 30, heure de Guadeloupe (15 h 30 – 17 h 30 chez vous) ».
 
-## 4. Écarts avec le serveur (à réconcilier)
+## 4. Réconciliation avec G1 (contrats synchronisés)
 
-En fin de lot, G1 a publié `plateforme/src/contracts/v1/territoires.ts` sur sa branche (`worktree-agent-af780e4f9bbc2b435`, pas encore fusionnée). Je l'ai **lu** sans le copier (périmètre `mobile/**`). L'app suit une **forme provisoire** (`src/territoires/types.ts`) aux **mêmes noms de champs**.
+Branche `claude/accompagnement-vie-marketplace-ufydih` fusionnée, puis `node scripts/sync-contracts.mjs` (12 contrats, dont `territoires.ts`). `sync-contracts --check` : à jour.
 
-| # | Champ (contrat G1) | Où | Comportement actuel de l'app | Action à la réconciliation |
-|---|---|---|---|---|
-| E1 | `territoire` (facultatif, OUVERT seulement) | `POST /auth/inscription` | **Envoyé** (`demandeInscriptionTerritoireSchema` = contrat L1 + `territoire`) | Compatible. Après la synchro, remplacer par `demandeInscriptionSchema` du contrat |
-| E2 | `aine.territoire`, `visite.fuseau` | `GET /visites`, `/visites/:id` | **Lus s'ils existent** (`territoireDe`, `fuseauDe`). Sinon : commune → territoire (ouverts d'abord), sinon Guadeloupe | `npm run sync:contracts` OBLIGATOIRE : les contrats `.strict()` de l'app rejettent une réponse avec un champ inconnu |
-| E3 | `fuseau` racine, `aine.territoire` | propositions | Même règle que E2 | idem |
-| E4 | `territoire` (nullable) | `GET /me` | Lu s'il existe (`territoireCompte`), sinon Guadeloupe | idem |
-| E5 | Codes de commune | `lib/territoires.ts` | **Alignés** sur G1 : 32 codes (`LAMENTIN_GP`, `SAINTE_ANNE_GP`…), mêmes centres, mêmes 3 zones (Grande-Terre, Basse-Terre, Îles du Sud) | Plus tard : lire `GET /api/v1/territoires` au lieu de la copie locale |
-| E6 | Liste d'attente | `POST /api/v1/liste-attente` | L'app ouvre `WEB_URL/liste-attente?territoire=<CODE>` ; **aucune page web** n'existe encore chez G1 | Soit une page web, soit un formulaire dans l'app (e-mail + case de consentement `LISTE_ATTENTE_CONSENTEMENT_TEXTE`) |
-| E7 | Données de démo du site | `prisma/seed.ts` | App : Léonie J., Carénage, Pointe-à-Pitre, `16.236, -61.529` | Aligner sur le seed de G1 (T8) |
-| E8 | Centre de carte | `centre { lat, lng, zoom }` | App : `carte { latitude, longitude, delta }` (delta pour react-native-maps) ; mêmes centres | Conversion zoom → delta si l'app lit le serveur |
+| # | Champ (contrat G1) | Où | Dans l'app |
+|---|---|---|---|
+| E1 | `territoire` (facultatif, OUVERT seulement) | `POST /auth/inscription` | Toujours envoyé (`demandeInscriptionTerritoireSchema` = contrat + `territoire` obligatoire) |
+| E2 | `fuseau`, `aine.territoire` | visites | Lus en PREMIER par `fuseauDe` / `territoireDe` ; la configuration locale sert seulement de repli |
+| E3 | `fuseau`, `aine.territoire` | propositions | Idem |
+| E4 | `territoire` (nullable) | `GET /me` | `territoireCompte` ; `null` → Guadeloupe |
+| E5 | Codes de commune | `lib/territoires.ts` | Alignés (32 codes, mêmes centres, mêmes 3 zones) |
+| E6 | Liste d'attente | `POST /api/v1/liste-attente` | L'app ouvre `WEB_URL/liste-attente?territoire=<CODE>`. [À VÉRIFIER] page web ou formulaire dans l'app |
+| E7 | Téléphone +262 | serveur : REFUSÉ | Retiré des préfixes de l'app ; `0262…`/`0692…` reconnus pour être refusés |
+| E8 | Centre de carte | `centre { lat, lng, zoom }` | App : `carte { latitude, longitude, delta }` (react-native-maps), mêmes centres |
 
-Le mode simulé n'ajoute PAS `territoire`/`fuseau` aux visites : le cache hors ligne relit les visites avec le contrat `.strict()` actuel et les rejetterait. À ajouter après la synchro.
+- `src/territoires/types.ts` prend `territoireSchema`, `CodeTerritoire`, `EtatTerritoire` du contrat.
+- Mode simulé : `me.territoire`, `visite.fuseau`, `aine.territoire`, `proposition.fuseau` remplis (Guadeloupe).
+- Fixtures mises à jour : `cache.spec.ts`, `horsligne.spec.ts`, `api-factice.mjs` (Léonie B., Sainte-Anne).
 
-## 5. Tests (2026-10-09)
+## 5. Tests (après la réconciliation)
 
 | Suite | Résultat |
 |---|---|
 | `tsc --noEmit` | OK |
-| `test:l1` (dont `territoires.spec.ts`, heures Guyane / Hexagone, comparaison à `Intl`) | 36 / 36 |
+| `sync-contracts --check` | à jour |
+| `test:l1` | 36 / 36 |
 | `test:hors-ligne` | 41 / 41 |
 | `test:push` | 9 / 9 |
 | `test:natif` | 6 / 6 |
-| `e2e:simule` (nouvel export `EXPO_OFFLINE=1`) | 37 / 37 (dont 2 nouveaux : heure de Guadeloupe ; téléphone en `Europe/Paris`) |
+| `e2e:simule` (nouvel export `EXPO_OFFLINE=1`) | 37 / 37 |
 | `e2e:natif` | 8 / 8 |
 | `e2e:hors-ligne` (nouvel export) | 3 / 3 |
 | Lint | pas de configuration ESLint dans `mobile/` |

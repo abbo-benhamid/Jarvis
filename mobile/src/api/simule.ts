@@ -1,5 +1,5 @@
 import { type ControleCheckIn } from '@/contracts';
-import { demandeInscriptionTerritoireSchema, territoireDe, trouverCommune, type CodeTerritoire } from '@/territoires';
+import { demandeInscriptionTerritoireSchema, territoireDe, TERRITOIRES, trouverCommune, type CodeTerritoire } from '@/territoires';
 import {
   ageEnAnnees,
   AGE_MIN_ACCOMPAGNANT,
@@ -124,6 +124,7 @@ const MOI: Moi = {
   prenom: 'Josiane',
   nom: 'Mathurin',
   email: 'josiane.mathurin@exemple.fr',
+  territoire: 'GUADELOUPE',
   demo: false,
   bacASable: false,
   emailVerifie: true,
@@ -285,9 +286,12 @@ function visite(id: string, debut: string, finMin: number, aine: Partial<Visite[
     id,
     debut,
     fin: new Date(new Date(debut).getTime() + finMin * 60_000).toISOString(),
+    // T1 : fuseau du territoire de l'aîné (contrat), comme le serveur.
+    fuseau: TERRITOIRES.GUADELOUPE.fuseau,
     statut: 'PREVUE',
     // Personne fictive, en Guadeloupe (T1) : Léonie J., quartier du Carénage, Pointe-à-Pitre.
     aine: {
+      territoire: 'GUADELOUPE',
       prenom: 'Léonie',
       initialeNom: 'J.',
       commune: 'POINTE_A_PITRE',
@@ -332,7 +336,8 @@ function propositionsInitiales(): Proposition[] {
       id: 'prop_ginette',
       message: 'Ginette habite près de chez vous. Sa fille cherche une visite le mardi matin.',
       creeLe: dans(-120),
-      aine: { prenom: 'Ginette', commune: 'ABYMES', communeLibelle: 'Les Abymes' },
+      fuseau: TERRITOIRES.GUADELOUPE.fuseau,
+      aine: { prenom: 'Ginette', territoire: 'GUADELOUPE', commune: 'ABYMES', communeLibelle: 'Les Abymes' },
       demande: { niveau: 1, frequence: 'HEBDOMADAIRE', dureeMinutes: 90, debut: null, consignes: 'Discussion et petite marche.', creneaux: [{ jour: 1, creneau: 'MATIN' }] },
       visitesPrevues: 4,
     },
@@ -340,7 +345,8 @@ function propositionsInitiales(): Proposition[] {
       id: 'prop_rene',
       message: null,
       creeLe: dans(-30),
-      aine: { prenom: 'René', commune: 'BAIE_MAHAULT', communeLibelle: 'Baie-Mahault' },
+      fuseau: TERRITOIRES.GUADELOUPE.fuseau,
+      aine: { prenom: 'René', territoire: 'GUADELOUPE', commune: 'BAIE_MAHAULT', communeLibelle: 'Baie-Mahault' },
       demande: { niveau: 2, frequence: 'DEUX_PAR_SEMAINE', dureeMinutes: 120, debut: a(7, 0), consignes: null, creneaux: [{ jour: 2, creneau: 'APRES_MIDI' }, { jour: 4, creneau: 'APRES_MIDI' }] },
       visitesPrevues: 8,
     },
@@ -463,6 +469,7 @@ export function creerApiSimulee(): KoudmenApi {
             prenom: ok.data.prenom,
             nom: ok.data.nom,
             email: ok.data.email,
+            territoire: ok.data.territoire,
             demo: false,
             bacASable: false,
             emailVerifie: false,

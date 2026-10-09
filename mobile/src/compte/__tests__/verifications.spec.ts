@@ -36,6 +36,10 @@ test('téléphone T1 : Guadeloupe d’abord (+590 690, +590 691, fixe +590 590),
   expect(normaliserTelephone('0690 12')).toMatchObject({ erreur: 'Ce numéro n’est pas complet. Exemple : 0690 12 34 56.' });
   expect(normaliserTelephone('06 12', '06 12 34 56 78')).toMatchObject({ erreur: 'Ce numéro n’est pas complet. Exemple : 06 12 34 56 78.' });
   expect(normaliserTelephone('+44 7700 900123')).toMatchObject({ erreur: expect.stringContaining('Guadeloupe') });
+  // La Réunion et Mayotte : refusées, comme sur le serveur (et 0262… n'est pas un fixe de l'Hexagone).
+  expect(normaliserTelephone('0692 12 34 56')).toMatchObject({ erreur: expect.stringContaining('Hexagone') });
+  expect(normaliserTelephone('0262 12 34 56')).toMatchObject({ erreur: expect.stringContaining('Hexagone') });
+  expect(normaliserTelephone('+262 639 12 34 56')).toHaveProperty('erreur');
   expect(formaterTelephone('+590690123456')).toBe('+590 690 12 34 56');
   expect(formaterTelephone('+590590123456')).toBe('+590 590 12 34 56');
   expect(formaterTelephone('+594694123456')).toBe('+594 694 12 34 56');

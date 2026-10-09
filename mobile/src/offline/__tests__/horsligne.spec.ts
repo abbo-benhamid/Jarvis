@@ -6,7 +6,7 @@ import { chiffreurWebCrypto, ev, laisserFinir, serveurFactice } from './aides';
 
 /** Assemblage (file + cache + stockage chiffré + réseau) : purge à la déconnexion, changement de compte, retour du réseau. */
 
-const MOI = { id: 'acc_josiane', role: 'ACCOMPAGNANT' as const, prenom: 'Josiane', nom: 'Mathurin', email: 'j@exemple.test', demo: false, bacASable: false, emailVerifie: true, profilValide: true, preinscription: false };
+const MOI = { id: 'acc_josiane', role: 'ACCOMPAGNANT' as const, prenom: 'Josiane', nom: 'Mathurin', email: 'j@exemple.test', demo: false, bacASable: false, emailVerifie: true, profilValide: true, preinscription: false, territoire: 'GUADELOUPE' as const };
 
 async function monter() {
   const brut = stockageMemoire();

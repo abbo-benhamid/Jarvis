@@ -84,7 +84,11 @@ test('inscription : 18 ans minimum, 10 caractères minimum, téléphone de 10 ch
 
 test('GET /me : contrat serveur strict ; état du compte et rappel e-mail', () => {
   const base = { id: 'u1', role: 'ACCOMPAGNANT', prenom: 'J', nom: 'M', email: 'j@exemple.fr', demo: false, bacASable: false };
-  const l1 = { ...base, emailVerifie: false, profilValide: false, preinscription: false };
+  const l1 = { ...base, emailVerifie: false, profilValide: false, preinscription: false, territoire: 'GUADELOUPE' };
+  // T1 : territoire nullable (accompagnant avant le choix), mais présent.
+  expect(reponseMoiSchema.safeParse({ ...l1, territoire: null }).success).toBe(true);
+  const { territoire: _sansT, ...ancien } = l1;
+  expect(reponseMoiSchema.safeParse(ancien).success).toBe(false);
   expect(reponseMoiSchema.safeParse(l1).success).toBe(true);
   // RGPD : liste fermée. Un champ en plus ou un champ L1 absent est refusé (versions différentes).
   expect(reponseMoiSchema.safeParse({ ...l1, champFutur: 1 }).success).toBe(false);

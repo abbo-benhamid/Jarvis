@@ -14,7 +14,7 @@ import { randomBytes } from 'node:crypto';
 const i = process.argv.indexOf('--port');
 const port = Number(i >= 0 ? process.argv[i + 1] : 4331);
 
-const MOI = { id: 'acc_e2e', role: 'ACCOMPAGNANT', prenom: 'Josiane', nom: 'Mathurin', email: 'accompagnant@demo.koudmen.test', demo: true, bacASable: false, emailVerifie: true, profilValide: true, preinscription: false };
+const MOI = { id: 'acc_e2e', role: 'ACCOMPAGNANT', prenom: 'Josiane', nom: 'Mathurin', email: 'accompagnant@demo.koudmen.test', demo: true, bacASable: false, emailVerifie: true, profilValide: true, preinscription: false, territoire: 'GUADELOUPE' };
 const jeton = (p) => p + randomBytes(24).toString('hex');
 
 let etat;
@@ -30,7 +30,8 @@ function reinitialiser() {
       debut: debut.toISOString(),
       fin: new Date(debut.getTime() + 120 * 60_000).toISOString(),
       statut: 'EN_COURS',
-      aine: { prenom: 'Léonie', initialeNom: 'B.', commune: 'SAINTE_LUCE', communeLibelle: 'Sainte-Luce', adresseApproximative: 'Quartier Désert', interets: [] },
+      fuseau: 'America/Guadeloupe',
+      aine: { territoire: 'GUADELOUPE', prenom: 'Léonie', initialeNom: 'B.', commune: 'SAINTE_ANNE_GP', communeLibelle: 'Sainte-Anne', adresseApproximative: 'Quartier Désert', interets: [] },
       demande: { niveau: 1, frequence: 'HEBDOMADAIRE', dureeMinutes: 120, consignes: 'Marché de Rivière-Pilote, puis le courrier.' },
       preuve: { score: 2, seuil: 2, facteursValides: ['CODE_DOMICILE', 'GPS'], checkInA: debut.toISOString(), checkOutA: null, horlogeSuspecte: false },
       kayePublie: false,
