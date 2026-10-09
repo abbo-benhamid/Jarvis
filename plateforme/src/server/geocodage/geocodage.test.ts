@@ -4,12 +4,12 @@ import { creerGeocodageSimule } from "./simule";
 import { geocodagePort, nomAdaptateurGeocodage, normaliserCommune, type GeocodagePort } from "./index";
 
 /** Réponse type de l'API Adresse (extrait). */
-function reponse(over: Record<string, unknown> = {}, coords: [number, number] = [-60.9996, 14.6131]) {
+function reponse(over: Record<string, unknown> = {}, coords: [number, number] = [-61.6325, 16.2689]) {
   return {
     features: [
       {
         geometry: { type: "Point", coordinates: coords },
-        properties: { score: 0.82, type: "housenumber", city: "Le Lamentin", postcode: "97232", label: "12 Rue Schoelcher 97232 Le Lamentin", ...over },
+        properties: { score: 0.82, type: "housenumber", city: "Lamentin", postcode: "97129", label: "12 Rue Schoelcher 97129 Lamentin", ...over },
       },
     ],
   };
@@ -48,15 +48,22 @@ describe("géocodage (L8) — tests contractuels des adaptateurs", () => {
 describe("api-adresse : lecture de la réponse", () => {
   const demande = { adresse: "12 rue Schoelcher", commune: "Le Lamentin" };
   it("numéro trouvé → point exact ; rue seule → approximatif", () => {
-    expect(lireReponse(reponse(), demande)).toMatchObject({ latitude: 14.6131, longitude: -60.9996, approximatif: false });
+    expect(lireReponse(reponse(), demande)).toMatchObject({ latitude: 16.2689, longitude: -61.6325, approximatif: false });
     expect(lireReponse(reponse({ type: "street" }), demande)?.approximatif).toBe(true);
   });
-  it("score trop bas, hors Martinique, autre commune, réponse vide → null (repli centre de commune)", () => {
+  it("score trop bas, hors du territoire, autre commune, réponse vide → null (repli centre de commune)", () => {
     expect(lireReponse(reponse({ score: 0.3 }), demande)).toBeNull();
     expect(lireReponse(reponse({ postcode: "75001" }), demande)).toBeNull();
     expect(lireReponse(reponse({ city: "Le Robert" }), demande)).toBeNull();
+    // T1 : homonyme de Martinique (« Le Lamentin », 97232) refusé pour une demande en Guadeloupe.
+    expect(lireReponse(reponse({ city: "Le Lamentin", postcode: "97232" }), { ...demande, prefixesCodePostal: ["971"] })).toBeNull();
     expect(lireReponse({ features: [] }, demande)).toBeNull();
     expect(lireReponse(null, demande)).toBeNull();
+  });
+  it("T1 : code postal du territoire de la commune (Martinique : 972)", () => {
+    const mq = { adresse: "12 rue Schoelcher", commune: "Le Lamentin", prefixesCodePostal: ["972"] };
+    expect(lireReponse(reponse({ city: "Le Lamentin", postcode: "97232" }), mq)).not.toBeNull();
+    expect(lireReponse(reponse(), mq)).toBeNull();
   });
   it("envoie l'adresse et la commune, un seul résultat", async () => {
     const f = fauxFetch(reponse());

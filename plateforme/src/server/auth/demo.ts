@@ -10,5 +10,5 @@ export type DemoRole = Exclude<Role, "OPERATEUR">;
 
 export const DEMO_ACCOUNTS: Record<DemoRole, { email: string; label: string }> = {
   FAMILLE: { email: "famille@demo.koudmen.test", label: "Sandrine (famille, Paris)" },
-  ACCOMPAGNANT: { email: "accompagnant@demo.koudmen.test", label: "Josiane (accompagnante, Fort-de-France)" },
+  ACCOMPAGNANT: { email: "accompagnant@demo.koudmen.test", label: "Josiane (accompagnante, Pointe-à-Pitre)" },
 };

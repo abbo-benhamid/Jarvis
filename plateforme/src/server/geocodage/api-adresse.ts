@@ -1,16 +1,21 @@
 import { normaliserCommune, type DemandeGeocodage, type GeocodagePort, type ResultatGeocodage } from "./port";
+import { TERRITOIRE_LANCEMENT, territoire } from "@/lib/territoires";
 
 /**
  * Adaptateur API Adresse (Base Adresse Nationale), `GET https://api-adresse.data.gouv.fr/search/`.
  * Sans clé. [À VÉRIFIER] Migration annoncée vers `data.geopf.fr/geocodage` (IGN) : l'URL est paramétrable.
  * Règles :
- * - un seul résultat demandé, code postal de Martinique (972xx) et commune identique, sinon null ;
+ * - un seul résultat demandé, code postal du territoire de la commune (T1 : 971xx en Guadeloupe, 972xx en Martinique)
+ *   et commune identique, sinon null ;
  * - score < 0,5 → null (repli : centre de la commune) ;
  * - type `housenumber` = point exact ; `street`, `locality`… = approximatif ;
  * - délai 3 s ; une erreur réseau donne null (jamais d'exception).
  * L'adresse n'est jamais écrite dans le journal du serveur.
  */
 export const SCORE_MIN = 0.5;
+
+/** Codes postaux du territoire de lancement (Guadeloupe). */
+const PREFIXES_DEFAUT = territoire(TERRITOIRE_LANCEMENT).prefixesCodePostal;
 
 type Feature = {
   geometry?: { coordinates?: [number, number] };
@@ -22,7 +27,8 @@ export function lireReponse(json: unknown, demande: DemandeGeocodage): ResultatG
   const coords = f?.geometry?.coordinates;
   const p = f?.properties;
   if (!coords || !p || typeof p.score !== "number" || p.score < SCORE_MIN) return null;
-  if (!p.postcode?.startsWith("972")) return null;
+  const prefixes = demande.prefixesCodePostal?.length ? demande.prefixesCodePostal : PREFIXES_DEFAUT;
+  if (!p.postcode || !prefixes.some((x) => p.postcode!.startsWith(x))) return null;
   if (!p.city || normaliserCommune(p.city) !== normaliserCommune(demande.commune)) return null;
   const [longitude, latitude] = coords;
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;

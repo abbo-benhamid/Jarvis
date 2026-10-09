@@ -13,6 +13,8 @@ import { PROOF_FACTOR_LABELS } from "@/lib/labels";
 import { PlanCostExample } from "@/components/famille/plan-cost";
 import { Term } from "@/components/ui/term";
 import { isLaunchMode } from "@/server/launch";
+import { TERRITOIRES_BIENTOT, TERRITOIRES_OUVERTS, listeNoms, territoire } from "@/lib/territoires";
+import { OUVERTURE_NOTICE } from "@/lib/legal-launch";
 
 /**
  * Page d'accueil (D13, maquette conso écran a) : elle vend la TRANQUILLITÉ, dans cet ordre :
@@ -65,6 +67,9 @@ const CTA = {
   },
 } as const;
 
+/** T1 (T9) : « Guadeloupe · diaspora » : le nom vient des territoires ouverts. */
+const EYEBROW = `${listeNoms(TERRITOIRES_OUVERTS)} · diaspora`;
+
 export default function HomePage() {
   const cta = CTA[isLaunchMode() ? "lancement" : "essai"];
   return (
@@ -72,7 +77,7 @@ export default function HomePage() {
       {/* 1. La réponse, le bouton et le prix : tout dans le premier écran */}
       <section aria-labelledby="titre-accueil" className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:items-center lg:gap-14">
         <div className="flex min-w-0 flex-col">
-          <Eyebrow>Martinique · diaspora</Eyebrow>
+          <Eyebrow>{EYEBROW}</Eyebrow>
           <h1 id="titre-accueil" className="mt-4 font-display text-[42px] leading-[1.02] font-normal tracking-[-.025em] lg:text-[64px]">
             De loin, <em className="text-mer italic">sachez</em> qu&apos;elle va bien.
           </h1>
@@ -96,6 +101,24 @@ export default function HomePage() {
         </div>
 
         <HeroScene label="Illustration : lever de soleil sur la mer, une case créole sur le morne" />
+      </section>
+
+      {/* T1 (T2) : encart « Bientôt » pour les autres territoires, avec la liste d'attente. */}
+      <section aria-labelledby="titre-territoires" className="rounded-lg bg-surface-2 px-5 py-4" data-testid="encart-bientot">
+        <h2 id="titre-territoires" className="font-sans text-[17px] font-semibold tracking-normal">
+          {OUVERTURE_NOTICE}
+        </h2>
+        <p className="mt-1 text-[15px] text-muted">
+          {TERRITOIRES_BIENTOT.map((t, i) => (
+            <span key={t}>
+              {i > 0 ? (i === TERRITOIRES_BIENTOT.length - 1 ? " et " : ", ") : null}
+              <Link className="inline-flex min-h-11 items-center font-semibold text-mer underline underline-offset-4" href={`/liste-attente?territoire=${t}`}>
+                {territoire(t).nom}
+              </Link>
+            </span>
+          ))}{" "}
+          : bientôt. Inscrivez-vous sur la liste d&apos;attente.
+        </p>
       </section>
 
       {/* 2. Trois promesses */}

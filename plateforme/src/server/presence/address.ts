@@ -2,7 +2,7 @@ import "server-only";
 import type { Role } from "@prisma/client";
 import { db } from "@/server/db";
 import { logAudit } from "@/server/audit";
-import { fuseauDe, getCommune } from "@/lib/territoires";
+import { fuseauDe, getCommune, territoire } from "@/lib/territoires";
 import { geocodagePort } from "@/server/geocodage";
 import { presenceRefusal, type PresenceGuardAine } from "@/server/visits/launch-guards";
 import { decryptAddress, decryptHomeGeo, encryptAddress, encryptHomeGeo } from "./address-crypto";
@@ -38,7 +38,12 @@ export async function computeHomeLocation(address: string | null, communeCode: s
   const fallback = { latitude: commune.lat, longitude: commune.lng, homeGeoEnc: null, locationApproximate: true, geocodedAt: null, label: null };
   const clean = address?.trim().slice(0, ADDRESS_MAX) || null;
   if (!clean) return { addressEnc: null, ...fallback };
-  const r = await geocodagePort().geocoder({ adresse: clean, commune: commune.label });
+  const r = await geocodagePort().geocoder({
+    adresse: clean,
+    commune: commune.label,
+    prefixesCodePostal: territoire(commune.territoire).prefixesCodePostal,
+    codePostal: commune.codePostal,
+  });
   const addressEnc = encryptAddress(clean);
   if (!r) return { addressEnc, ...fallback };
   return {

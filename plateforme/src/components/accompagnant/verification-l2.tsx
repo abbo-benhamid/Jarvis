@@ -20,6 +20,8 @@ import { FormMessage } from "@/components/ui/form-message";
 import { FormField, Fieldset, fieldA11y } from "@/components/ui/form-field";
 import { Checkbox, Input, Radio, Select } from "@/components/ui/input";
 import { Alert } from "@/components/ui/alert";
+import { TERRITOIRE_LANCEMENT, territoire } from "@/lib/territoires";
+import { creneauLabelOperateur } from "@/lib/rappel";
 
 /**
  * L2 : formulaires du site pour la vérification de l'accompagnant (téléphone, identité, adresse, entreprise, documents).
@@ -53,7 +55,7 @@ export function PhoneForm({ defaultPhone, voiceOpen }: { defaultPhone: string; v
     <div className="flex flex-col gap-5">
       <form onSubmit={send.onSubmit} className="flex flex-col gap-3" noValidate>
         <FormMessage state={send.state} />
-        <FormField label="Votre numéro de mobile" htmlFor="telephone" hint="Martinique, Guadeloupe, Guyane, La Réunion, Mayotte ou Hexagone. Exemple : 0696 12 34 56." errors={fe?.telephone} required>
+        <FormField label="Votre numéro de mobile" htmlFor="telephone" hint={`Guadeloupe, Martinique, Guyane ou Hexagone. Exemple : ${territoire(TERRITOIRE_LANCEMENT).exempleTelephone}.`} errors={fe?.telephone} required>
           <Input {...fieldA11y("telephone", fe?.telephone, true)} type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={20} required />
         </FormField>
         <input type="hidden" name="canal" value="SMS" />
@@ -108,10 +110,11 @@ export function IdentityStartForm({ disabled }: { disabled: boolean }) {
   );
 }
 
+/** T1 (T4) : créneaux dans le fuseau de l'équipe Koudmen (Guadeloupe au lancement). */
 const CRENEAUX = [
-  ["MATIN", "Matin (8 h – 11 h, heure de Martinique)"],
-  ["MIDI", "Midi (11 h – 14 h, heure de Martinique)"],
-  ["APRES_MIDI", "Après-midi (14 h – 17 h, heure de Martinique)"],
+  ["MATIN", `Matin (${creneauLabelOperateur("MATIN")})`],
+  ["MIDI", `Midi (${creneauLabelOperateur("MIDI")})`],
+  ["APRES_MIDI", `Après-midi (${creneauLabelOperateur("APRES_MIDI")})`],
 ] as const;
 
 const RAISONS = [

@@ -10,6 +10,7 @@ import { PendingButton, useFormAction } from "@/components/ui/use-form-action";
 import { FormMessage } from "@/components/ui/form-message";
 import { FAMILY_LOCATION_LABELS } from "@/lib/labels";
 import { COMMUNES } from "@/lib/communes";
+import { BIENTOT_NOTICE, OUVERTURE_NOTICE } from "@/lib/legal-launch";
 
 type RoleChoice = "FAMILLE" | "ACCOMPAGNANT";
 
@@ -98,8 +99,14 @@ export function RegisterForm({ defaultRole, next }: { defaultRole: RoleChoice; n
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
-          <FormField label="Ma commune" htmlFor="commune" errors={fe?.commune} required>
-            <Select {...fieldA11y("commune", fe?.commune)} defaultValue="" required>
+          <FormField
+            label="Ma commune"
+            htmlFor="commune"
+            hint={`${OUVERTURE_NOTICE} ${BIENTOT_NOTICE}`}
+            errors={fe?.commune}
+            required
+          >
+            <Select {...fieldA11y("commune", fe?.commune, true)} defaultValue="" required>
               <option value="" disabled>
                 Choisir…
               </option>
