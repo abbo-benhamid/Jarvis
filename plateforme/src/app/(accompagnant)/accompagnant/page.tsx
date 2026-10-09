@@ -19,6 +19,11 @@ import { CAREGIVER_STATUS_LABELS, VALIDATION_LABELS } from "@/lib/labels";
 import { communeLabel, fuseauDe } from "@/lib/territoires";
 import { formatEuros } from "@/lib/format";
 import { cn } from "@/lib/cn";
+import { realDataAllowed } from "@/server/launch";
+import { getVerificationState } from "@/server/accompagnant/verification-app";
+import { rangValidation } from "@/server/preinscription/queries";
+import { PreinscriptionPanel } from "@/components/accompagnant/preinscription-panel";
+import { VALIDATION_DELAY_DAYS } from "@/lib/legal-launch";
 
 export const metadata: Metadata = { title: "Accueil accompagnant" };
 
@@ -35,6 +40,9 @@ export default async function Page() {
   const today = nextVisits.filter((v) => relativeDay(v.scheduledStart, now) === "aujourd'hui");
   const focus = nextVisits[0] ?? null;
   const later = nextVisits.slice(1);
+  // P1 : en préinscription (aucune mission avant l'ouverture), place dans la file de validation et étapes (`etapes`).
+  const preinscription = !realDataAllowed() && user.sandboxId === null && !user.isDemo;
+  const [etat, rang] = preinscription ? await Promise.all([getVerificationState(user.id), rangValidation(user.id)]) : [null, null];
 
   const steps: Step[] = [
     { label: "Faire l'orientation (5 questions)", done: profile.status !== null, href: "/accompagnant/orientation" },
@@ -71,6 +79,8 @@ export default async function Page() {
       </header>
 
       <div className="flex flex-col gap-4">
+        {etat ? <PreinscriptionPanel rang={rang} validation={profile.validation} etapes={etat.etapes} delaiJours={VALIDATION_DELAY_DAYS} /> : null}
+
         {profile.status ? <MicroQuestion user={user} questionKey="INSCRIPTION_REELLE" path="/accompagnant" /> : null}
 
         {profile.validation === "REFUSE" || profile.validation === "SUSPENDU" ? (
@@ -166,7 +176,7 @@ export default async function Page() {
           </section>
         ) : null}
 
-        {profile.status && !allDone ? (
+        {profile.status && !allDone && !etat ? (
           <section aria-labelledby="missions">
             <SectionHeader id="missions" title="Pour recevoir des missions" className="mt-2" />
             <Card padding="none" className="px-[18px] py-1">
