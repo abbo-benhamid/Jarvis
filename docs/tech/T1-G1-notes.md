@@ -68,7 +68,7 @@ Routes nouvelles (publiques) : `GET /api/v1/territoires`, `POST /api/v1/liste-at
 | Base (`KOUDMEN_DB_TESTS=1`) | liste d'attente (doublon, territoire ouvert, limites IP et e-mail, purge), matching sur base réelle limité au territoire |
 | e2e | `e2e/territoires.spec.ts` (encart, page préremplie, consentement, API) ; suites existantes recalées en Guadeloupe |
 
-Résultat : voir le résumé de fin de lot (lint, typecheck, 770 tests unitaires et base, e2e).
+Résultat (base dédiée `koudmen_t1`) : lint OK, typecheck OK, **770 tests unitaires et base OK** (82 fichiers), **48 e2e OK** (essai + lancement, `RATE_LIMIT_DISABLED=true`, port 3460).
 
 ## 5. Limites et points `[À VÉRIFIER]`
 
