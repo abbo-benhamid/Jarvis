@@ -41,7 +41,7 @@ test.describe("API v1 — push (lot N1)", () => {
   test("appareil de la famille → Kayé publié → push générique ; retrait → plus de push", async ({ request }) => {
     const demo = await prisma.user.findUniqueOrThrow({ where: { email: DEMO_EMAIL }, select: { caregiverProfile: { select: { id: true } } } });
     const opId = await operatorId();
-    const { user: family, aine } = await createFamilyWithAine({ aineFirstName: "Ginette", commune: "LAMENTIN" });
+    const { user: family, aine } = await createFamilyWithAine({ aineFirstName: "Ginette", commune: "ABYMES" });
     const req = await createRequest({ aineId: aine.id, createdById: family.id, level: 1, slots: [[1, "MATIN"]] });
     await prisma.careRequest.update({ where: { id: req.id }, data: { status: "POURVUE" } });
     const proposal = await prisma.missionProposal.create({

@@ -68,9 +68,9 @@ test.describe("API v1 — visites, événements, propositions", () => {
     const demoProfile = demo.caregiverProfile!;
     expect(demoProfile.validation).toBe("VALIDE");
     const opId = await operatorId();
-    const { user: family, aine } = await createFamilyWithAine({ aineFirstName: "Ginette", commune: "LAMENTIN" });
+    const { user: family, aine } = await createFamilyWithAine({ aineFirstName: "Ginette", commune: "ABYMES" });
     const visit = await visitFor(demoProfile.id, aine.id, family.id, opId);
-    const other = await createCaregiver({ firstName: "Autre", status: "SALARIE_FAMILLE_CESU", validation: "VALIDE", communes: ["LAMENTIN"], avail: [[1, "MATIN"]] });
+    const other = await createCaregiver({ firstName: "Autre", status: "SALARIE_FAMILLE_CESU", validation: "VALIDE", communes: ["ABYMES"], avail: [[1, "MATIN"]] });
     const otherVisit = await visitFor(other.profile.id, aine.id, family.id, opId);
     const reqRefus = await createRequest({ aineId: aine.id, createdById: family.id, level: 1, slots: [[2, "MATIN"]] });
     const reqAccept = await createRequest({ aineId: aine.id, createdById: family.id, level: 1, slots: [[4, "APRES_MIDI"]] });
@@ -88,7 +88,7 @@ test.describe("API v1 — visites, événements, propositions", () => {
     expect(listRes.headers()["cache-control"]).toContain("no-store");
     const list = reponseVisitesSchema.parse(await listRes.json());
     const mine = list.visites.find((v) => v.id === visit.id);
-    expect(mine).toMatchObject({ statut: "PREVUE", aine: { prenom: "Ginette", communeLibelle: "Le Lamentin" }, actions: { checkIn: true } });
+    expect(mine).toMatchObject({ statut: "PREVUE", aine: { prenom: "Ginette", communeLibelle: "Les Abymes" }, actions: { checkIn: true } });
     expect(list.visites.map((v) => v.id)).not.toContain(otherVisit.id);
     expect(JSON.stringify(list)).not.toContain(aine.homeCode);
 

@@ -282,7 +282,7 @@ async function simulateCaregiver(tester: Tester, now: Date): Promise<SimulationR
       await tx.caregiverProfile.update({
         where: { id: profile.id },
         data: {
-          communes: profile.communes.length > 0 ? profile.communes : ["FORT_DE_FRANCE"],
+          communes: profile.communes.length > 0 ? profile.communes : ["POINTE_A_PITRE"],
           hourlyRateCents: statusIsPaid(status) ? rate : null,
           associationName: status === "BENEVOLE_ASSO" ? (profile.associationName ?? "Association Lakou Solidarité (fictive)") : null,
           saadName: status === "SAAD" ? (profile.saadName ?? "Service partenaire (fictif)") : null,
@@ -414,7 +414,7 @@ async function familyRobotChoosesTester(
 ): Promise<SimulationResult> {
   const sid = tester.sandboxId;
   const [operator, patrick] = await Promise.all([robot(sid, "operateur"), robot(sid, "patrick")]);
-  const commune = profile.communes[0] ?? "FORT_DE_FRANCE";
+  const commune = profile.communes[0] ?? "POINTE_A_PITRE";
   const level = [1, 2, 3, 4].find((l) => profile.allowedLevels.includes(l)) ?? 1;
   const slot = profile.availabilities[0];
   const procheAidant = profile.status === "PROCHE_AIDANT_APA";
@@ -432,11 +432,12 @@ async function familyRobotChoosesTester(
         data: {
           firstName: "Ernest",
           lastInitial: "B.",
+          territoire: c.territoire,
           commune,
           addressHint: "Quartier fictif",
           latitude: c.lat,
           longitude: c.lng,
-          phone: "+596 596 00 00 12 (fictif)",
+          phone: "+590 590 00 00 12 (fictif)",
           needs: ["COMPAGNIE", "COURSES"],
           activityLevel: level,
           consentGiven: true,

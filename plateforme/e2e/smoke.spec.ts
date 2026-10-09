@@ -29,7 +29,7 @@ test("D13 + S1c : l'accueil vend la tranquillité, montre « Découvrir Koudmen 
   // une ligne honnête dans le pied de page, avec le lien vers les mentions légales.
   await expect(page.getByText(/Version de test|fictif|Personnages inventés|Mode test/)).toHaveCount(0);
   const ouverture = page.getByTestId("ouverture");
-  await expect(ouverture).toContainText("Koudmen ouvre bientôt en Martinique. Les visites ne sont pas encore proposées.");
+  await expect(ouverture).toContainText("Koudmen ouvre en Guadeloupe. Les visites ne sont pas encore proposées.");
   await expect(ouverture.getByRole("link", { name: "En savoir plus" })).toHaveAttribute("href", "/mentions-legales");
 });
 
@@ -160,8 +160,8 @@ test("inscription d'un accompagnant (CGU, date de naissance, mot de passe couran
   await page.locator("#firstName").fill("Test");
   await page.locator("#lastName").fill("Accompagnant");
   await page.locator("#email").fill(email);
-  await page.locator("#phone").fill("+596 696 11 22 33");
-  await page.locator("#commune").selectOption("ROBERT");
+  await page.locator("#phone").fill("+590 690 11 22 33");
+  await page.locator("#commune").selectOption("MOULE");
   await page.locator("#birthDate").fill("1992-06-15");
   await page.getByLabel(/J'accepte les conditions/).check();
   // L1 : mot de passe trop courant → refus, et la saisie reste en place.

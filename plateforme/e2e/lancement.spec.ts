@@ -42,10 +42,10 @@ async function register(page: Page, role: "FAMILLE" | "ACCOMPAGNANT", email: str
   await page.locator("#firstName").fill("Rose");
   await page.locator("#lastName").fill(`Essai-${uid().replace(/[0-9]/g, (d) => "abcdefghij"[Number(d)]!)}`);
   await page.getByLabel("Adresse e-mail").fill(email);
-  await page.locator("#phone").fill("+596 696 12 34 56");
+  await page.locator("#phone").fill("+590 690 12 34 56");
   await page.getByLabel("Mot de passe").fill(PASSWORD);
   if (role === "ACCOMPAGNANT") {
-    await page.locator("#commune").selectOption("FORT_DE_FRANCE");
+    await page.locator("#commune").selectOption("POINTE_A_PITRE");
     await page.locator("#birthDate").fill("1990-04-02");
   } else {
     await page.locator("#location").selectOption("HEXAGONE");
@@ -101,7 +101,7 @@ test("L1 : /api/sante (mode, avertissement Brevo, préinscription) ; API v1 : d�
   expect((await demo.json()).erreur.code).toBe("ACCES_REFUSE");
 
   const email = `api-${uid()}@${E2E_DOMAIN}`;
-  const body = { role: "ACCOMPAGNANT", prenom: "Api", nom: `Essai-${uid().replace(/[0-9]/g, (d) => "abcdefghij"[Number(d)]!)}`, email, telephone: "+596 696 00 00 01", motDePasse: PASSWORD, commune: "LAMENTIN", dateNaissance: "1995-01-15", accepteCgu: true };
+  const body = { role: "ACCOMPAGNANT", prenom: "Api", nom: `Essai-${uid().replace(/[0-9]/g, (d) => "abcdefghij"[Number(d)]!)}`, email, telephone: "+590 690 00 00 01", motDePasse: PASSWORD, commune: "ABYMES", dateNaissance: "1995-01-15", accepteCgu: true };
   const first = await request.post("/api/v1/auth/inscription", { data: body });
   const again = await request.post("/api/v1/auth/inscription", { data: { ...body, prenom: "Autre" } });
   expect(first.status()).toBe(201);
@@ -167,10 +167,10 @@ test("R1 / L4 : préinscription — pas de fiche aîné ; demande de rappel visi
   await expect(page.getByRole("button", { name: "Demander un appel pour poser une question" })).toBeVisible();
   await page.getByRole("button", { name: "Demander un appel pour la formule Sérénité" }).click();
   const form = page.getByRole("form", { name: "Demander un appel pour la formule Sérénité" });
-  await expect(form.getByLabel("Numéro où le conseiller vous appelle")).toHaveValue("+596 696 12 34 56");
+  await expect(form.getByLabel("Numéro où le conseiller vous appelle")).toHaveValue("+590 690 12 34 56");
   await form.getByRole("button", { name: "Envoyer la demande" }).click();
   await expect(form.getByText("Choisissez un créneau.")).toBeVisible();
-  await form.getByLabel(/^8 h – 11 h en Martinique \(1[34] h – 1[67] h à Paris\)$/).check();
+  await form.getByLabel(/^8 h – 11 h en Guadeloupe \(1[34] h – 1[67] h à Paris\)$/).check();
   await form.getByRole("button", { name: "Envoyer la demande" }).click();
   await expect(page.getByText(/Demande envoyée pour la formule Sérénité/)).toBeVisible();
   // L1d (M3) : préinscription sans impasse « Ajouter un aîné » ; barre réduite à Accueil et Formule.

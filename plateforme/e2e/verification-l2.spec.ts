@@ -35,7 +35,7 @@ test("L2 : l'accompagnant vérifie son téléphone, son identité et son adresse
   await expect(page.getByText(/Code faux. Il reste 4 essais/)).toBeVisible();
   await page.getByLabel("Code à 6 chiffres").fill("000000");
   await page.getByRole("button", { name: "Vérifier le code" }).click();
-  await expect(page.getByText(/Numéro vérifié : \+596 696 •• •• /).first()).toBeVisible();
+  await expect(page.getByText(/Numéro vérifié : \+590 690 •• •• /).first()).toBeVisible();
 
   // Identité : consentement obligatoire, puis page du prestataire simulé.
   await page.goto("/accompagnant/verifications/identite");
@@ -53,7 +53,7 @@ test("L2 : l'accompagnant vérifie son téléphone, son identité et son adresse
   await page.goto("/accompagnant/verifications/adresse");
   await page.getByLabel("Numéro et voie").fill("12 rue des Flamboyants");
   await page.getByLabel("Code postal").fill("97232");
-  await page.getByLabel("Commune").fill("Le Lamentin");
+  await page.getByLabel("Commune").fill("Les Abymes");
   await page.getByRole("button", { name: "Enregistrer mon adresse" }).click();
   await expect(page.getByText(/Adresse enregistrée/)).toBeVisible();
   await page.getByLabel("Fichier").setInputFiles({ name: "facture.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4\nfacture fictive e2e\n%%EOF") });
