@@ -14,7 +14,8 @@ import { confirmElderSimulated, generateUniqueHomeCode } from "@/server/visits/s
 import { addressRefusal, computeHomeLocation, readAddress } from "@/server/presence/address";
 import { cancelCareRequest, chooseProfile, MatchingError } from "@/server/matching/service";
 import { trackEvent } from "@/server/sandbox/events";
-import { getCommune } from "@/lib/communes";
+import { getCommune, isOuvert } from "@/lib/territoires";
+import { messageTerritoireFerme } from "@/server/territoires";
 import { getPlan, NO_PAYMENT_NOTICE } from "@/lib/plans";
 import { isLaunchMode, assertRealDataAllowed, RealDataClosedError } from "@/server/launch";
 import { ActivationError, requestActivation } from "@/server/offre/activation";
@@ -61,6 +62,8 @@ export async function createAineAction(_prev: ActionResult, formData: FormData):
   const v = parsed.data;
   const commune = getCommune(v.commune);
   if (!commune) return { ok: false, error: CHECK_FIELDS, fieldErrors: { commune: ["Choisissez une commune."] } };
+  // T1 (T2) : un aîné seulement dans un territoire OUVERT (le formulaire ne fait jamais foi).
+  if (!isOuvert(commune.territoire)) return { ok: false, error: messageTerritoireFerme(commune.territoire), fieldErrors: { commune: [messageTerritoireFerme(commune.territoire)] } };
 
   // L1-B (L8, R1/R5) : adresse exacte seulement si les données réelles sont permises (l'accord est donné ici).
   if (v.address) {
@@ -75,6 +78,7 @@ export async function createAineAction(_prev: ActionResult, formData: FormData):
       data: {
         firstName: v.firstName,
         lastInitial: v.lastInitial ?? null,
+        territoire: commune.territoire,
         commune: v.commune,
         addressHint: v.addressHint ?? null,
         // L1-B (L8) : adresse chiffrée et géocodée ; sinon centre de la commune (position approximative).
@@ -104,7 +108,7 @@ export async function createAineAction(_prev: ActionResult, formData: FormData):
       },
       select: { id: true },
     });
-    await logAudit({ actor: user, action: "aine.created", entityType: "Aine", entityId: created.id, metadata: { commune: v.commune, level: v.activityLevel, address: home.addressEnc !== null, approximate: home.locationApproximate } }, tx);
+    await logAudit({ actor: user, action: "aine.created", entityType: "Aine", entityId: created.id, metadata: { territoire: commune.territoire, commune: v.commune, level: v.activityLevel, address: home.addressEnc !== null, approximate: home.locationApproximate } }, tx);
     await logAudit({ actor: user, action: "aine.consent", entityType: "Aine", entityId: created.id, metadata: { consentByType: v.consentByType } }, tx);
     return created;
   });
@@ -122,12 +126,14 @@ async function createAineForConsent(user: Awaited<ReturnType<typeof requireRole>
   const v = parsed.data;
   const commune = getCommune(v.commune);
   if (!commune) return { ok: false, error: CHECK_FIELDS, fieldErrors: { commune: ["Choisissez une commune."] } };
+  if (!isOuvert(commune.territoire)) return { ok: false, error: messageTerritoireFerme(commune.territoire), fieldErrors: { commune: [messageTerritoireFerme(commune.territoire)] } };
   const homeCode = await generateUniqueHomeCode();
   const now = new Date();
   const aine = await db.$transaction(async (tx) => {
     const created = await tx.aine.create({
       data: {
         firstName: v.firstName,
+        territoire: commune.territoire,
         commune: v.commune,
         latitude: commune.lat,
         longitude: commune.lng,
@@ -147,7 +153,7 @@ async function createAineForConsent(user: Awaited<ReturnType<typeof requireRole>
       },
       select: { id: true },
     });
-    await logAudit({ actor: user, action: "aine.created", entityType: "Aine", entityId: created.id, metadata: { commune: v.commune, accordEtat: "EN_ATTENTE_ACCORD" } }, tx);
+    await logAudit({ actor: user, action: "aine.created", entityType: "Aine", entityId: created.id, metadata: { territoire: commune.territoire, commune: v.commune, accordEtat: "EN_ATTENTE_ACCORD" } }, tx);
     return created;
   });
   revalidatePath("/famille");
@@ -174,11 +180,13 @@ export async function updateAineAction(_prev: ActionResult, formData: FormData):
   if (!member.isPayer) return { ok: false, error: "Seul le gestionnaire principal du profil peut le modifier." };
   const commune = getCommune(v.commune);
   if (!commune) return { ok: false, error: CHECK_FIELDS, fieldErrors: { commune: ["Choisissez une commune."] } };
+  if (!isOuvert(commune.territoire)) return { ok: false, error: messageTerritoireFerme(commune.territoire), fieldErrors: { commune: [messageTerritoireFerme(commune.territoire)] } };
 
   const before = await db.aine.findUniqueOrThrow({ where: { id: v.aineId } });
   const next = {
     firstName: v.firstName,
     lastInitial: v.lastInitial ?? null,
+    territoire: commune.territoire,
     commune: v.commune,
     addressHint: v.addressHint ?? null,
     phone: v.phone ?? null,
@@ -356,9 +364,15 @@ export async function createRequestAction(_prev: ActionResult, formData: FormDat
   const v = parsed.data;
   if (!(await canAccessAine(user, v.aineId))) return { ok: false, error: NOT_FOUND, fieldErrors: { aineId: ["Choisissez un aîné de votre cercle."] } };
   // R5 (J5) : aucune demande tant que l'aîné n'a pas donné son accord au conseiller.
-  const accord = await db.aine.findUnique({ where: { id: v.aineId }, select: { accordEtat: true } });
-  if (accord && accord.accordEtat !== "ACCORD_RECUEILLI") {
+  const accord = await db.aine.findUnique({ where: { id: v.aineId }, select: { accordEtat: true, territoire: true } });
+  if (!accord) return { ok: false, error: NOT_FOUND };
+  if (accord.accordEtat !== "ACCORD_RECUEILLI") {
     return { ok: false, error: ACCORD_MISSING, fieldErrors: { aineId: [ACCORD_MISSING] } };
+  }
+  // T1 (T2) : une demande seulement pour un aîné d'un territoire OUVERT.
+  if (!isOuvert(accord.territoire)) {
+    const msg = messageTerritoireFerme(accord.territoire);
+    return { ok: false, error: msg, fieldErrors: { aineId: [msg] } };
   }
 
   // Créneaux uniques (contrainte @@unique).
@@ -368,6 +382,7 @@ export async function createRequestAction(_prev: ActionResult, formData: FormDat
       data: {
         aineId: v.aineId,
         createdById: user.id,
+        territoire: accord.territoire,
         level: v.level,
         frequency: v.frequency,
         durationMinutes: v.durationMinutes,
@@ -380,7 +395,7 @@ export async function createRequestAction(_prev: ActionResult, formData: FormDat
       },
       select: { id: true },
     });
-    await logAudit({ actor: user, action: "request.created", entityType: "CareRequest", entityId: req.id, metadata: { aineId: v.aineId, level: v.level, frequency: v.frequency } }, tx);
+    await logAudit({ actor: user, action: "request.created", entityType: "CareRequest", entityId: req.id, metadata: { aineId: v.aineId, territoire: accord.territoire, level: v.level, frequency: v.frequency } }, tx);
   });
   revalidatePath("/famille/demandes");
   revalidatePath("/famille");

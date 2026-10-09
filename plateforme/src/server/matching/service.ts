@@ -7,7 +7,7 @@ import { schedulePushFlush } from "@/server/notifications/push/service";
 import { checkCompatibility, MAX_PROFILES_PER_REQUEST } from "@/server/rules/matching";
 import { proposalBlockReason } from "@/server/operateur/rules";
 import { sameScope, type Scope } from "@/server/scope";
-import { communeLabel } from "@/lib/communes";
+import { communeLabel } from "@/lib/territoires";
 import { isConcurrencyError, lockCareRequests } from "./locks";
 
 /**
@@ -74,7 +74,7 @@ export async function proposeProfile(
             level: true,
             status: true,
             aineId: true,
-            aine: { select: { firstName: true, commune: true, sandboxId: true } },
+            aine: { select: { firstName: true, territoire: true, commune: true, sandboxId: true } },
             slots: { select: { dayOfWeek: true, slot: true } },
           },
         });
@@ -85,6 +85,7 @@ export async function proposeProfile(
             status: true,
             validation: true,
             hasDiploma: true,
+            territoire: true,
             communes: true,
             linkedAineId: true,
             availabilities: { select: { dayOfWeek: true, slot: true } },
@@ -97,6 +98,7 @@ export async function proposeProfile(
         }
         // RÈGLE SERVEUR : compatibilité recalculée ici. Le formulaire ne fait jamais foi (RM-01, RM-02, D7).
         const match = checkCompatibility(cg, {
+          territoire: request.aine.territoire,
           level: request.level,
           commune: request.aine.commune,
           slots: request.slots,

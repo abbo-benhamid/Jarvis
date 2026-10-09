@@ -180,7 +180,7 @@ export async function getRequestWithCandidates(requestId: string) {
   const request = await db.careRequest.findFirst({
     where: { id: requestId, aine: REAL_AINE },
     include: {
-      aine: { select: { id: true, firstName: true, lastInitial: true, commune: true, needs: true } },
+      aine: { select: { id: true, firstName: true, lastInitial: true, territoire: true, commune: true, needs: true } },
       createdBy: { select: { firstName: true, lastName: true } },
       slots: { orderBy: [{ dayOfWeek: "asc" }, { slot: "asc" }] },
       proposals: {
@@ -192,14 +192,15 @@ export async function getRequestWithCandidates(requestId: string) {
   });
   if (!request) return null;
 
-  // Tous les accompagnants du MÊME monde qui ont un statut (les autres n'ont pas fini l'orientation).
+  // Tous les accompagnants du MÊME monde et du MÊME territoire (T1) qui ont un statut (orientation faite).
   const caregivers = await db.caregiverProfile.findMany({
-    where: { status: { not: null }, user: REAL_USER },
+    where: { status: { not: null }, user: REAL_USER, territoire: request.aine.territoire },
     select: {
       id: true,
       status: true,
       validation: true,
       hasDiploma: true,
+      territoire: true,
       communes: true,
       allowedLevels: true,
       hourlyRateCents: true,
@@ -213,7 +214,13 @@ export async function getRequestWithCandidates(requestId: string) {
   const candidates = sortCandidates(
     caregivers.map((c) => ({
       name: `${c.user.firstName} ${c.user.lastName}`,
-      match: checkCompatibility(c, { level: request.level, commune: request.aine.commune, slots: request.slots, aineId: request.aine.id }),
+      match: checkCompatibility(c, {
+        territoire: request.aine.territoire,
+        level: request.level,
+        commune: request.aine.commune,
+        slots: request.slots,
+        aineId: request.aine.id,
+      }),
       data: { ...c, proposalStatus: proposalByCaregiver.get(c.id) ?? null },
     })),
   );

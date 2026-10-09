@@ -1,6 +1,5 @@
 import "server-only";
 import type { Role, Territoire } from "@prisma/client";
-import { db } from "@/server/db";
 import { isOuvert, territoire, TERRITOIRES_OUVERTS, listeNoms } from "@/lib/territoires";
 
 /**
@@ -30,14 +29,12 @@ export function nomsOuverts(): string {
  * - famille : territoire du premier aîné du compte (null sans aîné) ;
  * - opérateur : null.
  */
-export async function accountTerritoire(user: { id: string; role: Role }): Promise<Territoire | null> {
-  if (user.role === "ACCOMPAGNANT") {
-    const p = await db.caregiverProfile.findUnique({ where: { userId: user.id }, select: { territoire: true } });
-    return p?.territoire ?? null;
-  }
-  if (user.role === "FAMILLE") {
-    const a = await db.aine.findFirst({ where: { ownerId: user.id }, orderBy: { createdAt: "asc" }, select: { territoire: true } });
-    return a?.territoire ?? null;
-  }
+export function accountTerritoire(user: {
+  role: Role;
+  caregiverProfile?: { territoire: Territoire } | null;
+  ownedAines?: { territoire: Territoire }[];
+}): Territoire | null {
+  if (user.role === "ACCOMPAGNANT") return user.caregiverProfile?.territoire ?? null;
+  if (user.role === "FAMILLE") return user.ownedAines?.[0]?.territoire ?? null;
   return null;
 }

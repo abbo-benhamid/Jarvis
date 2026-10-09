@@ -63,7 +63,9 @@ const userSelect = {
   sessionVersion: true,
   /** L1 : GET /me → emailVerifie et profilValide. */
   emailVerifiedAt: true,
-  caregiverProfile: { select: { validation: true } },
+  caregiverProfile: { select: { validation: true, territoire: true } },
+  /** T1 : GET /me → territoire de la famille (premier aîné du compte). */
+  ownedAines: { select: { territoire: true }, orderBy: { createdAt: "asc" }, take: 1 },
 } satisfies Prisma.UserSelect;
 
 export type ApiUser = Prisma.UserGetPayload<{ select: typeof userSelect }>;

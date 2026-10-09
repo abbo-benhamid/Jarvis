@@ -59,7 +59,7 @@ const phoneField = z.preprocess(
   z
     .string()
     .trim()
-    .regex(/^\+?[0-9 .-]{6,20}$/, "Saisissez un numéro valide (exemple : +596 596 00 00 00).")
+    .regex(/^\+?[0-9 .-]{6,20}$/, "Saisissez un numéro valide (exemple : 0590 00 00 00).")
     .optional(),
 );
 
@@ -101,7 +101,7 @@ export const aineUpdateSchema = aineSchema.extend({ aineId: id });
 export const aineLaunchCreateSchema = z.object({
   firstName: aineSchema.shape.firstName,
   commune: aineSchema.shape.commune,
-  phone: z.string({ message: "Le conseiller appelle l'aîné à ce numéro." }).trim().regex(/^\+?[0-9 .-]{6,20}$/, "Saisissez un numéro valide (exemple : +596 596 00 00 00)."),
+  phone: z.string({ message: "Le conseiller appelle l'aîné à ce numéro." }).trim().regex(/^\+?[0-9 .-]{6,20}$/, "Saisissez un numéro valide (exemple : 0590 00 00 00)."),
   myRelation: aineCreateSchema.shape.myRelation,
 });
 

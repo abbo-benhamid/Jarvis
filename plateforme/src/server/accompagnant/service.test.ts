@@ -63,7 +63,7 @@ const { AccompagnantError, acceptProposal, declineProposal, checkInWithCode, che
   service;
 
 const josiane = { id: "user-josiane", role: "ACCOMPAGNANT" as const, firstName: "Josiane" };
-const NOW = new Date("2026-10-05T14:00:00Z"); // lundi 10 h en Martinique
+const NOW = new Date("2026-10-05T14:00:00Z"); // lundi 10 h en Guadeloupe
 
 function resetAll(obj: Record<string, unknown>) {
   for (const v of Object.values(obj)) {
@@ -86,7 +86,9 @@ beforeEach(() => {
 
 // ─────────────────────────────── Acceptation ───────────────────────────────
 
-function proposalFixture(overrides: { validation?: string; status?: string; level?: number; caregiverStatus?: string; rate?: number | null } = {}) {
+function proposalFixture(
+  overrides: { validation?: string; status?: string; level?: number; caregiverStatus?: string; rate?: number | null; caregiverTerritoire?: string; aineTerritoire?: string } = {},
+) {
   return {
     id: "prop-ernest-josiane",
     requestId: "req-ernest",
@@ -97,6 +99,7 @@ function proposalFixture(overrides: { validation?: string; status?: string; leve
       validation: overrides.validation ?? "VALIDE",
       hasDiploma: false,
       hourlyRateCents: overrides.rate === undefined ? 1500 : overrides.rate,
+      territoire: overrides.caregiverTerritoire ?? "GUADELOUPE",
     },
     request: {
       id: "req-ernest",
@@ -109,12 +112,21 @@ function proposalFixture(overrides: { validation?: string; status?: string; leve
         { dayOfWeek: 1, slot: "APRES_MIDI" },
         { dayOfWeek: 3, slot: "APRES_MIDI" },
       ],
-      aine: { id: "aine-ernest", firstName: "Ernest" },
+      aine: { id: "aine-ernest", firstName: "Ernest", territoire: overrides.aineTerritoire ?? "GUADELOUPE" },
     },
   };
 }
 
 describe("acceptProposal — transaction d'acceptation", () => {
+  it("T1 (T3) : refuse une mission d'un autre territoire, ou d'un territoire pas encore ouvert ; rien n'est écrit", async () => {
+    for (const f of [proposalFixture({ aineTerritoire: "MARTINIQUE" }), proposalFixture({ aineTerritoire: "MARTINIQUE", caregiverTerritoire: "MARTINIQUE" })]) {
+      m.tx.missionProposal.findFirst.mockResolvedValue(f);
+      await expect(acceptProposal(josiane, "prop-ernest-josiane", NOW)).rejects.toMatchObject({ code: "INTERDIT" });
+    }
+    expect(m.tx.mission.create).not.toHaveBeenCalled();
+    expect(m.tx.careRequest.updateMany).not.toHaveBeenCalled();
+  });
+
   it("crée la mission (tarif copié), 8 visites, annule les autres propositions, demande POURVUE, audit + notification dans la transaction", async () => {
     m.tx.missionProposal.findFirst.mockResolvedValue(proposalFixture());
     m.tx.missionProposal.updateMany
@@ -146,6 +158,7 @@ describe("acceptProposal — transaction d'acceptation", () => {
       proposalId: "prop-ernest-josiane",
       aineId: "aine-ernest",
       caregiverId: "cg-josiane",
+      territoire: "GUADELOUPE",
       hourlyRateCents: 1500,
     });
     const visits = m.tx.visit.createMany.mock.calls[0]![0].data as { missionId: string; caregiverId: string }[];

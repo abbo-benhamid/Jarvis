@@ -26,7 +26,7 @@ export const GET = route(async (req: NextRequest) => {
     emailVerifie: user.emailVerifiedAt !== null,
     profilValide: user.role !== "ACCOMPAGNANT" || user.caregiverProfile?.validation === "VALIDE",
     preinscription: !realDataAllowed(),
-    territoire: await accountTerritoire(user),
+    territoire: accountTerritoire(user),
   });
   return json(body);
 });

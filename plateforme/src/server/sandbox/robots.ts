@@ -62,7 +62,7 @@ async function currentFamilyRequest(sandboxId: string) {
     where: { aine: { sandboxId }, status: { not: "ANNULEE" } },
     orderBy: { createdAt: "desc" },
     include: {
-      aine: { select: { id: true, firstName: true, commune: true, homeCode: true } },
+      aine: { select: { id: true, firstName: true, territoire: true, commune: true, homeCode: true } },
       slots: { select: { dayOfWeek: true, slot: true } },
       proposals: { select: { id: true, status: true, caregiverId: true } },
       mission: {
@@ -193,12 +193,13 @@ type RequestForRobots = NonNullable<Awaited<ReturnType<typeof currentFamilyReque
 /** Profils compatibles du MÊME bac à sable, triés sans note (créneaux communs, puis nom). */
 async function compatibleCaregivers(sandboxId: string, r: RequestForRobots): Promise<string[]> {
   const list = await db.caregiverProfile.findMany({
-    where: { status: { not: null }, user: { sandboxId, role: "ACCOMPAGNANT" } },
+    where: { status: { not: null }, user: { sandboxId, role: "ACCOMPAGNANT" }, territoire: r.aine.territoire },
     select: {
       id: true,
       status: true,
       validation: true,
       hasDiploma: true,
+      territoire: true,
       communes: true,
       linkedAineId: true,
       availabilities: { select: { dayOfWeek: true, slot: true } },
@@ -208,7 +209,7 @@ async function compatibleCaregivers(sandboxId: string, r: RequestForRobots): Pro
   return sortCandidates(
     list.map((c) => ({
       name: `${c.user.firstName} ${c.user.lastName}`,
-      match: checkCompatibility(c, { level: r.level, commune: r.aine.commune, slots: r.slots, aineId: r.aine.id }),
+      match: checkCompatibility(c, { territoire: r.aine.territoire, level: r.level, commune: r.aine.commune, slots: r.slots, aineId: r.aine.id }),
       data: c.id,
     })),
   )
