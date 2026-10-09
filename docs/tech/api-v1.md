@@ -561,3 +561,44 @@ File opérateur « Accompagnants à appeler » (`server/operateur/files-lancemen
 | `/operateur/verifications/{itemId}` | Fiche de revue : résultats (sans image de pièce), document à ouvrir avec un motif, aperçu filigrané, liste de cases, décision (valider, complément, proposer un refus, confirmer ou annuler un refus) |
 | `GET /operateur/documents/{id}/apercu?motif=` | Flux déchiffré, `no-store`, `inline` ; motif obligatoire ; `DocumentAccessLog` + `AuditLog` |
 | `/operateur/accompagnants/{id}` | Validation bloquée tant qu'un élément manque ; refus du profil = motif fermé + second opérateur |
+
+## 15. Lot T1 — territoires (lancement en Guadeloupe)
+
+> Décisions : `docs/revues/T1-arbitrage-guadeloupe.md` (T1 à T9). Contrat : `src/contracts/v1/territoires.ts`.
+> Le territoire est une **donnée**. Au lancement, seul `GUADELOUPE` est `OUVERT`. `MARTINIQUE`, `GUYANE` et `HEXAGONE` sont `BIENTOT`.
+
+```mermaid
+flowchart LR
+  A[App : écran inscription] --> B[GET /api/v1/territoires]
+  B --> C{Territoire OUVERT ?}
+  C -- oui --> D[Liste des communes<br/>POST /auth/inscription<br/>territoire + commune]
+  C -- non --> E[Encart « Bientôt »<br/>POST /api/v1/liste-attente]
+```
+
+### 15.1 Routes publiques (sans jeton)
+
+| Route | Réponse | Règles |
+|---|---|---|
+| `GET /api/v1/territoires` | 200 `{ territoires: TerritoireInfo[] }` | Ordre : Guadeloupe, Martinique, Guyane, Hexagone. `communes` vide = saisie libre (commune + code postal). Réponse en cache public 1 h |
+| `POST /api/v1/liste-attente` | 202 `{}` **toujours** | Corps `{ email, territoire, consentement: true }`. Même réponse si l'e-mail est déjà inscrit ou si le territoire est ouvert (rien n'est gardé) : aucune fuite. Limite : 5 par heure et par IP (`liste-attente:ip`), 3 par 24 h et par e-mail. Purge après 12 mois |
+
+`TerritoireInfo` : `code`, `nom`, `libelleHeure` (« heure de Guadeloupe »), `etat`, `fuseau` (IANA), `indicatif`, `prefixesMobiles`, `centre { lat, lng, zoom }`, `communes[] { code, libelle, zone, lat, lng }`.
+
+### 15.2 Champs ajoutés aux contrats existants
+
+| Contrat | Champ | Règle |
+|---|---|---|
+| `POST /auth/inscription` | `territoire?` | Facultatif (ancienne app : déduit du code de commune). Territoire `BIENTOT` → 422 `ACTION_IMPOSSIBLE` (« Koudmen n'est pas encore ouvert en Martinique… ») : l'app propose la liste d'attente. La commune doit appartenir au territoire |
+| `GET /me` | `territoire` (nullable) | Accompagnant : territoire de sa zone. Famille : territoire du premier aîné. Opérateur : `null` |
+| `GET /visites`, `GET /visites/{id}` | `fuseau` ; `aine.territoire` | Afficher `debut`/`fin` dans `fuseau` : « 14 h 30, heure de Guadeloupe », puis l'heure du téléphone si elle est différente |
+| `GET /propositions` | `fuseau` ; `aine.territoire` | Les créneaux `MATIN` (9 h), `APRES_MIDI` (14 h), `SOIR` (18 h) sont dans `fuseau` |
+
+### 15.3 Règles serveur (rappel pour l'app)
+
+| Règle | Détail |
+|---|---|
+| Codes de commune | Uniques sur tous les territoires. Les codes de Martinique ne changent pas. Deux homonymes de Guadeloupe ont un suffixe : `LAMENTIN_GP`, `SAINTE_ANNE_GP` |
+| Matching | Un accompagnant reçoit seulement des propositions de **son** territoire |
+| Fuseaux | `America/Guadeloupe` et `America/Martinique` : UTC − 4 sans heure d'été ; `America/Cayenne` : UTC − 3 ; `Europe/Paris` : UTC + 1 / + 2. Ne jamais coder un décalage en dur |
+| Téléphone (T5) | Guadeloupe `+590 690`, `+590 691` (mobiles), `+590 590` (fixes) ; Martinique `+596 696`, `+596 697` ; Guyane `+594 694` ; Hexagone `+33 6`, `+33 7`. Numéro national `0690…` → `+590690…` |
+| Compatibilité | Les réponses sont `.strict()` : une app qui ne connaît pas `fuseau`/`territoire` refuse la réponse. L'app doit synchroniser les contrats (`mobile/scripts/sync-contracts.mjs`) avant de viser ce serveur |

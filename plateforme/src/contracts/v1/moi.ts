@@ -4,6 +4,7 @@
  * RGPD : liste FERMÉE de champs (`.strict()`). Aucune donnée de santé, aucun téléphone, aucun aîné.
  */
 import { z } from "zod";
+import { territoireSchema } from "./territoires";
 
 export const roleSchema = z.enum(["FAMILLE", "ACCOMPAGNANT", "OPERATEUR"]);
 export type Role = z.infer<typeof roleSchema>;
@@ -31,6 +32,12 @@ export const reponseMoiSchema = z
      * de Kayé ni de trajet). Vrai seulement en mode lancement sans DONNEES_REELLES_AUTORISEES.
      */
     preinscription: z.boolean(),
+    /**
+     * T1 : territoire du compte. Accompagnant : territoire de sa zone d'intervention (null avant le choix).
+     * Famille : territoire du premier aîné, sinon null. Opérateur : null.
+     * L'app l'utilise pour le fuseau par défaut et la liste des communes.
+     */
+    territoire: territoireSchema.nullable(),
   })
   .strict();
 export type ReponseMoi = z.infer<typeof reponseMoiSchema>;
