@@ -592,6 +592,9 @@ flowchart LR
 | `GET /me` | `territoire` (nullable) | Accompagnant : territoire de sa zone. Famille : territoire du premier aîné. Opérateur : `null` |
 | `GET /visites`, `GET /visites/{id}` | `fuseau` ; `aine.territoire` | Afficher `debut`/`fin` dans `fuseau` : « 14 h 30, heure de Guadeloupe », puis l'heure du téléphone si elle est différente |
 | `GET /propositions` | `fuseau` ; `aine.territoire` | Les créneaux `MATIN` (9 h), `APRES_MIDI` (14 h), `SOIR` (18 h) sont dans `fuseau` |
+| Vue web famille du trajet (`reponseTrajetFamilleSchema`) | `territoire?` | Facultatif ; l'heure prévue s'affiche dans le fuseau du territoire |
+
+Page web associée : `/liste-attente?territoire=MARTINIQUE|GUYANE|HEXAGONE` (l'app ouvre `WEB_URL/liste-attente?territoire=…`). Liste finale des champs : `docs/tech/T1-G1-notes.md` § 3.
 
 ### 15.3 Règles serveur (rappel pour l'app)
 

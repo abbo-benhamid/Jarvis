@@ -35,7 +35,7 @@ export default defineConfig({
   use: {
     trace: "retain-on-failure",
     locale: "fr-FR",
-    timezoneId: "America/Martinique",
+    timezoneId: "America/Guadeloupe",
   },
   projects: [
     // Mode ESSAI (démo, bac à sable, robots) : toutes les suites existantes.
