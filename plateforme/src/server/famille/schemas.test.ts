@@ -14,9 +14,9 @@ const validAine = {
   firstName: "  Léonie ",
   lastInitial: "j",
   myRelation: "fille",
-  commune: "FORT_DE_FRANCE",
+  commune: "POINTE_A_PITRE",
   addressHint: "",
-  phone: "+596 596 00 00 11",
+  phone: "+590 590 00 00 11",
   needs: ["COMPAGNIE", "REPAS"],
   activityLevel: "3",
   consentGiven: "on",
@@ -165,8 +165,8 @@ describe("formDataToObject", () => {
 });
 
 describe("todayIso", () => {
-  it("donne la date du jour en Martinique (UTC-4)", () => {
-    // 2 h UTC le 5 octobre = 22 h le 4 octobre en Martinique.
+  it("donne la date du jour dans le fuseau du territoire de lancement (Guadeloupe, UTC − 4)", () => {
+    // 2 h UTC le 5 octobre = 22 h le 4 octobre en Guadeloupe.
     expect(todayIso(new Date("2026-10-05T02:00:00Z"))).toBe("2026-10-04");
   });
 });

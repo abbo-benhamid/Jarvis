@@ -6,6 +6,7 @@ import { purgeAccountTokens } from "@/server/auth/account-tokens";
 import { purgeActivations } from "@/server/offre/activation";
 import { mailDeliveryConfigured } from "@/server/mail";
 import { logAudit } from "@/server/audit";
+import { purgeWaitlist } from "@/server/waitlist";
 
 /**
  * L11 / L1-A : purges nocturnes du mode lancement (appelées par /api/cron/purge-bacs-a-sable).
@@ -13,6 +14,7 @@ import { logAudit } from "@/server/audit";
  * - Jetons de compte expirés ou utilisés (L3).
  * - J29 : comptes jamais confirmés depuis 7 jours (sans aîné, sans demande, sans mission).
  * - J35 : demandes de rappel sans suite depuis 3 mois.
+ * - T1 : inscriptions de la liste d'attente de plus de 12 mois.
  */
 export const UNVERIFIED_ACCOUNT_DAYS = 7;
 
@@ -95,7 +97,15 @@ export async function purgeAinesWithoutAccord(now: Date = new Date()): Promise<n
   return rows.length;
 }
 
-export type LaunchPurgeResult = { sandboxes: number; accountTokens: number; unverifiedAccounts: number; activations: number; ainesWithoutAccord: number };
+export type LaunchPurgeResult = {
+  sandboxes: number;
+  accountTokens: number;
+  unverifiedAccounts: number;
+  activations: number;
+  ainesWithoutAccord: number;
+  /** T1 : inscriptions de la liste d'attente de plus de 12 mois. */
+  waitlist: number;
+};
 
 export async function purgeLaunchData(launch: boolean, now: Date = new Date()): Promise<LaunchPurgeResult> {
   return {
@@ -104,5 +114,6 @@ export async function purgeLaunchData(launch: boolean, now: Date = new Date()): 
     unverifiedAccounts: await purgeUnverifiedAccounts(now),
     activations: await purgeActivations(now),
     ainesWithoutAccord: await purgeAinesWithoutAccord(now),
+    waitlist: await purgeWaitlist(now),
   };
 }

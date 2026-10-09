@@ -37,9 +37,10 @@ describe.runIf(enabled)("matching, annulation et suspension sur une vraie base",
     const aine = await db.aine.create({
       data: {
         firstName: "Ernest",
-        commune: "LAMENTIN",
-        latitude: 14.61,
-        longitude: -61,
+        territoire: "GUADELOUPE",
+        commune: "LAMENTIN_GP",
+        latitude: 16.27,
+        longitude: -61.63,
         activityLevel: 2,
         consentGiven: true,
         accordEtat: "ACCORD_RECUEILLI",
@@ -60,7 +61,8 @@ describe.runIf(enabled)("matching, annulation et suspension sur une vraie base",
           userId: u.id,
           status: "SALARIE_FAMILLE_CESU",
           allowedLevels: [1, 2, 3],
-          communes: ["LAMENTIN"],
+          territoire: "GUADELOUPE",
+          communes: ["LAMENTIN_GP"],
           hourlyRateCents: 1500,
           validation: "VALIDE",
           availabilities: { create: [{ dayOfWeek: 1, slot: "APRES_MIDI" }] },
@@ -83,6 +85,22 @@ describe.runIf(enabled)("matching, annulation et suspension sur une vraie base",
       });
     return { sandboxId: sb.id, operator, family, aine, caregivers, request };
   }
+
+  it("T1 (T3) : jamais un profil d'un autre territoire ; jamais une demande d'un territoire pas encore ouvert", async () => {
+    const w = await world(2);
+    const r = await w.request();
+    // Accompagnant de Martinique (données antérieures à T1) : refusé pour un aîné de Guadeloupe.
+    await db.caregiverProfile.update({ where: { id: w.caregivers[0]!.profile.id }, data: { territoire: "MARTINIQUE", communes: ["LAMENTIN"] } });
+    await expect(matching.proposeProfile(w.operator, { requestId: r.id, caregiverId: w.caregivers[0]!.profile.id }, w.sandboxId)).rejects.toThrow(
+      "Autre territoire",
+    );
+    // Aîné et accompagnant de Martinique : même territoire, mais pas encore ouvert.
+    await db.aine.update({ where: { id: w.aine.id }, data: { territoire: "MARTINIQUE", commune: "LAMENTIN" } });
+    await expect(matching.proposeProfile(w.operator, { requestId: r.id, caregiverId: w.caregivers[0]!.profile.id }, w.sandboxId)).rejects.toThrow(
+      "Territoire pas encore ouvert",
+    );
+    expect(await db.missionProposal.count({ where: { requestId: r.id } })).toBe(0);
+  });
 
   it("max 3 profils : 4 propositions simultanées → exactement 3 réussissent", async () => {
     const w = await world(4);

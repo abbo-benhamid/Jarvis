@@ -11,11 +11,11 @@ test.afterAll(async () => {
   await prisma.$disconnect();
 });
 
-const HOME = { lat: 14.6131, lng: -60.9996 };
+const HOME = { lat: 16.271, lng: -61.5045 }; // centre des Abymes (Guadeloupe)
 
 async function visitSoon(aineId: string, createdById: string) {
   const req = await createRequest({ aineId, createdById, level: 1, slots: [] });
-  const cg = await createCaregiver({ firstName: "Josiane", status: "BENEVOLE_ASSO", validation: "VALIDE", communes: ["LAMENTIN"], avail: [] });
+  const cg = await createCaregiver({ firstName: "Josiane", status: "BENEVOLE_ASSO", validation: "VALIDE", communes: ["ABYMES"], avail: [] });
   const proposal = await prisma.missionProposal.create({
     data: { requestId: req.id, caregiverId: cg.profile.id, proposedById: await operatorId(), status: "ACCEPTEE", respondedAt: new Date() },
   });
@@ -28,7 +28,7 @@ async function visitSoon(aineId: string, createdById: string) {
 }
 
 test("L9 — carte domicile : QR signé, code de secours, impression, nouvelle carte (version + 1)", async ({ page }) => {
-  const fam = await createFamilyWithAine({ aineFirstName: `Carte${uid()}`, commune: "LAMENTIN" });
+  const fam = await createFamilyWithAine({ aineFirstName: `Carte${uid()}`, commune: "ABYMES" });
   await login(page, fam.user.email);
   await page.goto(`/famille/aines/${fam.aine.id}`);
   await page.getByRole("link", { name: /Carte domicile/ }).click();
@@ -52,7 +52,7 @@ test("L9 — carte domicile : QR signé, code de secours, impression, nouvelle c
 });
 
 test("L6/L7/R4 — « Où en est la visite » : en route (liste textuelle), hors trajet l'heure prévue seulement ; cercle non désigné : 404", async ({ page }) => {
-  const fam = await createFamilyWithAine({ aineFirstName: `Trajet${uid()}`, commune: "LAMENTIN" });
+  const fam = await createFamilyWithAine({ aineFirstName: `Trajet${uid()}`, commune: "ABYMES" });
   await prisma.aine.update({ where: { id: fam.aine.id }, data: { latitude: HOME.lat, longitude: HOME.lng, locationApproximate: false } });
   const { visit, cg } = await visitSoon(fam.aine.id, fam.user.id);
 
@@ -61,7 +61,7 @@ test("L6/L7/R4 — « Où en est la visite » : en route (liste textuelle), hors
   await page.getByRole("link", { name: "Où en est la visite ?" }).first().click();
   await expect(page).toHaveURL(new RegExp(`/famille/visites/${visit.id}/trajet`));
   // Hors trajet : l'heure prévue seulement, jamais « non partagé ».
-  await expect(page.getByText(/Visite prévue à \d{1,2} h( \d{2})? \(heure de Martinique\) avec Josiane\./)).toBeVisible();
+  await expect(page.getByText(/Visite prévue à \d{1,2} h( \d{2})? \(heure de Guadeloupe\) avec Josiane\./)).toBeVisible();
   await expect(page.getByText(/non partagé/i)).toHaveCount(0);
 
   // Trajet en cours, 2 km du domicile, départ à plus de 500 m.
@@ -70,10 +70,10 @@ test("L6/L7/R4 — « Où en est la visite » : en route (liste textuelle), hors
       visitId: visit.id,
       userId: cg.user.id,
       expiresAt: new Date(Date.now() + 50 * 60_000),
-      startLatitude: 14.64,
-      startLongitude: -60.9996,
-      latitude: 14.631,
-      longitude: -60.9996,
+      startLatitude: 16.2979,
+      startLongitude: -61.5045,
+      latitude: 16.2889,
+      longitude: -61.5045,
       accuracyMeters: 110,
       positionAt: new Date(),
       receivedAt: new Date(),

@@ -12,7 +12,8 @@ const enabled = process.env.KOUDMEN_DB_TESTS === "1";
 describe.runIf(enabled)("Lot B sur une vraie base", async () => {
   const { db } = await import("@/server/db");
   const service = await import("./service");
-  const { mqDayOfWeek } = await import("./schedule");
+  const { localDayOfWeek } = await import("./schedule");
+  const mqDayOfWeek = (d: Date) => localDayOfWeek(d, "America/Guadeloupe");
   const tag = `lotb-${randomBytes(4).toString("hex")}`;
   const userIds: string[] = [];
   const aineIds: string[] = [];
@@ -31,7 +32,7 @@ describe.runIf(enabled)("Lot B sur une vraie base", async () => {
         userId: u.id,
         status: "SALARIE_FAMILLE_CESU",
         allowedLevels: [1, 2, 3],
-        communes: ["LAMENTIN"],
+        communes: ["LAMENTIN_GP"],
         hourlyRateCents: 1650,
         validation: "VALIDE",
       },
@@ -57,7 +58,7 @@ describe.runIf(enabled)("Lot B sur une vraie base", async () => {
         status: "PROPOSEE",
         slots: {
           create: [
-            // Jours relatifs à aujourd'hui (heure de Martinique) : aucun créneau déjà passé, donc toujours 8 visites.
+            // Jours relatifs à aujourd'hui (heure de Guadeloupe) : aucun créneau déjà passé, donc toujours 8 visites.
             { dayOfWeek: (mqDayOfWeek(new Date()) + 1) % 7, slot: "APRES_MIDI" },
             { dayOfWeek: (mqDayOfWeek(new Date()) + 3) % 7, slot: "APRES_MIDI" },
           ],
@@ -78,9 +79,9 @@ describe.runIf(enabled)("Lot B sur une vraie base", async () => {
     const aine = await db.aine.create({
       data: {
         firstName: "Aîné",
-        commune: "LAMENTIN",
-        latitude: 14.6131,
-        longitude: -60.9996,
+        commune: "LAMENTIN_GP",
+        latitude: 16.2689,
+        longitude: -61.6325,
         activityLevel: 2,
         consentGiven: true,
         accordEtat: "ACCORD_RECUEILLI",

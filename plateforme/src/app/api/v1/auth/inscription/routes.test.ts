@@ -26,9 +26,9 @@ const ok = {
   prenom: "Rose",
   nom: "Lafleur",
   email: "rose@exemple.test",
-  telephone: "+596 696 12 34 56",
+  telephone: "+590 690 12 34 56",
   motDePasse: "Zebre-Lagon-2026",
-  commune: "FORT_DE_FRANCE",
+  commune: "POINTE_A_PITRE",
   dateNaissance: "1990-04-02",
   accepteCgu: true,
 };

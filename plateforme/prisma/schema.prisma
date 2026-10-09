@@ -17,6 +17,14 @@ datasource db {
 
 // ─────────────────────────────── Enums ───────────────────────────────
 
+/// T1 : territoire (configuration : src/lib/territoires.ts). Au lancement, seule la Guadeloupe est ouverte.
+enum Territoire {
+  GUADELOUPE
+  MARTINIQUE
+  GUYANE
+  HEXAGONE
+}
+
 /// Rôle d'un compte. L'aîné n'a pas de compte : c'est un profil (modèle Aine).
 enum Role {
   FAMILLE
@@ -26,6 +34,9 @@ enum Role {
 
 /// Lieu de vie du membre de la famille (diaspora = HEXAGONE ou AUTRE).
 enum FamilyLocation {
+  /// T1 : valeurs ajoutées (lancement en Guadeloupe).
+  GUADELOUPE
+  GUYANE
   MARTINIQUE
   HEXAGONE
   AUTRE
@@ -344,7 +355,9 @@ model Aine {
   firstName              String
   /// Initiale du nom seulement (minimisation).
   lastInitial            String?
-  /// Code commune (voir src/lib/communes.ts), ex. "FORT_DE_FRANCE".
+  /// T1 : territoire du domicile. Création seulement dans un territoire OUVERT. Lignes antérieures à T1 : MARTINIQUE.
+  territoire             Territoire @default(GUADELOUPE)
+  /// Code commune du territoire (voir src/lib/territoires.ts), ex. "POINTE_A_PITRE".
   commune                String
   /// Indication d'adresse libre et fictive en test (pas d'adresse exacte obligatoire).
   addressHint            String?
@@ -511,7 +524,9 @@ model CaregiverProfile {
   allowedLevels      Int[]
   /// Diplôme DEAES / ADVF déclaré : ouvre le niveau 4 au salarié de la famille.
   hasDiploma         Boolean             @default(false)
-  /// Codes commune desservies.
+  /// T1 : territoire de la zone d'intervention. Propositions seulement dans CE territoire, s'il est OUVERT.
+  territoire         Territoire          @default(GUADELOUPE)
+  /// Codes commune desservies (toutes dans `territoire`).
   communes           String[]
   /// Tarif horaire LIBRE fixé par l'accompagnant, en centimes. Null pour un bénévole.
   hourlyRateCents    Int?
@@ -534,27 +549,27 @@ model CaregiverProfile {
 
   // ── L2 : vérification (ADR 0009). Koudmen garde le RÉSULTAT, jamais la pièce. ──
   /// Nom de référence : vérifié par le prestataire (ou en visio). L'accompagnant ne le change plus seul.
-  verifiedGivenNames  String?
-  verifiedFamilyName  String?
-  verifiedBirthDate   DateTime? @db.Date
-  identityVerifiedAt  DateTime?
+  verifiedGivenNames        String?
+  verifiedFamilyName        String?
+  verifiedBirthDate         DateTime? @db.Date
+  identityVerifiedAt        DateTime?
   /// Empreinte HMAC du numéro vérifié (E.164) : un numéro = un compte accompagnant.
-  phoneHash           String?   @unique
-  phoneVerifiedAt     DateTime?
+  phoneHash                 String?   @unique
+  phoneVerifiedAt           DateTime?
   /// Adresse déclarée, chiffrée (AES-256-GCM, clé des documents). En clair : le code postal seulement.
-  addressEnc          String?
-  addressPostalCode   String?
+  addressEnc                String?
+  addressPostalCode         String?
   /// Refus du dossier (étude § 6.5) : motif fermé, proposé par un opérateur, confirmé par un SECOND.
-  refusalCode         String?
-  refusalProposedById String?
-  refusalProposedAt   DateTime?
+  refusalCode               String?
+  refusalProposedById       String?
+  refusalProposedAt         DateTime?
   /// L2b (M1) : annulation d'un refus proposé, proposée par un opérateur ; un AUTRE opérateur la confirme.
   refusalCancelProposedById String?
   refusalCancelProposedAt   DateTime?
-  refusedAt           DateTime?
+  refusedAt                 DateTime?
   /// Visio de repli demandée (créneau, raison) : l'équipe rappelle pour fixer l'heure.
-  visioRequestedAt    DateTime?
-  visioCreneau        String?
+  visioRequestedAt          DateTime?
+  visioCreneau              String?
 
   availabilities  CaregiverAvailability[]
   verifications   VerificationItem[]
@@ -593,27 +608,27 @@ model VerificationItem {
   seenOn       DateTime?          @db.Date
 
   // ── L2 (étude § 8.4) ──
-  method              VerificationMethod?
+  method                    VerificationMethod?
   /// Résultat structuré (schéma Zod par type, `server/verifications/evidence.ts`), SANS texte libre ni image.
-  evidence            Json?
+  evidence                  Json?
   /// Motif fermé du dernier complément ou du refus (liste fermée, jamais de texte libre).
-  decisionCode        String?
-  expiresAt           DateTime?
+  decisionCode              String?
+  expiresAt                 DateTime?
   /// Sessions de prestataire ouvertes (identité : 3 au plus, puis visio).
-  attempts            Int                 @default(0)
+  attempts                  Int                 @default(0)
   /// Refus proposé par un premier opérateur ; `REFUSE` seulement après la confirmation d'un second.
-  refusalProposedById String?
-  refusalProposedAt   DateTime?
+  refusalProposedById       String?
+  refusalProposedAt         DateTime?
   /// L2b (M1) : annulation du refus proposé : proposée par un opérateur, confirmée par un AUTRE.
   refusalCancelProposedById String?
   refusalCancelProposedAt   DateTime?
   /// L2b (M7) : adaptateur qui a mis VALIDE (simule, brevo, twilio, veriff, stripe, recherche-entreprises, insee, operateur).
   /// En lancement, un élément validé par « simule » (ou sans adaptateur connu) compte comme NON validé.
-  validatedWith       String?
+  validatedWith             String?
   /// L2b (M3) : identifiants des décisions du prestataire déjà appliquées (anti-rejeu durable, 20 dernières).
-  appliedDecisionIds  String[]            @default([])
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @default(now()) @updatedAt
+  appliedDecisionIds        String[]            @default([])
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @default(now()) @updatedAt
 
   identityChecks IdentityCheck[]
   documents      SensitiveDocument[]
@@ -768,16 +783,16 @@ model ProviderRedaction {
 
 /// L2 (étude § 6.5) : demande de réexamen après un refus (30 jours). Un AUTRE opérateur la traite sous 7 jours.
 model VerificationAppeal {
-  id          String           @id @default(cuid())
-  caregiverId String
-  caregiver   CaregiverProfile @relation(fields: [caregiverId], references: [id], onDelete: Cascade)
+  id                 String           @id @default(cuid())
+  caregiverId        String
+  caregiver          CaregiverProfile @relation(fields: [caregiverId], references: [id], onDelete: Cascade)
   /// Motif fermé (ERREUR_SUR_UN_DOCUMENT, NOUVEAU_DOCUMENT, SITUATION_CHANGEE, AUTRE).
-  motif       String
-  createdAt   DateTime         @default(now())
-  handledAt   DateTime?
-  handledById String?
+  motif              String
+  createdAt          DateTime         @default(now())
+  handledAt          DateTime?
+  handledById        String?
   /// ACCEPTE (dossier rouvert) ou MAINTENU.
-  outcome     String?
+  outcome            String?
   /// L2b (B1) : un recours ACCEPTÉ rouvre des éléments refusés à deux opérateurs : il faut donc aussi deux opérateurs.
   acceptProposedById String?
   acceptProposedAt   DateTime?
@@ -794,6 +809,8 @@ model CareRequest {
   aine            Aine          @relation(fields: [aineId], references: [id], onDelete: Cascade)
   createdById     String
   createdBy       User          @relation(fields: [createdById], references: [id])
+  /// T1 : copie du territoire de l'aîné à la création (territoire OUVERT seulement).
+  territoire      Territoire    @default(GUADELOUPE)
   /// Niveau demandé 1 à 4.
   level           Int
   frequency       Frequency
@@ -812,6 +829,8 @@ model CareRequest {
   mission   Mission?
 
   @@index([status])
+  /// T1 : file opérateur par territoire.
+  @@index([territoire, status])
 }
 
 model RequestSlot {
@@ -858,6 +877,8 @@ model Mission {
   aine            Aine             @relation(fields: [aineId], references: [id], onDelete: Cascade)
   caregiverId     String
   caregiver       CaregiverProfile @relation(fields: [caregiverId], references: [id])
+  /// T1 : territoire de la mission (celui de l'aîné et de l'accompagnant).
+  territoire      Territoire       @default(GUADELOUPE)
   /// Copie du tarif libre de l'accompagnant au moment de l'acceptation.
   hourlyRateCents Int?
   /// Copie de l'employeur de la demande (D6).
@@ -1109,6 +1130,24 @@ model DiscoveryRequest {
   status            FeedbackStatus @default(NOUVEAU)
   createdAt         DateTime       @default(now())
 
+  @@index([createdAt])
+}
+
+/// T1 (T2) : liste d'attente d'un territoire « Bientôt ». Consentement explicite ; purge après 12 mois.
+/// Réponse identique si l'adresse est déjà inscrite (aucune fuite). Jamais journalisée en clair (AuditLog : territoire seul).
+model WaitlistEntry {
+  id             String     @id @default(cuid())
+  /// Adresse e-mail (minuscules). Nécessaire pour prévenir la personne à l'ouverture.
+  email          String
+  territoire     Territoire
+  /// Texte exact de la case cochée et sa version (preuve du consentement).
+  consentText    String
+  consentVersion String
+  consentAt      DateTime
+  createdAt      DateTime   @default(now())
+
+  @@unique([email, territoire])
+  /// Purge à 12 mois.
   @@index([createdAt])
 }
 

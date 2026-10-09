@@ -4,7 +4,7 @@ import { Badge, ProofBadge } from "@/components/ui/badge";
 import { CardLink, DateBox } from "@/components/ui/card";
 import { VisitStatusBadge } from "@/components/status-badges";
 import { capitalize, dayLong, dayNumber, hourLabel, weekdayShort } from "@/components/famille/format";
-import { communeLabel } from "@/lib/communes";
+import { communeLabel, fuseauDe, type CodeTerritoire } from "@/lib/territoires";
 import { initialWithDot } from "@/lib/format";
 
 /** Deux preuves sur trois suffisent (RM-07). */
@@ -17,7 +17,7 @@ export type VisitRowData = {
   status: VisitStatus;
   proofScore: number;
   checkInAt: Date | null;
-  aine: { firstName: string; lastInitial: string | null; commune: string };
+  aine: { firstName: string; lastInitial: string | null; commune: string; territoire?: CodeTerritoire };
   journal: { id: string } | null;
 };
 
@@ -26,9 +26,9 @@ export function aineShortName(aine: { firstName: string; lastInitial: string | n
   return `${aine.firstName}${aine.lastInitial ? ` ${initialWithDot(aine.lastInitial)}` : ""}`;
 }
 
-/** « 10 h – 12 h » */
-export function hourRange(start: Date, end: Date): string {
-  return `${hourLabel(start)} – ${hourLabel(end)}`;
+/** « 10 h – 12 h » dans le fuseau du territoire de l'aîné (T4). */
+export function hourRange(start: Date, end: Date, tz?: string): string {
+  return `${hourLabel(start, tz)} – ${hourLabel(end, tz)}`;
 }
 
 /** Vrai si l'arrivée est enregistrée et le Kayé pas encore écrit. */
@@ -56,7 +56,7 @@ export function VisitRow({ visit, showDate = true }: { visit: VisitRowData; show
           <DateBox day={weekdayShort(visit.scheduledStart)} date={dayNumber(visit.scheduledStart)} label={dayLong(visit.scheduledStart)} />
         ) : null}
         <span className="flex min-w-0 flex-col gap-1">
-          <b className="num block font-semibold">{hourRange(visit.scheduledStart, visit.scheduledEnd)}</b>
+          <b className="num block font-semibold">{hourRange(visit.scheduledStart, visit.scheduledEnd, fuseauDe(visit.aine.territoire))}</b>
           <span className="block text-[15px] leading-[1.4] text-muted">
             {aineShortName(visit.aine)} · {communeLabel(visit.aine.commune)}
           </span>

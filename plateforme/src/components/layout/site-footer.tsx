@@ -2,7 +2,7 @@ import Link from "next/link";
 import { MadrasLine } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { isLaunchMode } from "@/server/launch";
-import { LAUNCH_FOOTER_NOTICE } from "@/lib/legal-launch";
+import { BIENTOT_NOTICE, LAUNCH_FOOTER_NOTICE, OUVERTURE_NOTICE } from "@/lib/legal-launch";
 
 /** R2 : liens légaux. En lancement : CGU et conditions des accompagnants. En essai : CGU de la démo. */
 function links(launch: boolean) {
@@ -29,9 +29,14 @@ export function SiteFooter() {
       <div className="mx-auto flex w-full max-w-[var(--content-max)] flex-col gap-4 px-5 py-6 text-[15px] text-muted lg:flex-row lg:items-center lg:justify-between lg:px-6">
         {/* Honnêteté légale minimale (remplace le bandeau « Version de test ») : une ligne, avec le lien vers les mentions légales. */}
         <p className="max-w-prose" data-testid="ouverture">
-          {launch ? LAUNCH_FOOTER_NOTICE : "Koudmen ouvre bientôt en Martinique. Les visites ne sont pas encore proposées."}{" "}
+          {OUVERTURE_NOTICE} {launch ? LAUNCH_FOOTER_NOTICE : "Les visites ne sont pas encore proposées."}{" "}
           <Link className="text-fg underline decoration-line-strong underline-offset-4 hover:text-mer" href="/mentions-legales">
             En savoir plus
+          </Link>
+          <br />
+          {BIENTOT_NOTICE}{" "}
+          <Link className="text-fg underline decoration-line-strong underline-offset-4 hover:text-mer" href="/liste-attente" data-testid="lien-liste-attente">
+            Liste d&apos;attente
           </Link>
         </p>
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6">

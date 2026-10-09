@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 /**
  * POST /api/v1/auth/inscription — création d'un compte ACCOMPAGNANT depuis l'app (L2, contrat § 2.1, R6).
  * Réponse : 201 { etat: "VERIFICATION_EMAIL_ENVOYEE" }, la MÊME si l'e-mail existe déjà (aucune fuite).
- * Erreurs : 400 (corps refusé), 422 ACTION_IMPOSSIBLE (mot de passe trop courant, moins de 18 ans, commune inconnue),
+ * Erreurs : 400 (corps refusé), 422 ACTION_IMPOSSIBLE (mot de passe trop courant, moins de 18 ans, commune inconnue,
+ * T1 : territoire pas encore ouvert ou commune hors du territoire),
  * 429 (5 inscriptions par heure et par IP). L'inscription est gratuite pour l'accompagnant (R6, J27).
  */
 export const POST = route(async (req: NextRequest) => {
@@ -28,6 +29,7 @@ export const POST = route(async (req: NextRequest) => {
     password: body.motDePasse,
     phone: body.telephone,
     commune: body.commune,
+    territoire: body.territoire ?? null,
     location: null,
     city: null,
     birthDate: body.dateNaissance,

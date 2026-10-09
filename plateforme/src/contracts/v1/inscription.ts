@@ -11,6 +11,7 @@
  * Le serveur refuse aussi un mot de passe trop courant (422 ACTION_IMPOSSIBLE, message affichable).
  */
 import { z } from "zod";
+import { codeCommuneSchema, territoireSchema } from "./territoires";
 
 /** Longueur minimale du mot de passe (le serveur applique aussi une liste de refus). */
 export const MOT_DE_PASSE_MIN = 10;
@@ -18,7 +19,7 @@ export const MOT_DE_PASSE_MAX = 200;
 
 export const motDePasseSchema = z.string().min(MOT_DE_PASSE_MIN).max(MOT_DE_PASSE_MAX);
 
-/** Téléphone : chiffres, espaces, +, points, tirets (ex. +596 696 12 34 56). */
+/** Téléphone : chiffres, espaces, +, points, tirets (ex. +590 690 12 34 56). Le serveur contrôle l'indicatif (T5). */
 export const telephoneSchema = z
   .string()
   .trim()
@@ -46,8 +47,13 @@ export const demandeInscriptionSchema = z
     email: z.string().trim().toLowerCase().email().max(254),
     telephone: telephoneSchema,
     motDePasse: motDePasseSchema,
-    /** Code de commune (ex. "FORT_DE_FRANCE"), contrôlé par le serveur. */
-    commune: z.string().trim().min(2).max(60).regex(/^[A-Z_]+$/),
+    /**
+     * T1 : territoire de la zone d'intervention. Seul un territoire OUVERT est accepté (sinon 422 ACTION_IMPOSSIBLE,
+     * l'app propose la liste d'attente). Absent : le serveur le déduit du code de commune (ancienne version de l'app).
+     */
+    territoire: territoireSchema.optional(),
+    /** Code de commune du territoire (liste : GET /api/v1/territoires, ex. "POINTE_A_PITRE"), contrôlé par le serveur. */
+    commune: codeCommuneSchema,
     /** Date de naissance (AAAA-MM-JJ). 18 ans minimum. */
     dateNaissance: dateJourSchema,
     /** Case « J'accepte les conditions d'utilisation » (obligatoire). */

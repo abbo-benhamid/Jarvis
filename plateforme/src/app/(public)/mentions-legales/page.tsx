@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { editorInfo } from "@/server/env";
 import { Field, LegalList, LegalPage, LegalSection } from "@/components/legal/legal-page";
+import { OUVERTURE_NOTICE } from "@/lib/legal-launch";
+import { TERRITOIRES_OUVERTS, territoire } from "@/lib/territoires";
 
 export const metadata: Metadata = { title: "Mentions légales" };
 // L'identité de l'éditeur vient des variables d'environnement : lecture à chaque requête.
@@ -52,7 +54,7 @@ export default function MentionsLegalesPage() {
       <LegalSection title="Nature du site">
         {launch ? (
           <>
-            <p>Koudmen ouvre bientôt en Martinique. Koudmen met en relation des familles et des accompagnants.</p>
+            <p>{OUVERTURE_NOTICE} Koudmen met en relation des familles et des accompagnants.</p>
             <LegalList
               items={[
                 "Koudmen n'est pas un service d'aide à domicile autorisé. Koudmen n'emploie pas les accompagnants.",
@@ -63,7 +65,7 @@ export default function MentionsLegalesPage() {
           </>
         ) : (
           <>
-            <p>Koudmen ouvre bientôt en Martinique. Ce site est une démo. Il sert à recueillir l&apos;avis de testeurs invités.</p>
+            <p>{OUVERTURE_NOTICE} Ce site est une démo. Il sert à recueillir l&apos;avis de testeurs invités.</p>
             <LegalList
               items={[
                 "Koudmen ne rend aucun service réel. Aucune visite réelle n'a lieu.",
@@ -74,6 +76,24 @@ export default function MentionsLegalesPage() {
             />
           </>
         )}
+      </LegalSection>
+
+      {/* T1 (T10) : organismes du territoire ouvert. [À VÉRIFIER] avec un juriste avant l'ouverture des visites. */}
+      <LegalSection title="Organismes locaux">
+        {TERRITOIRES_OUVERTS.map((code) => {
+          const t = territoire(code);
+          return (
+            <LegalList
+              key={code}
+              items={[
+                `Services à la personne : Koudmen prépare sa déclaration auprès de la ${t.organismes.sap}.`,
+                `Sécurité sociale (CESU, cotisations) : ${t.organismes.securiteSociale}.`,
+                `Santé : ${t.organismes.sante}.`,
+                `Allocation personnalisée d'autonomie (APA) : ${t.organismes.apa}.`,
+              ]}
+            />
+          );
+        })}
       </LegalSection>
 
       <LegalSection title="Signaler un contenu">

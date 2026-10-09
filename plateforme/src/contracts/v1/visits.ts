@@ -13,6 +13,7 @@
  * Aucune position au check-out, au Kayé ni au SOS.
  */
 import { z } from "zod";
+import { territoireSchema } from "./territoires";
 
 // ─────────────── Constantes ───────────────
 
@@ -29,7 +30,7 @@ export const SEUIL_PREUVE = 2;
 
 // ─────────────── Briques ───────────────
 
-/** Date ISO 8601 avec fuseau (ex. « 2026-10-05T14:00:00.000Z » ou « …-04:00 »). */
+/** Date ISO 8601 avec décalage (ex. « 2026-10-05T14:00:00.000Z » ou « …-04:00 »). L'affichage utilise le fuseau de la visite. */
 export const dateIsoSchema = z.string().datetime({ offset: true });
 /** Identifiant serveur (cuid). Une forme inattendue répond 404, comme un identifiant inconnu. */
 export const identifiantSchema = z.string().min(1).max(64).regex(/^[A-Za-z0-9_-]+$/);
@@ -64,9 +65,11 @@ export const aineVisiteSchema = z
     prenom: z.string(),
     /** Initiale du nom (ex. « R. »). */
     initialeNom: z.string().nullable(),
-    /** Code commune (ex. « FORT_DE_FRANCE »). */
+    /** T1 : territoire du domicile de l'aîné. */
+    territoire: territoireSchema,
+    /** Code commune (ex. « POINTE_A_PITRE »). */
     commune: z.string(),
-    /** Nom affichable de la commune (ex. « Fort-de-France »). */
+    /** Nom affichable de la commune (ex. « Pointe-à-Pitre »). */
     communeLibelle: z.string(),
     /** Indication libre (quartier, repère). Jamais une adresse complète. */
     adresseApproximative: z.string().nullable(),
@@ -114,6 +117,11 @@ export const visiteSchema = z
     id: identifiantSchema,
     debut: dateIsoSchema,
     fin: dateIsoSchema,
+    /**
+     * T1 (T4) : fuseau IANA du territoire de l'aîné (ex. « America/Guadeloupe »). L'app affiche l'heure dans ce fuseau
+     * (« 14 h 30, heure de Guadeloupe »), puis l'heure du téléphone si elle est différente.
+     */
+    fuseau: z.string(),
     statut: statutVisiteSchema,
     aine: aineVisiteSchema,
     demande: demandeFamilleSchema,

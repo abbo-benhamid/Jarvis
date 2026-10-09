@@ -4,6 +4,7 @@
  * RÈGLE : aucun import serveur ici (seulement `zod` et les fichiers de ce dossier).
  */
 export * from "./erreurs";
+export * from "./territoires";
 export * from "./auth";
 export * from "./inscription";
 export * from "./moi";

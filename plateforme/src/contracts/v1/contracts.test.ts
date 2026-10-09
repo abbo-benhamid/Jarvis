@@ -90,7 +90,7 @@ describe("contrats v1 : authentification", () => {
 });
 
 describe("contrats v1 : /me", () => {
-  const moi = { id: "u1", role: "ACCOMPAGNANT", prenom: "Josiane", nom: "R.", email: "j@exemple.test", demo: true, bacASable: false, emailVerifie: true, profilValide: true, preinscription: false };
+  const moi = { id: "u1", role: "ACCOMPAGNANT", prenom: "Josiane", nom: "R.", email: "j@exemple.test", demo: true, bacASable: false, emailVerifie: true, profilValide: true, preinscription: false, territoire: "GUADELOUPE" };
 
   it("accepte le profil minimal", () => {
     expect(reponseMoiSchema.safeParse(moi).success).toBe(true);
@@ -114,9 +114,9 @@ describe("contrats v1 : inscription et mot de passe oublié (L1-A, R6)", () => {
     prenom: "Rose",
     nom: "Lafleur",
     email: "Rose@Exemple.test",
-    telephone: "+596 696 12 34 56",
+    telephone: "+590 690 12 34 56",
     motDePasse: "Zebre-Lagon-2026",
-    commune: "FORT_DE_FRANCE",
+    commune: "POINTE_A_PITRE",
     dateNaissance: "1990-04-02",
     accepteCgu: true,
   };

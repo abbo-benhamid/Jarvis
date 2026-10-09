@@ -1,3 +1,4 @@
+import { TERRITOIRES_BIENTOT, TERRITOIRES_OUVERTS, listeNoms, territoire } from "@/lib/territoires";
 /**
  * R2 : versions des textes juridiques de lancement. Une nouvelle version = nouvelle date.
  * [À VÉRIFIER AVEC UN AVOCAT] : CGU, politique de confidentialité, conditions des accompagnants.
@@ -23,5 +24,11 @@ export const NOTICE_FALC = [
 ] as const;
 
 /** J2 : phrase du pied de page en mode lancement. */
+/** T1 (T9) : « Koudmen ouvre en Guadeloupe » (le nom vient de la configuration des territoires). */
+export const OUVERTURE_NOTICE = `Koudmen ouvre ${TERRITOIRES_OUVERTS.map((t) => territoire(t).enNom).join(" et ")}.`;
+
+/** « Martinique, Guyane et Hexagone : bientôt. » */
+export const BIENTOT_NOTICE = `${listeNoms(TERRITOIRES_BIENTOT)} : bientôt.`;
+
 export const LAUNCH_FOOTER_NOTICE =
   "Koudmen met en relation. Koudmen n'est pas un service d'aide à domicile autorisé. Les visites ne sont pas encore proposées.";

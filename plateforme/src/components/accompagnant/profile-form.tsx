@@ -5,7 +5,7 @@ import type { CaregiverStatus } from "@prisma/client";
 import { ChevronDown } from "lucide-react";
 import { saveProfileAction } from "@/server/accompagnant/actions";
 import { initialActionState } from "@/lib/action-result";
-import { COMMUNE_ZONES, communeLabel } from "@/lib/communes";
+import { TERRITOIRES_OUVERTS, communeLabel, territoire, zonesDe } from "@/lib/territoires";
 import { DAY_LABELS, SLOT_LABELS } from "@/lib/labels";
 import { formatEuros } from "@/lib/format";
 import { EXAMPLE_HOURS_PER_VISIT, EXAMPLE_VISITS_PER_MONTH, formatEurosRounded, netIncomeEstimate } from "@/lib/estimates";
@@ -18,6 +18,11 @@ import { ChoiceCard } from "./choice-card";
 import { InstallPrompt } from "./install-prompt";
 
 const SLOTS = ["MATIN", "APRES_MIDI", "SOIR"] as const;
+
+/** T1 : zones d'intervention possibles = communes des territoires OUVERTS seulement. */
+const ZONES = TERRITOIRES_OUVERTS.flatMap((t) =>
+  zonesDe(t).map((z) => ({ ...z, label: TERRITOIRES_OUVERTS.length > 1 ? `${territoire(t).nom} — ${z.label}` : z.label })),
+);
 const SLOT_SHORT: Record<(typeof SLOTS)[number], string> = { MATIN: "Matin", APRES_MIDI: "Après-midi", SOIR: "Soir" };
 
 export type ProfileFormValues = {
@@ -98,10 +103,14 @@ export function ProfileForm({
 
       <Card className="flex flex-col gap-3">
         <CardTitle className="mb-0">Mes communes</CardTitle>
-        <Fieldset legend="Communes où vous pouvez aller" hint="Choisissez une ou plusieurs communes." errors={fe?.communes}>
-          {/* m8 : 4 zones repliables au lieu d'une liste plate de 34 communes. */}
+        <Fieldset
+          legend="Communes où vous pouvez aller"
+          hint={`Choisissez une ou plusieurs communes. Koudmen est ouvert seulement ${TERRITOIRES_OUVERTS.map((t) => territoire(t).enNom).join(" et ")}.`}
+          errors={fe?.communes}
+        >
+          {/* m8 : zones repliables au lieu d'une liste plate de communes. */}
           <div className="flex flex-col gap-2">
-            {COMMUNE_ZONES.map((z, zi) => {
+            {ZONES.map((z, zi) => {
               const count = z.codes.filter((c) => v.communes.includes(c)).length;
               return (
                 <details key={z.label} open={zi === 0 || count > 0} className="group rounded-md bg-surface-2 px-3.5">

@@ -21,6 +21,7 @@ import { lockCareRequests } from "@/server/matching/locks";
 import { inTransaction } from "@/server/matching/service";
 import { MOOD_LABELS } from "@/lib/labels";
 import { planVisits } from "./schedule";
+import { fuseauDe, isOuvert, territoireDeCommune } from "@/lib/territoires";
 import { addressProofRequired } from "@/server/verifications/config";
 import { l2TypesFor } from "@/server/verifications/rules";
 import { VerificationError } from "@/server/verifications/errors";
@@ -227,10 +228,19 @@ export async function saveProfile(actor: Actor, input: ProfileInput): Promise<{ 
     );
   }
 
+  // T1 (T3) : la zone d'intervention est dans UN territoire, et ce territoire est OUVERT.
+  const territoires = [...new Set(input.communes.map((c) => territoireDeCommune(c)))];
+  if (territoires.some((t) => !t || !isOuvert(t))) {
+    throw new AccompagnantError("Choisissez des communes d'un territoire où Koudmen est ouvert.", "INVALIDE");
+  }
+  if (territoires.length > 1) throw new AccompagnantError("Choisissez des communes d'un seul territoire.", "INVALIDE");
+  const zoneTerritoire = territoires[0];
+
   await db.$transaction(async (tx) => {
     await tx.caregiverProfile.update({
       where: { id: profile.id },
       data: {
+        ...(zoneTerritoire ? { territoire: zoneTerritoire } : {}),
         communes: input.communes,
         hourlyRateCents,
         bio: input.bio,
@@ -253,6 +263,7 @@ export async function saveProfile(actor: Actor, input: ProfileInput): Promise<{ 
         entityId: profile.id,
         metadata: {
           communes: input.communes.length,
+          territoire: zoneTerritoire ?? null,
           availabilities: input.availabilities.length,
           rateChanged: hourlyRateCents !== profile.hourlyRateCents,
         },
@@ -340,7 +351,7 @@ export async function acceptProposal(
       where: ownedProposalWhere(actor.id, proposalId),
       include: {
         caregiver: true,
-        request: { include: { slots: true, aine: { select: { id: true, firstName: true } } } },
+        request: { include: { slots: true, aine: { select: { id: true, firstName: true, territoire: true } } } },
       },
     });
     if (!proposal) throw new AccompagnantError("Proposition introuvable.", "INTROUVABLE");
@@ -351,6 +362,10 @@ export async function acceptProposal(
     const request = proposal.request;
     if (cg.validation !== "VALIDE" || !cg.status) {
       throw new AccompagnantError("Votre profil doit être validé pour accepter une mission.", "INTERDIT");
+    }
+    // T1 (T3) : une mission seulement dans le territoire de l'accompagnant, et seulement s'il est OUVERT.
+    if (request.aine.territoire !== cg.territoire || !isOuvert(request.aine.territoire)) {
+      throw new AccompagnantError("Cette mission n'est pas dans votre territoire, ou Koudmen n'y est pas encore ouvert.", "INTERDIT");
     }
     if (!canStatusDoLevel(cg.status, request.level, { hasDiploma: cg.hasDiploma })) {
       throw new AccompagnantError("Votre statut ne permet pas ce niveau d'accompagnement.", "INTERDIT");
@@ -385,6 +400,7 @@ export async function acceptProposal(
         proposalId: proposal.id,
         aineId: request.aineId,
         caregiverId: cg.id,
+        territoire: request.aine.territoire,
         hourlyRateCents: paid ? cg.hourlyRateCents : null,
         // D6 : l'employeur (ou client) déclaré par la famille dans la demande.
         employerType: request.employerType,
@@ -398,6 +414,7 @@ export async function acceptProposal(
         durationMinutes: request.durationMinutes,
         startDate: request.startDate,
         slots: request.slots,
+        timeZone: fuseauDe(request.aine.territoire),
       },
       now,
     );

@@ -3,11 +3,12 @@ import { randomBytes } from "node:crypto";
 import type { CaregiverStatus, Prisma, ProofFactor, TimeSlot } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { db } from "@/server/db";
-import { getCommune } from "@/lib/communes";
+import { fuseauDe, getCommune, TERRITOIRE_LANCEMENT } from "@/lib/territoires";
 import { allowedLevelsFor } from "@/server/rules/status-levels";
 import { requiredVerificationsFor } from "@/server/rules/orientation";
 import { generateUniqueHomeCode } from "@/server/visits/service";
 import { computeVisitProof } from "@/server/visits/proof";
+import { addLocalDays, zonedToUtc } from "@/lib/fuseau";
 
 /**
  * Construction du « monde » fictif d'un bac à sable (D2). TOUTES les données sont fictives.
@@ -31,10 +32,10 @@ export function sandboxEmail(sandboxId: string, slug: string): string {
   return `${slug}.${sandboxId}@bac-a-sable.koudmen.test`;
 }
 
-/** Date à J+offset, à l'heure de Martinique donnée (UTC−4). */
-export function mqDate(now: Date, dayOffset: number, hour: number, minute = 0): Date {
-  const local = new Date(now.getTime() - 4 * 3_600_000 + dayOffset * DAY);
-  return new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate(), hour + 4, minute));
+/** Date à J+offset, à l'heure locale donnée du territoire (T4 : fuseau IANA, Guadeloupe par défaut). */
+export function localDate(now: Date, dayOffset: number, hour: number, minute = 0, tz: string = fuseauDe(TERRITOIRE_LANCEMENT)): Date {
+  const { year, month, day } = addLocalDays(now, dayOffset, tz);
+  return zonedToUtc(year, month, day, hour, minute, tz);
 }
 
 function position(code: string, dLat = 0.0012, dLng = -0.0009) {
@@ -59,7 +60,7 @@ async function robotUser(
       lastName: p.lastName,
       phone: p.phone ?? null,
       sandboxId,
-      ...(p.role === "FAMILLE" ? { familyProfile: { create: { location: "MARTINIQUE" as const } } } : {}),
+      ...(p.role === "FAMILLE" ? { familyProfile: { create: { location: "GUADELOUPE" as const } } } : {}),
     },
     select: { id: true, firstName: true },
   });
@@ -91,7 +92,7 @@ export async function createRobotCaregiver(tx: Tx, sandboxId: string, operatorId
       role: "ACCOMPAGNANT",
       firstName: spec.firstName,
       lastName: spec.lastName,
-      phone: "+596 696 00 00 00 (fictif)",
+      phone: "+590 690 00 00 00 (fictif)",
       sandboxId,
       caregiverProfile: {
         create: {
@@ -133,7 +134,7 @@ const FAMILY_WORLD_CAREGIVERS: RobotCaregiverSpec[] = [
     firstName: "Josiane",
     lastName: "Labeau",
     status: "SALARIE_FAMILLE_CESU",
-    communes: ["FORT_DE_FRANCE", "SCHOELCHER"],
+    communes: ["POINTE_A_PITRE", "GOSIER"],
     rateCents: 1500,
     bio: "Ancienne auxiliaire de cantine. J'aime les discussions et les promenades au bord de mer.",
     avail: [
@@ -147,7 +148,7 @@ const FAMILY_WORLD_CAREGIVERS: RobotCaregiverSpec[] = [
     firstName: "Germaine",
     lastName: "Célestine",
     status: "BENEVOLE_ASSO",
-    communes: ["FORT_DE_FRANCE"],
+    communes: ["POINTE_A_PITRE"],
     rateCents: null,
     bio: "Retraitée, bénévole. Je lis le journal et je joue aux dominos avec les aînés.",
     associationName: "Association Lakou Solidarité (fictive)",
@@ -161,11 +162,11 @@ const FAMILY_WORLD_CAREGIVERS: RobotCaregiverSpec[] = [
     firstName: "Mylène",
     lastName: "Bérard",
     status: "SAAD",
-    communes: ["FORT_DE_FRANCE", "LAMENTIN"],
+    communes: ["POINTE_A_PITRE", "ABYMES"],
     rateCents: 2400,
     bio: "Service d'aide à domicile partenaire. Le service désigne l'intervenant.",
     hasDiploma: true,
-    saadName: "Aide Plus Martinique (fictif)",
+    saadName: "Aide Plus Guadeloupe (fictif)",
     avail: [
       [1, "MATIN"],
       [5, "MATIN"],
@@ -176,7 +177,7 @@ const FAMILY_WORLD_CAREGIVERS: RobotCaregiverSpec[] = [
     firstName: "Kévin",
     lastName: "Marie-Sainte",
     status: "AUTO_ENTREPRENEUR_SAP",
-    communes: ["FORT_DE_FRANCE", "LAMENTIN"],
+    communes: ["POINTE_A_PITRE", "ABYMES"],
     rateCents: 1800,
     bio: "Auto-entrepreneur SAP. Courses, papiers, aide au numérique (pas de visite de compagnie).",
     siret: "00000000000000",
@@ -190,7 +191,7 @@ const FAMILY_WORLD_CAREGIVERS: RobotCaregiverSpec[] = [
     firstName: "Nadège",
     lastName: "Rosemond",
     status: "PROCHE_AIDANT_APA",
-    communes: ["FORT_DE_FRANCE"],
+    communes: ["POINTE_A_PITRE"],
     rateCents: 1300,
     bio: "Proche aidante de sa grand-mère (autre famille) : jamais proposée à Léonie (règle D7).",
     avail: [[5, "MATIN"]],
@@ -204,7 +205,7 @@ type PastVisit = {
 };
 
 /**
- * Monde « Famille » : le testeur est l'enfant de Léonie (81 ans, Fort-de-France).
+ * Monde « Famille » : le testeur est l'enfant de Léonie (81 ans, Pointe-à-Pitre).
  * - Cercle Lakou : le testeur (payeur) + son frère Frédéric (robot).
  * - Mission en cours avec Josiane : 2 Kayé (dont 1 « à surveiller »), 1 visite « À vérifier », 1 visite prévue.
  * - Une demande OUVERTE (samedi matin) : le scénario 2 commence ici.
@@ -232,10 +233,11 @@ export async function buildFamilyWorld(sandboxId: string, tester: { firstName: s
         data: {
           firstName: "Léonie",
           lastInitial: "J.",
-          commune: "FORT_DE_FRANCE",
-          addressHint: "Quartier Terres-Sainville (fictif)",
-          ...position("FORT_DE_FRANCE"),
-          phone: "+596 596 00 00 11 (fictif)",
+          territoire: "GUADELOUPE",
+          commune: "POINTE_A_PITRE",
+          addressHint: "Quartier Lauricisque (fictif)",
+          ...position("POINTE_A_PITRE"),
+          phone: "+590 590 00 00 11 (fictif)",
           needs: ["COMPAGNIE", "REPAS", "SORTIES"],
           activityLevel: 3,
           consentGiven: true,
@@ -334,8 +336,8 @@ export async function buildFamilyWorld(sandboxId: string, tester: { firstName: s
         { day: -3, factors: [{ factor: "GPS", valid: false }] },
       ];
       for (const v of past) {
-        const start = mqDate(now, v.day, 9);
-        const end = mqDate(now, v.day, 11);
+        const start = localDate(now, v.day, 9);
+        const end = localDate(now, v.day, 11);
         const proof = computeVisitProof(v.factors);
         const visit = await tx.visit.create({
           data: {
@@ -383,8 +385,8 @@ export async function buildFamilyWorld(sandboxId: string, tester: { firstName: s
           missionId: mission.id,
           aineId: leonie.id,
           caregiverId: josiane.profileId,
-          scheduledStart: mqDate(now, 4, 9),
-          scheduledEnd: mqDate(now, 4, 11),
+          scheduledStart: localDate(now, 4, 9),
+          scheduledEnd: localDate(now, 4, 11),
           status: "PREVUE",
         },
       });
@@ -419,7 +421,7 @@ export async function buildFamilyWorld(sandboxId: string, tester: { firstName: s
 export async function buildCaregiverWorld(sandboxId: string, tester: { firstName: string }) {
   return db.$transaction(async (tx) => {
     await robotUser(tx, sandboxId, { slug: "operateur", role: "OPERATEUR", firstName: "Équipe Koudmen", lastName: "(robot)" });
-    await robotUser(tx, sandboxId, { slug: "patrick", role: "FAMILLE", firstName: "Patrick", lastName: "(robot)", phone: "+596 696 00 00 03 (fictif)" });
+    await robotUser(tx, sandboxId, { slug: "patrick", role: "FAMILLE", firstName: "Patrick", lastName: "(robot)", phone: "+590 690 00 00 03 (fictif)" });
     const me = await tx.user.create({
       data: {
         email: sandboxEmail(sandboxId, "vous"),

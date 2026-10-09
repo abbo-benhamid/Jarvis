@@ -4,9 +4,9 @@
  * - heure retenue pour un événement hors ligne ;
  * - conversion d'une visite (Prisma) vers le contrat `Visite` (liste FERMÉE de champs, RGPD).
  */
-import type { CaregiverValidation, Frequency, MissionStatus, ProofFactor, VisitStatus } from "@prisma/client";
+import type { CaregiverValidation, Frequency, MissionStatus, ProofFactor, Territoire, VisitStatus } from "@prisma/client";
 import { ECART_HORLOGE_MAX_H, SEUIL_PREUVE, type MotifRefus, type Visite } from "@/contracts/v1/visits";
-import { communeLabel } from "@/lib/communes";
+import { communeLabel, fuseauDe } from "@/lib/territoires";
 import { checkInWindow, visitAcceptsProof } from "@/server/accompagnant/rules";
 import { computeVisitProof } from "./proof";
 
@@ -43,7 +43,7 @@ export type AppVisitRow = {
   checkInAt: Date | null;
   checkOutAt: Date | null;
   clockSkewAt: Date | null;
-  aine: { firstName: string; lastInitial: string | null; commune: string; addressHint: string | null };
+  aine: { firstName: string; lastInitial: string | null; territoire: Territoire; commune: string; addressHint: string | null };
   mission: { status: MissionStatus; request: { level: number; frequency: Frequency; durationMinutes: number; notes: string | null } };
   caregiver: { validation: CaregiverValidation };
   proofs: { factor: ProofFactor; valid: boolean }[];
@@ -61,7 +61,7 @@ export const APP_VISIT_SELECT = {
   checkOutAt: true,
   clockSkewAt: true,
   // L1d (D9) : champs des gardes R1/R5 (jamais renvoyés à l'app).
-  aine: { select: { firstName: true, lastInitial: true, commune: true, addressHint: true, sandboxId: true, accordEtat: true, consentGiven: true, consentAt: true } },
+  aine: { select: { firstName: true, lastInitial: true, territoire: true, commune: true, addressHint: true, sandboxId: true, accordEtat: true, consentGiven: true, consentAt: true } },
   mission: { select: { status: true, request: { select: { level: true, frequency: true, durationMinutes: true, notes: true } } } },
   caregiver: { select: { validation: true } },
   proofs: { select: { factor: true, valid: true } },
@@ -76,10 +76,12 @@ export function toVisiteDto(v: AppVisitRow, now: Date, testMode: boolean): Visit
     id: v.id,
     debut: v.scheduledStart.toISOString(),
     fin: v.scheduledEnd.toISOString(),
+    fuseau: fuseauDe(v.aine.territoire),
     statut: v.status,
     aine: {
       prenom: v.aine.firstName,
       initialeNom: v.aine.lastInitial,
+      territoire: v.aine.territoire,
       commune: v.aine.commune,
       communeLibelle: communeLabel(v.aine.commune),
       adresseApproximative: v.aine.addressHint,

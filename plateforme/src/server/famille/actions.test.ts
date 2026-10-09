@@ -105,7 +105,7 @@ describe("createAineAction", () => {
     firstName: "Léonie",
     lastInitial: "J",
     myRelation: "fille",
-    commune: "FORT_DE_FRANCE",
+    commune: "POINTE_A_PITRE",
     needs: ["COMPAGNIE"],
     activityLevel: "3",
     consentGiven: "on",
@@ -125,8 +125,8 @@ describe("createAineAction", () => {
     db.aine.create.mockResolvedValue({ id: AINE });
     await expect(actions.createAineAction(empty, fd(valid))).rejects.toThrow(`REDIRECT:/famille/aines/${AINE}?cree=1`);
     const data = db.aine.create.mock.calls[0]![0].data;
-    expect(data.latitude).toBeCloseTo(14.6161);
-    expect(data.longitude).toBeCloseTo(-61.0588);
+    expect(data.latitude).toBeCloseTo(16.2411);
+    expect(data.longitude).toBeCloseTo(-61.5331);
     expect(data.homeCode).toBe("ABC234");
     expect(data.consentGiven).toBe(true);
     expect(data.ownerId).toBe(user.id);
@@ -142,7 +142,7 @@ describe("updateAineAction", () => {
     db.lakouMember.findUnique.mockResolvedValue({ isPayer: false });
     const r = await actions.updateAineAction(
       empty,
-      fd({ aineId: AINE, firstName: "L", commune: "FORT_DE_FRANCE", needs: ["COMPAGNIE"], activityLevel: "1", consentGiven: "on", consentByType: "AINE", consentByName: "Léonie" }),
+      fd({ aineId: AINE, firstName: "L", commune: "POINTE_A_PITRE", needs: ["COMPAGNIE"], activityLevel: "1", consentGiven: "on", consentByType: "AINE", consentByName: "Léonie" }),
     );
     expect(r).toEqual({ ok: false, error: "Seul le gestionnaire principal du profil peut le modifier." });
     expect(db.aine.update).not.toHaveBeenCalled();
@@ -271,11 +271,21 @@ describe("createRequestAction", () => {
     expect(db.careRequest.create).not.toHaveBeenCalled();
   });
 
+  it("T1 (T2) : refuse une demande pour un aîné d'un territoire pas encore ouvert", async () => {
+    db.aine.findUnique.mockResolvedValue({ accordEtat: "ACCORD_RECUEILLI", territoire: "MARTINIQUE" });
+    const r = await actions.createRequestAction(empty, fd(valid));
+    expect(r).toMatchObject({ ok: false });
+    expect(!r.ok && r.error).toContain("pas encore ouvert en Martinique");
+    expect(db.careRequest.create).not.toHaveBeenCalled();
+  });
+
   it("crée la demande OUVERTE avec des créneaux uniques", async () => {
+    db.aine.findUnique.mockResolvedValue({ accordEtat: "ACCORD_RECUEILLI", territoire: "GUADELOUPE" });
     db.careRequest.create.mockResolvedValue({ id: "r1" });
     await expect(actions.createRequestAction(empty, fd(valid))).rejects.toThrow("REDIRECT:/famille/demandes?envoyee=1");
     const data = db.careRequest.create.mock.calls[0]![0].data;
     expect(data.status).toBe("OUVERTE");
+    expect(data.territoire).toBe("GUADELOUPE");
     expect(data.slots.create).toEqual([
       { dayOfWeek: 0, slot: "MATIN" },
       { dayOfWeek: 5, slot: "APRES_MIDI" },
@@ -438,7 +448,7 @@ describe("R1 / R5 : préinscription et accord de l'aîné", () => {
   it("préinscription : aucune fiche aîné créée", async () => {
     launch.realData = false;
     try {
-      const r = await actions.createAineAction(empty, fd({ firstName: "Léonie", commune: "FORT_DE_FRANCE", phone: "+596 596 00 00 00", myRelation: "fille" }));
+      const r = await actions.createAineAction(empty, fd({ firstName: "Léonie", commune: "POINTE_A_PITRE", phone: "+590 590 00 00 00", myRelation: "fille" }));
       expect(r).toEqual({ ok: false, error: "Koudmen ouvre bientôt. Nous vous contactons dès l'ouverture." });
       expect(db.aine.create).not.toHaveBeenCalled();
     } finally {
@@ -451,10 +461,10 @@ describe("R1 / R5 : préinscription et accord de l'aîné", () => {
     try {
       db.aine.create.mockResolvedValue({ id: AINE });
       await expect(
-        actions.createAineAction(empty, fd({ firstName: "Léonie", commune: "FORT_DE_FRANCE", phone: "+596 596 00 00 00", myRelation: "fille", needs: ["COMPAGNIE"] })),
+        actions.createAineAction(empty, fd({ firstName: "Léonie", commune: "POINTE_A_PITRE", phone: "+590 590 00 00 00", myRelation: "fille", needs: ["COMPAGNIE"] })),
       ).rejects.toThrow(`REDIRECT:/famille/aines/${AINE}?cree=1`);
       const data = (db.aine.create.mock.calls[0] as unknown as [{ data: Record<string, unknown> }])[0].data;
-      expect(data).toMatchObject({ accordEtat: "EN_ATTENTE_ACCORD", consentGiven: false, needs: [], phone: "+596 596 00 00 00" });
+      expect(data).toMatchObject({ accordEtat: "EN_ATTENTE_ACCORD", consentGiven: false, needs: [], phone: "+590 590 00 00 00" });
       expect(data.addressHint).toBeUndefined();
     } finally {
       launch.on = false;

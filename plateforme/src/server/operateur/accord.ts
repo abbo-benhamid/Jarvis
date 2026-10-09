@@ -6,6 +6,9 @@ import { logAudit } from "@/server/audit";
 import { NOTICE_FALC_VERSION } from "@/lib/legal-launch";
 import { generateUniqueHomeCode } from "@/server/visits/service";
 import { lockCareRequests } from "@/server/matching/locks";
+import { zonedToUtc } from "@/lib/fuseau";
+import { fuseauDe } from "@/lib/territoires";
+import { TERRITOIRE_EQUIPE } from "@/lib/rappel";
 
 /**
  * R5 (J5) : un conseiller Koudmen appelle l'aîné, lit la notice FALC et enregistre sa réponse.
@@ -78,9 +81,16 @@ const TARGET = { ACCORD: "ACCORD_RECUEILLI", REFUS: "ACCORD_REFUSE", RETRAIT: "A
 
 type Result = { ok: true } | { ok: false; error: string };
 
-/** Heure saisie à l'heure de la Martinique (UTC−4, sans heure d'été). Null si invalide ou dans le futur. */
-function callDate(appelLe: string, now: Date): Date | null {
-  const appel = new Date(`${appelLe}:00-04:00`);
+/**
+ * Heure saisie dans le fuseau de l'équipe Koudmen (T4 : fuseau IANA du territoire de l'équipe, Guadeloupe au lancement).
+ * Format « AAAA-MM-JJTHH:MM ». Null si invalide ou dans le futur.
+ */
+export function callDate(appelLe: string, now: Date, tz: string = fuseauDe(TERRITOIRE_EQUIPE)): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(appelLe);
+  if (!m) return null;
+  const [y, mo, d, h, mi] = m.slice(1).map(Number) as [number, number, number, number, number];
+  if (mo < 1 || mo > 12 || d < 1 || d > 31 || h > 23 || mi > 59) return null;
+  const appel = zonedToUtc(y, mo, d, h, mi, tz);
   if (Number.isNaN(appel.getTime()) || appel > new Date(now.getTime() + 5 * 60_000)) return null;
   return appel;
 }

@@ -29,12 +29,12 @@ test("parcours complet : la famille demande, Koudmen propose, la famille choisit
   const aineFirstName = `Hortense${id.slice(-4)}`;
   const kayeNote = `Partie de dominos sous la véranda (e2e ${id}).`;
 
-  // Accompagnante VALIDE au François, disponible tous les matins (compte e2e, mot de passe connu).
+  // Accompagnante VALIDE à Saint-François, disponible tous les matins (compte e2e, mot de passe connu).
   const cg = await createCaregiver({
     firstName: "Rosette",
     status: "SALARIE_FAMILLE_CESU",
     validation: "VALIDE",
-    communes: ["FRANCOIS"],
+    communes: ["SAINT_FRANCOIS"],
     avail: [0, 1, 2, 3, 4, 5, 6].map((d) => [d, "MATIN"] as [number, "MATIN"]),
   });
 
@@ -57,7 +57,7 @@ test("parcours complet : la famille demande, Koudmen propose, la famille choisit
   await page.goto("/famille/aines/nouveau");
   await page.locator("#firstName").fill(aineFirstName);
   await page.getByLabel("Votre lien avec l'aîné").fill("fille");
-  await page.getByLabel("Commune").selectOption("FRANCOIS");
+  await page.getByLabel("Commune").selectOption("SAINT_FRANCOIS");
   await page.getByLabel("Compagnie", { exact: true }).check();
   await page.getByLabel(/Niveau 1 — Lien/).check();
   await page.getByLabel("Nom et prénom de l'aîné").fill(`${aineFirstName} E2E`);

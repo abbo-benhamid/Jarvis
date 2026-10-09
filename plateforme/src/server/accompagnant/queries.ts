@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "@/server/db";
 import { sweepOverdueVisits } from "@/server/visits/service";
 import { planVisits } from "./schedule";
+import { fuseauDe } from "@/lib/territoires";
 import { getOrCreateProfile, ownedVisitWhere } from "./service";
 import type { ProfileSnapshot } from "./rules";
 
@@ -35,7 +36,7 @@ const VISIT_LIST_SELECT = {
   proofScore: true,
   checkInAt: true,
   checkOutAt: true,
-  aine: { select: { firstName: true, lastInitial: true, commune: true } },
+  aine: { select: { firstName: true, lastInitial: true, territoire: true, commune: true } },
   journal: { select: { id: true } },
 } as const;
 
@@ -74,7 +75,7 @@ export async function getPendingProposals(userId: string, now: Date = new Date()
           startDate: true,
           notes: true,
           slots: { select: { dayOfWeek: true, slot: true }, orderBy: [{ dayOfWeek: "asc" }] },
-          aine: { select: { firstName: true, commune: true } },
+          aine: { select: { firstName: true, commune: true, territoire: true } },
         },
       },
     },
@@ -89,6 +90,7 @@ export async function getPendingProposals(userId: string, now: Date = new Date()
           durationMinutes: p.request.durationMinutes,
           startDate: p.request.startDate,
           slots: p.request.slots,
+          timeZone: fuseauDe(p.request.aine.territoire),
         },
         now,
       ).length,
@@ -129,7 +131,7 @@ export async function getOwnedVisit(userId: string, visitId: string) {
       proofScore: true,
       checkInAt: true,
       checkOutAt: true,
-      aine: { select: { firstName: true, lastInitial: true, commune: true, addressHint: true } },
+      aine: { select: { firstName: true, lastInitial: true, territoire: true, commune: true, addressHint: true } },
       proofs: { select: { factor: true, valid: true, simulated: true, distanceMeters: true, details: true } },
       journal: {
         select: {

@@ -27,8 +27,8 @@ describe("registerSchema (L2, R6)", () => {
     lastName: "Test",
     email: "rose@example.test",
     password: "Zebre-Lagon-2026",
-    phone: "+596 696 12 34 56",
-    commune: "FORT_DE_FRANCE",
+    phone: "+590 690 12 34 56",
+    commune: "POINTE_A_PITRE",
     birthDate: "1990-04-02",
     acceptCgu: "on",
   };

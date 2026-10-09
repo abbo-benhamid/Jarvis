@@ -106,10 +106,10 @@ describe("Kayé", () => {
     expect(moodSentence("Léonie", 4)).toBe("Léonie allait bien.");
     expect(moodSentence("Léonie", 1)).toBe("Léonie avait le moral bas.");
   });
-  it("groupe par jour en heure de Martinique", () => {
+  it("groupe par jour dans le fuseau du territoire (Guadeloupe par défaut)", () => {
     const items = [
       { id: "a", d: new Date("2026-10-04T13:00:00Z") },
-      { id: "b", d: new Date("2026-10-04T02:00:00Z") }, // 3 octobre, 22 h en Martinique
+      { id: "b", d: new Date("2026-10-04T02:00:00Z") }, // 3 octobre, 22 h en Guadeloupe
       { id: "c", d: new Date("2026-10-03T12:00:00Z") },
     ];
     const groups = groupByDay(items, (i) => i.d);

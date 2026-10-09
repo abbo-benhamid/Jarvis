@@ -1,15 +1,22 @@
-import { MARTINIQUE_TZ } from "@/lib/format";
+import { DEFAULT_TZ } from "@/lib/format";
 
-/** Dates courtes de l'espace famille (fuseau de la Martinique). Utilisable client et serveur. */
+/**
+ * Dates courtes des espaces famille et accompagnant. Utilisable client et serveur.
+ * T1 (T4) : fuseau du territoire de l'aîné (paramètre `tz`) ; par défaut, le territoire de lancement (Guadeloupe).
+ */
 
-const fmt = (opts: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("fr-FR", { timeZone: MARTINIQUE_TZ, ...opts });
-const WEEKDAY_SHORT = fmt({ weekday: "short" });
-const DAY_NUMBER = fmt({ day: "numeric" });
-const WEEKDAY_LONG = fmt({ weekday: "long" });
-const DAY_MONTH_LONG = fmt({ weekday: "long", day: "numeric", month: "long" });
-const DAY_MONTH_SHORT = fmt({ weekday: "long", day: "numeric", month: "short" });
-const DAY_KEY = new Intl.DateTimeFormat("en-CA", { timeZone: MARTINIQUE_TZ, year: "numeric", month: "2-digit", day: "2-digit" });
-const HOUR = fmt({ hour: "numeric", minute: "2-digit" });
+const CACHE = new Map<string, Intl.DateTimeFormat>();
+function fmt(tz: string, locale: string, opts: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const key = `${tz}|${locale}|${JSON.stringify(opts)}`;
+  let f = CACHE.get(key);
+  if (!f) {
+    f = new Intl.DateTimeFormat(locale, { timeZone: tz, ...opts });
+    CACHE.set(key, f);
+  }
+  return f;
+}
+const fr = (tz: string, opts: Intl.DateTimeFormatOptions) => fmt(tz, "fr-FR", opts);
+const dayKey = (d: Date, tz: string) => fmt(tz, "en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 
 export function capitalize(s: string): string {
   return s.charAt(0).toLocaleUpperCase("fr-FR") + s.slice(1);
@@ -21,36 +28,36 @@ function firstOfMonth(s: string): string {
 }
 
 /** « Jeu » (pavé de date). */
-export function weekdayShort(d: Date): string {
-  return capitalize(WEEKDAY_SHORT.format(d).replace(/\.$/, ""));
+export function weekdayShort(d: Date, tz: string = DEFAULT_TZ): string {
+  return capitalize(fr(tz, { weekday: "short" }).format(d).replace(/\.$/, ""));
 }
 
 /** « 8 » (pavé de date). */
-export function dayNumber(d: Date): string {
-  return DAY_NUMBER.format(d);
+export function dayNumber(d: Date, tz: string = DEFAULT_TZ): string {
+  return fr(tz, { day: "numeric" }).format(d);
 }
 
 /** « jeudi 8 octobre ». */
-export function dayLong(d: Date): string {
-  return firstOfMonth(DAY_MONTH_LONG.format(d));
+export function dayLong(d: Date, tz: string = DEFAULT_TZ): string {
+  return firstOfMonth(fr(tz, { weekday: "long", day: "numeric", month: "long" }).format(d));
 }
 
 /** « samedi 3 oct. ». */
-export function dayShort(d: Date): string {
-  return firstOfMonth(DAY_MONTH_SHORT.format(d));
+export function dayShort(d: Date, tz: string = DEFAULT_TZ): string {
+  return firstOfMonth(fr(tz, { weekday: "long", day: "numeric", month: "short" }).format(d));
 }
 
 /** « 10 h » ou « 10 h 30 » (typographie française, espace insécable). */
-export function hourLabel(d: Date): string {
-  const [h, m] = HOUR.format(d).split(":");
-  return m === "00" ? `${Number(h)} h` : `${Number(h)} h ${m}`;
+export function hourLabel(d: Date, tz: string = DEFAULT_TZ): string {
+  const [h, m] = fr(tz, { hour: "numeric", minute: "2-digit" }).format(d).split(":");
+  return m === "00" ? `${Number(h)} h` : `${Number(h)} h ${m}`;
 }
 
 /** « aujourd'hui », « hier », « samedi » (moins de 7 jours), sinon « 3 oct. ». */
-export function relativeDay(d: Date, now: Date = new Date()): string {
-  const days = Math.round((Date.parse(DAY_KEY.format(now)) - Date.parse(DAY_KEY.format(d))) / 86_400_000);
+export function relativeDay(d: Date, now: Date = new Date(), tz: string = DEFAULT_TZ): string {
+  const days = Math.round((Date.parse(dayKey(now, tz)) - Date.parse(dayKey(d, tz))) / 86_400_000);
   if (days === 0) return "aujourd'hui";
   if (days === 1) return "hier";
-  if (days > 1 && days < 7) return WEEKDAY_LONG.format(d);
-  return dayShort(d).replace(/^\p{L}+ /u, "");
+  if (days > 1 && days < 7) return fr(tz, { weekday: "long" }).format(d);
+  return dayShort(d, tz).replace(/^\p{L}+ /u, "");
 }

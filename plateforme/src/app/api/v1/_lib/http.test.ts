@@ -105,10 +105,11 @@ describe("GET /api/v1/me", () => {
         sandboxId: null,
         sessionVersion: 4,
         emailVerifiedAt: new Date("2026-10-07T10:00:00Z"),
-        caregiverProfile: { validation: "EN_ATTENTE" },
+        caregiverProfile: { validation: "EN_ATTENTE", territoire: "GUADELOUPE" },
+        ownedAines: [],
         // Champs qui ne doivent JAMAIS sortir, même si le service les lisait un jour.
         passwordHash: "$2a$…",
-        phone: "+596 696 00 00 00",
+        phone: "+590 690 00 00 00",
       },
     };
     const res = await meRoute.GET(get({ authorization: "Bearer bon-jeton" }));
@@ -127,8 +128,10 @@ describe("GET /api/v1/me", () => {
       profilValide: false,
       // R1 : mode essai en test → données réelles autorisées → pas de préinscription.
       preinscription: false,
+      // T1 : territoire de la zone d'intervention.
+      territoire: "GUADELOUPE",
     });
-    expect(Object.keys(body).sort()).toEqual(["bacASable", "demo", "email", "emailVerifie", "id", "nom", "preinscription", "prenom", "profilValide", "role"]);
+    expect(Object.keys(body).sort()).toEqual(["bacASable", "demo", "email", "emailVerifie", "id", "nom", "preinscription", "prenom", "profilValide", "role", "territoire"]);
   });
 
   it("L1 : famille → profilValide vrai ; e-mail non confirmé → emailVerifie faux", async () => {

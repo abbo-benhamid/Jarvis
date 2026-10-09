@@ -126,11 +126,12 @@ const ae: CaregiverForMatching = {
   status: "AUTO_ENTREPRENEUR_SAP",
   validation: "VALIDE",
   hasDiploma: false,
-  communes: ["MARIN"],
+  territoire: "GUADELOUPE",
+  communes: ["MOULE"],
   availabilities: [{ dayOfWeek: 2, slot: "MATIN" }],
 };
 const cesu: CaregiverForMatching = { ...ae, status: "SALARIE_FAMILLE_CESU" };
-const level3 = { level: 3, commune: "MARIN", slots: [{ dayOfWeek: 2, slot: "MATIN" as const }] };
+const level3 = { territoire: "GUADELOUPE" as const, level: 3, commune: "MOULE", slots: [{ dayOfWeek: 2, slot: "MATIN" as const }] };
 
 describe("proposalBlockReason (refus serveur)", () => {
   it("refuse un auto-entrepreneur sur un niveau 3 (RM-02)", () => {

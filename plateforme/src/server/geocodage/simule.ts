@@ -1,4 +1,4 @@
-import { COMMUNES } from "@/lib/communes";
+import { TOUTES_COMMUNES } from "@/lib/territoires";
 import { normaliserCommune, type GeocodagePort } from "./port";
 
 /**
@@ -12,7 +12,7 @@ export function creerGeocodageSimule(): GeocodagePort {
     nom: "simule",
     async geocoder({ adresse, commune }) {
       if (/introuvable/i.test(adresse)) return null;
-      const c = COMMUNES.find((x) => normaliserCommune(x.label) === normaliserCommune(commune) || x.code === commune);
+      const c = TOUTES_COMMUNES.find((x) => normaliserCommune(x.label) === normaliserCommune(commune) || x.code === commune);
       if (!c) return null;
       let h = 0;
       for (const ch of adresse) h = (h * 31 + ch.charCodeAt(0)) >>> 0;

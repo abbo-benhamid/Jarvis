@@ -11,7 +11,7 @@ export const PASSWORD_MAX = 200;
 
 /**
  * Mots de passe trop courants (fuites publiques, en minuscules). Liste courte et volontairement locale :
- * français, créole, Martinique. [À VÉRIFIER] étendre avec une liste plus longue (ex. 10 000 entrées) si besoin.
+ * français, créole, Guadeloupe et Martinique (T1). [À VÉRIFIER] étendre avec une liste plus longue (ex. 10 000 entrées) si besoin.
  */
 const COMMON = [
   "123456", "1234567", "12345678", "123456789", "1234567890", "12345678910", "0123456789", "987654321", "111111", "000000",
@@ -24,6 +24,9 @@ const COMMON = [
   "motdepasse1", "password1", "password123", "changeme", "secret", "secret123", "maison", "famille", "manman", "papa",
   "maman", "mamie", "papie", "grandmere", "accompagnant", "accompagnante", "aidant", "carnaval", "zouk", "biguine",
   "972972", "971971", "97200", "97232", "france", "paris", "lyon", "toulouse", "liberte", "vacances",
+  // T1 : lancement en Guadeloupe.
+  "gwadloup", "gwadeloup", "karukera", "pointeapitre", "pointe-a-pitre", "abymes", "baiemahault", "basseterre", "gosier", "koudmen971",
+  "97110", "97139", "guyane", "cayenne", "kourou",
 ] as const;
 
 const COMMON_SET = new Set<string>(COMMON);

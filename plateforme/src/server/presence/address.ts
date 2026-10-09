@@ -2,7 +2,7 @@ import "server-only";
 import type { Role } from "@prisma/client";
 import { db } from "@/server/db";
 import { logAudit } from "@/server/audit";
-import { getCommune } from "@/lib/communes";
+import { fuseauDe, getCommune, territoire } from "@/lib/territoires";
 import { geocodagePort } from "@/server/geocodage";
 import { presenceRefusal, type PresenceGuardAine } from "@/server/visits/launch-guards";
 import { decryptAddress, decryptHomeGeo, encryptAddress, encryptHomeGeo } from "./address-crypto";
@@ -38,7 +38,12 @@ export async function computeHomeLocation(address: string | null, communeCode: s
   const fallback = { latitude: commune.lat, longitude: commune.lng, homeGeoEnc: null, locationApproximate: true, geocodedAt: null, label: null };
   const clean = address?.trim().slice(0, ADDRESS_MAX) || null;
   if (!clean) return { addressEnc: null, ...fallback };
-  const r = await geocodagePort().geocoder({ adresse: clean, commune: commune.label });
+  const r = await geocodagePort().geocoder({
+    adresse: clean,
+    commune: commune.label,
+    prefixesCodePostal: territoire(commune.territoire).prefixesCodePostal,
+    codePostal: commune.codePostal,
+  });
   const addressEnc = encryptAddress(clean);
   if (!r) return { addressEnc, ...fallback };
   return {
@@ -101,14 +106,13 @@ export function readAddress(aine: { addressEnc: string | null }): string | null 
   return decryptAddress(aine.addressEnc);
 }
 
-const TZ = "America/Martinique";
-function dayKey(d: Date): string {
-  return new Intl.DateTimeFormat("fr-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+function dayKey(d: Date, tz: string): string {
+  return new Intl.DateTimeFormat("fr-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 }
 
-/** Le jour de la visite (heure de Martinique). */
-export function isVisitDay(scheduledStart: Date, now: Date): boolean {
-  return dayKey(scheduledStart) === dayKey(now);
+/** Le jour de la visite, dans le fuseau du territoire de l'aîné (T4). */
+export function isVisitDay(scheduledStart: Date, now: Date, tz: string = fuseauDe(null)): boolean {
+  return dayKey(scheduledStart, tz) === dayKey(now, tz);
 }
 
 /**
@@ -119,9 +123,9 @@ export async function readAddressForCaregiver(actor: { id: string; role: Role },
   if (actor.role !== "ACCOMPAGNANT") return null;
   const visit = await db.visit.findFirst({
     where: { id: visitId, caregiver: { userId: actor.id }, mission: { status: "ACTIVE" } },
-    select: { id: true, scheduledStart: true, aineId: true, aine: { select: { addressEnc: true, accordEtat: true, consentGiven: true, consentAt: true, sandboxId: true } } },
+    select: { id: true, scheduledStart: true, aineId: true, aine: { select: { territoire: true, addressEnc: true, accordEtat: true, consentGiven: true, consentAt: true, sandboxId: true } } },
   });
-  if (!visit || !visit.aine.addressEnc || !isVisitDay(visit.scheduledStart, now) || presenceRefusal(visit.aine)) return null;
+  if (!visit || !visit.aine.addressEnc || !isVisitDay(visit.scheduledStart, now, fuseauDe(visit.aine.territoire)) || presenceRefusal(visit.aine)) return null;
   const address = decryptAddress(visit.aine.addressEnc);
   if (address) {
     await logAudit({ actor, action: "aine.address.read", entityType: "Aine", entityId: visit.aineId, metadata: { visitId: visit.id } });

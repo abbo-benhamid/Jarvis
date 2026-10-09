@@ -71,7 +71,7 @@ export async function createCaregiver(p: {
       role: "ACCOMPAGNANT",
       firstName: p.firstName,
       lastName: `E2E-${id}`,
-      phone: "+596 696 99 99 99",
+      phone: "+590 690 99 99 99",
       caregiverProfile: {
         create: {
           status: p.status,
@@ -113,7 +113,7 @@ export async function createDraftCaregiver(firstName: string) {
         create: {
           status: "SALARIE_FAMILLE_CESU",
           allowedLevels: [1, 2],
-          communes: ["LAMENTIN"],
+          communes: ["ABYMES"],
           hourlyRateCents: 1500,
           birthDate: new Date("1985-03-02"),
           validation: "BROUILLON",
@@ -148,6 +148,7 @@ export async function createFamilyWithAine(p: { aineFirstName: string; commune: 
     data: {
       firstName: p.aineFirstName,
       lastInitial: "E.",
+      territoire: c.territoire,
       commune: p.commune,
       latitude: c.lat,
       longitude: c.lng,

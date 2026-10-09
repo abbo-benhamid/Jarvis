@@ -43,7 +43,7 @@ export function arrivedHome(current: Point, home: Point & { approximate: boolean
 
 /**
  * Minutes estimées jusqu'au domicile. [À VÉRIFIER] avec le terrain : facteur de détour 1,4 et 30 km/h
- * de moyenne (routes de Martinique, bouchons). Arrondi à la minute supérieure, 1 minute au moins.
+ * de moyenne (routes des Antilles, bouchons). Arrondi à la minute supérieure, 1 minute au moins.
  */
 export const DETOUR_FACTOR = 1.4;
 export const VITESSE_MOYENNE_KMH = 30;

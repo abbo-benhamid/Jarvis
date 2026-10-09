@@ -53,12 +53,12 @@ describe("tarif horaire libre", () => {
 describe("profileSchema", () => {
   it("valide communes, créneaux, SIRET", () => {
     const p = profileSchema.parse({
-      communes: ["FORT_DE_FRANCE", "FORT_DE_FRANCE", "LAMENTIN"],
+      communes: ["POINTE_A_PITRE", "POINTE_A_PITRE", "LAMENTIN_GP"],
       availabilities: ["0-MATIN", "3-APRES_MIDI", "0-MATIN"],
       hourlyRate: "16",
       siret: "123 456 789 00012",
     });
-    expect(p.communes).toEqual(["FORT_DE_FRANCE", "LAMENTIN"]);
+    expect(p.communes).toEqual(["POINTE_A_PITRE", "LAMENTIN_GP"]);
     expect(p.availabilities).toEqual([
       { dayOfWeek: 0, slot: "MATIN" },
       { dayOfWeek: 3, slot: "APRES_MIDI" },
@@ -75,7 +75,7 @@ describe("profileSchema", () => {
 describe("complétude du profil et demande de vérification", () => {
   const complete: ProfileSnapshot = {
     status: "SALARIE_FAMILLE_CESU",
-    communes: ["FORT_DE_FRANCE"],
+    communes: ["POINTE_A_PITRE"],
     availabilityCount: 2,
     hourlyRateCents: 1500,
     associationName: null,

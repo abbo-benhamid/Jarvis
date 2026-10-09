@@ -44,6 +44,9 @@ export const RATE_RULES = {
   "entreprise:compte": { limit: 10, windowSeconds: 60 * 60 },
   /** L2 : dépôts de documents. */
   "document:compte": { limit: 20, windowSeconds: 24 * 60 * 60 },
+  /** T1 : liste d'attente d'un territoire « Bientôt ». Par IP (429), et par e-mail (silencieux : aucune fuite). */
+  "liste-attente:ip": { limit: 5, windowSeconds: 60 * 60 },
+  "liste-attente:email": { limit: 3, windowSeconds: 24 * 60 * 60 },
   /** L2 : webhooks des prestataires (signés), garde-fou par IP. */
   "webhook:ip": { limit: 300, windowSeconds: 60 },
 } as const satisfies Record<string, { limit: number; windowSeconds: number }>;

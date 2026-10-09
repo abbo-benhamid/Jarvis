@@ -11,7 +11,7 @@ import { invitationState } from "./logic";
  */
 
 const visitInclude = {
-  aine: { select: { id: true, firstName: true, lastInitial: true } },
+  aine: { select: { id: true, firstName: true, lastInitial: true, territoire: true } },
   caregiver: { select: { user: { select: { firstName: true } } } },
   proofs: { select: { factor: true, valid: true, simulated: true } },
   journal: { select: { id: true } },
@@ -32,6 +32,7 @@ export async function getFamilyHome(userId: string, now: Date = new Date()) {
           id: true,
           firstName: true,
           lastInitial: true,
+          territoire: true,
           commune: true,
           activityLevel: true,
           subscription: { select: { plan: true } },

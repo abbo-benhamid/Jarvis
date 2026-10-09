@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { NOM_PERSONNE_MAX, NOM_PERSONNE_REGEX } from "@/contracts/v1/inscription";
+import { TERRITOIRE_LANCEMENT, territoire } from "@/lib/territoires";
 
 /** L1d (D6) : prénom ou nom d'un compte. Mêmes règles que l'API v1 (pas d'URL, pas de chiffre, 40 caractères). */
 const NAME_RULE = "Lettres, espaces, tirets et apostrophes seulement.";
@@ -35,10 +36,11 @@ export const registerSchema = z
     lastName: personNameSchema("Nom"),
     email: emailSchema,
     password: z.string().min(10, "10 caractères minimum.").max(200, "200 caractères maximum."),
-    phone: optional(z.string().trim().regex(/^\+?[0-9 .-]{6,20}$/, "Saisissez un numéro valide (exemple : +596 696 12 34 56).")),
+    phone: optional(z.string().trim().regex(/^\+?[0-9 .-]{6,20}$/, `Saisissez un numéro valide (exemple : ${territoire(TERRITOIRE_LANCEMENT).exempleTelephone}).`)),
     commune: optional(z.string().trim().max(60)),
     birthDate: optional(z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Saisissez votre date de naissance.")),
-    location: optional(z.enum(["MARTINIQUE", "HEXAGONE", "AUTRE"], { message: "Indiquez où vous habitez." })),
+    // T1 (T3) : une famille vit dans n'importe quel territoire (diaspora comprise).
+    location: optional(z.enum(["GUADELOUPE", "MARTINIQUE", "GUYANE", "HEXAGONE", "AUTRE"], { message: "Indiquez où vous habitez." })),
     city: optional(z.string().trim().max(80, "80 caractères maximum.")),
     acceptCgu: z.literal("on", { message: "Acceptez les conditions d'utilisation pour créer un compte." }),
     newsOptIn: optional(z.literal("on")),

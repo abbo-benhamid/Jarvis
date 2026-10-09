@@ -15,7 +15,7 @@ function row(over: Partial<AppVisitRow> = {}): AppVisitRow {
     checkInAt: null,
     checkOutAt: null,
     clockSkewAt: null,
-    aine: { firstName: "Léonie", lastInitial: "R.", commune: "FORT_DE_FRANCE", addressHint: "Quartier Terres-Sainville (fictif)" },
+    aine: { firstName: "Léonie", lastInitial: "R.", territoire: "GUADELOUPE", commune: "POINTE_A_PITRE", addressHint: "Quartier Lauricisque (fictif)" },
     mission: { status: "ACTIVE", request: { level: 1, frequency: "HEBDOMADAIRE", durationMinutes: 120, notes: "Elle aime marcher." } },
     caregiver: { validation: "VALIDE" },
     proofs: [],
@@ -52,7 +52,8 @@ describe("toVisiteDto", () => {
   it("respecte le contrat (liste fermée de champs) et donne l'adresse approximative", () => {
     const dto = toVisiteDto(row(), now, false);
     expect(visiteSchema.safeParse(dto).success).toBe(true);
-    expect(dto.aine).toMatchObject({ prenom: "Léonie", communeLibelle: "Fort-de-France", adresseApproximative: "Quartier Terres-Sainville (fictif)" });
+    expect(dto.aine).toMatchObject({ prenom: "Léonie", communeLibelle: "Pointe-à-Pitre", adresseApproximative: "Quartier Lauricisque (fictif)", territoire: "GUADELOUPE" });
+    expect(dto.fuseau).toBe("America/Guadeloupe");
     expect(dto.demande.consignes).toBe("Elle aime marcher.");
     expect(dto.actions).toEqual({ checkIn: true, checkOut: false, kaye: false });
   });

@@ -4,6 +4,7 @@ import { editorInfo } from "@/server/env";
 import { Field, LegalList, LegalPage, LegalSection } from "@/components/legal/legal-page";
 import { CGU_VERSION } from "@/lib/legal-launch";
 import { NO_PAYMENT_NOTICE } from "@/lib/plans";
+import { TERRITOIRES_OUVERTS, territoire } from "@/lib/territoires";
 
 export const metadata: Metadata = { title: "Conditions d'utilisation" };
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ export default function CguPage() {
       <LegalSection title="1. Ce que fait Koudmen">
         <LegalList
           items={[
-            "Koudmen est une plateforme de mise en relation entre des familles et des accompagnants, pour des visites chez une personne âgée en Martinique.",
+            `Koudmen est une plateforme de mise en relation entre des familles et des accompagnants, pour des visites chez une personne âgée ${TERRITOIRES_OUVERTS.map((t) => territoire(t).enNom).join(" ou ")}. Les autres territoires ouvrent plus tard.`,
             "Koudmen n'est pas un service d'aide à domicile autorisé. Koudmen n'emploie pas les accompagnants. L'employeur (ou le client) de l'accompagnant est l'aîné ou son représentant.",
             "Les visites ne sont pas encore proposées. Le site ouvre d'abord les comptes et les demandes de rappel.",
           ]}

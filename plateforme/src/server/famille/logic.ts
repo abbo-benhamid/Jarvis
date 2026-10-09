@@ -5,6 +5,7 @@
 import type { ProofFactor, RequestStatus, VisitStatus } from "@prisma/client";
 import { computeVisitProof, deriveVisitStatus } from "@/server/visits/proof";
 import { isLaunchMode } from "@/server/config-check";
+import { DEFAULT_TZ } from "@/lib/format";
 
 /** Durée de validité d'un lien d'invitation au cercle Lakou. */
 export const INVITATION_TTL_DAYS = 14;
@@ -103,7 +104,7 @@ export function moodSentence(firstName: string, mood: number): string {
 }
 
 /** Groupe des éléments par jour (clé « AAAA-MM-JJ » dans le fuseau donné), ordre conservé. */
-export function groupByDay<T>(items: T[], getDate: (item: T) => Date, tz = "America/Martinique"): { day: string; items: T[] }[] {
+export function groupByDay<T>(items: T[], getDate: (item: T) => Date, tz = DEFAULT_TZ): { day: string; items: T[] }[] {
   const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" });
   const groups: { day: string; items: T[] }[] = [];
   for (const item of items) {

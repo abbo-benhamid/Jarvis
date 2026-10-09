@@ -33,7 +33,7 @@ export const CODES_ERREUR = [
   /** 500 : erreur du serveur. Aucun détail technique. */
   "ERREUR_INTERNE",
   // ─── L2 : vérification de l'accompagnant (verifications.ts) ───
-  /** 422 : numéro hors des préfixes acceptés (Antilles, Guyane, Réunion, Mayotte, Hexagone). */
+  /** 422 : numéro hors des préfixes acceptés (T5 : Guadeloupe, Martinique, Guyane, Hexagone). */
   "PREFIXE_NON_ACCEPTE",
   /** 409 : ce numéro sert déjà à un autre compte accompagnant. */
   "NUMERO_DEJA_UTILISE",

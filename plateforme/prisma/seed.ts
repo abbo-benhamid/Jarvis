@@ -11,7 +11,8 @@
  */
 import { PrismaClient, type ProofFactor, type TimeSlot } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { getCommune } from "../src/lib/communes";
+import { fuseauDe, getCommune } from "../src/lib/territoires";
+import { addLocalDays, zonedToUtc } from "../src/lib/fuseau";
 import { allowedLevelsFor } from "../src/server/rules/status-levels";
 import { computeVisitProof, deriveVisitStatus, haversineMeters } from "../src/server/visits/proof";
 import { renderTemplate, type TemplateKey } from "../src/server/notification-templates";
@@ -42,10 +43,11 @@ const prisma = new PrismaClient();
 const DAY = 24 * 60 * 60 * 1000;
 const now = new Date();
 
-/** Date à J+offset, à l'heure de Martinique donnée (UTC-4, pas d'heure d'été). */
+/** T1 : données d'essai en Guadeloupe. Date à J+offset, à l'heure locale donnée (fuseau IANA du territoire). */
+const TZ = fuseauDe("GUADELOUPE");
 function mqDate(dayOffset: number, hour: number, minute = 0): Date {
-  const d = new Date(now.getTime() + dayOffset * DAY);
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), hour + 4, minute));
+  const { year, month, day } = addLocalDays(now, dayOffset, TZ);
+  return zonedToUtc(year, month, day, hour, minute, TZ);
 }
 
 function home(code: string, dLat = 0.0012, dLng = -0.0009) {
@@ -153,9 +155,9 @@ async function main() {
       role: "FAMILLE",
       firstName: "Patrick",
       lastName: "Bellance",
-      phone: "+596 696 00 00 03",
+      phone: "+590 690 00 00 03",
       isDemo: true,
-      familyProfile: { create: { location: "MARTINIQUE", city: "Le Lamentin" } },
+      familyProfile: { create: { location: "GUADELOUPE", city: "Les Abymes" } },
     },
   });
   const marieClaire = await prisma.user.create({
@@ -165,9 +167,9 @@ async function main() {
       role: "FAMILLE",
       firstName: "Marie-Claire",
       lastName: "Rosemond",
-      phone: "+596 696 00 00 04",
+      phone: "+590 690 00 00 04",
       isDemo: true,
-      familyProfile: { create: { location: "MARTINIQUE", city: "Schœlcher" } },
+      familyProfile: { create: { location: "GUADELOUPE", city: "Le Gosier" } },
     },
   });
 
@@ -176,10 +178,11 @@ async function main() {
     data: {
       firstName: "Léonie",
       lastInitial: "J.",
-      commune: "FORT_DE_FRANCE",
-      addressHint: "Quartier Terres-Sainville (fictif)",
-      ...home("FORT_DE_FRANCE"),
-      phone: "+596 596 00 00 11",
+      territoire: "GUADELOUPE",
+      commune: "POINTE_A_PITRE",
+      addressHint: "Quartier Lauricisque (fictif)",
+      ...home("POINTE_A_PITRE"),
+      phone: "+590 590 00 00 11",
       needs: ["COMPAGNIE", "REPAS", "SORTIES", "RENDEZ_VOUS"],
       activityLevel: 3,
       consentGiven: true,
@@ -201,10 +204,11 @@ async function main() {
     data: {
       firstName: "Ernest",
       lastInitial: "B.",
-      commune: "LAMENTIN",
-      addressHint: "Quartier Place d'Armes (fictif)",
-      ...home("LAMENTIN"),
-      phone: "+596 596 00 00 12",
+      territoire: "GUADELOUPE",
+      commune: "ABYMES",
+      addressHint: "Quartier Raizet (fictif)",
+      ...home("ABYMES"),
+      phone: "+590 590 00 00 12",
       needs: ["COURSES", "DEMARCHES", "NUMERIQUE"],
       activityLevel: 2,
       consentGiven: true,
@@ -221,10 +225,11 @@ async function main() {
     data: {
       firstName: "Yvette",
       lastInitial: "R.",
-      commune: "SCHOELCHER",
-      addressHint: "Quartier Fond Lahaye (fictif)",
-      ...home("SCHOELCHER"),
-      phone: "+596 596 00 00 13",
+      territoire: "GUADELOUPE",
+      commune: "GOSIER",
+      addressHint: "Quartier Montauban (fictif)",
+      ...home("GOSIER"),
+      phone: "+590 590 00 00 13",
       needs: ["COMPAGNIE", "APPEL_REGULIER"],
       activityLevel: 1,
       consentGiven: true,
@@ -342,9 +347,9 @@ async function main() {
     email: DEMO_ACCOUNTS.ACCOMPAGNANT.email,
     firstName: "Josiane",
     lastName: "Labeau",
-    phone: "+596 696 00 00 21",
+    phone: "+590 690 00 00 21",
     status: "SALARIE_FAMILLE_CESU",
-    communes: ["FORT_DE_FRANCE", "SCHOELCHER", "SAINT_JOSEPH", "LAMENTIN"],
+    communes: ["POINTE_A_PITRE", "GOSIER", "BAIE_MAHAULT", "ABYMES"],
     rate: 1500,
     bio: "Ancienne auxiliaire de cantine. J'aime les discussions et les promenades au bord de mer.",
     validation: "VALIDE",
@@ -362,9 +367,9 @@ async function main() {
     email: "kevin.marie-sainte@demo.koudmen.test",
     firstName: "Kévin",
     lastName: "Marie-Sainte",
-    phone: "+596 696 00 00 22",
+    phone: "+590 690 00 00 22",
     status: "AUTO_ENTREPRENEUR_SAP",
-    communes: ["LAMENTIN", "DUCOS", "FORT_DE_FRANCE"],
+    communes: ["ABYMES", "PETIT_BOURG", "POINTE_A_PITRE"],
     rate: 1800,
     bio: "Auto-entrepreneur déclaré SAP. Courses, papiers, aide au téléphone et à l'ordinateur.",
     validation: "VALIDE",
@@ -379,9 +384,9 @@ async function main() {
     email: "nadege.rosemond@demo.koudmen.test",
     firstName: "Nadège",
     lastName: "Rosemond",
-    phone: "+596 696 00 00 23",
+    phone: "+590 690 00 00 23",
     status: "PROCHE_AIDANT_APA",
-    communes: ["SCHOELCHER"],
+    communes: ["GOSIER"],
     rate: 1300,
     bio: "Petite-fille d'Yvette. Proche aidante, salariée via l'APA (exemple fictif).",
     validation: "VALIDE",
@@ -396,9 +401,9 @@ async function main() {
     email: "germaine.celestine@demo.koudmen.test",
     firstName: "Germaine",
     lastName: "Célestine",
-    phone: "+596 696 00 00 24",
+    phone: "+590 690 00 00 24",
     status: "BENEVOLE_ASSO",
-    communes: ["FORT_DE_FRANCE", "SCHOELCHER"],
+    communes: ["POINTE_A_PITRE", "GOSIER"],
     rate: null,
     bio: "Retraitée, bénévole. Je rends visite et je lis le journal avec les aînés.",
     validation: "VALIDE",
@@ -412,14 +417,14 @@ async function main() {
     email: "mylene.berard@demo.koudmen.test",
     firstName: "Mylène",
     lastName: "Bérard",
-    phone: "+596 696 00 00 25",
+    phone: "+590 690 00 00 25",
     status: "SAAD",
-    communes: ["LAMENTIN", "FORT_DE_FRANCE", "ROBERT", "SCHOELCHER"],
+    communes: ["ABYMES", "POINTE_A_PITRE", "MOULE", "GOSIER"],
     rate: 2400,
     bio: "Auxiliaire de vie diplômée (DEAES), salariée d'un SAAD partenaire.",
     validation: "VALIDE",
     hasDiploma: true,
-    saadName: "Aide Plus Martinique (SAAD fictif)",
+    saadName: "Aide Plus Guadeloupe (SAAD fictif)",
     avail: [
       [0, "MATIN"],
       [2, "MATIN"],
@@ -430,9 +435,9 @@ async function main() {
     email: "steeve.larcher@demo.koudmen.test",
     firstName: "Steeve",
     lastName: "Larcher",
-    phone: "+596 696 00 00 26",
+    phone: "+590 690 00 00 26",
     status: "SALARIE_FAMILLE_CESU",
-    communes: ["ROBERT", "TRINITE", "FRANCOIS"],
+    communes: ["MOULE", "SAINTE_ANNE_GP", "SAINT_FRANCOIS"],
     rate: 1600,
     bio: "Étudiant en BTS, disponible le week-end pour de la compagnie.",
     validation: "EN_ATTENTE",
@@ -692,7 +697,7 @@ async function main() {
     if (!chosen) continue;
     await outbox(
       "PROPOSITION_MISSION",
-      { prenom: c.user.firstName, niveau: 2, commune: "Le Lamentin" },
+      { prenom: c.user.firstName, niveau: 2, commune: "Les Abymes" },
       { channel: "WHATSAPP", to: c.user.phone!, userId: c.user.id, related: { type: "MissionProposal", id: p.id }, at: mqDate(-2, 10) },
     );
   }
