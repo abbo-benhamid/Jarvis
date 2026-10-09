@@ -5,6 +5,7 @@ import { messageErreur, type ReponseVisite } from '@/api';
 import { texteDistance } from '@/lib/geo';
 import { useTheme } from '@/theme';
 import { Button, Card, Icon, SectionHeader, Text } from '@/ui';
+import { territoireDe } from '@/territoires';
 import { domicileRepli } from './textes';
 import { useTrajet } from './TrajetProvider';
 
@@ -38,11 +39,11 @@ export function CarteSurLaRoute({ v }: { v: ReponseVisite }) {
     setErreur(null);
     t.oublierFin();
     if (!t.accord) {
-      router.push({ pathname: '/accord-trajet', params: { visite: v.id, prenom: v.aine.prenom, commune: v.aine.commune } });
+      router.push({ pathname: '/accord-trajet', params: { visite: v.id, prenom: v.aine.prenom, commune: v.aine.commune, territoire: territoireDe(v).code } });
       return;
     }
     try {
-      await t.demarrer(v.id, v.aine.prenom, domicileRepli(v.aine.commune));
+      await t.demarrer(v.id, v.aine.prenom, domicileRepli(v.aine.commune, territoireDe(v).code));
     } catch (e) {
       setErreur(messageErreur(e, 'Le partage n’a pas démarré. Vous pouvez venir quand même.'));
     }

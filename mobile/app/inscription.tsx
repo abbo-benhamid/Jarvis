@@ -5,7 +5,9 @@ import { retourConnexion } from '@/session/navigation';
 import { api, messageErreur, WEB_URL } from '@/api';
 import { ChoixCommune } from '@/compte/ChoixCommune';
 import { EnTeteRetour } from '@/compte/EnTete';
-import { CHAMPS_VIDES, formaterSaisieDate, ORDRE_CHAMPS, validerInscription, type ChampsInscription, type ErreursInscription } from '@/compte/formulaire';
+import { ChoixTerritoire } from '@/compte/ChoixTerritoire';
+import { territoireLancement, TERRITOIRES, type CodeTerritoire } from '@/territoires';
+import { CHAMPS_VIDES, exempleTelephone, formaterSaisieDate, ORDRE_CHAMPS, validerInscription, type ChampsInscription, type ErreursInscription } from '@/compte/formulaire';
 import { MOT_DE_PASSE_MIN } from '@/contracts';
 import { useTheme } from '@/theme';
 import { Button, CaseACocher, Em, Field, Icon, Screen, Text } from '@/ui';
@@ -44,6 +46,13 @@ export default function Inscription() {
     setChamps((x) => ({ ...x, [k]: v }));
     if (erreurs[k]) setErreurs((e) => ({ ...e, [k]: undefined }));
   };
+  const territoireChoisi = TERRITOIRES[champs.territoire];
+  /** T1 : un autre territoire vide la commune (la commune appartient au territoire). */
+  const choisirTerritoire = (code: CodeTerritoire) => {
+    if (code === champs.territoire) return;
+    setChamps((x) => ({ ...x, territoire: code, commune: null }));
+    setErreurs((e) => ({ ...e, territoire: undefined, commune: undefined }));
+  };
 
   const envoyer = async () => {
     if (envoi) return;
@@ -77,7 +86,7 @@ export default function Inscription() {
         Rejoignez le <Em>koudmen.</Em>
       </Text>
       <Text variant="body" tone="muted" style={{ marginTop: 10 }}>
-        Vous rendez visite à des aînés de Martinique. Vous fixez votre tarif. Vous choisissez vos visites.
+        Vous rendez visite à des aînés {territoireLancement().deNom}. Vous fixez votre tarif. Vous choisissez vos visites.
       </Text>
 
       <View style={[styles.gratuit, { backgroundColor: c.feuilleSoft }]} testID="inscription-gratuite">
@@ -133,7 +142,7 @@ export default function Inscription() {
           testID="champ-telephone"
           inputRef={refTelephone}
           label="Téléphone"
-          placeholder="0696 12 34 56"
+          placeholder={exempleTelephone(champs.territoire)}
           keyboardType="phone-pad"
           autoComplete="tel"
           textContentType="telephoneNumber"
@@ -173,7 +182,15 @@ export default function Inscription() {
               : `${MOT_DE_PASSE_MIN} caractères au moins. Une phrase courte marche bien.`
           }
         />
-        <ChoixCommune value={champs.commune} onChange={(code) => changer('commune', code)} erreur={erreurs.commune} />
+        <ChoixTerritoire
+          value={champs.territoire}
+          onChange={choisirTerritoire}
+          onListeAttente={(code) => ouvrir(`/liste-attente?territoire=${code}`)}
+          erreur={erreurs.territoire}
+        />
+        {territoireChoisi.etat === 'OUVERT' ? (
+          <ChoixCommune territoire={champs.territoire} value={champs.commune} onChange={(code) => changer('commune', code)} erreur={erreurs.commune} />
+        ) : null}
 
         <CaseACocher
           testID="case-cgu"

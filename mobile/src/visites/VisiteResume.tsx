@@ -1,18 +1,19 @@
 import { StyleSheet, View } from 'react-native';
 import type { Visite } from '@/api';
 import { jourCourt, libelleJour, numeroJour, plageHoraire } from '@/lib/format';
+import { fuseauDe } from '@/territoires';
 import { fonts, radius, useTheme } from '@/theme';
 import { Avatar, Badge, Chip, IconButton, MapIllustration, PressableCard, ProofBadge, Text } from '@/ui';
 import { estProuvee, lieuAine, nbPreuves, nomAine } from './regles';
 
 /** Pastille de date : jour abrégé (hibiscus, § 2) + numéro du jour. */
-export function DateBox({ iso }: { iso: string }) {
+export function DateBox({ iso, fuseau }: { iso: string; fuseau?: string }) {
   const { c } = useTheme();
   return (
     <View style={[styles.datebox, { backgroundColor: c.surface2 }]}>
-      <Text style={{ fontFamily: fonts.sansBold, fontSize: 12, lineHeight: 14, letterSpacing: 1.2, color: c.hibiscus }}>{jourCourt(iso)}</Text>
+      <Text style={{ fontFamily: fonts.sansBold, fontSize: 12, lineHeight: 14, letterSpacing: 1.2, color: c.hibiscus }}>{jourCourt(iso, fuseau)}</Text>
       <Text style={{ fontFamily: fonts.sansSemiBold, fontSize: 24, lineHeight: 26, color: c.fg }} num>
-        {numeroJour(iso)}
+        {numeroJour(iso, fuseau)}
       </Text>
     </View>
   );
@@ -25,7 +26,7 @@ export function VisiteBadge({ v }: { v: Visite }) {
   if (v.kayePublie) return <Badge kind="preuve" icon="check" label="Kayé envoyé" />;
   if (estProuvee(v)) return <Badge kind="preuve" icon="check" label="Visite prouvée" />;
   if (n > 0) return <ProofBadge obtenues={n} requises={v.preuve.seuil} />;
-  return <Badge kind="neutre" icon="clock" label={libelleJour(v.debut)} />;
+  return <Badge kind="neutre" icon="clock" label={libelleJour(v.debut, new Date(), fuseauDe(v))} />;
 }
 
 /** Ligne de liste : une visite, toute la carte est le lien. */
@@ -34,14 +35,14 @@ export function VisiteLigne({ v, onPress }: { v: Visite; onPress: () => void }) 
     <PressableCard
       testID={`visite-${v.id}`}
       onPress={onPress}
-      accessibilityLabel={`${libelleJour(v.debut)}, ${plageHoraire(v.debut, v.fin)}, visite chez ${nomAine(v)}, ${v.aine.communeLibelle}`}
+      accessibilityLabel={`${libelleJour(v.debut, new Date(), fuseauDe(v))}, ${plageHoraire(v.debut, v.fin, fuseauDe(v))}, visite chez ${nomAine(v)}, ${v.aine.communeLibelle}`}
       accessibilityHint="Ouvre la fiche de la visite"
     >
       <View style={styles.row}>
-        <DateBox iso={v.debut} />
+        <DateBox iso={v.debut} fuseau={fuseauDe(v)} />
         <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
           <Text variant="bodyStrong" num numberOfLines={1}>
-            {plageHoraire(v.debut, v.fin)}
+            {plageHoraire(v.debut, v.fin, fuseauDe(v))}
           </Text>
           <Text variant="small" tone="muted" numberOfLines={1}>
             {nomAine(v)} · {v.aine.communeLibelle}

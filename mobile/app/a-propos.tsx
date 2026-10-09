@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import Constants from 'expo-constants';
 import { SITE_URL } from '@/api';
 import { useSession } from '@/session/SessionProvider';
+import { territoireCompte } from '@/territoires';
 import { retourAuxVisites } from '@/session/navigation';
 import { useTheme } from '@/theme';
 import { Button, Card, Icon, type IconName, IconButton, Screen, SectionHeader, Text } from '@/ui';
@@ -103,13 +104,13 @@ export default function APropos() {
         À propos et confidentialité
       </Text>
       <Text variant="body" tone="muted" style={{ marginTop: 8 }} testID="annonce-lancement">
-        Koudmen ouvre bientôt en Martinique.
+        Koudmen ouvre bientôt {territoireCompte(session).enNom}.
       </Text>
 
       <Card style={{ marginTop: 16, gap: 8 }} testID="carte-editeur">
         <Text variant="bodyStrong">Qui édite Koudmen ?</Text>
         <Text variant="body">
-          L’équipe Koudmen, en Martinique. Son identité complète (nom, adresse, contact) est dans les mentions légales.
+          L’équipe Koudmen. Son identité complète (nom, adresse, contact) est dans les mentions légales.
         </Text>
         <Text variant="small" tone="muted">
           En cas d’urgence, appelez le 15 ou le 112.

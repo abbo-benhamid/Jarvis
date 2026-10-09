@@ -1,6 +1,7 @@
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { router } from 'expo-router';
 import { emailAVerifier } from '@/session/compte';
+import { territoireCompte } from '@/territoires';
 import { useSession } from '@/session/SessionProvider';
 import { fonts, useTheme } from '@/theme';
 import { Button, CaseIllustration, Em, Icon, Kreyol, Logo, MadrasLine, Screen, Text } from '@/ui';
@@ -28,7 +29,7 @@ export default function Bientot() {
         <CaseIllustration width={Math.min(width, 440) - 40} bleed />
       </View>
       <Text variant="h2" accessibilityRole="header" style={{ marginTop: 24 }}>
-        Koudmen ouvre bientôt <Em>en Martinique.</Em>
+        Koudmen ouvre bientôt <Em>{territoireCompte(session).enNom}.</Em>
       </Text>
       <Text variant="body" style={{ marginTop: 12 }}>
         Votre profil est validé, {session.prenom}. Nous vous prévenons dès l’ouverture.

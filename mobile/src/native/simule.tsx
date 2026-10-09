@@ -52,12 +52,12 @@ function journal(): JournalNatif {
 const QR_SIMULE = contenuQrDomicile('LKW7Q3');
 
 /** Domicile simulé de Léonie (`DOMICILE_SIMULE` de `src/api/simule.ts`). */
-const DOMICILE = { latitude: 14.6085, longitude: -61.068 };
+const DOMICILE = { latitude: 16.236, longitude: -61.529 };
 /** Position au check-in : ≈ 60 m du domicile (proche) ou ≈ 800 m (loin). */
-const POSITION_PROCHE: PositionPonctuelle = { latitude: 14.609, longitude: -61.0677, precisionMetres: 18 };
-const POSITION_LOIN: PositionPonctuelle = { latitude: 14.6037, longitude: -61.0731, precisionMetres: 18 };
-/** Départ du trajet simulé : ≈ 1,6 km du domicile (Fort-de-France, vers la Savane). */
-const DEPART_TRAJET = { latitude: 14.5985, longitude: -61.0775 };
+const POSITION_PROCHE: PositionPonctuelle = { latitude: 16.2365, longitude: -61.5287, precisionMetres: 18 };
+const POSITION_LOIN: PositionPonctuelle = { latitude: 16.2408, longitude: -61.5239, precisionMetres: 18 };
+/** Départ du trajet simulé : ≈ 1,5 km du domicile (vers Les Abymes, Guadeloupe). */
+const DEPART_TRAJET = { latitude: 16.246, longitude: -61.5195 };
 /** Part du chemin faite à chaque lecture du trajet simulé (on arrive à moins de 150 m en une dizaine de lectures). */
 const PAS_TRAJET = 0.2;
 

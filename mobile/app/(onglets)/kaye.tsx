@@ -3,6 +3,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { api, messageErreur, type Visite } from '@/api';
 import { libelleJour, plageHoraire } from '@/lib/format';
+import { fuseauDe } from '@/territoires';
 import { useAsync } from '@/lib/useAsync';
 import { useTheme } from '@/theme';
 import { Avatar, Badge, Button, Card, CaseIllustration, Em, PressableCard, Screen, SectionHeader, TabBarSpace, Text } from '@/ui';
@@ -68,7 +69,7 @@ export default function KayeOnglet() {
               key={v.id}
               testID={`kaye-${v.id}`}
               onPress={() => ouvrir(v)}
-              accessibilityLabel={`Écrire le Kayé de ${v.aine.prenom}, ${libelleJour(v.debut)}, ${plageHoraire(v.debut, v.fin)}`}
+              accessibilityLabel={`Écrire le Kayé de ${v.aine.prenom}, ${libelleJour(v.debut, new Date(), fuseauDe(v))}, ${plageHoraire(v.debut, v.fin, fuseauDe(v))}`}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                 <Avatar initiale={v.aine.prenom.charAt(0)} teinte="soleil" aine size={44} />
@@ -77,7 +78,7 @@ export default function KayeOnglet() {
                     {nomAine(v)}
                   </Text>
                   <Text variant="small" tone="muted" num>
-                    {libelleJour(v.debut)} · {plageHoraire(v.debut, v.fin)}
+                    {libelleJour(v.debut, new Date(), fuseauDe(v))} · {plageHoraire(v.debut, v.fin, fuseauDe(v))}
                   </Text>
                   <Badge kind="soleil" icon="pen" label="À écrire" />
                 </View>

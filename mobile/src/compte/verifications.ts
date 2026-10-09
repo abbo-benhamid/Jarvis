@@ -31,6 +31,7 @@ import type {
   TypeElement as TypeItem,
 } from '../contracts';
 import { TAILLE_MAX_DOCUMENT as TAILLE_MAX_DOCUMENT_OCTETS, TYPES_DOCUMENT_ACCEPTES as TYPES_MIME_ACCEPTES } from '../contracts';
+import { ORDRE_TERRITOIRES, TERRITOIRE_LANCEMENT, TERRITOIRES } from '../territoires/donnees';
 
 export type CanalCode = z.infer<typeof canalCodeSchema>;
 
@@ -39,15 +40,22 @@ export type CanalCode = z.infer<typeof canalCodeSchema>;
 /**
  * Préfixes autorisés (§ 5.1, `PHONE_ALLOWED_PREFIXES` côté serveur). Le serveur fait foi : l'app filtre seulement
  * pour dire tout de suite ce qui ne marchera pas.
+ * T1 (arbitrage T5) : les préfixes viennent de la configuration des territoires (Guadeloupe +590 690/691 et
+ * +590 590, Martinique +596, Guyane +594, Hexagone +33). La Réunion et Mayotte (+262) restent acceptées, comme
+ * sur le serveur (numéro libre pour l'accompagnant).
  */
-export const PREFIXES_MOBILES = ['+596696', '+596697', '+590690', '+590691', '+594694', '+262692', '+262693', '+262639', '+262269', '+336', '+337'] as const;
+const PREFIXES_HORS_TERRITOIRES = { mobiles: ['+262692', '+262693', '+262639', '+262269'], fixes: ['+262262'] } as const;
+export const PREFIXES_MOBILES: readonly string[] = [...ORDRE_TERRITOIRES.flatMap((t) => TERRITOIRES[t].telephone.mobiles), ...PREFIXES_HORS_TERRITOIRES.mobiles];
 /** Fixes : pas de SMS, le code arrive par un appel vocal. */
-export const PREFIXES_FIXES = ['+596596', '+590590', '+594594', '+262262', '+331', '+332', '+333', '+334', '+335', '+339'] as const;
+export const PREFIXES_FIXES: readonly string[] = [...ORDRE_TERRITOIRES.flatMap((t) => TERRITOIRES[t].telephone.fixes), ...PREFIXES_HORS_TERRITOIRES.fixes];
 
-/** Indicatif d'un numéro national à 10 chiffres (0696…, 0590…, 06…). */
+/** Exemple de numéro pour les aides et les erreurs (territoire de lancement : « 0690 12 34 56 »). */
+export const EXEMPLE_TELEPHONE = TERRITOIRES[TERRITOIRE_LANCEMENT].telephone.exemple;
+
+/** Indicatif d'un numéro national à 10 chiffres (0690…, 0590…, 0696…, 06…). */
 const INDICATIFS_NATIONAUX: { debut: RegExp; indicatif: string }[] = [
-  { debut: /^0(596|696|697)/, indicatif: '+596' },
   { debut: /^0(590|690|691)/, indicatif: '+590' },
+  { debut: /^0(596|696|697)/, indicatif: '+596' },
   { debut: /^0(594|694|695)/, indicatif: '+594' },
   { debut: /^0(262|269|692|693|639)/, indicatif: '+262' },
   { debut: /^0[1-79]/, indicatif: '+33' },
@@ -56,10 +64,11 @@ const INDICATIFS_NATIONAUX: { debut: RegExp; indicatif: string }[] = [
 export type Telephone = { e164: string; genre: 'mobile' | 'fixe' };
 
 /**
- * Saisie libre → E.164. Accepte « 0696 12 34 56 », « +596 696 12 34 56 », « 00596696123456 ».
- * Renvoie un message clair si le numéro n'est pas accepté.
+ * Saisie libre → E.164. Accepte « 0690 12 34 56 », « +590 690 12 34 56 », « 00590690123456 », « 0696… », « 06… ».
+ * Renvoie un message clair si le numéro n'est pas accepté. `exemple` : exemple du territoire choisi.
  */
-export function normaliserTelephone(saisie: string): Telephone | { erreur: string } {
+export function normaliserTelephone(saisie: string, exemple: string = EXEMPLE_TELEPHONE): Telephone | { erreur: string } {
+  const incomplet = `Ce numéro n’est pas complet. Exemple : ${exemple}.`;
   let brut = saisie.replace(/[\s.\-()]/g, '');
   if (!brut) return { erreur: 'Entrez votre numéro de téléphone.' };
   if (brut.startsWith('00')) brut = `+${brut.slice(2)}`;
@@ -69,17 +78,17 @@ export function normaliserTelephone(saisie: string): Telephone | { erreur: strin
     const regle = INDICATIFS_NATIONAUX.find((r) => r.debut.test(brut));
     if (regle) e164 = `${regle.indicatif}${brut.slice(1)}`;
   }
-  if (!e164) return { erreur: 'Ce numéro n’est pas complet. Exemple : 0696 12 34 56.' };
+  if (!e164) return { erreur: incomplet };
   // Numéros français : 9 chiffres après l'indicatif.
   if (/^\+(33|590|594|596|262)/.test(e164) && !/^\+(33|590|594|596|262)\d{9}$/.test(e164)) {
-    return { erreur: 'Ce numéro n’est pas complet. Exemple : 0696 12 34 56.' };
+    return { erreur: incomplet };
   }
   if (PREFIXES_MOBILES.some((p) => e164.startsWith(p))) return { e164, genre: 'mobile' };
   if (PREFIXES_FIXES.some((p) => e164.startsWith(p))) return { e164, genre: 'fixe' };
-  return { erreur: 'Koudmen accepte les numéros des Antilles, de la Guyane, de La Réunion, de Mayotte et de la France hexagonale.' };
+  return { erreur: 'Koudmen accepte les numéros de Guadeloupe, de Martinique, de Guyane, de La Réunion, de Mayotte et de l’Hexagone.' };
 }
 
-/** Affichage lisible : +596 696 12 34 56. */
+/** Affichage lisible : +590 690 12 34 56. */
 export function formaterTelephone(e164: string): string {
   const m = /^\+(33|590|594|596|262)(\d)(\d{2})(\d{2})(\d{2})(\d{2})$/.exec(e164);
   if (!m) return e164;

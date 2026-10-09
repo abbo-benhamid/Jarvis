@@ -9,6 +9,7 @@ import { useDossier } from '@/compte/useDossier';
 import { actionValidation, demandeEnvoyee, etapesValidation } from '@/compte/validation';
 import { ecranItem, prochainItem } from '@/compte/verifications';
 import { emailAVerifier } from '@/session/compte';
+import { territoireCompte } from '@/territoires';
 import { useSession } from '@/session/SessionProvider';
 import { fonts, useTheme } from '@/theme';
 import { Badge, Button, Card, Em, Icon, Logo, MadrasLine, Screen, Text } from '@/ui';
@@ -18,7 +19,7 @@ import { Badge, Button, Card, Em, Icon, Logo, MadrasLine, Screen, Text } from '@
  * (`profilValide: false` dans GET /me). Elle fait ICI son orientation et sa demande de vérification.
  * L'écran montre les étapes faites et à faire. « L'équipe vous appelle » seulement après l'envoi de la demande.
  *
- * Préinscription (revue UX M14) : même écran, avec un encadré « Koudmen ouvre bientôt en Martinique ».
+ * Préinscription (revue UX M14) : même écran, avec un encadré « Koudmen ouvre bientôt en Guadeloupe » (territoire du compte, T1).
  */
 export default function CompteEnValidation() {
   const { c } = useTheme();
@@ -132,7 +133,7 @@ export default function CompteEnValidation() {
         <View style={[styles.encadre, { backgroundColor: c.soleilSoft }]} testID="encadre-preinscription">
           <Icon name="sun" size={20} color={c.soleilInk} />
           <Text variant="body" style={{ flex: 1, fontSize: 16, lineHeight: 23, color: c.soleilInk }}>
-            Koudmen ouvre bientôt en Martinique. Préparez votre profil maintenant : vos premières visites arrivent après l’ouverture.
+            Koudmen ouvre bientôt {territoireCompte(session).enNom}. Préparez votre profil maintenant : vos premières visites arrivent après l’ouverture.
           </Text>
         </View>
       ) : null}

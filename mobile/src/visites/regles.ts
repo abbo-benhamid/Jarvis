@@ -1,5 +1,6 @@
 import type { FacteurPreuve, Visite } from '@/api';
 import { memeJour } from '@/lib/format';
+import { fuseauDe } from '@/territoires';
 import type { IconName } from '@/ui/Icon';
 
 /**
@@ -19,7 +20,7 @@ export function estProuvee(v: Visite): boolean {
 }
 
 export function estDuJour(v: Visite): boolean {
-  return memeJour(v.debut, new Date());
+  return memeJour(v.debut, new Date(), fuseauDe(v));
 }
 
 /** L1 : « Je pars chez … » possible : visite du jour, arrivée pas encore faite, visite pas finie. */

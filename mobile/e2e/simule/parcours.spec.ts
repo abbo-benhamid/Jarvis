@@ -36,6 +36,26 @@ test('connexion simulée, visites, fiche, arrivée, Kayé', async ({ page }) => 
   expect(largeur).toBeLessThanOrEqual(390);
 });
 
+test('T1 : visite en Guadeloupe, téléphone en Guadeloupe : heure de Guadeloupe seulement', async ({ page }) => {
+  await seConnecter(page);
+  await page.getByTestId('visite-vis_leonie_j2').click();
+  const fiche = page.getByTestId('ecran-fiche-visite');
+  await expect(fiche).toContainText('heure de Guadeloupe');
+  await expect(fiche).not.toContainText('chez vous');
+  await expect(fiche).not.toContainText('Martinique');
+});
+
+test.describe('T1 : téléphone dans l’Hexagone', () => {
+  test.use({ timezoneId: 'Europe/Paris' });
+  test('la fiche dit l’heure de Guadeloupe, puis l’heure du téléphone', async ({ page }) => {
+    await seConnecter(page);
+    await page.getByTestId('visite-vis_leonie_j2').click();
+    const fiche = page.getByTestId('ecran-fiche-visite');
+    // `a(2, 9, 30)` du mode simulé : 9 h 30 à l'heure du téléphone (Paris) = 3 h 30 ou 4 h 30 en Guadeloupe.
+    await expect(fiche).toContainText(/h 30 – \d+ h, heure de Guadeloupe \(9 h 30 – 11 h chez vous\)/);
+  });
+});
+
 test('propositions : refus sans pénalité', async ({ page }) => {
   await seConnecter(page);
   await page.getByTestId('lien-propositions').click();

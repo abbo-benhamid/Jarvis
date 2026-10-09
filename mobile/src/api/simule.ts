@@ -1,4 +1,5 @@
-import { demandeInscriptionSchema, type ControleCheckIn } from '@/contracts';
+import { type ControleCheckIn } from '@/contracts';
+import { demandeInscriptionTerritoireSchema, territoireDe, trouverCommune, type CodeTerritoire } from '@/territoires';
 import {
   ageEnAnnees,
   AGE_MIN_ACCOMPAGNANT,
@@ -19,7 +20,7 @@ import {
 } from '@/contracts';
 import { codeComplet, controlerFichier, MAX_SESSIONS_IDENTITE, normaliserSiret, normaliserTelephone } from '@/compte/verifications';
 import { orienterLocalement } from '@/compte/orientation';
-import { trouverCommune } from '@/lib/communes';
+
 import { distanceMetres } from '@/lib/geo';
 import type { KoudmenApi } from './client';
 import { MESSAGES } from './messages';
@@ -57,15 +58,18 @@ export const CODE_DOMICILE_SIMULE = 'LKW7Q3';
  */
 export const QR_SIGNE_SIMULE = `${PREFIXE_QR_SIGNE}eyJhIjoiYWluZV9sZW9uaWUiLCJ2IjoxfQ.c2lnbmF0dXJlLXNpbXVsZWU`;
 
-/** Domicile simulé de Léonie (Terres-Sainville, Fort-de-France). Position précise : `approximatif: false`. */
-export const DOMICILE_SIMULE: DomicileTrajet = { latitude: 14.6085, longitude: -61.068, approximatif: false };
+/**
+ * Domicile simulé de Léonie (quartier du Carénage, Pointe-à-Pitre, Guadeloupe ; T1, arbitrage T8). Position précise :
+ * `approximatif: false`. [À VÉRIFIER] Coordonnées approximatives d'un point réel du quartier.
+ */
+export const DOMICILE_SIMULE: DomicileTrajet = { latitude: 16.236, longitude: -61.529, approximatif: false };
 
 /**
  * Journal de l'API simulée, lu par les tests e2e (`globalThis.__KOUDMEN_API_JOURNAL__`).
  * Aucun mot de passe. Positions du trajet telles qu'envoyées (déjà arrondies par l'app).
  */
 export type JournalApiSimulee = {
-  inscriptions: { email: string; commune: string; dateNaissance: string }[];
+  inscriptions: { email: string; territoire: CodeTerritoire; commune: string; dateNaissance: string }[];
   motsDePasseOublies: string[];
   trajets: { visiteId: string; action: 'DEMARRER' | 'ARRETER' }[];
   positions: { visiteId: string; latitude: number; longitude: number; precisionMetres: number; simulee: boolean }[];
@@ -228,7 +232,7 @@ function nouvelElement(type: TypeElement): ElementVerification {
   };
   return { ...base, message: messageElement(base) };
 }
-/** « +596 696 •• •• 56 ». */
+/** « +590 690 •• •• 56 ». */
 function masquer(e164: string): string {
   const m = /^\+(\d{2,3})(\d{3})\d{4}(\d{2})$/.exec(e164);
   return m ? `+${m[1]} ${m[2]} •• •• ${m[3]}` : '•• •• ••';
@@ -282,13 +286,13 @@ function visite(id: string, debut: string, finMin: number, aine: Partial<Visite[
     debut,
     fin: new Date(new Date(debut).getTime() + finMin * 60_000).toISOString(),
     statut: 'PREVUE',
-    // Même personne fictive que la démo du site : Léonie J., Terres-Sainville, Fort-de-France.
+    // Personne fictive, en Guadeloupe (T1) : Léonie J., quartier du Carénage, Pointe-à-Pitre.
     aine: {
       prenom: 'Léonie',
       initialeNom: 'J.',
-      commune: 'FORT_DE_FRANCE',
-      communeLibelle: 'Fort-de-France',
-      adresseApproximative: 'Quartier Terres-Sainville',
+      commune: 'POINTE_A_PITRE',
+      communeLibelle: 'Pointe-à-Pitre',
+      adresseApproximative: 'Quartier du Carénage',
       interets: [],
       ...aine,
     },
@@ -301,12 +305,12 @@ function visite(id: string, debut: string, finMin: number, aine: Partial<Visite[
 
 function donneesInitiales(): Visite[] {
   return [
-    visite('vis_leonie_j0', dans(-10), 120, { interets: ['Dominos', 'Son jardin'] }, 'Marché de Rivière-Pilote, puis le courrier de la CGSS.', true),
+    visite('vis_leonie_j0', dans(-10), 120, { interets: ['Dominos', 'Son jardin'] }, 'Marché Saint-Antoine, puis le courrier de la CGSS.', true),
     visite(
       'vis_alphonse_j0',
       a(0, 17),
       90,
-      { prenom: 'Alphonse', initialeNom: 'D.', commune: 'RIVIERE_PILOTE', communeLibelle: 'Rivière-Pilote', adresseApproximative: 'Bourg', interets: ['Radio', 'Football'] },
+      { prenom: 'Alphonse', initialeNom: 'D.', commune: 'SAINTE_ANNE_GP', communeLibelle: 'Sainte-Anne', adresseApproximative: 'Bourg', interets: ['Radio', 'Football'] },
       'Promenade courte et lecture du journal.',
       false,
     ),
@@ -315,7 +319,7 @@ function donneesInitiales(): Visite[] {
       'vis_marceline_j3',
       a(3, 14),
       120,
-      { prenom: 'Marceline', initialeNom: 'L.', commune: 'SAINTE_LUCE', communeLibelle: 'Sainte-Luce', adresseApproximative: 'Trois-Rivières' },
+      { prenom: 'Marceline', initialeNom: 'L.', commune: 'GOSIER', communeLibelle: 'Le Gosier', adresseApproximative: 'Mare-Gaillard' },
       'Courses au marché, puis un café ensemble.',
       false,
     ),
@@ -328,7 +332,7 @@ function propositionsInitiales(): Proposition[] {
       id: 'prop_ginette',
       message: 'Ginette habite près de chez vous. Sa fille cherche une visite le mardi matin.',
       creeLe: dans(-120),
-      aine: { prenom: 'Ginette', commune: 'LAMENTIN', communeLibelle: 'Le Lamentin' },
+      aine: { prenom: 'Ginette', commune: 'ABYMES', communeLibelle: 'Les Abymes' },
       demande: { niveau: 1, frequence: 'HEBDOMADAIRE', dureeMinutes: 90, debut: null, consignes: 'Discussion et petite marche.', creneaux: [{ jour: 1, creneau: 'MATIN' }] },
       visitesPrevues: 4,
     },
@@ -336,7 +340,7 @@ function propositionsInitiales(): Proposition[] {
       id: 'prop_rene',
       message: null,
       creeLe: dans(-30),
-      aine: { prenom: 'René', commune: 'SAINTE_LUCE', communeLibelle: 'Sainte-Luce' },
+      aine: { prenom: 'René', commune: 'BAIE_MAHAULT', communeLibelle: 'Baie-Mahault' },
       demande: { niveau: 2, frequence: 'DEUX_PAR_SEMAINE', dureeMinutes: 120, debut: a(7, 0), consignes: null, creneaux: [{ jour: 2, creneau: 'APRES_MIDI' }, { jour: 4, creneau: 'APRES_MIDI' }] },
       visitesPrevues: 8,
     },
@@ -398,7 +402,7 @@ export function creerApiSimulee(): KoudmenApi {
   const etatD15 = (email: string) => etatVerificationSimule(verificationDe(email), [...dossierDe(email).items.values()]);
   const domicileDe = (v: Visite): DomicileTrajet | null => {
     if (v.id === 'vis_leonie_j0') return DOMICILE_SIMULE;
-    const c = trouverCommune(v.aine.commune);
+    const c = trouverCommune(v.aine.commune, territoireDe(v).code);
     return c ? { latitude: c.lat, longitude: c.lng, approximatif: true } : null;
   };
 
@@ -440,7 +444,7 @@ export function creerApiSimulee(): KoudmenApi {
 
     async inscrire(demande) {
       await attendre(400);
-      const ok = demandeInscriptionSchema.safeParse({ role: 'ACCOMPAGNANT', ...demande });
+      const ok = demandeInscriptionTerritoireSchema.safeParse({ role: 'ACCOMPAGNANT', ...demande });
       if (!ok.success) throw new ApiError('REQUETE_INVALIDE', ok.error.issues[0]?.message ?? MESSAGES.REQUETE_INVALIDE, 400);
       if (ageEnAnnees(ok.data.dateNaissance) < AGE_MIN_ACCOMPAGNANT) {
         throw new ApiError('REQUETE_INVALIDE', 'Il faut avoir 18 ans ou plus pour devenir accompagnant.', 400);
@@ -448,7 +452,7 @@ export function creerApiSimulee(): KoudmenApi {
       if (/^(motdepasse|koudmen123|azerty|0123456789)/i.test(ok.data.motDePasse)) {
         throw new ApiError('REQUETE_INVALIDE', 'Ce mot de passe est trop courant. Choisissez-en un autre.', 400);
       }
-      journalApi().inscriptions.push({ email: ok.data.email, commune: ok.data.commune, dateNaissance: ok.data.dateNaissance });
+      journalApi().inscriptions.push({ email: ok.data.email, territoire: ok.data.territoire, commune: ok.data.commune, dateNaissance: ok.data.dateNaissance });
       // Même réponse si l'e-mail existe déjà (pas de fuite) : le compte existant ne change pas.
       if (!comptes.has(ok.data.email)) {
         comptes.set(ok.data.email, {

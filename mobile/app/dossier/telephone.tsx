@@ -10,6 +10,7 @@ import {
   appelPropose,
   canalParDefaut,
   codeComplet,
+  EXEMPLE_TELEPHONE,
   formaterTelephone,
   nettoyerCode,
   normaliserTelephone,
@@ -146,7 +147,7 @@ export default function VerifierTelephone() {
           <Field
             testID="champ-telephone"
             label="Mon numéro de téléphone"
-            aide="Exemple : 0696 12 34 56. Un fixe reçoit le code par un appel."
+            aide={`Exemple : ${EXEMPLE_TELEPHONE}. Un fixe reçoit le code par un appel.`}
             value={saisie}
             onChangeText={(t) => {
               setSaisie(t);

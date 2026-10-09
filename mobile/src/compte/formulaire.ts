@@ -2,9 +2,8 @@
  * Règles du formulaire d'inscription accompagnant (L1). Module PUR : testable sans appareil.
  * Les messages disent ce qui manque, près du champ (V1c, UX M8). Style ASD-STE100 : phrases courtes.
  */
-import type { DemandeInscription } from '@/contracts';
 import { ageEnAnnees, AGE_MIN_ACCOMPAGNANT, MOT_DE_PASSE_MIN } from '@/api/l1';
-import { trouverCommune } from '@/lib/communes';
+import { estCodeTerritoire, estOuvert, explicationBientot, TERRITOIRE_LANCEMENT, TERRITOIRES, trouverCommune, type CodeTerritoire, type DemandeInscriptionApp } from '@/territoires';
 
 export type ChampsInscription = {
   prenom: string;
@@ -14,6 +13,8 @@ export type ChampsInscription = {
   /** Saisie libre JJ/MM/AAAA. */
   dateNaissance: string;
   motDePasse: string;
+  /** T1 : territoire choisi (Guadeloupe au lancement). La commune appartient à ce territoire. */
+  territoire: CodeTerritoire;
   commune: string | null;
   accepteCgu: boolean;
 };
@@ -27,6 +28,7 @@ export const CHAMPS_VIDES: ChampsInscription = {
   telephone: '',
   dateNaissance: '',
   motDePasse: '',
+  territoire: TERRITOIRE_LANCEMENT,
   commune: null,
   accepteCgu: false,
 };
@@ -51,10 +53,15 @@ export function dateVersIso(texte: string): string | null {
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Exemple de numéro du territoire (« 0690 12 34 56 » en Guadeloupe). */
+export function exempleTelephone(territoire: CodeTerritoire | null | undefined): string {
+  return TERRITOIRES[estCodeTerritoire(territoire) ? territoire : TERRITOIRE_LANCEMENT].telephone.exemple;
+}
+
 export function validerInscription(
   c: ChampsInscription,
   maintenant = new Date(),
-): { ok: true; demande: Omit<DemandeInscription, 'role'> } | { ok: false; erreurs: ErreursInscription } {
+): { ok: true; demande: DemandeInscriptionApp } | { ok: false; erreurs: ErreursInscription } {
   const e: ErreursInscription = {};
   if (!c.prenom.trim()) e.prenom = 'Entrez votre prénom.';
   if (!c.nom.trim()) e.nom = 'Entrez votre nom.';
@@ -62,7 +69,7 @@ export function validerInscription(
   else if (!EMAIL.test(c.email.trim())) e.email = 'Vérifiez l’e-mail. Exemple : prenom@exemple.fr';
   const chiffres = c.telephone.replace(/\D/g, '');
   if (!chiffres) e.telephone = 'Entrez votre numéro de téléphone.';
-  else if (chiffres.length < 10 || !/^\+?[0-9 .-]{10,20}$/.test(c.telephone.trim())) e.telephone = 'Le numéro a 10 chiffres au moins. Exemple : 0696 12 34 56';
+  else if (chiffres.length < 10 || !/^\+?[0-9 .-]{10,20}$/.test(c.telephone.trim())) e.telephone = `Le numéro a 10 chiffres au moins. Exemple : ${exempleTelephone(c.territoire)}`;
   const iso = dateVersIso(c.dateNaissance);
   if (!c.dateNaissance.trim()) e.dateNaissance = 'Entrez votre date de naissance.';
   else if (!iso) e.dateNaissance = 'Vérifiez la date. Format : JJ/MM/AAAA.';
@@ -71,7 +78,9 @@ export function validerInscription(
   if (c.motDePasse.length < MOT_DE_PASSE_MIN) {
     e.motDePasse = c.motDePasse ? `Encore ${MOT_DE_PASSE_MIN - c.motDePasse.length} caractère(s). Il en faut ${MOT_DE_PASSE_MIN} au moins.` : `Choisissez un mot de passe de ${MOT_DE_PASSE_MIN} caractères au moins.`;
   }
-  if (!c.commune || !trouverCommune(c.commune)) e.commune = 'Choisissez votre commune.';
+  if (!estCodeTerritoire(c.territoire)) e.territoire = 'Choisissez votre territoire.';
+  else if (!estOuvert(c.territoire)) e.territoire = explicationBientot(c.territoire);
+  else if (!c.commune || !trouverCommune(c.commune, c.territoire)) e.commune = 'Choisissez votre commune.';
   if (!c.accepteCgu) e.accepteCgu = 'Pour créer le compte, acceptez les conditions d’utilisation.';
 
   if (Object.keys(e).length || !iso || !c.commune) return { ok: false, erreurs: e };
@@ -84,6 +93,7 @@ export function validerInscription(
       telephone: c.telephone.trim(),
       dateNaissance: iso,
       motDePasse: c.motDePasse,
+      territoire: c.territoire,
       commune: c.commune,
       accepteCgu: true,
     },
@@ -91,4 +101,4 @@ export function validerInscription(
 }
 
 /** Ordre des champs à l'écran : le premier champ en erreur reçoit le focus. */
-export const ORDRE_CHAMPS: (keyof ChampsInscription)[] = ['prenom', 'nom', 'email', 'telephone', 'dateNaissance', 'motDePasse', 'commune', 'accepteCgu'];
+export const ORDRE_CHAMPS: (keyof ChampsInscription)[] = ['prenom', 'nom', 'email', 'telephone', 'dateNaissance', 'motDePasse', 'territoire', 'commune', 'accepteCgu'];

@@ -68,10 +68,10 @@ test('L2 salarié CESU : téléphone, identité, adresse, puis demande ; jamais 
   await expect(page.getByTestId('pourquoi-telephone')).toContainText('Le code reçu par SMS');
   await page.getByTestId('champ-telephone').fill('+44 7700 900123');
   await page.getByTestId('bouton-envoyer-code').click();
-  await expect(page.getByTestId('ecran-telephone')).toContainText('Antilles');
-  await page.getByTestId('champ-telephone').fill('0696 12 34 56');
+  await expect(page.getByTestId('ecran-telephone')).toContainText('numéros de Guadeloupe');
+  await page.getByTestId('champ-telephone').fill('0690 12 34 56');
   await page.getByTestId('bouton-envoyer-code').click();
-  await expect(page.getByTestId('code-envoye')).toContainText('+596 696 12 34 56');
+  await expect(page.getByTestId('code-envoye')).toContainText('+590 690 12 34 56');
   const champCode = page.getByTestId('champ-code');
   await expect(champCode).toHaveAttribute('autocomplete', 'one-time-code');
   await expect(champCode).toHaveAttribute('inputmode', 'numeric');
@@ -91,7 +91,7 @@ test('L2 salarié CESU : téléphone, identité, adresse, puis demande ; jamais 
   await champCode.fill('Votre code : 000 000');
   await expect(champCode).toHaveValue('000000');
   await page.getByTestId('bouton-confirmer-code').click();
-  await expect(page.getByTestId('telephone-valide')).toContainText('+596 696 •• •• 56');
+  await expect(page.getByTestId('telephone-valide')).toContainText('+590 690 •• •• 56');
   await page.getByTestId('bouton-telephone-retour').click();
   await expect(page.getByTestId('mes-verifications-TELEPHONE')).toContainText('Fait');
 
@@ -122,8 +122,8 @@ test('L2 salarié CESU : téléphone, identité, adresse, puis demande ; jamais 
   await page.getByTestId('bouton-declarer-adresse').click();
   await expect(page.getByTestId('ecran-adresse')).toContainText('Le code postal a 5 chiffres');
   await page.getByTestId('champ-adresse-ligne').fill('12 rue des Flamboyants');
-  await page.getByTestId('champ-adresse-cp').fill('97200');
-  await page.getByTestId('champ-adresse-commune').fill('Fort-de-France');
+  await page.getByTestId('champ-adresse-cp').fill('97110');
+  await page.getByTestId('champ-adresse-commune').fill('Pointe-à-Pitre');
   await page.getByTestId('bouton-declarer-adresse').click();
   await expect(page.getByTestId('document-adresse')).toContainText('Justificatif de domicile');
   await page.getByTestId('document-adresse-type-JUSTIFICATIF_DOMICILE').click();
@@ -155,7 +155,7 @@ test('L2 salarié CESU : téléphone, identité, adresse, puis demande ; jamais 
   expect(j?.soumissions).toEqual(['en-validation@exemple.fr']);
   const stockage = await page.evaluate(() => JSON.stringify({ ...localStorage }) + JSON.stringify({ ...sessionStorage }));
   expect(stockage).not.toContain('facture-edf');
-  expect(stockage).not.toContain('0696');
+  expect(stockage).not.toContain('0690');
 });
 
 test('L2 micro-entreprise : SIRET contrôlé, adresse du siège ; identité en visio', async ({ page }) => {

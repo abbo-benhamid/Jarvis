@@ -72,13 +72,26 @@ test('créer un compte : erreurs près des champs, puis « Vérifiez votre e-mai
   await page.getByTestId('champ-prenom').fill('Marius');
   await page.getByTestId('champ-nom').fill('Rosette');
   await page.getByTestId('champ-email-inscription').fill('marius@exemple.fr');
-  await page.getByTestId('champ-telephone').fill('0696 12 34 56');
+  await page.getByTestId('champ-telephone').fill('0690 12 34 56');
   await page.getByTestId('champ-date-naissance').fill('12082010');
   await expect(page.getByTestId('champ-date-naissance')).toHaveValue('12/08/2010');
   await page.getByTestId('champ-mot-de-passe-inscription').fill('soleil du matin');
+  // T1 : territoire d'abord. Guadeloupe ouverte (choisie par défaut) ; les autres disent « Bientôt ».
+  await expect(page.getByTestId('choix-territoire-GUADELOUPE')).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByTestId('choix-territoire-GUADELOUPE')).toContainText('Ouvert');
+  for (const code of ['MARTINIQUE', 'GUYANE', 'HEXAGONE']) await expect(page.getByTestId(`choix-territoire-${code}`)).toContainText('Bientôt');
+  await page.getByTestId('choix-territoire-MARTINIQUE').click();
+  await expect(page.getByTestId('choix-territoire-bientot')).toContainText('Koudmen ouvre d’abord en Guadeloupe');
+  await expect(page.getByTestId('choix-territoire-liste-attente')).toBeVisible();
+  await expect(page.getByTestId('choix-commune')).toHaveCount(0);
+  await capture(page, '02b-territoire-bientot');
+  await page.getByTestId('choix-territoire-GUADELOUPE').click();
+  await expect(page.getByTestId('choix-territoire-bientot')).toHaveCount(0);
   await page.getByTestId('choix-commune').click();
-  await page.getByTestId('choix-commune-SAINTE_LUCE').click();
-  await expect(page.getByTestId('choix-commune')).toContainText('Sainte-Luce');
+  await expect(page.getByTestId('choix-commune-liste')).toContainText('Îles du Sud');
+  await expect(page.getByTestId('choix-commune-liste').getByRole('radio')).toHaveCount(32);
+  await page.getByTestId('choix-commune-SAINTE_ANNE_GP').click();
+  await expect(page.getByTestId('choix-commune')).toContainText('Sainte-Anne');
   await page.getByTestId('case-cgu').click();
   await expect(page.getByTestId('case-cgu')).toHaveAttribute('aria-checked', 'true');
   await expect(page.getByTestId('lien-confidentialite')).toBeVisible();
@@ -90,7 +103,7 @@ test('créer un compte : erreurs près des champs, puis « Vérifiez votre e-mai
   await expect(page.getByTestId('ecran-verifier-email')).toContainText('Vérifiez votre');
   await capture(page, '03-verifier-email');
   const j = await journal(page);
-  expect(j?.inscriptions).toEqual([{ email: 'marius@exemple.fr', commune: 'SAINTE_LUCE', dateNaissance: '1988-08-12' }]);
+  expect(j?.inscriptions).toEqual([{ email: 'marius@exemple.fr', territoire: 'GUADELOUPE', commune: 'SAINTE_ANNE_GP', dateNaissance: '1988-08-12' }]);
   expect(JSON.stringify(j)).not.toContain('soleil du matin');
 
   await page.getByTestId('bouton-aller-connexion').click();
@@ -158,7 +171,7 @@ test('D15 : orientation en 5 questions puis demande de vérification, dans l’a
 test('préinscription : écran calme à la place des visites ; e-mail non vérifié : rappel', async ({ page }) => {
   // Revue UX M14 : profil à valider en préinscription → même parcours de validation, avec « ouvre bientôt ».
   await connecter(page, 'preinscription-validation@exemple.fr');
-  await expect(page.getByTestId('encadre-preinscription')).toContainText('Koudmen ouvre bientôt en Martinique');
+  await expect(page.getByTestId('encadre-preinscription')).toContainText('Koudmen ouvre bientôt en Guadeloupe');
   await expect(page.getByTestId('bouton-orientation')).toBeVisible();
   await page.getByTestId('bouton-deconnexion-validation').click();
 

@@ -76,7 +76,7 @@ test.describe('V2-app : langage de lancement', () => {
     await expect(page.getByTestId('ecran-connexion')).not.toContainText(INTERDITS);
     await page.getByTestId('lien-a-propos-connexion').click();
     const aPropos = page.getByTestId('ecran-a-propos');
-    await expect(aPropos).toContainText('Koudmen ouvre bientôt en Martinique');
+    await expect(aPropos).toContainText('Koudmen ouvre bientôt en Guadeloupe');
     await expect(aPropos).not.toContainText(INTERDITS);
     await page.getByRole('button', { name: 'Retour', exact: true }).click();
 

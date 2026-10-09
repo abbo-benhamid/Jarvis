@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { messageErreur } from '@/api';
 import { natif } from '@/native';
+import { territoireDe } from '@/territoires';
 import { domicileRepli, pointsAccordTrajet } from '@/trajet/textes';
 import { useTrajet } from '@/trajet/TrajetProvider';
 import { useTheme } from '@/theme';
@@ -11,12 +12,12 @@ import { Button, Card, Em, Icon, IconButton, Screen, Text } from '@/ui';
 /**
  * Accord AVANT le premier partage du trajet (décision de l'orchestrateur, critique juridique).
  * Écran d'information + geste actif (« J'accepte et je pars »). Accord mémorisé, révocable dans Profil.
- * Params : `visite`, `prenom`, `commune` (pour démarrer tout de suite après l'accord).
+ * Params : `visite`, `prenom`, `commune`, `territoire` (pour démarrer tout de suite après l'accord).
  * Sans `visite` (depuis Profil) : l'écran informe et enregistre l'accord seulement.
  */
 export default function AccordTrajet() {
   const { c } = useTheme();
-  const { visite, prenom, commune } = useLocalSearchParams<{ visite?: string; prenom?: string; commune?: string }>();
+  const { visite, prenom, commune, territoire } = useLocalSearchParams<{ visite?: string; prenom?: string; commune?: string; territoire?: string }>();
   const { accord, donnerAccord, demarrer } = useTrajet();
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -27,7 +28,7 @@ export default function AccordTrajet() {
     setErreur(null);
     try {
       await donnerAccord();
-      if (visite) await demarrer(visite, prenom ?? '', commune ? domicileRepli(commune) : null);
+      if (visite) await demarrer(visite, prenom ?? '', commune ? domicileRepli(commune, territoireDe({ territoire, aine: { commune } }).code) : null);
       fermer();
     } catch (e) {
       setErreur(messageErreur(e, 'Le partage n’a pas démarré. Réessayez, ou venez sans partager.'));

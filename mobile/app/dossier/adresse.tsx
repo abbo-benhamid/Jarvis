@@ -36,7 +36,7 @@ export default function VerifierAdresse() {
     if (envoi) return;
     const e: Partial<Record<keyof Formulaire, string>> = {};
     if (f.ligne.trim().length < 3) e.ligne = 'Entrez le numéro et la rue.';
-    if (!/^\d{5}$/.test(f.codePostal.trim())) e.codePostal = 'Le code postal a 5 chiffres. Exemple : 97200.';
+    if (!/^\d{5}$/.test(f.codePostal.trim())) e.codePostal = 'Le code postal a 5 chiffres. Exemple : 97110.';
     if (!f.commune.trim()) e.commune = 'Entrez la commune.';
     setErreurs(e);
     if (Object.keys(e).length > 0) return;

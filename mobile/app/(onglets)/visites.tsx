@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { api, messageErreur, type Visite } from '@/api';
 import { dateLongue, heureTexte, plageHoraire, pluriel } from '@/lib/format';
+import { fuseauDe, territoireCompte } from '@/territoires';
 import { useAsync } from '@/lib/useAsync';
 import { emailAVerifier } from '@/session/compte';
 import { useSession } from '@/session/SessionProvider';
@@ -47,7 +48,7 @@ export default function Visites() {
             Bonjou, {prenom}
           </Text>
           <Text variant="small" tone="muted" style={{ marginTop: 4 }} num>
-            {dateLongue(new Date())} · {pluriel(duJour.length, 'visite')}
+            {dateLongue(new Date(), territoireCompte(session).fuseau)} · {pluriel(duJour.length, 'visite')}
           </Text>
         </View>
         <Avatar initiale={prenom.charAt(0)} teinte="mer" size={44} />
@@ -98,12 +99,12 @@ export default function Visites() {
                 key={v.id}
                 onPress={() => ouvrir(v)}
                 accessibilityRole="button"
-                accessibilityLabel={`À ${heureTexte(v.debut)}, ${v.aine.prenom}, ${libelleStatut(v)}`}
+                accessibilityLabel={`À ${heureTexte(v.debut, fuseauDe(v))}, ${v.aine.prenom}, ${libelleStatut(v)}`}
                 aria-current={now ? 'true' : undefined}
                 style={[styles.slot, { backgroundColor: now ? c.surface : c.surface2 }, now && { borderColor: c.mer, borderWidth: 1.5 }]}
               >
                 <Text style={{ fontFamily: fonts.sansSemiBold, fontSize: 16, lineHeight: 20, color: now ? c.mer : c.fg }} num>
-                  à {heureTexte(v.debut)}
+                  à {heureTexte(v.debut, fuseauDe(v))}
                 </Text>
                 <Text variant="small" tone="muted" numberOfLines={1} style={{ fontSize: 14 }}>
                   {v.aine.prenom} · {libelleStatut(v)}
@@ -136,7 +137,7 @@ export default function Visites() {
             <AineCarte v={vedette} />
             <View style={[styles.consigne, { borderTopColor: c.line }]}>
               <Text variant="caption" tone="muted" num>
-                {plageHoraire(vedette.debut, vedette.fin)} · {libelleStatut(vedette)}
+                {plageHoraire(vedette.debut, vedette.fin, fuseauDe(vedette))} · {libelleStatut(vedette)}
               </Text>
               {vedette.demande.consignes ? (
                 <Text variant="body" style={{ marginTop: 4 }}>

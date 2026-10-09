@@ -3,6 +3,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { router } from 'expo-router';
 import { api, ApiError, messageErreur, type Proposition } from '@/api';
 import { dateLongue, NBSP, NNBSP, pluriel } from '@/lib/format';
+import { fuseauDe } from '@/territoires';
 import { useAsync } from '@/lib/useAsync';
 import { proposerNotifications } from '@/push';
 import { retourAuxVisites } from '@/session/navigation';
@@ -162,7 +163,7 @@ function CarteProposition({ p, onFini, onConflit }: { p: Proposition; onFini: (t
       <View style={[styles.details, { borderTopColor: c.line }]}>
         <Detail icone="calendar" texte={`${FREQUENCES[p.demande.frequence]} · ${duree(p.demande.dureeMinutes)}`} />
         {creneaux ? <Detail icone="clock" texte={creneaux.charAt(0).toUpperCase() + creneaux.slice(1)} /> : null}
-        <Detail icone="flag" texte={p.demande.debut ? `À partir du ${dateLongue(p.demande.debut).toLowerCase()}` : 'Dès que possible'} />
+        <Detail icone="flag" texte={p.demande.debut ? `À partir du ${dateLongue(p.demande.debut, fuseauDe(p)).toLowerCase()}` : 'Dès que possible'} />
         <Detail icone="check" texte={`${pluriel(p.visitesPrevues, 'visite')} sur 4 semaines si vous acceptez`} />
       </View>
       {p.demande.consignes ? (

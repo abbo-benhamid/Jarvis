@@ -13,6 +13,7 @@ import {
   type ResultatEvenement,
 } from '@/api';
 import { heureTexte, libelleJour, NBSP, plageAvecFuseau, plageHoraire } from '@/lib/format';
+import { fuseauDe } from '@/territoires';
 import { useAsync } from '@/lib/useAsync';
 import { lireControle, PREFIXE_QR_SIGNE } from '@/api/l1';
 import { lireQrDomicile, natif, normaliserCode, type NumeroUrgence } from '@/native';
@@ -278,7 +279,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
       <>
         <Button large label="Arrivée possible à l’heure de la visite" icon="clock" disabled accessibilityHint="Ce bouton s’active à l’heure de la visite." />
         <Text variant="small" tone="muted" center style={styles.hint}>
-          Visite prévue {libelleJour(v.debut).toLowerCase()}, {plageAvecFuseau(v.debut, v.fin)}.
+          Visite prévue {libelleJour(v.debut, new Date(), fuseauDe(v)).toLowerCase()}, {plageAvecFuseau(v.debut, v.fin, fuseauDe(v))}.
         </Text>
       </>
     );
@@ -315,7 +316,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
       <SectionHeader title="Ce que la famille demande" />
       <Card>
         <Text variant="caption" tone="muted" num>
-          {libelleJour(v.debut)} · {plageHoraire(v.debut, v.fin)} · {FREQUENCES[v.demande.frequence]}
+          {libelleJour(v.debut, new Date(), fuseauDe(v))} · {plageHoraire(v.debut, v.fin, fuseauDe(v))} · {FREQUENCES[v.demande.frequence]}
         </Text>
         <Text variant="body" style={{ marginTop: 4 }}>
           {v.demande.consignes ?? 'Pas de consigne particulière.'}
@@ -330,7 +331,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
           const detail = fait
             ? f === 'CONFIRMATION_AINE'
               ? `${v.aine.prenom} a confirmé par téléphone`
-              : `Validé${v.preuve.checkInA ? ` à ${heureTexte(v.preuve.checkInA)}` : ''}`
+              : `Validé${v.preuve.checkInA ? ` à ${heureTexte(v.preuve.checkInA, fuseauDe(v))}` : ''}`
             : f === 'GPS'
               ? 'Une seule lecture, avec votre accord'
               : f === 'CODE_DOMICILE'
@@ -529,7 +530,7 @@ function Fiche({ v, header, sos, recharger }: { v: ReponseVisite; header: ReactN
         </Apparition>
       ) : v.preuve.checkInA && duJour ? (
         <Text variant="small" tone="muted" style={{ marginTop: 12 }}>
-          Arrivée à {heureTexte(v.preuve.checkInA)}. La confirmation de l’aîné ({v.aine.prenom} tape 1 au téléphone) peut donner une autre preuve.
+          Arrivée à {heureTexte(v.preuve.checkInA, fuseauDe(v))}. La confirmation de l’aîné ({v.aine.prenom} tape 1 au téléphone) peut donner une autre preuve.
         </Text>
       ) : null}
     </Screen>
