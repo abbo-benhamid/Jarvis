@@ -296,7 +296,7 @@ test("P1 : préinscription accompagnant — file de validation, étapes, « Déc
   const g = await createCaregiver({ firstName: "Murielle", status: "AUTO_ENTREPRENEUR_SAP", validation: "EN_ATTENTE", communes: ["SAINTE_ANNE"], avail: [[1, "MATIN"]] });
   await login(page, g.user.email);
   await expect(page.getByTestId("place-file").getByRole("heading", { level: 2 })).toHaveText(/^Vous êtes n°\s\d+ dans la file de validation\.$/);
-  await expect(page.getByTestId("place-file")).toContainText("Réponse en 7 jours environ.");
+  await expect(page.getByTestId("place-file")).toContainText("Réponse en 7 jours au plus.");
   await page.getByTestId("lien-metier").click();
   await expect(page).toHaveURL(/\/accompagnant\/decouvrir$/);
   await expect(page.getByTestId("visite-position")).toHaveText("Écran 1 sur 4");

@@ -27,6 +27,7 @@ export function CallbackRequest({
   creneaux,
   pendingSince,
   startOpen = false,
+  emphasis = false,
 }: {
   plan: SujetRappel;
   /** Texte du bouton, ex. « Demander un appel pour la formule Sérénité ». */
@@ -37,6 +38,8 @@ export function CallbackRequest({
   /** Date (déjà formatée) d'une demande ouverte pour ce sujet. */
   pendingSince?: string | null;
   startOpen?: boolean;
+  /** P1 : bouton principal (accueil famille en préinscription). Sinon : bouton discret. */
+  emphasis?: boolean;
 }) {
   const { state, onSubmit, pending } = useFormAction(requestActivationAction, initialActionState);
   const [open, setOpen] = useState(startOpen);
@@ -69,7 +72,7 @@ export function CallbackRequest({
   }
   if (!open) {
     return (
-      <Button variant="quiet" size="lg" fullWidth onClick={() => setOpen(true)} icon={<PhoneCall strokeWidth={1.6} />} aria-expanded={false}>
+      <Button variant={emphasis ? "primary" : "quiet"} size="lg" fullWidth onClick={() => setOpen(true)} icon={<PhoneCall strokeWidth={1.6} />} aria-expanded={false}>
         {label}
       </Button>
     );

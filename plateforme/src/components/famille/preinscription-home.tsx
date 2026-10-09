@@ -74,7 +74,7 @@ export function PreinscriptionHome({ rang, ouverture, territoire, demande, phone
                 <p className="mt-0.5 text-[15px] leading-[1.45] text-muted">
                   {demande.creneau ? `Un conseiller vous appelle sur votre créneau : ${demande.creneau}.` : "Un conseiller vous appelle."}
                 </p>
-                <LinkButton href="/famille/formule#rappel" variant="link" className="-ml-3 mt-1 text-[15px]">
+                <LinkButton href="/famille/formule#rappel" variant="link" className="mt-1 min-h-11 px-0 text-[15px]">
                   Voir ou changer ma demande
                 </LinkButton>
               </div>
@@ -84,7 +84,7 @@ export function PreinscriptionHome({ rang, ouverture, territoire, demande, phone
               <p className="text-[15px] leading-[1.45] text-muted">
                 Un conseiller Koudmen vous appelle. Il explique le service et les prix. C&apos;est gratuit. Vous ne vous engagez à rien.
               </p>
-              <CallbackRequest plan="QUESTION" label="Demander un appel" defaultPhone={phone} creneaux={creneaux} />
+              <CallbackRequest plan="QUESTION" label="Demander un appel" defaultPhone={phone} creneaux={creneaux} emphasis />
             </>
           )}
         </Card>
@@ -122,8 +122,8 @@ export function PreinscriptionHome({ rang, ouverture, territoire, demande, phone
         </Card>
       </section>
 
-      <p className="mx-0.5 mt-6 text-sm leading-[1.45] text-muted">
-        Pour l&apos;instant, Koudmen n&apos;enregistre aucune information sur votre parent.{" "}
+      <p className="mx-0.5 mt-6 flex flex-col items-start text-sm leading-[1.45] text-muted">
+        Pour l&apos;instant, Koudmen n&apos;enregistre aucune information sur votre parent.
         <Link href="/confidentialite" className="inline-flex min-h-11 items-center font-semibold text-mer underline underline-offset-4">
           Vos données
           <ArrowRight aria-hidden="true" className="ml-1 size-4" strokeWidth={1.8} />

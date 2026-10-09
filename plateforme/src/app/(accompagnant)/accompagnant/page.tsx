@@ -128,7 +128,7 @@ export default async function Page() {
           </nav>
         ) : null}
 
-        {focus ? <FocusVisit visit={focus} now={now} /> : profile.status ? <NoVisit hasProposals={pendingProposals > 0} /> : null}
+        {focus ? <FocusVisit visit={focus} now={now} /> : profile.status && !etat ? <NoVisit hasProposals={pendingProposals > 0} /> : null}
 
         {kayeToWrite > 0 || pendingProposals > 0 ? (
           <section aria-labelledby="a-faire">

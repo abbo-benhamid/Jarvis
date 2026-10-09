@@ -116,7 +116,7 @@ export default async function Page() {
           ) : (
             <>
               <p className="text-[15px] leading-snug">Écrivez votre tarif dans votre profil. Koudmen calcule votre revenu net estimé.</p>
-              <LinkButton href={profile.status ? "/accompagnant/profil" : "/accompagnant/orientation"} variant="link" className="-ml-3 mt-1" iconEnd={<ArrowRight strokeWidth={1.8} />}>
+              <LinkButton href={profile.status ? "/accompagnant/profil" : "/accompagnant/orientation"} variant="link" className="mt-1 min-h-11 px-0" iconEnd={<ArrowRight strokeWidth={1.8} />}>
                 {profile.status ? "Fixer mon tarif" : "Commencer par mon statut"}
               </LinkButton>
             </>

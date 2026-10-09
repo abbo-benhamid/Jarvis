@@ -59,7 +59,7 @@ export function PreinscriptionPanel({
         ? {
             icon: <Hourglass className="size-5" strokeWidth={1.6} />,
             title: `Vous êtes ${libelleRang(rang)} dans la file de validation.`,
-            text: `L'équipe Koudmen vous appelle, puis valide votre profil. Réponse en ${delaiJours} jours environ.`,
+            text: `L'équipe Koudmen vous appelle, puis valide votre profil. Réponse en ${delaiJours} jours au plus.`,
           }
         : validation === "A_COMPLETER"
           ? { icon: <Hourglass className="size-5" strokeWidth={1.6} />, title: "L'équipe attend un complément", text: "Ouvrez « Mes vérifications ». Votre dossier repart dès que c'est fait." }
