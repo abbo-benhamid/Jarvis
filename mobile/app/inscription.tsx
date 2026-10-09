@@ -47,7 +47,7 @@ export default function Inscription() {
     if (erreurs[k]) setErreurs((e) => ({ ...e, [k]: undefined }));
   };
   const territoireChoisi = TERRITOIRES[champs.territoire];
-  /** T1 : un autre territoire vide la commune (les codes de commune sont propres à chaque territoire). */
+  /** T1 : un autre territoire vide la commune (la commune appartient au territoire). */
   const choisirTerritoire = (code: CodeTerritoire) => {
     if (code === champs.territoire) return;
     setChamps((x) => ({ ...x, territoire: code, commune: null }));

@@ -54,7 +54,10 @@ export function ChoixTerritoire({
             >
               <View style={[styles.rond, { borderColor: on ? c.mer : c.lineStrong }]}>{on ? <View style={[styles.point, { backgroundColor: c.mer }]} /> : null}</View>
               <Text style={{ flex: 1, fontFamily: on ? fonts.sansSemiBold : fonts.sans, fontSize: 17, color: on ? c.mer : c.fg }}>{t.nom}</Text>
-              {ouvert ? <Badge kind="preuve" icon="check" label="Ouvert" /> : <Badge kind="soleil" icon="clock" label="Bientôt" />}
+              {/* Le badge s'aligne en haut par défaut : on le centre dans la ligne. */}
+              <View style={{ alignSelf: 'center' }}>
+                {ouvert ? <Badge kind="preuve" icon="check" label="Ouvert" /> : <Badge kind="soleil" icon="clock" label="Bientôt" />}
+              </View>
             </Pressable>
           );
         })}

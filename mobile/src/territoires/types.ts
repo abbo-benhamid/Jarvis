@@ -18,7 +18,7 @@ export type CodeTerritoire = z.infer<typeof territoireSchema>;
 export type EtatTerritoire = 'OUVERT' | 'BIENTOT';
 
 export type Commune = {
-  /** Code unique DANS le territoire (ex. « POINTE_A_PITRE »). Deux territoires peuvent avoir le même code (SAINTE_ANNE). */
+  /** Code unique sur tous les territoires (ex. « POINTE_A_PITRE », « SAINTE_ANNE_GP »), comme le serveur. */
   code: string;
   label: string;
   /** Centre approximatif (± 1 km) : repli de la carte quand le serveur ne donne pas le domicile. */
@@ -60,7 +60,7 @@ export type Territoire = {
 
 /**
  * POST /auth/inscription : contrat L1 + `territoire` (FORME PROVISOIRE T1, arbitrage T3 : le profil
- * accompagnant porte un territoire). Le territoire lève aussi l'ambiguïté des codes de commune.
+ * accompagnant porte un territoire). Contrat de G1 : `territoire` facultatif, seul un territoire OUVERT passe.
  */
 export const demandeInscriptionTerritoireSchema = demandeInscriptionSchema.extend({ territoire: territoireSchema });
 export type DemandeInscriptionApp = Omit<z.infer<typeof demandeInscriptionTerritoireSchema>, 'role'>;

@@ -23,7 +23,7 @@ export const TERRITOIRES: Readonly<Record<CodeTerritoire, Territoire>> = {
     telephone: { indicatif: '+590', mobiles: ['+590690', '+590691'], fixes: ['+590590'], exemple: '0690 12 34 56' },
     communes: COMMUNES_GUADELOUPE,
     zones: ZONES_GUADELOUPE,
-    carte: { latitude: 16.18, longitude: -61.45, delta: 1.0 },
+    carte: { latitude: 16.2, longitude: -61.55, delta: 1.0 },
   },
   MARTINIQUE: {
     code: 'MARTINIQUE',
@@ -49,7 +49,7 @@ export const TERRITOIRES: Readonly<Record<CodeTerritoire, Territoire>> = {
     telephone: { indicatif: '+594', mobiles: ['+594694'], fixes: ['+594594'], exemple: '0694 12 34 56' },
     communes: [],
     zones: [],
-    carte: { latitude: 4.93, longitude: -52.33, delta: 3 },
+    carte: { latitude: 4.4, longitude: -53.0, delta: 4 },
   },
   HEXAGONE: {
     code: 'HEXAGONE',

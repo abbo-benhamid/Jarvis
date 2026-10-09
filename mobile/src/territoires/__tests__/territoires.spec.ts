@@ -40,8 +40,11 @@ test('communes : 32 en Guadeloupe (sans Saint-Martin ni Saint-Barthélemy), 34 e
       expect(Math.abs(c.lng - t.carte.longitude)).toBeLessThan(t.carte.delta);
     }
   }
-  // Même code, deux territoires : le territoire décide.
-  expect(trouverCommune('SAINTE_ANNE')?.lat).toBeGreaterThan(16);
+  // Codes uniques sur tous les territoires (comme le serveur) ; la commune doit être celle du territoire.
+  expect(trouverCommune('SAINTE_ANNE_GP')?.lat).toBeGreaterThan(16);
+  expect(trouverCommune('SAINTE_ANNE')).toBeUndefined();
+  const tous = [...TERRITOIRES.GUADELOUPE.communes, ...TERRITOIRES.MARTINIQUE.communes].map((c) => c.code);
+  expect(new Set(tous).size).toBe(tous.length);
   expect(trouverCommune('SAINTE_ANNE', 'MARTINIQUE')?.lat).toBeLessThan(15);
   expect(trouverCommune('FORT_DE_FRANCE')).toBeUndefined();
   expect(domicileRepli('POINTE_A_PITRE')).toEqual({ latitude: 16.2411, longitude: -61.5331, approximatif: true });
@@ -50,16 +53,18 @@ test('communes : 32 en Guadeloupe (sans Saint-Martin ni Saint-Barthélemy), 34 e
 
 test('territoire d’une visite : champ du serveur, puis fuseau, puis commune, puis Guadeloupe', () => {
   expect(territoireDe({ territoire: 'GUYANE', aine: { commune: 'POINTE_A_PITRE' } }).code).toBe('GUYANE');
-  expect(territoireDe({ aine: { territoire: 'MARTINIQUE', commune: 'SAINTE_ANNE' } }).code).toBe('MARTINIQUE');
+  expect(territoireDe({ aine: { territoire: 'MARTINIQUE', commune: 'SAINTE_ANNE_GP' } }).code).toBe('MARTINIQUE');
   expect(territoireDe({ fuseau: 'Europe/Paris', aine: { commune: 'X' } }).code).toBe('HEXAGONE');
   // Ancien serveur (sans territoire) : la commune décide, territoires ouverts d'abord.
   expect(territoireDe({ aine: { commune: 'FORT_DE_FRANCE' } }).code).toBe('MARTINIQUE');
-  expect(territoireDe({ aine: { commune: 'SAINTE_ANNE' } }).code).toBe('GUADELOUPE');
+  expect(territoireDe({ aine: { commune: 'SAINTE_ANNE_GP' } }).code).toBe('GUADELOUPE');
+  expect(territoireDe({ aine: { commune: 'SAINTE_ANNE' } }).code).toBe('MARTINIQUE');
   expect(territoireDe({ aine: { commune: 'INCONNUE' } }).code).toBe('GUADELOUPE');
   // Fuseau : celui du serveur d'abord, sinon celui du territoire.
   expect(fuseauDe({ fuseau: 'America/Cayenne', territoire: 'GUADELOUPE' })).toBe('America/Cayenne');
   expect(fuseauDe({ territoire: 'HEXAGONE' })).toBe('Europe/Paris');
-  expect(fuseauDe({ aine: { commune: 'LAMENTIN' } })).toBe('America/Guadeloupe');
+  expect(fuseauDe({ aine: { commune: 'LAMENTIN_GP' } })).toBe('America/Guadeloupe');
+  expect(fuseauDe({ aine: { commune: 'LAMENTIN' } })).toBe('America/Martinique');
   // Compte : champ provisoire de GET /me, sinon Guadeloupe.
   expect(territoireCompte({ territoire: 'MARTINIQUE' }).code).toBe('MARTINIQUE');
   expect(territoireCompte({ prenom: 'Josiane' }).code).toBe('GUADELOUPE');

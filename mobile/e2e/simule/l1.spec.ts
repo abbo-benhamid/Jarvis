@@ -88,9 +88,9 @@ test('créer un compte : erreurs près des champs, puis « Vérifiez votre e-mai
   await page.getByTestId('choix-territoire-GUADELOUPE').click();
   await expect(page.getByTestId('choix-territoire-bientot')).toHaveCount(0);
   await page.getByTestId('choix-commune').click();
-  await expect(page.getByTestId('choix-commune-liste')).toContainText('Marie-Galante, Les Saintes, La Désirade');
+  await expect(page.getByTestId('choix-commune-liste')).toContainText('Îles du Sud');
   await expect(page.getByTestId('choix-commune-liste').getByRole('radio')).toHaveCount(32);
-  await page.getByTestId('choix-commune-SAINTE_ANNE').click();
+  await page.getByTestId('choix-commune-SAINTE_ANNE_GP').click();
   await expect(page.getByTestId('choix-commune')).toContainText('Sainte-Anne');
   await page.getByTestId('case-cgu').click();
   await expect(page.getByTestId('case-cgu')).toHaveAttribute('aria-checked', 'true');
@@ -103,7 +103,7 @@ test('créer un compte : erreurs près des champs, puis « Vérifiez votre e-mai
   await expect(page.getByTestId('ecran-verifier-email')).toContainText('Vérifiez votre');
   await capture(page, '03-verifier-email');
   const j = await journal(page);
-  expect(j?.inscriptions).toEqual([{ email: 'marius@exemple.fr', territoire: 'GUADELOUPE', commune: 'SAINTE_ANNE', dateNaissance: '1988-08-12' }]);
+  expect(j?.inscriptions).toEqual([{ email: 'marius@exemple.fr', territoire: 'GUADELOUPE', commune: 'SAINTE_ANNE_GP', dateNaissance: '1988-08-12' }]);
   expect(JSON.stringify(j)).not.toContain('soleil du matin');
 
   await page.getByTestId('bouton-aller-connexion').click();

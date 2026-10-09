@@ -28,7 +28,7 @@ export function territoire(code?: string | null): Territoire {
 export const territoireLancement = (): Territoire => TERRITOIRES[TERRITOIRE_LANCEMENT];
 export const estOuvert = (code: CodeTerritoire) => TERRITOIRES[code].etat === 'OUVERT';
 
-/** Commune d'un territoire (les codes sont uniques DANS un territoire seulement). */
+/** Commune d'un territoire (la commune doit appartenir au territoire choisi). */
 export function trouverCommune(code: string, territoireCode: CodeTerritoire = TERRITOIRE_LANCEMENT): Commune | undefined {
   return TERRITOIRES[territoireCode].communes.find((c) => c.code === code);
 }

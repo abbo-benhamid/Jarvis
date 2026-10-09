@@ -68,7 +68,7 @@ test('L2 salarié CESU : téléphone, identité, adresse, puis demande ; jamais 
   await expect(page.getByTestId('pourquoi-telephone')).toContainText('Le code reçu par SMS');
   await page.getByTestId('champ-telephone').fill('+44 7700 900123');
   await page.getByTestId('bouton-envoyer-code').click();
-  await expect(page.getByTestId('ecran-telephone')).toContainText('Antilles');
+  await expect(page.getByTestId('ecran-telephone')).toContainText('numéros de Guadeloupe');
   await page.getByTestId('champ-telephone').fill('0690 12 34 56');
   await page.getByTestId('bouton-envoyer-code').click();
   await expect(page.getByTestId('code-envoye')).toContainText('+590 690 12 34 56');

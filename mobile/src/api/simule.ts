@@ -310,7 +310,7 @@ function donneesInitiales(): Visite[] {
       'vis_alphonse_j0',
       a(0, 17),
       90,
-      { prenom: 'Alphonse', initialeNom: 'D.', commune: 'SAINTE_ANNE', communeLibelle: 'Sainte-Anne', adresseApproximative: 'Bourg', interets: ['Radio', 'Football'] },
+      { prenom: 'Alphonse', initialeNom: 'D.', commune: 'SAINTE_ANNE_GP', communeLibelle: 'Sainte-Anne', adresseApproximative: 'Bourg', interets: ['Radio', 'Football'] },
       'Promenade courte et lecture du journal.',
       false,
     ),
