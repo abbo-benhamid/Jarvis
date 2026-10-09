@@ -62,3 +62,9 @@ Corrigés dans L2b : B1, M1 à M7, m1, m2, m4, m6, m10, m11, m12 (voir `docs/tec
 | P28 | L2b (M6) | MINEUR | Rotation de la clé HMAC : la recherche « une pièce = un compte » utilise l'empreinte calculée par l'adaptateur (clé courante seulement) | Adaptateur : renvoyer les empreintes de toutes les clés actives pendant la rotation |
 | P29 | Sécu L2 M4 / RGPD | [À VÉRIFIER DPO] | Retrait du consentement biométrique : suppression anticipée chez le prestataire sur demande | Bouton « retirer mon accord » → ligne `ProviderRedaction` immédiate |
 | P30 | Sécu L2 M1 point 3 | [À VÉRIFIER fondateur] | Élément passé par `A_REVOIR` avec un code de risque (`RISQUE`, `COMPTE_EN_DOUBLE`, `MINEUR`) : `VALIDE` à deux opérateurs ? | Décision produit |
+
+## Ajouts T1
+
+| # | Origine | Gravité | Sujet | Proposition |
+|---|---|---|---|---|
+| P31 | Vérification orchestrateur (T1) | MINEUR | Avec `KOUDMEN_DB_TESTS=1`, la suite complète sur UNE base échoue sur 2 tests (L2b M4, push m1) : ils comptent des lignes globales créées par d'autres fichiers en parallèle. Seuls, ils passent | Filtrer ces comptes par les identifiants du test, ou lancer les tests base avec `--no-file-parallelism` |
