@@ -1,7 +1,7 @@
 # 03 — Modèle économique & finances
 
 > **Rôle** : CFO / stratège marketplaces. **Date** : octobre 2026.
-> **Périmètre** : plateforme de mise en relation familles ↔ « accompagnants de vie » indépendants (présence, courses, aide administrative légère, accompagnement aux rendez-vous, organisation du quotidien). Pilote Outre-mer (La Réunion d'abord, puis Guadeloupe et Martinique).
+> **Périmètre** : plateforme de mise en relation familles ↔ « accompagnants de vie » indépendants (présence, courses, aide administrative légère, accompagnement aux rendez-vous, organisation du quotidien). Pilote Outre-mer. **Mise à jour T1 (2026-10-09) : Guadeloupe d'abord, puis Martinique, Guyane et Hexagone.** Les scénarios du §5 ont été calculés avec La Réunion en premier territoire : relis-les avec la note du §5.1.
 > **Convention** : 🔎 = fait sourcé (URL en fin de section ou en ligne) ; 🧮 = hypothèse de modélisation ; ⚠️ = incertitude ou point à faire valider par un juriste ou un expert-comptable.
 
 ---
@@ -308,7 +308,9 @@ C'est ce qui rend la proposition **éthiquement solide** et **fidélisante**.
 
 ### 5.1 Hypothèses structurantes 🧮
 
-- **Territoires** :
+> **Note T1.** Le fondateur lance en **Guadeloupe** (380 400 habitants, 2ᵉ région la plus âgée). Remplace « Réunion » par « Guadeloupe » et « Guadeloupe » par « Martinique » dans les scénarios ci-dessous. Le marché local de la Guadeloupe est environ 2,3 fois plus petit que celui de La Réunion, mais sa diaspora est plus grande (1 natif sur 4 en Hexagone, contre 1 sur 7). Effet attendu : moins de familles locales, plus de familles diaspora (panier plus élevé). **[À VÉRIFIER : relancer `annexes/modele-pl.py` avec le paramètre territoire = Guadeloupe et une part diaspora de 25 à 35 %.]** Ordre cible : Guadeloupe (M0), Martinique (M7-M9 si critères atteints), Guyane (M18-M24), Hexagone (M24+).
+
+- **Territoires (calcul v1)** :
   - Prudent : Réunion, puis Guadeloupe au 25e mois.
   - Central : Réunion, puis Guadeloupe au 13e mois, puis Martinique au 19e mois.
   - Ambitieux : Réunion, Guadeloupe au 10e mois, Martinique au 13e mois, puis renforcement (diaspora et Guyane) au 25e mois.
@@ -429,7 +431,7 @@ C'est ce qui rend la proposition **éthiquement solide** et **fidélisante**.
 | Ordre | Période | Source | Montant indicatif | Nature | Commentaire |
 |---|---|---|---|---|---|
 | 1 | M−2 à M0 | **Apport des fondateurs et love money** | 20 à 40 k€ | Fonds propres | Sert d'effet de levier pour tout le reste (les prêts d'honneur et la BPI exigent des fonds propres) |
-| 2 | M−2 à M2 | **Incubateur** : Technopole de La Réunion ; ⚠️ équivalents à vérifier en Guadeloupe et en Martinique (technopoles, incubateurs régionaux) | 0 à 10 k€ + accompagnement | Accompagnement | Crédibilité auprès de la BPI et de la Région, réseau de mentors |
+| 2 | M−2 à M2 | **Incubateur** : **ZEBOX Caraïbes** (Jarry, Guadeloupe), French Tech Guadeloupe, Initiative Guadeloupe [À VÉRIFIER] ; plus tard : équivalents en Martinique ; Technopole de La Réunion (hors feuille de route) | 0 à 10 k€ + accompagnement | Accompagnement | Crédibilité auprès de la BPI et de la Région, réseau de mentors |
 | 3 | M0 à M3 | **Prêt d'honneur Initiative Réunion Entreprendre** (innovation : jusqu'à environ 25 k€ à 0 %, sur 5 ans maximum, sans garantie) | 25 à 50 k€ (2 fondateurs) | Quasi-fonds propres personnels | 🔎 [les-aides.fr](https://les-aides.fr/aide/QRlf3w/initiative-reunion-entreprendre.pret-d-honneur-innovation.pdf) |
 | 4 | M0 à M3 | **Réseau Entreprendre** (antennes Outre-mer ⚠️ à vérifier) | 15 à 50 k€ ⚠️ | Prêt d'honneur + mentorat | Mentorat de chefs d'entreprise locaux : précieux pour le B2B |
 | 5 | M1 à M4 | **Bourse French Tech (Bpifrance)** : 30 k€ de plafond standard (jusqu'à 70 % des dépenses éligibles) ; variante Émergence jusqu'à 90 k€ pour les deep tech | 30 k€ | Subvention | 🔎 [hayot-expertise.fr](https://hayot-expertise.fr/blog/bourse-french-tech-bpifrance-conditions). L'innovation doit être démontrée : moteur de remplacement, détection de signaux faibles, rails fiscaux automatisés |
@@ -446,7 +448,7 @@ C'est ce qui rend la proposition **éthiquement solide** et **fidélisante**.
 
 **Séquence recommandée (central, environ 460 k€)** :
 1. **Avant le pilote (environ 125 à 190 k€)** : apport de 30 k€, prêts d'honneur de 25 à 50 k€, Réseau Entreprendre (15 à 50 k€ ⚠️, voir ligne 4), Bourse French Tech de 30 k€ et prêt bancaire de 50 k€. Cela finance le pilote et la première année. Les contrats CFPPA et B2G sont déjà comptés dans le chiffre d'affaires.
-2. **Du 9e au 12e mois** : seed à impact de 300 à 350 k€, avec un prêt d'amorçage Bpifrance. Cela finance l'application, l'ouverture de la Guadeloupe et celle de la Martinique.
+2. **Du 9e au 12e mois** : seed à impact de 300 à 350 k€, avec un prêt d'amorçage Bpifrance. Cela finance l'application, la consolidation en Guadeloupe et l'ouverture de la Martinique.
 3. **Le FSE+ ou le FEDER (50 à 150 k€)** arrive vers le 18e à 24e mois. C'est un coussin de sécurité ; on ne bâtit pas le plan dessus.
 
 ---

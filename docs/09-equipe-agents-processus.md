@@ -94,3 +94,5 @@ sequenceDiagram
 | **S4** | Journal Kayé + notifications | Compte-rendu de visite envoyé à la famille (WhatsApp simulé) |
 | **S5** | Paiements + back-office | Abonnement, Stripe Connect (test), tableau de bord opérateur |
 | **S6** | Durcissement | Pentest interne, accessibilité, mode dégradé SMS, démo pilote |
+
+> **Lot T1 (2026-10-09) : territoire en donnée, lancement en Guadeloupe.** Répartition : G1 `dev-backend` (`plateforme/`), G2 `dev-frontend` (`mobile/`), G3 `critique-produit` (`docs/` et `site/`). Décisions : `revues/T1-arbitrage-guadeloupe.md`. Plan terrain : `10-lancement-guadeloupe.md`.

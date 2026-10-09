@@ -1,14 +1,14 @@
 # 06 — Go-to-market & Opérations : plan d'exécution (M0 → M12)
 
 > Point de vue : growth lead / COO qui a déjà lancé des marketplaces locales de services, et qui connaît le terrain ultramarin.
-> Date : octobre 2026. Ce document se concentre sur l'exécution. Le modèle juridique (statut d'« intermédiaire technique », SAP) et la sécurité sont traités ailleurs. Ici, on les mentionne seulement quand ils changent une décision opérationnelle.
+> Date : octobre 2026. **Mise à jour T1 (2026-10-09) : lancement en Guadeloupe**, puis Martinique, Guyane, Hexagone. Ce document se concentre sur l'exécution. Le modèle juridique (statut d'« intermédiaire technique », SAP) et la sécurité sont traités ailleurs. Ici, on les mentionne seulement quand ils changent une décision opérationnelle.
 > Légende : **[Source]** = fait sourcé (URL en fin de section ou dans l'annexe) · **[Hypothèse]** = estimation de praticien, à valider sur le terrain · **[À vérifier]** = information non confirmée.
 
 ---
 
 ## 0. Ce que je changerais d'abord (les 6 décisions qui comptent)
 
-1. **Le client qui paie n'est pas la personne aidée. C'est souvent l'enfant, et souvent l'enfant qui vit dans l'Hexagone.** Environ **37 % des natifs des Antilles vivent hors de leur territoire d'origine, contre 18 % pour La Réunion**, et environ **258 000 natifs des Antilles vivent dans l'Hexagone** (Insee, données 2020) [Source 1]. L'acquisition doit donc être pensée « double bout » dès le premier jour : l'aidé est à Fort-de-France, le payeur est à Créteil.
+1. **Le client qui paie n'est pas la personne aidée. C'est souvent l'enfant, et souvent l'enfant qui vit dans l'Hexagone.** Environ **37 % des natifs des Antilles vivent hors de leur territoire d'origine, contre 18 % pour La Réunion**, et environ **258 000 natifs des Antilles vivent dans l'Hexagone** (Insee, données 2020) [Source 1]. L'acquisition doit donc être pensée « double bout » dès le premier jour : l'aidé est aux Abymes, le payeur est à Créteil.
 2. **Ne pas monétiser l'offre (accompagnants) au départ.** Un abonnement à 29-49 €/mois côté accompagnants, sur des territoires où le chômage est élevé, coupe l'arrivée de nouveaux accompagnants. La plateforme gagne de l'argent côté famille, avec un **forfait** et une marge intégrée au prix horaire. On pourra introduire un abonnement « Pro » pour les accompagnants à partir de M9, quand ils auront des revenus récurrents.
 3. **Une commission seule ne tient pas dans l'aide à la personne.** Après 3 visites réussies, la famille et l'accompagnante échangent leurs numéros, et la relation passe hors plateforme. Il faut vendre ce que la famille ne peut pas obtenir en direct : **remplacement garanti sous 24 h, compte rendu de visite, assurance, avance immédiate du crédit d'impôt, coordination de la fratrie.** Ce sont ces éléments qui justifient le forfait.
 4. **Densité avant couverture.** On commence sur 1 à 3 communes contiguës (rayon de 20 min en voiture), pas sur un département entier. En Outre-mer, les embouteillages (Jarry, Fort-de-France, la route du Littoral à La Réunion) détruisent la rentabilité d'une mission de 2 h si l'accompagnante fait 1 h de trajet.
@@ -40,21 +40,23 @@
 | Concentration média | RCI, Guadeloupe La 1ère (41,6 % de couverture TV) [Source 8] | RCI, Martinique La 1ère | **Freedom : 39,3 % de part d'audience radio** (un seul canal touche presque toute l'île) [Source 9] |
 | Taille du marché | Moyen | Moyen | Le plus grand (≈ 2× les Antilles) |
 
-**Recommandation.** La règle n°1 l'emporte sur toutes les autres : **le pilote se fait là où un fondateur peut faire 25 à 30 rencontres terrain par semaine.** Si les fondateurs n'ont aucun ancrage, je recommande la **Martinique** (le territoire le plus âgé, une diaspora forte, pas de concurrent numérique identifié), puis la Guadeloupe à M7-M9 (mêmes médias RCI/La 1ère et même diaspora). La Réunion vient à M10-M12, en s'appuyant sur Freedom et en partenariat avec le GIP SAP. Si le choix est contraint entre Réunion et Guadeloupe (comme dans le brief initial) : **Guadeloupe** pour la diaspora, à condition d'avoir **rencontré Izokan avant S2** pour décider entre partenariat (eux font la tech de suivi, nous l'humain) ou différenciation claire.
+> **Décision T1 (fondateur) : la Guadeloupe ouvre en premier.** La règle n°1 ci-dessous s'applique : l'ancrage du fondateur est en Guadeloupe. La Martinique vient ensuite (vers M7-M9, critères dans `10-lancement-guadeloupe.md` §6), puis la Guyane et l'Hexagone. La Réunion sort de la feuille de route actuelle. Le texte qui suit est la recommandation v1, gardée pour mémoire.
+
+**Recommandation v1.** La règle n°1 l'emporte sur toutes les autres : **le pilote se fait là où un fondateur peut faire 25 à 30 rencontres terrain par semaine.** Si les fondateurs n'ont aucun ancrage, je recommande la **Martinique** (le territoire le plus âgé, une diaspora forte, pas de concurrent numérique identifié), puis la Guadeloupe à M7-M9 (mêmes médias RCI/La 1ère et même diaspora). La Réunion vient à M10-M12, en s'appuyant sur Freedom et en partenariat avec le GIP SAP. Si le choix est contraint entre Réunion et Guadeloupe (comme dans le brief initial) : **Guadeloupe** pour la diaspora, à condition d'avoir **rencontré Izokan avant S2** pour décider entre partenariat (eux font la tech de suivi, nous l'humain) ou différenciation claire.
 
 ### 1.3 Zone de départ (la « micro-ville »)
 
 | Territoire | Zone pilote proposée | Pourquoi |
 |---|---|---|
-| Martinique | **Fort-de-France + Schœlcher** (+ Le Lamentin à M3) | Densité, CHU (rendez-vous médicaux = missions d'accompagnement), pharmacies, paroisses |
-| Guadeloupe | **Les Abymes + Pointe-à-Pitre + Le Gosier** | CHU, plateforme de répit **Village des Colibris** aux Abymes [Source 10], siège de la Mutuelle Mare-Gaillard au Gosier [Source 11] |
+| Martinique (2ᵉ territoire) | **Fort-de-France + Schœlcher** (+ Le Lamentin au 3ᵉ mois d'ouverture) | Densité, CHU (rendez-vous médicaux = missions d'accompagnement), pharmacies, paroisses |
+| **Guadeloupe (pilote)** | **Les Abymes + Pointe-à-Pitre + Le Gosier** (+ Baie-Mahault ou Sainte-Anne à M4-M6 ; 2ᵉ bassin Basse-Terre + Saint-Claude + Gourbeyre à M6-M9) | CHU, plateforme de répit **Village des Colibris** et **Aloïs** aux Abymes [Source 10], siège de la Mutuelle Mare-Gaillard au Gosier [Source 11], ZEBOX à Jarry. Évite les heures de pointe de Jarry et des ponts de la Rivière Salée. Marie-Galante, Les Saintes et La Désirade : plus tard, avec un financeur public |
 | La Réunion | **Saint-Denis + Sainte-Marie**, ou **Saint-Pierre + Le Tampon** (le Sud a un indice de vieillissement plus élevé [Source 12]) | Siège du GIP SAP à Saint-Denis ; Journée des aidants au Tampon [Source 7] |
 
 Critère de passage à la commune suivante : **plus de 70 % des demandes servies en moins de 48 h et des accompagnantes occupées à plus de 60 %** pendant 4 semaines consécutives.
 
 ### 1.4 « Single-player mode » : utile avant même qu'il y ait une marketplace
 
-1. **Carnet de veille familial (gratuit).** Un groupe WhatsApp « Famille + Coordinatrice » et une fiche Tally/Notion par parent : traitements, médecins, numéros utiles, rendez-vous, documents (carte Vitale, mutuelle), préférences (« Manman aime qu'on lui lise France-Antilles »). La fratrie dispersée (Martinique / Paris / Montréal) partage enfin une vue unique. **C'est l'aimant à leads diaspora.**
+1. **Carnet de veille familial (gratuit).** Un groupe WhatsApp « Famille + Coordinatrice » et une fiche Tally/Notion par parent : traitements, médecins, numéros utiles, rendez-vous, documents (carte Vitale, mutuelle), préférences (« Manman aime qu'on lui lise France-Antilles »). La fratrie dispersée (Guadeloupe / Paris / Montréal) partage enfin une vue unique. **C'est l'aimant à leads diaspora.**
 2. **Appel de veille hebdomadaire (9 €/mois, ou offert le 1ᵉʳ mois).** Une coordinatrice créolophone appelle le parent chaque semaine et envoie un compte rendu de 3 lignes aux enfants. C'est le **produit d'entrée** : il crée la relation, détecte les besoins (« elle n'arrive plus à faire ses courses ») et convertit vers des visites. [Hypothèse : conversion de 20 à 30 % vers une offre de visites dans les 60 jours.]
 3. **Pour les accompagnants : boîte à outils gratuite.** Aide à la création de la micro-entreprise, déclaration SAP, modèle de facture et d'attestation fiscale, attestation d'assurance groupe. Ils viennent pour l'outil et restent pour les missions.
 
@@ -88,9 +90,9 @@ Critère de passage à la commune suivante : **plus de 70 % des demandes servies
 | **CCAS** des communes pilotes | Présenter l'offre comme un complément aux SAAD (pas un concurrent), proposer les visites de démonstration gratuites aux personnes isolées repérées par le CCAS (registre canicule / personnes vulnérables). | 2 CCAS conventionnés (convention simple) | 0 € |
 | **Plateformes de répit** (Martinique : **ACEROLA**/ASSCAM, **Ô de Mélisse**/Assistance 2000 ; Guadeloupe : **Village des Colibris**, **Aloïs**/Assistance 2000, A3A ; Réunion : **GIP SAP**) [Sources 6, 7, 10, 14] | Proposer d'être leur « bras de répit à domicile de courte durée ». C'est précisément le besoin que l'expérimentation ANAAIS a mis en évidence (répit flexible et court) [Source 6]. | 1 accord d'orientation | 0 € |
 | **Églises / paroisses / temples hindous (Réunion)** | Annonce en fin de messe, intervention à la réunion de l'équipe du Rosaire / du Secours catholique, flyer. Les **visiteurs de malades** des paroisses sont aussi un vivier de recrutement. | 5 paroisses | 0 € |
-| **Radio locale** | *Antilles* : RCI (radio leader historique [Source 15]), émissions de libre antenne ; *Réunion* : **Freedom** (39 % de part d'audience, libre antenne très suivie [Source 9]). Ne pas acheter de spots à S1-S8 : obtenir **un passage invité ou une chronique** sur le thème « aidants » autour de la **Journée nationale des aidants (6 octobre)**. | 2 passages radio | 0 € (relations presse), puis 2-4 k€ de spots à M4 |
+| **Radio locale** | *Guadeloupe* : RCI Guadeloupe (radio leader historique [Source 15]), Guadeloupe La 1ère radio, émissions de libre antenne ; *Réunion* : **Freedom** (39 % de part d'audience, libre antenne très suivie [Source 9]). Ne pas acheter de spots à S1-S8 : obtenir **un passage invité ou une chronique** sur le thème « aidants » autour de la **Journée nationale des aidants (6 octobre)**. | 2 passages radio | 0 € (relations presse), puis 2-4 k€ de spots à M4 |
 | **Presse** | France-Antilles (Martinique/Guadeloupe), Le Journal de l'Île de La Réunion, Clicanoo, Outremers360 (pour l'angle diaspora). Angle : « Ces enfants partis qui veillent sur leurs parents depuis Paris ». | 2 articles | 0 € |
-| **Marchés** | Stand le samedi au marché couvert de Fort-de-France / au marché de Pointe-à-Pitre / au marché forain de Saint-Pierre : « bilan aidant » gratuit en 5 min. | 4 samedis, 40 contacts | 200 €/samedi |
+| **Marchés** | Stand le samedi au marché de Pointe-à-Pitre (marché Saint-Antoine) et au marché du Gosier [À VÉRIFIER jour], puis au marché couvert de Fort-de-France (Martinique) : « bilan aidant » gratuit en 5 min. | 4 samedis, 40 contacts | 200 €/samedi |
 | **Facebook / WhatsApp** | Groupes communaux d'entraide, d'annonces et « bons plans » (faire une recherche par commune ; ne pas spammer : demander l'accord de l'admin, proposer un contenu utile comme « guide des aides pour nos aînés »). Statuts WhatsApp des accompagnantes. | 5 groupes partenaires | 0-500 € de boost |
 | **Événements** | Journée nationale des aidants (forum CAF/plateforme de répit en Guadeloupe [Source 16] ; GIP SAP au Tampon [Source 7]) ; Semaine bleue (octobre) ; Conférence territoriale de l'autonomie (CTM) [Source 17] | 2 événements | 500 € |
 
@@ -135,6 +137,19 @@ Critère de passage à la commune suivante : **plus de 70 % des demandes servies
 | **Parrainage** par les accompagnantes | 50 € après 20 h réalisées par la personne parrainée | Dès M2 |
 
 **Entonnoir cible :** 100 candidatures → 50 pré-qualifiées par téléphone → 25 entretiens → 15 vérifiées → 12 formées → 10 actives. **Taux de transformation global : environ 10 %.** C'est normal, et c'est même un argument marketing (« nous retenons 1 candidature sur 10 »).
+
+### 3.2 bis Recrutement des accompagnants en Guadeloupe
+
+- **Tension réelle.** Les aides à domicile et auxiliaires de vie sont parmi les métiers aux plus forts volumes de recrutements difficiles en 2026 (France Travail, BMO 2026 Guadeloupe). L'Insee estime le besoin à **+ 1 620 emplois** d'ici 2030, en plus des 5 071 emplois de 2020.
+- **Ne débauche pas les SAAD.** Cible les profils qu'ils n'atteignent pas : jeunes retraités, femmes de 40-60 ans à temps partiel, étudiants, proches aidants.
+- **Canaux locaux à activer :**
+  - agences France Travail des Abymes, de Pointe-à-Pitre et du Gosier [À VÉRIFIER liste] ; Mission locale de Guadeloupe ;
+  - Université des Antilles, pôle Guadeloupe (campus de Fouillole, Pointe-à-Pitre) et IFSI du CHU de la Guadeloupe ;
+  - paroisses et associations de visiteurs de malades ; clubs du 3ᵉ âge des CCAS ;
+  - RCI Guadeloupe (libre antenne) et groupes Facebook communaux.
+- **Créole guadeloupéen.** Exige la pratique du créole pour le niveau 3. Vérifie le vocabulaire de l'app (Koudmen, Lakou, Kayé, Kozé) avec des locuteurs guadeloupéens [À VÉRIFIER].
+- **Mobilité.** Recrute des accompagnants qui vivent dans les 3 communes pilotes. Un trajet de plus de 20 min tue la marge d'une mission de 2 h.
+- **Archipel.** Pour Marie-Galante, Les Saintes et La Désirade, recrute sur place. Ne fais pas traverser une accompagnante pour une mission.
 
 ### 3.3 Parcours de vérification (7 étapes, environ 10 jours)
 
@@ -238,14 +253,14 @@ Délai premier contact → proposition ; délai → première visite ; taux de r
 | Sem. | Objectif | Livrables | Responsable | Budget |
 |---|---|---|---|---|
 | **S1** | Cadrage et décisions | Choix du territoire et de la zone pilote ; rendez-vous juriste (périmètre SAP, CGU, statut) ; création de la société et du compte bancaire ; numéro WhatsApp Business ; landing page (Carrd/Framer) avec 2 offres et liste d'attente | CEO + COO + JUR | 1 500 € (juriste) + 200 € |
-| **S2** | Écoute marché (30 entretiens) | **15 entretiens de familles** (dont 8 diaspora en visio) + **10 prescripteurs** (IDEL, pharmacies, CCAS) + **5 acteurs** (plateforme de répit, Izokan si Guadeloupe, GIP SAP si Réunion, un SAAD) → synthèse « top 5 des douleurs » et « prix acceptable » | COO + CEO | 300 € (déplacements) |
+| **S2** | Écoute marché (30 entretiens) | **15 entretiens de familles** (dont 8 diaspora en visio) + **10 prescripteurs** (IDEL, pharmacies, CCAS) + **5 acteurs** (plateforme de répit, **Isokan/Izokan (obligatoire)**, CCAS des Abymes, un SAAD, la DEETS Guadeloupe) → synthèse « top 5 des douleurs » et « prix acceptable » | COO + CEO | 300 € (déplacements) |
 | **S3** | Lancer le recrutement de l'offre | Annonces France Travail, missions locales, Facebook, paroisses ; grille d'entretien ; base Airtable ; recrutement de la COORD | COO | 500 € |
 | **S4** | **Expérience E1 (demande diaspora)** + entretiens d'accompagnants | Campagne Meta (Île-de-France) vers WhatsApp ; 25 entretiens d'accompagnants ; contrat groupe RC Pro signé | CEO / COO | 1 500 € (ads) + 300 € (assurance) |
 | **S5** | Formation de la cohorte 1 | 21 h de socle + PSC1 pour 12 accompagnantes ; kit (badge, tote bag, carnet) | COO + COORD | 2 000 € |
 | **S6** | Premières missions | 10 premières visites découverte (dont des visites de démonstration CCAS/paroisse) ; tournée IDEL et pharmacies (20 contacts) | COORD + COO | Minimum garanti : 1 600 €/sem. |
 | **S7** | Montée en charge et prescripteurs | **Expérience E3 (prescripteurs)** : kit déposé dans 10 pharmacies et chez 15 IDEL ; premier stand au marché ; appel CCAS | COO | 800 € |
 | **S8** | Paiement et récurrence | Lancement des forfaits payants (Stripe / SumUp, mandat SEPA) ; **Expérience E4 (abonnement)** ; premier cercle d'accompagnantes | CEO + COORD | 300 € |
-| **S9** | Médias | Passage radio (RCI/Freedom) + 1 article de presse ; 3 témoignages vidéo | CEO | 500 € |
+| **S9** | Médias | Passage radio (RCI Guadeloupe / Guadeloupe La 1ère) + 1 article de presse (France-Antilles Guadeloupe) ; 3 témoignages vidéo | CEO | 500 € |
 | **S10** | Diaspora : partenariats | 3 rendez-vous CSE / associations (CREFOM, association culturelle) ; webinaire « Aider ses parents à distance » | CEO | 300 € |
 | **S11** | Qualité et rétention | Enquête NPS (familles + accompagnantes) ; revue des incidents ; cohorte 2 de recrutement lancée | COO + COORD | 200 € |
 | **S12** | **Comité go/no-go** | Tableau de bord S1-S12, unit economics par mission, décision : code / pivot / arrêt | Tous | — |
@@ -273,12 +288,12 @@ Délai premier contact → proposition ; délai → première visite ; taux de r
 | **M4** | Industrialiser le manuel | Process documentés (SOP) ; COORD à temps plein ; 2ᵉ commune ; spécifications du MVP (app familles = compte rendu + paiement ; app accompagnants = planning + check-in) ; dépôt de dossiers de financement (BPI Bourse French Tech, Initiative / Réseau Entreprendre, Région) | CEO / COO | 12 k€ |
 | **M5** | Diaspora à l'échelle | 2 CSE actifs ; campagne Toussaint « Avant de repartir » ; 25 accompagnantes ; développement du MVP (no-code avancé ou agence, 6-8 semaines) | CEO | 15 k€ (dont 6 k€ de dev) |
 | **M6** | Premier partenariat institutionnel | Convention CCAS ou plateforme de répit ; dossier conférence des financeurs ; campagne Noël ; NPS ≥ 50 | COO | 15 k€ |
-| **M7** | Lancement du MVP | Bascule des familles dans l'app ; **ouverture du 2ᵉ territoire** (si Martinique en premier : Guadeloupe ; mêmes médias) avec 1 COO local à temps partiel ; 1ᵉʳ contact mutuelle | CEO + COO | 20 k€ |
+| **M7** | Lancement du MVP | Bascule des familles dans l'app ; **ouverture de la Martinique** (2ᵉ territoire, mêmes médias RCI/La 1ère) **si les critères d'ouverture sont atteints** (`10` §6), avec 1 COO local à temps partiel ; sinon M8-M9 ; 1ᵉʳ contact mutuelle | CEO + COO | 20 k€ |
 | **M8** | Mutuelles et assisteurs | Pilote avec une mutuelle locale (garantie « aide au retour d'hospitalisation ») ; référencement auprès d'un assisteur ; campagne Carnaval | CEO | 20 k€ |
 | **M9** | Rentabilité unitaire | Offre « Pro » accompagnants (optionnelle) ; analyse des cohortes ; revue tarifaire | CEO + COO | 20 k€ |
-| **M10** | Préparer La Réunion | Rencontres GIP SAP, Département, Freedom ; recrutement d'un·e country lead Réunion | CEO | 22 k€ |
+| **M10** | Consolider les Antilles | 2ᵉ bassin en Guadeloupe (Basse-Terre) ; premier projet B2G archipel (Marie-Galante) avec le Département ; étude de la Guyane (CTG, CGSS Guyane) | CEO | 22 k€ |
 | **M11** | Fête des mères (pic) + levée | Campagne Fête des mères (Antilles fin mai) ; deck de levée (pré-seed / seed 0,8-1,5 M€) ou subventions FEDER / FSE+ | CEO | 25 k€ |
-| **M12** | Bilan et extension | 3 territoires (2 actifs + 1 en lancement) ; objectifs ci-dessous | Tous | 25 k€ |
+| **M12** | Bilan et extension | 2 territoires actifs (Guadeloupe, Martinique) + Guyane en préparation ; objectifs ci-dessous | Tous | 25 k€ |
 
 **Budget M4-M12 : environ 175 k€.** Avec S1-S12, le total sur 12 mois est d'**environ 200 k€** (prêts d'honneur + BPI + subventions + love money, voir le document financement).
 
@@ -362,6 +377,9 @@ Outillage : Airtable (interfaces) + Looker Studio jusqu'à M6, puis tableau de b
 | Partenaire | Ce qu'il peut apporter | Comment l'approcher | Priorité / délai |
 |---|---|---|---|
 | **CCAS des communes pilotes** | Prescription, orientation des personnes isolées, crédibilité, salles | Rendez-vous avec le directeur ou la directrice + adjoint·e aux aînés ; proposer des visites de démonstration gratuites et un **rapport d'impact** (isolement mesuré) | ★★★ S3-S8 |
+| **Isokan / Izokan** (Les Abymes [À VÉRIFIER], fondateurs Juliano Rémy et Hugues Lami ; Prix de l'Audace UDE-Medef 2024) [Source 5] | Concurrent ou partenaire : plateforme numérique des aides et du lien avec les enfants éloignés | Rencontre avant S2. Option A : eux = coordination numérique, Koudmen = présence humaine vérifiée. Option B : différence claire (preuve de visite, diaspora) | ★★★ S1-S2 |
+| **DEETS Guadeloupe** et **Département de la Guadeloupe** (direction de l'autonomie) | Avis écrit sur le montage ; tarif APA ; conférence des financeurs ; MONALISA | Demande écrite en S1 (voir `01` §7.1) | ★★★ S1-S4 |
+| **CHU de la Guadeloupe** (gériatrie, service social) | Sorties d'hospitalisation = besoin le plus aigu | Rendez-vous avec le service social de gériatrie | ★★ S6-M4 |
 | **Plateformes de répit** (ACEROLA / ASSCAM, Ô de Mélisse et Aloïs / Assistance 2000, Village des Colibris, A3A, GIP SAP) [Sources 6, 7, 10, 14] | Orientation d'aidants épuisés ; répit à domicile court, que leurs structures (accueil de jour, hébergement temporaire) couvrent mal | Proposer une offre « répit 2-4 h à domicile » à tarif partenaire, et une évaluation conjointe | ★★★ S2-M6 |
 | **Département / CTM** (APA, conférence des financeurs de la prévention de la perte d'autonomie) | Financement de la prévention, de la lutte contre l'isolement (démarche **MONALISA** : appel à projets du CD971 en 2020 [Source 30]), solvabilisation APA (emploi direct / CESU [À vérifier]) | Répondre aux appels à projets « prévention / isolement » de la conférence des financeurs ; s'inscrire dans la **Conférence territoriale de l'autonomie** de la CTM [Source 17] ; Réunion : passer par le **GIP SAP**, émanation du Département | ★★ M4-M9 |
 | **ARS** (Guadeloupe / Martinique / Réunion) | Légitimité, financement de l'innovation (fonds d'intervention régional), orientation vers les dispositifs aidants. L'ARS Martinique consacre 13,2 M€/an au répit [Source 14] | Ne pas demander d'argent en premier : demander à **présenter les données d'impact** au référent « aidants / personnes âgées » ; candidater aux appels à projets « aidants » | ★★ M6-M12 |
@@ -392,8 +410,8 @@ Outillage : Airtable (interfaces) + Looker Studio jusqu'à M6, puis tableau de b
 1. **S3 : Coordinatrice de matching** (temps partiel → temps plein à M4). Profil : assistante de coordination SAAD, standardiste médicale, organisée, créolophone, chaleureuse au téléphone. ≈ 2 000-2 300 € bruts/mois [Hypothèse]. **C'est l'embauche la plus importante de l'année.**
 2. **M3 : Référente accompagnants** (pouvant être une accompagnante promue, à mi-temps) : onboarding, cercles, remplacement.
 3. **M5 : Growth / community manager diaspora** (freelance ou alternant·e) : ads, contenu, influenceurs, CSE.
-4. **M7 : Country lead territoire 2** (même profil que le COO).
-5. **M10 : Country lead Réunion**.
+4. **M7 : Country lead Martinique** (même profil que le COO).
+5. **M10 : Responsable du 2ᵉ bassin en Guadeloupe (Basse-Terre)**, puis country lead Guyane vers M18.
 
 **Conseil consultatif (non rémunéré ou en BSPCE) :** un·e **médecin gériatre** du CHU local, un·e **ex-directeur·rice de CCAS ou de SAAD**, un·e **juriste en droit social / SAP**, un·e **fondateur·rice de marketplace** (pour la méthode).
 
@@ -408,7 +426,9 @@ Outillage : Airtable (interfaces) + Looker Studio jusqu'à M6, puis tableau de b
 | Contournement (la relation passe en direct) | Forte | Valeur du forfait (remplacement, compte rendu, crédit d'impôt, assurance), binôme titulaire + suppléante, programme de fidélité |
 | Dépendance au fondateur terrain | Forte | Process documentés dès M4, référente promue, 2ᵉ coordinatrice à M6 |
 | Concurrent local mieux financé (Izokan en Guadeloupe, SAAD qui se digitalisent) | Moyenne | Rencontrer et explorer le partenariat ; différenciation par l'humain vérifié + la diaspora |
-| Événement climatique (cyclone août-novembre aux Antilles, janvier-mars à La Réunion) | Certaine sur 12 mois | Plan de crise (§4.3), transformé en preuve de fiabilité |
+| Événement climatique (cyclone juin-novembre aux Antilles, pic août-octobre) | Certaine sur 12 mois | Plan de crise (§4.3) et Veyé Siklòn, transformés en preuve de fiabilité |
+| Coupures d'eau en Guadeloupe (Grande-Terre surtout) | Certaine | Fiche « eau » dans le Kayé ; alerte à la famille après 48 h ; livraison d'eau en Coups de main |
+| Séisme (zone de sismicité 5) ou barrages routiers (mouvements sociaux) | Faible à moyenne | Liste de crise, appels Kozé, missions de proximité à pied ; plan de reprise des données hors de l'île |
 
 ---
 

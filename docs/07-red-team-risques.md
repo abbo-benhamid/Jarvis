@@ -199,7 +199,7 @@ La sécurité est devenue l'argument de vente plutôt qu'un coût. Charte anti-a
 
 Les accompagnantes étaient mieux payées que dans la moyenne du secteur parce que les plannings étaient regroupés par quartier : 6 visites par demi-journée sur un même secteur de Saint-Denis, au lieu de 3 visites dispersées. La rétention des accompagnantes a dépassé 80 % à un an. En 2028, la CGSS et une mutuelle locale ont acheté un programme "prévention de l'isolement après hospitalisation" pour 300 bénéficiaires : premier contrat B2B2C, payé au résultat (réhospitalisations évitées, mesurées avec le CHU).
 
-Enfin, l'Outre-mer s'est révélé un avantage : vieillissement le plus rapide de France, Départements prêts à expérimenter, diaspora organisée. Le playbook a été porté en **Martinique avec une associée locale**, puis dans **trois départements ruraux de l'Hexagone** où la même équation existait (parents isolés, enfants loin). La plateforme n'a jamais été la plus grosse ; elle a été **la plus digne de confiance**.
+Enfin, l'Outre-mer s'est révélé un avantage : vieillissement le plus rapide de France, Départements prêts à expérimenter, diaspora organisée. Le pilote a démarré en **Guadeloupe** (Les Abymes, Pointe-à-Pitre, Le Gosier). Le playbook a été porté en **Martinique avec une associée locale**, puis dans **trois départements ruraux de l'Hexagone** où la même équation existait (parents isolés, enfants loin). La plateforme n'a jamais été la plus grosse ; elle a été **la plus digne de confiance**.
 
 **Les vraies causes, dans l'ordre** : (1) cadre légal choisi pour être finançable et partenaire des pouvoirs publics ; (2) monétisation de la valeur récurrente (tranquillité, remplacement, crédit d'impôt immédiat) au lieu de la transaction ; (3) payeur = diaspora + B2B2C ; (4) densité géographique ; (5) sécurité comme produit ; (6) une équipe fondatrice avec un·e opérationnel·le du médico-social local.
 
@@ -274,7 +274,7 @@ Pourquoi c'est un piège, en 5 points :
 
 5. **Faire de la sécurité le produit** : charte anti-abus financier publique, protocole de crise avant la 1re mission, sécurité des accompagnants autant que des aînés, comité d'éthique, transparence des incidents (rapport annuel de confiance). C'est ce qui vous différencie de la voisine au noir et de l'appli lambda.
 
-6. **Densité avant expansion** : une île, une intercommunalité, 12 mois. Pas de Guadeloupe/Martinique avant d'avoir un playbook rentable et un·e associé·e local·e sur place.
+6. **Densité avant expansion** : une île, une intercommunalité, 12 mois. Mise à jour T1 : cette île est la **Guadeloupe** (Cap Excellence + Le Gosier). Pas de Martinique avant d'avoir un playbook rentable et un·e associé·e local·e sur place (critères : `10-lancement-guadeloupe.md` §6). Risques propres à la Guadeloupe : eau, cyclones, séismes, mobilité, archipel (`00` §7).
 
 7. **Équipe** : ne pas lancer seul. Un·e associé·e opérations issu·e du médico-social local est plus important qu'un CTO au stade MVP (le no-code suffit).
 

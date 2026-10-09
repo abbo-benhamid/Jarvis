@@ -342,7 +342,25 @@ Le système interne de traitement des plaintes est exigé sauf pour les petites 
 - **Phase 2 (salariés)** : les exonérations **LODEOM** (art. L752-3-2 CSS) s'appliquent aux employeurs des DROM, très favorables pour les entreprises de moins de 11 salariés. C'est un **avantage compétitif net pour un SAD ultramarin**. **[À VÉRIFIER : éligibilité du secteur SAP et articulation avec l'exonération aide à domicile L241-10]**
 - **Financements locaux** : programmes FEDER et FSE+ 2021-2027 gérés par la **Région** (Guadeloupe, Réunion), la **CTM**, la **CTG** ou l'État selon le cas. Conférence des financeurs de la prévention de la perte d'autonomie (CFPPA) de chaque département. CNSA. Agrément **ESUS** (entreprise solidaire d'utilité sociale) pour accéder à l'épargne solidaire, à France Active et à Bpifrance.
 - **Contexte** : les Antilles vieillissent plus vite que l'Hexagone, avec une forte proportion d'aidants familiaux et d'emploi direct informel. Le besoin et le **risque de travail non déclaré** sont tous deux élevés, ce qui renforce l'intérêt d'une voie B qui « blanchit » l'emploi direct via CESU+. **[Chiffres INSEE à sourcer dans le livrable marché]**
-- **Choix du pilote** : **La Réunion** (département et région distincts, CGSS mature, bassin AE important) ou **Guadeloupe**. La **Martinique (CTM)** a l'avantage d'un **interlocuteur unique** (autonomie, insertion et fonds européens) pour la phase 2.
+- **Choix du pilote (décision T1, 2026-10-09)** : **Guadeloupe** d'abord, puis Martinique, Guyane et Hexagone. La **Martinique (CTM)** garde l'avantage d'un **interlocuteur unique** pour la phase 2. En Guadeloupe, il y a **deux collectivités** : le Département (APA, PCH, autorisation SAD) et la Région (FEDER, FSE+, aides aux entreprises).
+
+### 7.1 Organismes locaux en Guadeloupe (territoire de lancement)
+
+| Organisme | Rôle pour Koudmen | Démarche |
+|---|---|---|
+| **DEETS Guadeloupe** (direction de l'économie, de l'emploi, du travail et des solidarités) | Déclaration SAP des accompagnants AE (NOVA) ; **agrément mandataire** en phase 1 | Demande écrite d'avis sur le montage (voie A / voie B) avant la première mission |
+| **Département de la Guadeloupe** (CD 971, direction de l'autonomie) | APA, PCH, **autorisation SAD** (phase 2), tarif horaire de référence, conférence des financeurs (CFPPA), appels à projets MONALISA | Demande de l'arrêté de tarif APA ; avis écrit sur le niveau 3 (compagnie) ; réponse aux appels à projets « isolement » |
+| **Région Guadeloupe** | Autorité de gestion du FEDER et du FSE+ ; aides à l'innovation | Dossier de financement à M4 |
+| **ARS Guadeloupe, Saint-Martin, Saint-Barthélemy** | Projet régional de santé 2023-2027 (axe soutien aux aidants), plateformes de répit, fonds d'intervention régional | Présentation des données d'impact (M6-M12). Koudmen ne fait aucun soin : pas d'autorisation ARS nécessaire [À VÉRIFIER avec l'avocat] |
+| **CGSS Guadeloupe** | Assurance retraite et action sociale ; recouvrement des cotisations (rôle d'URSSAF dans les DROM) ; membre de la conférence des financeurs | Rendez-vous action sociale retraite ; questions sur le précompte AE 2027 et l'AICI [À VÉRIFIER : interlocuteur AICI = URSSAF Caisse nationale ou CGSS] |
+| **CAF Guadeloupe** | Forum de la Journée nationale des aidants | Stand en octobre |
+| **Préfecture de la Guadeloupe** | Plan ORSEC (cyclone, séisme, eau), registres des personnes vulnérables tenus par les communes | Présenter Veyé Siklòn au service de protection civile |
+
+Saint-Martin et Saint-Barthélemy sont des collectivités d'outre-mer distinctes (art. 74 de la Constitution). Elles sont hors du périmètre.
+
+### 7.2 Martinique (2ᵉ territoire)
+
+Interlocuteurs : DEETS Martinique, **CTM** (APA, PCH, autorisation SAD, fonds européens, Conférence territoriale de l'autonomie), ARS Martinique, CGSS Martinique. Demande les avis écrits au moins 3 mois avant l'ouverture.
 
 ---
 
@@ -438,7 +456,7 @@ Le système interne de traitement des plaintes est exigé sauf pour les petites 
 - [ ] Domiciliation dans le DROM pilote ; compte bancaire ; contrat PSP signé (Stripe Connect, Mangopay ou Lemonway)
 - [ ] RC exploitation, RC pro de la plateforme et cyber souscrites
 - [ ] Adhésion à un médiateur de la consommation (et offre collective pour les AE)
-- [ ] Rendez-vous préalables avec la **DEETS** (déclaration et agrément), le **département** (ou CTM / CTG) et l'**URSSAF/CGSS** (AICI, précompte)
+- [ ] Rendez-vous préalables avec la **DEETS Guadeloupe** (déclaration et agrément), le **Département de la Guadeloupe** (puis la CTM / la CTG à l'ouverture de ces territoires) et l'**URSSAF/CGSS Guadeloupe** (AICI, précompte)
 
 **Voie A (AE)**
 - [ ] Liste blanche des activités autorisées en voie A (déclaration uniquement), reflétée dans le produit

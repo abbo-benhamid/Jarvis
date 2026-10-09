@@ -98,7 +98,7 @@ C'est le cas le plus fréquent pour Koudmen. Deux montages sont possibles.
 | Qui a le crédit d'impôt | Le parent. C'est un **crédit** : il est remboursé même si le parent n'est pas imposable | L'enfant |
 | Avance immédiate | Oui si le parent a un compte bancaire en France et a déjà déposé une déclaration de revenus. **Non** s'il touche l'APA (avant juillet 2027) | Oui, sauf si le parent touche l'APA [À VÉRIFIER : l'exclusion vise-t-elle l'employeur ou le bénéficiaire ?] |
 | Exonération patronale | Si le parent a 80 ans ou plus, ou touche l'APA ou la PCH | [À VÉRIFIER : l'exonération suit-elle l'âge de l'employeur (l'enfant) ou de la personne aidée ?] |
-| Utilisation de l'APA | Simple : l'APA est versée au parent pour son plan d'aide | Complexe [À VÉRIFIER avec la CTM] |
+| Utilisation de l'APA | Simple : l'APA est versée au parent pour son plan d'aide | Complexe [À VÉRIFIER avec le Département de la Guadeloupe, puis la CTM] |
 | Qui paie | L'enfant peut verser une aide au parent, déductible comme pension alimentaire sous conditions [À VÉRIFIER : plafond et état de besoin] | L'enfant paie directement |
 | Recommandation | **Montage par défaut pour un parent autonome** | **Montage pour un parent en GIR 1 à 4** qui ne touche pas encore l'APA, ou quand le parent ne peut plus gérer |
 
@@ -165,7 +165,7 @@ Ces personnes deviennent en pratique **salariées de la famille** (fiche a) ou *
 | **PCH** | Deux options : **salarier** un proche (règles plus strictes, notamment pour le conjoint et les obligés alimentaires du premier degré [À VÉRIFIER]) ou **dédommager** l'aidant familial. Dédommagement 2026 : **4,78 €/h** si l'aidant garde son activité, **7,16 €/h** s'il l'a réduite [À VÉRIFIER sur source officielle]. Le dédommagement **n'est pas un salaire** |
 | **Statut** | Salarié de l'aîné, en emploi direct CESU (fiche a). Mêmes droits et obligations |
 | **Crédit d'impôt** | **Oui** pour l'aîné, sur le reste à charge après APA. **Exclusion** : le salarié ne doit pas être **membre du foyer fiscal** de l'employeur. Un enfant majeur non rattaché qui vit à côté est éligible [À VÉRIFIER pour l'enfant qui vit sous le même toit] |
-| **Contrôle** | L'aîné doit justifier au Département (la CTM) l'usage de l'APA : heures, type d'aide |
+| **Contrôle** | L'aîné doit justifier au Département (Département de la Guadeloupe ; CTM en Martinique) l'usage de l'APA : heures, type d'aide |
 | **Intérêt pour Koudmen** | **Très fort aux Antilles.** Beaucoup d'aidants familiaux aident déjà sans être payés. Koudmen leur donne un statut, une fiche de paie, et un remplaçant pour le répit |
 | **Risques** | Conflits dans la fratrie (« pourquoi lui est payé ? »). Abus de faiblesse intrafamilial. Confusion entre aide familiale et travail. Le **Lakou** doit rendre les heures visibles à toute la fratrie, sauf si l'aîné active son « droit au secret » |
 | **Alternatives à signaler** | Congé de proche aidant et **AJPA** (allocation journalière du proche aidant), versée par la CAF ou la CGSS. Ce n'est pas un revenu payé par Koudmen |
@@ -179,7 +179,7 @@ Ces personnes deviennent en pratique **salariées de la famille** (fiche a) ou *
 | **Crédit d'impôt famille** | Oui, avec avance immédiate (sauf bénéficiaires APA ou PCH avant juillet 2027) |
 | **APA / PCH** | **Oui**, au tarif départemental |
 | **Rôle sur Koudmen** | **Renfort** et **remplacement garanti** : quand un accompagnant salarié est absent, le SAAD prend le relais. Le SAAD reçoit aussi les cas trop lourds pour un particulier |
-| **Rémunération de Koudmen** | Contrat B2B avec le SAAD (outil Kayé et preuve de visite en marque blanche, ou frais d'apport) [À VÉRIFIER : licéité des frais d'apport vis-à-vis de la CTM] |
+| **Rémunération de Koudmen** | Contrat B2B avec le SAAD (outil Kayé et preuve de visite en marque blanche, ou frais d'apport) [À VÉRIFIER : licéité des frais d'apport vis-à-vis du Département de la Guadeloupe et de la CTM] |
 | **Risques** | Concurrence perçue. Tarif plus élevé pour la famille. Le SAAD peut capter le client |
 
 ### 2.9 Tableau de synthèse des statuts
@@ -320,7 +320,7 @@ Les six règles de `00` § 3 s'appliquent à **tous** les statuts. Trois précis
 |---|---|---|---|---|
 | **a. Salarié de la famille** | Salaire + cotisations (via CESU+), puis **abonnement Koudmen** | **0 €** | Abonnement famille | Salaire et cotisations : oui. Abonnement : **non** (sauf frais de gestion d'un mandataire agréé, phase 1) |
 | **b. Auto-entrepreneur SAP** | Facture de l'auto-entrepreneur + abonnement Koudmen | **0 €** | Abonnement famille | Facture : oui. Abonnement : non |
-| **d. Bénévole** | Rien | 0 € | **Financement B2G** (CFPPA, CTM, CCAS) ou association | — |
+| **d. Bénévole** | Rien | 0 € | **Financement B2G** (CFPPA, Département de la Guadeloupe, CTM, CCAS) ou association | — |
 | **f. Proche aidant salarié** | Comme a, financé en partie par l'APA | 0 € | Abonnement famille (offre « Lakou » à prix réduit) | Oui, sur le reste à charge |
 | **g. SAAD** | Facture du SAAD + abonnement Koudmen éventuel | — | Contrat B2B avec le SAAD | Facture SAAD : oui |
 
@@ -380,13 +380,13 @@ Un particulier non formé auprès d'une personne vulnérable est **le risque n°
 
 ## 5. Recommandation finale
 
-### Ouvrir au pilote (Martinique, semaines 1 à 12)
+### Ouvrir au pilote (Guadeloupe, semaines 1 à 12)
 
 | Statut | Pour quoi | Pourquoi |
 |---|---|---|
 | **a. Salarié de la famille (CESU+)** | Niveaux 1 et 2 | Seul statut légal pour la compagnie et l'accompagnement. Crédit d'impôt et APA. Aucun prélèvement sur l'accompagnant |
 | **c. Étudiants français, retraités, demandeurs d'emploi, allocataires RSA, salariés à temps partiel** | Comme salariés de la famille | Élargit le vivier. Règles de cumul simples à afficher |
-| **f. Proche aidant salarié via l'APA** (hors conjoint) | Niveau 2 | Cas fréquent aux Antilles. Argument fort pour la CTM. Peu de risques juridiques |
+| **f. Proche aidant salarié via l'APA** (hors conjoint) | Niveau 2 | Cas fréquent aux Antilles. Argument fort pour le Département de la Guadeloupe (puis la CTM). Peu de risques juridiques |
 | **b. Auto-entrepreneur SAP** | **Niveau 1 seulement** | Avance immédiate. Utile pour les courses, repas, papiers et numérique |
 | **g. SAAD partenaire** | Niveau 3 et remplacement | Sécurité et continuité de service |
 | **d. Bénévole, via une association partenaire** | **Niveau 0 seulement** | Lien social et preuve d'impact. L'association porte le bénévole, pas Koudmen |

@@ -1,7 +1,7 @@
 # 02 — Étude de marché et concurrence
 
 > **Projet :** plateforme de mise en relation familles / « accompagnants de vie » (hors soins), pilote Outre-mer.
-> **Date :** octobre 2026. **Statut :** v1, à compléter par des entretiens terrain.
+> **Date :** octobre 2026. **Statut :** v2 (T1, 2026-10-09) : **lancement en Guadeloupe**, Martinique en 2ᵉ territoire. Le §1.4 ajoute les chiffres de la Guadeloupe. Le §8 garde la grille v1 pour mémoire, puis donne la décision.
 > **Convention :** les chiffres **sourcés** portent une URL ; les chiffres marqués **[EST.]** sont des estimations de l'analyste, avec la méthode indiquée ; les chiffres **[À VÉRIFIER]** viennent de sources secondaires ou datées et doivent être recoupés avant d'être utilisés dans un dossier de financement.
 > **Limites de cette version :** insee.fr, cnsa.fr et banquedesterritoires.fr étaient bloqués en lecture directe pendant la recherche. Les chiffres INSEE viennent donc des extraits de publications INSEE indexés par le moteur de recherche (URL INSEE citées). Plusieurs données récentes (APA 2024 par DROM, tarifs horaires CTM/Guadeloupe) n'ont pas pu être obtenues. Elles sont listées en fin de document comme travaux à mener.
 
@@ -13,7 +13,7 @@
 2. **Les Antilles cumulent trois facteurs :** des seniors plus isolés, plus pauvres et plus tôt dépendants, des aidants familiaux plus nombreux (15,1 % des habitants en Martinique contre environ 14 % en moyenne nationale), et **une population active qui s'en va** (Guadeloupe : la tranche 20-64 ans serait divisée par 2 d'ici 2070). Il y aura de plus en plus de personnes âgées et de moins en moins de bras pour les aider.
 3. **Le vrai payeur n'est probablement pas sur place.** Environ **365 000 natifs des DOM vivent en Hexagone**. **Un Antillais sur quatre** y réside. Nous estimons que **75 000 Antillais de 70 ans et plus ont au moins un enfant en Hexagone** [EST.]. Ces enfants ont des revenus hexagonaux, ont droit au crédit d'impôt de 50 % et vivent l'angoisse de la distance. C'est le segment au meilleur ratio solvabilité / douleur.
 4. **Le modèle « marketplace pure + commission + auto-entrepreneurs » est le plus fragile du secteur.** Plusieurs acteurs l'ont montré : Papa a été valorisé 1,4 Md$, puis a perdu environ 36 clients payeurs en 2024 et est revenu au B2C, Honor s'est transformé en réseau d'agences, et Care.com a payé une amende FTC de 8,5 M$. Deux risques s'y ajoutent : la désintermédiation dès la 3e mission, et la directive européenne sur les plateformes, à transposer **avant le 2 décembre 2026**, qui crée une présomption de salariat. **Ce qu'il faut monétiser, c'est la tranquillité d'esprit à distance** (coordination, compte rendu, remplacement, paiement avec avance immédiate du crédit d'impôt), pas la mise en relation.
-5. **Recommandation :** **pilote en Martinique** (plutôt qu'à La Réunion), avec le **segment prioritaire « enfant de la diaspora en Île-de-France / parent de 75 ans et plus autonome ou semi-autonome (GIR 4-6), sans APA ou avec une APA insuffisante »**. On ouvre la Guadeloupe dans la foulée, puisque la même campagne en Hexagone touche les deux diasporas. La Réunion vient en 2e vague, car son marché local est plus grand mais moins solvable, et sa diaspora est proportionnellement 2 fois plus petite. Justification chiffrée en §8.
+5. **Décision T1 (fondateur) : pilote en Guadeloupe**, puis Martinique, Guyane et Hexagone (voir §8.2 et `10-lancement-guadeloupe.md`). *Recommandation v1, pour mémoire :* **pilote en Martinique** (plutôt qu'à La Réunion), avec le **segment prioritaire « enfant de la diaspora en Île-de-France / parent de 75 ans et plus autonome ou semi-autonome (GIR 4-6), sans APA ou avec une APA insuffisante »**. On ouvre la Guadeloupe dans la foulée, puisque la même campagne en Hexagone touche les deux diasporas. La Réunion vient en 2e vague, car son marché local est plus grand mais moins solvable, et sa diaspora est proportionnellement 2 fois plus petite. Justification chiffrée en §8.
 
 ---
 
@@ -23,8 +23,8 @@
 
 | Indicateur | Martinique | Guadeloupe | La Réunion | Guyane | Mayotte | Hexagone (réf.) |
 |---|---|---|---|---|---|---|
-| Population (dernière estimation) | ~350 000 [EST., baisse de -0,9 %/an] | **378 600** (1/1/2024) | **885 700** (1/1/2024) | ~295 000 [À VÉRIFIER] | ~320 000 [À VÉRIFIER] | ~66 M |
-| Part des 60 ans et plus aujourd'hui | ~33-35 % [EST.] (25 % en 2016) | **31 %** (2024) | **21 %** (2024) | ~10 % [EST.] | ~4-5 % (4 % en 2017) | ~28 % |
+| Population (dernière estimation) | **355 500** (1/1/2025, Insee) | **380 400** (1/1/2025, Insee Flash 8557247) ; 378 600 au 1/1/2024 | **885 700** (1/1/2024) | ~295 000 [À VÉRIFIER] | ~320 000 [À VÉRIFIER] | ~66 M |
+| Part des 60 ans et plus aujourd'hui | **33 %** (2023) (25 % en 2016) | **30 %** (2023) ; 31 % (2024) ; ~34 % au 1/1/2026 [À VÉRIFIER] | **21 %** (2024) | ~10 % [EST.] | ~4-5 % (4 % en 2017) | ~28 % |
 | Effectif des 60 ans et plus aujourd'hui | ~120 000 [EST.] | ~117 000 [EST. = 31 % × 378 600] | ~186 000 [EST. = 21 % × 885 700] | ~30 000 [EST.] | ~15 000 [EST.] | ~18 M |
 | Projection 2030 | **~40 % de 60 ans et plus** (1re région la plus âgée de France) | **~34 % de 60 ans et plus** (1/3) | ~24 % [EST., interpolation] | — | — | ~30 % |
 | Projection 2042 / 2050 | **65 ans et plus = 42,3 % en 2050** (16,9 % en 2013) ; population 286 500 en 2042 | Population **314 000 en 2042** ; plus d'1/3 de 65 ans et plus en 2042 | **27 % de 60 ans et plus en 2050** (autant que de jeunes) ; 75 ans et plus × 3 à × 4 | Croissance dynamique, vieillissement lent | 60 ans et plus = **12 % en 2050** | — |
@@ -60,6 +60,33 @@ Sources : [INSEE Martinique 3560209 « Perte d'autonomie précoce… tempérée 
 - Aux Antilles, la moitié des personnes qui connaissent un malade d'Alzheimer sont ou ont été aidantes, contre 33 % en Hexagone (Baromètre santé DOM 2014, [SPF](https://www.santepubliquefrance.fr/maladies-neurodegeneratives/maladie-dalzheimer-et-autres-demences/article/connaissances-attitudes-et-etat-de-sante-des-proches-aidants-de-personnes-atteintes-de-la-maladie)).
 - **L'INSEE Martinique résume la situation ainsi : « perte d'autonomie précoce tempérée par l'aide de l'entourage ».** Le modèle antillais repose sur la famille. Or la famille part en Hexagone et l'aidant qui reste (souvent une fille de 55-65 ans) s'épuise. Cette tension est le cœur du marché.
 
+### 1.4 Focus Guadeloupe, territoire de lancement (mise à jour T1, octobre 2026)
+
+| Indicateur | Valeur | Source |
+|---|---|---|
+| Population | **380 400** au 1/1/2025 ; recul continu (solde naturel et solde migratoire négatifs) | [Insee Flash Guadeloupe, bilan démographique 2024](https://www.insee.fr/fr/statistiques/8557247) |
+| Rang | **2ᵉ région la plus âgée de France** depuis 2024, derrière la Martinique | [Insee Flash Guadeloupe, bilan 2025 (mars 2026)](https://www.insee.fr/fr/statistiques/8904519) |
+| 60 ans et plus | **30 %** en 2023 (21 % en 2013) ; 29,2 % en 2021 ; environ **34 %** au 1/1/2026 [À VÉRIFIER : chiffre relayé par la presse] | [Insee via Outremers360](https://outremers360.com/bassin-atlantique-appli/la-martinique-devient-la-region-la-plus-agee-de-france-naissances-et-deces-sont-en-baisse-en-guadeloupe-et-la-fecondite-reste-elevee-en-guyane-insee) · [IEDOM, rapport 2021](https://www.iedom.fr/IMG/rapport_annuel_iedom_guadeloupe_2021/index-35.html) · [Guadeloupe La 1ère, bilan 2025](https://la1ere.franceinfo.fr/guadeloupe/bilan-demographique-2025-en-guadeloupe-le-taux-de-natalite-baisse-mais-le-vieillissement-de-la-population-s-accentue-1686350.html) |
+| 75 ans et plus | **9,7 %** en 2021 (6,8 % en 2011), soit **~37 000 personnes** [EST.] | [IEDOM, rapport 2021](https://www.iedom.fr/IMG/rapport_annuel_iedom_guadeloupe_2021/index-35.html) |
+| 65 ans et plus | ~94 400 en 2025 (~24 %) [À VÉRIFIER, fiche chiffres clés] ; **39 % en 2070** | [Insee Flash 6664271 (Omphale 2022)](https://www.insee.fr/fr/statistiques/6664271) |
+| Projection | **313 500** habitants en 2042, **241 500** en 2070 (−0,9 %/an) ; la tranche des 20-64 ans est divisée par 2 | [Insee Flash 6664271](https://www.insee.fr/fr/statistiques/6664271) |
+| Fécondité | 1,65 enfant par femme en 2025 (2,11 en 2021) [À VÉRIFIER] | [Courrier de Guadeloupe, d'après l'Insee](https://lecourrierdeguadeloupe.com/3-388-naissances-3-661-deces-la-guadeloupe-dans-lengrenage-du-declin/?print=pdf) |
+| Perte d'autonomie | Région où elle est **la plus précoce** ; **28 000** personnes de 60 ans et plus dépendantes en 2030 (+ 8 000 par rapport à 2017), dont ~5 000 de 75 ans et plus en dépendance sévère ; 2/3 de femmes | [Insee Flash 91](https://www.insee.fr/fr/statistiques/3560354) · [Insee Analyses Guadeloupe 49](https://www.insee.fr/fr/statistiques/5359577) |
+| Emplois du grand âge | **5 071** emplois en 2020 ; **+ 1 620** nécessaires d'ici 2030 | [Insee Analyses Guadeloupe 49](https://www.insee.fr/fr/statistiques/5359577) |
+| Seniors qui vivent seuls | Antilles 2021 : **32,5 %** des 60-74 ans, **37,8 %** des 75-84 ans, **44,6 %** des 85 ans et plus ; 1 femme sur 2 aux grands âges. Guadeloupe 2014 : 39 % des 75 ans et plus | [Insee Analyses Guadeloupe 78](https://www.insee.fr/fr/statistiques/7728543) |
+| Bénéficiaires APA | 26,4 % des 75 ans et plus (2013) ; **~8 200** bénéficiaires en 2022 [À VÉRIFIER : source tierce qui cite la DREES] ; plus de 130 M€ par an pour l'APA et la PCH au budget du Département | [Insee 2513082](https://www.insee.fr/fr/statistiques/2513082) · [RCI, budget primitif du Département](https://rci.fm/guadeloupe/infos/Economie/Budget-primitif-du-Conseil-departemental-pres-dun-milliard-deuros-valides-lunanimite) |
+| Revenus | Niveau de vie médian **15 770 €/an** en 2021 (France : 23 000 €) ; **34 %** de la population sous le seuil de pauvreté national en 2017 ; ASPA : 21,9 % des retraités ; prix supérieurs de 16 % à l'Hexagone | [Insee, L'essentiel sur la Guadeloupe](https://www.insee.fr/fr/statistiques/4481456) · [Insee 4623253](https://www.insee.fr/fr/statistiques/4623253) · [Inégalités.fr](https://inegalites.fr/pauvrete-outremer) |
+| Communes les plus âgées | Marie-Galante (âge médian **48 ans** en 2018, 33 ans en 1999 ; 10 422 habitants en 2021) ; Capesterre-de-Marie-Galante (âge médian ~54 ans, ~40 % de 60 ans et plus), Terre-de-Bas, La Désirade (~54 ans) [À VÉRIFIER : classement non officiel, à recouper avec l'Insee] | [Insee Analyses Guadeloupe 61 (Marie-Galante)](https://www.insee.fr/fr/statistiques/6676047) · [villagesfrancais.fr](https://villagesfrancais.fr/classements/age-median/guadeloupe/) |
+| Couverture mobile | 4 opérateurs : Orange Caraïbe, SFR Caraïbe, Free Caraïbe, Digicel. Obligation 4G d'Orange : 99,8 % de la population en 2026 ; 5G lancée en 2025. Mesure réelle par commune [À VÉRIFIER sur monreseaumobile.arcep.fr] | [Arcep, FAQ territoires ultramarins](https://www.arcep.fr/fileadmin/reprise/faq/faq-territoires-ultramarins-01.pdf) · [RCI, 5G](https://rci.fm/deuxiles/infos/Economie/La-5G-officiellement-lancee-en-Martinique-et-en-Guadeloupe) |
+| Fibre | Déploiement en cours, freiné par le raccordement, la voirie privée et l'élagage ; fermeture du cuivre programmée [À VÉRIFIER taux de locaux raccordables] | [Arcep, outre-mer (oct. 2025)](https://www.arcep.fr/actualites/actualites-et-communiques/detail/n/amenagement-numerique-du-territoire-311025.html) |
+| Eau | Coupures et « tours d'eau » ; 60 à 70 % de la population touchée selon une estimation ; Grande-Terre la plus exposée ; congrès des élus en juin 2026 ; le Département engage 150 M€ sur 4 ans | [linfodurable (AFP)](https://www.linfodurable.fr/guadeloupe-lorigine-de-la-crise-de-leau-des-decennies-de-defaillances-44860) · [RCI, congrès de l'eau](https://rci.fm/guadeloupe/infos/Societe/Congres-de-leau-en-Guadeloupe-les-elus-reunis-face-lurgence-dune-crise-qui-dure) |
+
+**Ce qu'on en tire pour le modèle :**
+- Le besoin est presque aussi fort qu'en Martinique. Il grandit vite : + 8 000 seniors dépendants en 13 ans.
+- **Le payeur local est plus fragile** (ASPA 21,9 % contre 9 %). Le segment diaspora (§8.2) devient le cœur du pilote. Les familles locales passent par l'APA, la voie B (CESU) et les financeurs (CFPPA, Agirc-Arrco).
+- **La crise de l'eau est un cas d'usage.** Une famille en Hexagone veut savoir si Manman a de l'eau. Veyé Siklòn s'étend aux coupures d'eau.
+- **L'archipel concentre les aînés les plus âgés** (Marie-Galante, Les Saintes, La Désirade). C'est un terrain B2G, pas un terrain de pilote.
+
 ---
 
 ## 2. L'insight diaspora : quantification
@@ -69,7 +96,7 @@ Sources : [INSEE Martinique 3560209 « Perte d'autonomie précoce… tempérée 
 | Natifs résidant en Hexagone | Effectif | Part de la population native |
 |---|---|---|
 | Martinique | **~114 000-117 000** | ~1 sur 4 |
-| Guadeloupe | **~114 000-115 400** | ~1 sur 4 |
+| Guadeloupe | **~114 000-115 400** (113 900 en 2006 ; ~2/3 en Île-de-France) | ~1 sur 4 ; en 2017, 40,5 % des natifs de 20-24 ans et 45,5 % des 25-29 ans vivent en Hexagone [À VÉRIFIER] |
 | La Réunion | **~105 000-108 000** | ~1 sur 7 |
 | Guyane | ~22 000-24 400 | faible |
 | **Total natifs DOM** | **~355 000-365 000** (0,6 % de la population de l'Hexagone) | |
@@ -161,7 +188,7 @@ Ce segment pèse **2 fois plus que le marché local** à volume égal, avec un *
 
 | Type d'acteur | Rôle | Observations DROM |
 |---|---|---|
-| **SAAD autorisés** (associatifs, CCAS/CIAS, privés) | Aide humaine APA/PCH, ménage, aide aux actes essentiels | La Réunion fixe un **tarif de référence APA/PCH de 19,39 €/h maximum** ; le département verse un complément via les CPOM ([Département 974, appel à candidatures SAAD](https://departement974.fr/sites/default/files/appel-candidature-saad.pdf)). Le **tarif national de référence APA 2025** est de **24,58 €/h** [via synthèse de recherche, source CNSA](https://www.cnsa.fr/sites/default/files/2025-01/Tarifs-APA-1er-janvier-2025.pdf). Les tarifs CTM (Martinique) et Guadeloupe 2025-2026 sont **[À VÉRIFIER]**. |
+| **SAAD autorisés** (associatifs, CCAS/CIAS, privés) | Aide humaine APA/PCH, ménage, aide aux actes essentiels | La Réunion fixe un **tarif de référence APA/PCH de 19,39 €/h maximum** ; le département verse un complément via les CPOM ([Département 974, appel à candidatures SAAD](https://departement974.fr/sites/default/files/appel-candidature-saad.pdf)). Le **tarif national de référence APA 2025** est de **24,58 €/h** [via synthèse de recherche, source CNSA](https://www.cnsa.fr/sites/default/files/2025-01/Tarifs-APA-1er-janvier-2025.pdf). Les tarifs CTM (Martinique) et Guadeloupe 2025-2026 sont **[À VÉRIFIER]** : demande l'arrêté annuel à la direction de l'autonomie du Département de la Guadeloupe. En Guadeloupe, l'annuaire national référence **88 services d'aide à domicile** ([pour-les-personnes-agees.gouv.fr](https://www.pour-les-personnes-agees.gouv.fr/annuaire-service-aide-accompagnement-domicile/guadeloupe-971)). |
 | **Franchises SAP** | Prestataire ou mandataire, clientèle solvable | Domidom est **présent en Guadeloupe** (agence de Jarry, agréée depuis 2013) ([Observatoire de la franchise](https://www.observatoiredelafranchise.fr/indiscretions-actualite/DOMIDOM-franchise-sap-domidom-ouvre-en-guadeloupe-59265.htm)). Aucune présence confirmée de Petits-fils, Senior Compagnie ou Ouihelp dans les DROM [À VÉRIFIER sur leurs annuaires]. |
 | **CCAS / CIAS** | Portage de repas, aide sociale, téléassistance | Rôle central dans les communes rurales. |
 | **Plateformes de répit (PFR)** | Soutien aux aidants, répit | 242 PFR « personnes âgées » en France au 15/10/2024 ; objectif d'une PFR par département d'ici 2027 ([Banque des Territoires](https://www.banquedesterritoires.fr/soutien-aux-aidants-la-deuxieme-strategie-nationale-est-lancee)). Chaque DROM en a au moins une (souvent adossée à un accueil de jour) [À VÉRIFIER]. Ce sont des **prescripteurs naturels**. |
@@ -318,12 +345,14 @@ Sources : [Capretraite, tarifs aide à domicile 2026](https://www.capretraite.fr
 
 ### 8.2 Recommandation
 
-**Territoire pilote : Martinique**, avec ouverture de la **Guadeloupe à M+4-6**. La communication en Hexagone est commune (les mêmes communautés, médias et CE d'Île-de-France), donc le coût d'acquisition diaspora est mutualisé. **La Réunion est à prévoir en vague 2 (M+12-18)**, en s'appuyant sur ses atouts propres : le volume, et un département qui structure fortement l'offre SAAD, à approcher en **partenaire** plutôt qu'en concurrent.
+> **Décision T1 (fondateur, 2026-10-09) : la Guadeloupe ouvre en premier.** La grille ci-dessus mesure l'attractivité du marché. Elle ne mesure pas l'ancrage du fondateur, qui reste le critère n°1 (`06` §1.2). Écart de score : 4,45 contre 3,80. Les deux critères où la Guadeloupe perd (solvabilité locale, logistique) se traitent ainsi : le payeur diaspora d'abord, et une zone pilote de 3 communes contiguës (Les Abymes, Pointe-à-Pitre, Le Gosier). La Martinique devient le 2ᵉ territoire (vers M7-M9), avec ses chiffres ci-dessus. La Réunion sort de la feuille de route actuelle (Guadeloupe → Martinique → Guyane → Hexagone).
+
+*Recommandation v1, pour mémoire :* **Territoire pilote : Martinique**, avec ouverture de la **Guadeloupe à M+4-6**. La communication en Hexagone est commune (les mêmes communautés, médias et CE d'Île-de-France), donc le coût d'acquisition diaspora est mutualisé. **La Réunion est à prévoir en vague 2 (M+12-18)**, en s'appuyant sur ses atouts propres : le volume, et un département qui structure fortement l'offre SAAD, à approcher en **partenaire** plutôt qu'en concurrent.
 
 > **Challenge de l'hypothèse initiale (« La Réunion ou la Guadeloupe »)** : La Réunion offre le plus gros marché local en volume, mais c'est le **moins solvable** et le **moins vieilli**. Une grande part y est couverte par l'APA, captée par des SAAD au tarif départemental, et sa diaspora est proportionnellement 2 fois plus petite. Pour un MVP qui doit prouver la **volonté de payer** en 3-4 mois, la Martinique est un meilleur terrain. La Guadeloupe est une bonne seconde, mais le taux d'ASPA y est 2,4 fois plus élevé qu'en Martinique.
 
-**Segment cible n°1 : « l'enfant de la diaspora en Île-de-France qui finance la tranquillité de son parent de 75 ans et plus, autonome ou semi-autonome (GIR 4-6), vivant seul en Martinique ».**
-- **Taille :** ~40 000 seniors martiniquais de 70 ans et plus ont au moins un enfant en Hexagone [EST.]. 25 % de propension donne ~10 000 familles adressables. **Objectif pilote : 30-50 familles payantes** (0,3-0,5 %), compatible avec l'objectif de 50-100 missions en 3-4 mois.
+**Segment cible n°1 : « l'enfant de la diaspora en Île-de-France qui finance la tranquillité de son parent de 75 ans et plus, autonome ou semi-autonome (GIR 4-6), vivant seul en Guadeloupe »** (puis en Martinique).
+- **Taille :** ~40 000 seniors guadeloupéens de 70 ans et plus ont au moins un enfant en Hexagone [EST., §2.2] ; même ordre de grandeur pour les seniors martiniquais de 70 ans et plus ont au moins un enfant en Hexagone [EST.]. 25 % de propension donne ~10 000 familles adressables. **Objectif pilote : 30-50 familles payantes** (0,3-0,5 %), compatible avec l'objectif de 50-100 missions en 3-4 mois.
 - **Offre :** un **abonnement « Présence » à 49-89 €/mois**, plus les heures (cf. document business model). Il comprend un référent unique, des visites régulières, un compte rendu après chaque visite, du remplacement garanti, un accompagnement aux RDV avec résumé, et un paiement multi-payeurs entre membres de la fratrie.
 - **Pourquoi en premier :**
   - un panier 2 à 3 fois supérieur à celui du marché local ;
@@ -346,12 +375,12 @@ Sources : [Capretraite, tarifs aide à domicile 2026](https://www.capretraite.fr
 
 ## 9. Travaux à mener pour fiabiliser (avant dossier de financement)
 
-1. **Exploitation du recensement 2021 (INSEE, fichier détail)** : natifs des DOM résidant en Hexagone par âge et par région ; seniors vivant seuls par commune en Martinique.
+1. **Exploitation du recensement 2021 ou 2022 (INSEE, fichier détail)** : natifs des DOM résidant en Hexagone par âge et par région ; seniors vivant seuls **par commune en Guadeloupe** (priorité : Les Abymes, Pointe-à-Pitre, Le Gosier, Sainte-Anne, Basse-Terre), puis en Martinique.
 2. **Enquête TeO2 (INED-INSEE)** : liens familiaux transocéaniques, transferts d'argent des originaires d'outre-mer.
-3. **DREES, séries APA 2023-2024 par département DROM** et tarifs horaires de référence de la CTM et de la Guadeloupe.
+3. **DREES, séries APA 2023-2024 par département DROM** (971 en priorité) et tarifs horaires de référence du Département de la Guadeloupe, puis de la CTM.
 4. **Annuaires SAP / Nova (DGE)** : nombre de SAAD et d'organismes SAP déclarés par DROM ; présence réelle de Petits-fils, Senior Compagnie, Ouihelp, Click&Care, Yoopies.
 5. **30 entretiens qualitatifs** : 15 enfants de la diaspora (Île-de-France), 5 aidants locaux, 5 accompagnants potentiels, 5 prescripteurs (PFR, CGSS, pharmaciens). **Test de prix** par la méthode Van Westendorp.
-6. **Test de demande à 500 € de budget** : landing page et campagne Facebook/Instagram ciblée « Martiniquais en Île-de-France, 35-60 ans », avec pour indicateur le taux d'inscription en liste d'attente.
+6. **Test de demande à 500 € de budget** : landing page et campagne Facebook/Instagram ciblée « Guadeloupéens en Île-de-France, 35-60 ans », avec pour indicateur le taux d'inscription en liste d'attente.
 
 ---
 

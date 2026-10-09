@@ -1,6 +1,6 @@
 # Koudmen — Synthèse stratégique de l'orchestrateur
 
-> Synthèse des 7 études (`01` à `07`). Version 1 — octobre 2026.
+> Synthèse des études (`01` à `10`). Version 2 — octobre 2026 : **lancement en Guadeloupe** (décision T1).
 > Statut : **idée affinée, avant validation juridique**. Aucun code.
 > Chaque chiffre provient d'un document détaillé. Ceux qui sont marqués [À VÉRIFIER] ou ⚠️ dans les sources doivent être confirmés avant de servir à une décision.
 
@@ -181,19 +181,72 @@ flowchart LR
 
 *(Détails, scripts et acteurs réels : `06`.)*
 
-**Territoire pilote : la Martinique** (Fort-de-France et Schœlcher). C'est aussi le choix de `02` et `06`.
-- Elle a le vieillissement le plus rapide de France (environ 40 % de 60 ans et plus en 2030).
-- Elle compte le plus d'aidants des DROM et des seniors plus solvables qu'ailleurs.
-- **Un seul interlocuteur public, la CTM**, qui cumule les compétences du Département et de la Région.
-- 37 % des natifs des Antilles vivent hors de leur île : le pont avec la diaspora est maximal.
+> **Décision du fondateur (T1, 2026-10-09) : le lancement se fait en Guadeloupe.** Ordre d'ouverture : Guadeloupe → Martinique → Guyane → Hexagone. Détails : `10-lancement-guadeloupe.md` et `revues/T1-arbitrage-guadeloupe.md`. La version 1 de cette synthèse recommandait la Martinique. Le critère n°1 était l'ancrage du fondateur : ce critère tranche pour la Guadeloupe.
 
-Ensuite la Guadeloupe (à M4-M6, où il faudra rencontrer Izokan, déjà présent), puis La Réunion. Le Juridique préférait La Réunion ou la Guadeloupe ; **l'orchestrateur tranche pour la Martinique**, sauf si le fondateur a un ancrage local plus fort ailleurs. Cet ancrage est le premier critère.
+```mermaid
+flowchart LR
+  G["Guadeloupe<br/>pilote S1-S12<br/>puis M4-M12"] -->|"critères §6.3 atteints<br/>(vers M7-M9)"| M["Martinique<br/>2ᵉ territoire"]
+  M -->|"vers M18-M24"| Y["Guyane<br/>3ᵉ territoire"]
+  Y -->|"vers M24+"| H["Hexagone<br/>aidants à distance<br/>et diaspora inverse"]
+```
+
+### 6.1 Pourquoi la Guadeloupe tient comme territoire pilote
+
+| Indicateur | Guadeloupe | Martinique (2ᵉ territoire) |
+|---|---|---|
+| Population | **380 400** habitants au 1ᵉʳ janvier 2025 (Insee) | **355 500** au 1ᵉʳ janvier 2025 (Insee) |
+| Part des 60 ans et plus | **30 %** en 2023 (21 % en 2013) ; environ **34 %** au 1ᵉʳ janvier 2026 [À VÉRIFIER] | **33 %** en 2023 ; 1ʳᵉ région la plus âgée de France |
+| Rang | **2ᵉ région la plus âgée de France** depuis 2024 | 1ʳᵉ |
+| Part des 75 ans et plus | **9,7 %** en 2021, soit environ 37 000 personnes [EST.] | environ 10-11 % [À VÉRIFIER] |
+| Projection | 313 500 hab. en 2042, 241 500 en 2070 ; 65 ans et plus = **39 %** en 2070 | 65 ans et plus = 42 % en 2050 |
+| Seniors dépendants | **28 000** personnes de 60 ans et plus en 2030 (+ 8 000 par rapport à 2017) | — |
+| Seniors qui vivent seuls (Antilles, 2021) | 37,8 % des 75-84 ans, 44,6 % des 85 ans et plus | idem (étude Antilles) |
+| Natifs en Hexagone | **~114 000-115 000** (1 sur 4), 2/3 en Île-de-France | ~114 000-117 000 |
+| Retraités au minimum vieillesse (ASPA) | **21,9 %** | 9 % |
+| Collectivité pour l'APA et les SAAD | **Département de la Guadeloupe** (la Région gère les fonds européens) | CTM (collectivité unique) |
+| Concurrent numérique local | **Isokan / Izokan** (plateforme des aides, lien avec les enfants éloignés) | aucun identifié [À VÉRIFIER] |
+
+Sources et détails : `02` §1 et `10` §1. Les chiffres 2026 viennent d'articles de presse qui citent l'Insee : vérifie-les dans les tableaux Insee avant un dossier de financement.
+
+**Avantages :**
+- Le vieillissement est presque aussi fort qu'en Martinique (2ᵉ région de France).
+- La diaspora est aussi grande que celle de la Martinique. La même campagne en Île-de-France touche les deux.
+- Le marché local est un peu plus grand (380 000 habitants).
+- L'écosystème est déjà prêt : ZEBOX Caraïbes à Jarry, plateformes de répit, 88 SAAD référencés, une conférence des financeurs active.
+
+**Points d'attention :**
+- La solvabilité locale est plus faible (ASPA 21,9 % contre 9 %). Le payeur diaspora devient encore plus central.
+- Il y a deux collectivités (Département et Région), pas une seule.
+- Un concurrent local existe : Isokan. Rencontre ses fondateurs avant S2.
+- Les risques propres au territoire sont forts : eau, cyclones, séismes, mobilité, archipel (§7).
+
+### 6.2 La zone pilote : 3 communes contiguës
+
+| Ordre | Communes | Justification |
+|---|---|---|
+| **Cœur (S1-S12)** | **Les Abymes, Pointe-à-Pitre, Le Gosier** | Agglomération la plus dense (Cap Excellence et Le Gosier, environ 100 000 habitants [À VÉRIFIER]) ; CHU de la Guadeloupe (rendez-vous médicaux = missions) ; plateformes de répit **Village des Colibris** et **Aloïs** aux Abymes ; centre de Pointe-à-Pitre âgé, avec beaucoup d'aînés seuls [À VÉRIFIER commune par commune] ; trajets courts (moins de 20 min) |
+| **Extension M4-M6** | **Baie-Mahault** ou **Sainte-Anne** | Contiguïté ; Sainte-Anne est une commune âgée de la Riviera du Levant |
+| **2ᵉ bassin (M6-M9)** | **Basse-Terre, Saint-Claude, Gourbeyre** | Préfecture, services de l'État et du Département ; population âgée ; zone séparée du cœur par 1 h de route : il faut une équipe locale |
+| **Plus tard, en B2G** | **Marie-Galante, Les Saintes, La Désirade** | Communes parmi les plus âgées (âge médian de Marie-Galante : 48 ans en 2018 ; Capesterre-de-Marie-Galante, Terre-de-Bas et La Désirade en tête des classements [À VÉRIFIER Insee]). Le besoin est maximal, mais le bateau rend les visites chères. À ouvrir avec une commune, un CCAS ou le Département, et des accompagnants qui vivent sur l'île |
+
+Saint-Martin et Saint-Barthélemy sont des collectivités distinctes. Elles sont hors du périmètre.
+
+### 6.3 Critères pour ouvrir la Martinique
+
+Ouvre la Martinique seulement si **toutes** ces conditions sont vraies :
+1. Le seuil go/no-go de S12 est atteint en Guadeloupe (liste ci-dessous).
+2. La marge contributive est positive pendant 2 mois de suite.
+3. Le playbook est écrit (procédures de recrutement, matching, incident, remplacement).
+4. Au moins **50 familles** de la liste d'attente ont un parent en Martinique.
+5. Un ou une responsable local·e est recruté·e en Martinique.
+6. L'avis écrit de la DEETS Martinique et de la CTM est obtenu.
+7. La trésorerie couvre au moins 9 mois.
 
 **Amorçage du marché :**
 - Un noyau de **10 à 12 accompagnantes** avec un revenu minimum garanti (environ 10 k€ de budget).
 - Au moins 1 accompagnante pour 3 familles, sur 1 à 3 communes seulement.
 - Côté diaspora : l'outil gratuit Lakou, les associations, les CSE (RATP, AP-HP, La Poste), Outre-mer La 1ère, et les retours de vacances de décembre et de l'été.
-- Côté local : pharmacies, infirmiers libéraux, CCAS, églises, RCI, plateformes de répit.
+- Côté local : pharmacies, infirmiers libéraux, CCAS des Abymes, de Pointe-à-Pitre et du Gosier, églises, RCI et Guadeloupe La 1ère, plateformes de répit (Village des Colibris, Aloïs).
 
 **Indicateur principal (North Star) :** nombre de **visites récurrentes avec compte-rendu par semaine**. Cible : 450 à M12.
 
@@ -212,22 +265,28 @@ Ensuite la Guadeloupe (à M4-M6, où il faudra rencontrer Izokan, déjà présen
 
 | Risque | Parade |
 |---|---|
-| Cadre légal mal maîtrisé | Avis écrit de la DEETS et de la CTM, plus un avocat, **avant la première mission**. Montage en deux voies |
+| Cadre légal mal maîtrisé | Avis écrit de la DEETS Guadeloupe et du Département de la Guadeloupe, plus un avocat, **avant la première mission**. Montage en deux voies |
 | Incident grave avec une personne vulnérable, puis crise médiatique (cas Care.com, Papa) | Preuve de visite, bouclier anti-abus, protocole de crise, assurance de groupe, communication préparée |
 | Désintermédiation | Valeur continue : journal, remplacement, avance de crédit d'impôt, coordination de la fratrie. Pas de commission sur l'accompagnant. Mode « Passerelle » payant, qui fait de la fuite un revenu |
 | Marché insulaire trop petit pour du capital-risque | Rentabilité d'abord, payeurs institutionnels, plan d'extension vers l'Hexagone et d'autres diasporas |
 | Fondateur seul | Recruter un CTO associé et un ou une responsable des opérations ancré·e localement |
 | Avance immédiate supprimée pour les plateformes (amendements aux budgets 2027) | Le modèle ne doit **pas** dépendre de l'avance immédiate. La voie B (CESU+) reste un plan de repli |
+| **Eau** : coupures longues et « tours d'eau », surtout en Grande-Terre (60 à 70 % de la population touchée selon une estimation, 2025-2026) | Fiche « eau » dans le Kayé (réserve, accès à l'eau, hygiène). Veyé Siklòn étendu aux coupures d'eau. Alerte à la famille si une coupure dure plus de 48 h. Livraison d'eau dans l'offre Coups de main |
+| **Cyclones** (juin-novembre ; Maria 2017, Fiona 2022) | **Veyé Siklòn** : liste des aînés inscrits, appel de chacun en moins de 24 h, repli SMS et appel vocal. Lien avec le registre communal des personnes vulnérables et le plan ORSEC de la préfecture |
+| **Séismes et volcan** (zone de sismicité 5, la plus forte de France ; Soufrière surveillée par l'OVSG) | Plan de crise : liste des aînés, contacts d'urgence, consignes simples dans le Kayé. Exercice une fois par an. Plan de reprise des données hors de l'île |
+| **Mobilité** (bouchons de Jarry et des ponts de la Rivière Salée ; peu de transports publics) | Zone pilote compacte (3 communes, moins de 20 min). Missions de 2 h minimum. Indemnité kilométrique dans le prix |
+| **Archipel** (Marie-Galante, Les Saintes, La Désirade : accès par bateau) | Pas de mission depuis la Grande-Terre. Accompagnants qui vivent sur l'île. Ouverture seulement avec un financeur public |
+| **Concurrent local** (Isokan) et **mouvements sociaux** (barrages en 2009 et 2021) | Rencontre Isokan avant S2 (partenariat ou différence claire). Plan « barrage » : missions de proximité à pied, appels Kozé quand la route est bloquée |
 
 ---
 
 ## 8. Plan d'action pour les 30 prochains jours
 
-1. **Semaines 1-2 — Juridique.** Consulter un avocat spécialisé SAP et numérique (les 17 questions sont listées dans `01`). Envoyer une demande écrite à la DEETS et à la CTM Martinique. Envisager un rescrit fiscal à la DGFiP sur l'éligibilité au crédit d'impôt.
+1. **Semaines 1-2 — Juridique.** Consulter un avocat spécialisé SAP et numérique (les 17 questions sont listées dans `01`). Envoyer une demande écrite à la DEETS Guadeloupe et au Département de la Guadeloupe (direction de l'autonomie). Envisager un rescrit fiscal à la DGFiP sur l'éligibilité au crédit d'impôt.
 2. **Semaines 1-2 — Terrain.** Mener **30 entretiens** : 10 enfants de la diaspora, 10 aînés ou aidants locaux, 10 accompagnants potentiels. Valider la volonté de payer environ 149 à 199 €/mois.
 3. **Semaine 2 — Marque.** Faire la recherche d'antériorité INPI/EUIPO sur « Koudmen », puis réserver le domaine et les comptes sociaux.
 4. **Semaine 3.** Monter la phase 0 conforme RGPD (Tally, Grist, WhatsApp Business) et rédiger la charte anti-abus.
-5. **Semaines 3-4.** Rencontrer 3 plateformes de répit, 5 pharmacies et 1 SAAD partenaire. Prendre un premier contact avec Agirc-Arrco action sociale.
+5. **Semaines 3-4.** Rencontrer 3 plateformes de répit, 5 pharmacies, 1 SAAD partenaire et les fondateurs d'Isokan. Prendre un premier contact avec Agirc-Arrco action sociale et la CGSS Guadeloupe.
 6. **Semaine 4.** Déposer les candidatures à l'incubateur et au prêt d'honneur.
 
 ---
@@ -236,7 +295,7 @@ Ensuite la Guadeloupe (à M4-M6, où il faudra rencontrer Izokan, déjà présen
 
 Le plan change selon tes réponses :
 
-1. **Ton ancrage :** où vis-tu, et as-tu un réseau en Martinique, en Guadeloupe ou à La Réunion ? C'est le critère n°1 du choix du territoire.
+1. ~~**Ton ancrage**~~ : **réponse reçue** (T1) : lancement en Guadeloupe. Nouvelle question : qui sera le ou la responsable terrain créolophone en Guadeloupe ?
 2. **Ton équipe :** es-tu seul ? As-tu un profil tech, opérationnel, social ou santé autour de toi ?
 3. **Ton budget de départ :** combien peux-tu mettre sur les 6 premiers mois (environ 25 k€ pour les 12 premières semaines, selon `06`) ?
 4. **Ton ambition :** une PME rentable et à fort impact dans les Outre-mer, ou une startup qui vise ensuite l'Hexagone et l'international ?
@@ -257,3 +316,5 @@ Le plan change selon tes réponses :
 | 06 | `06-go-to-market-operations.md` | Amorçage du marché, acteurs locaux réels, recrutement et formation, opérations, plan S1-S12 puis M4-M12, scripts, KPIs, partenariats |
 | 07 | `07-red-team-risques.md` | Post-mortems du secteur, 15 risques, hypothèses à valider en priorité, pre-mortem 2028, due diligence, verdict |
 | 08 | `08-particuliers-multi-statuts.md` | Fonctionnement de Yoojo et des plateformes comparables, 7 statuts possibles, 4 niveaux d'activité, parcours d'inscription en 5 questions, recommandation pour le pilote |
+| 09 | `09-equipe-agents-processus.md` | Organisation des agents, rôles, cycle d'un sprint, règles d'arbitrage |
+| 10 | `10-lancement-guadeloupe.md` | Pourquoi la Guadeloupe d'abord, chiffres sourcés, plan des 90 premiers jours, partenaires, critères pour ouvrir la Martinique |

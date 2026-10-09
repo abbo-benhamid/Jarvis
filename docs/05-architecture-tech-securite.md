@@ -65,7 +65,7 @@ Périmètre fonctionnel du MVP :
 
 ### 1.3 Phase 2 — Scale (M10 → M18 et au-delà)
 
-Multi-territoires (Guadeloupe, Martinique, La Réunion, puis Guyane et Mayotte), API B2B2C (mutuelles, CD, CCAS), matching par ML, détection de fraude avancée, ASR créole en bêta, ISO 27001, programme de bug bounty, réévaluation de Mangopay ou Lemonway.
+Multi-territoires (Guadeloupe au lancement, puis Martinique, Guyane et Hexagone ; le territoire est une donnée, décision T1), API B2B2C (mutuelles, CD, CCAS), matching par ML, détection de fraude avancée, ASR créole en bêta, ISO 27001, programme de bug bounty, réévaluation de Mangopay ou Lemonway.
 
 ### 1.4 Critères de bascule (déclencheurs objectifs)
 
