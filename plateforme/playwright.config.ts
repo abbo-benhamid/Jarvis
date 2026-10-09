@@ -56,7 +56,7 @@ export default defineConfig({
         },
         {
           command: `pnpm exec next start -p ${LAUNCH_PORT}`,
-          env: { ...RATE, ...GEO, KOUDMEN_MODE: "lancement", MAIL_CAPTURE_FILE, BREVO_API_KEY: "" },
+          env: { ...RATE, ...GEO, KOUDMEN_MODE: "lancement", MAIL_CAPTURE_FILE, BREVO_API_KEY: "", OUVERTURE_PREVUE: "2027-03" },
           url: launchURL,
           reuseExistingServer: !process.env.CI,
           timeout: 120_000,

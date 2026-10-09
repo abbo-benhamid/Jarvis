@@ -66,8 +66,8 @@ export function PrepareChecklist({ headingId }: { headingId: string }) {
           const id = `prep-${item.id}-${uid}`;
           return (
             <li key={item.id} className="border-t border-line">
-              <label htmlFor={id} className="flex min-h-14 cursor-pointer items-start gap-3.5 px-5 py-3.5">
-                <input id={id} type="checkbox" className="peer sr-only" checked={checked} onChange={(e) => toggle(item.id, e.currentTarget.checked)} />
+              <label htmlFor={id} className="relative flex min-h-14 cursor-pointer items-start gap-3.5 px-5 py-3.5">
+                <input id={id} type="checkbox" className="peer absolute inset-0 m-0 size-full cursor-pointer appearance-none opacity-0" checked={checked} onChange={(e) => toggle(item.id, e.currentTarget.checked)} />
                 <span
                   aria-hidden="true"
                   className={cn(

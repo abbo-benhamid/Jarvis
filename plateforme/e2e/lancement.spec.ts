@@ -8,7 +8,7 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
-import { cleanupE2E, E2E_DOMAIN, login, loginOperateur, uid } from "./fixtures";
+import { cleanupE2E, createCaregiver, E2E_DOMAIN, login, loginOperateur, uid } from "./fixtures";
 
 const PASSWORD = "Zebre-Lagon-2026";
 
@@ -156,7 +156,7 @@ test("R1 / L4 : préinscription — pas de fiche aîné ; demande de rappel visi
   const email = `famille-rappel-${uid()}@${E2E_DOMAIN}`;
   await register(page, "FAMILLE", email);
   await login(page, email, PASSWORD);
-  await expect(page.getByText("Koudmen ouvre bientôt. Nous vous contactons dès l'ouverture.")).toBeVisible();
+  await expect(page.getByTestId("place-liste")).toContainText("sur la liste d'ouverture en Guadeloupe");
   await page.goto("/famille/aines/nouveau");
   await expect(page.getByText("Koudmen ouvre bientôt. Nous vous contactons dès l'ouverture.")).toBeVisible();
   await expect(page.getByLabel("Prénom")).toHaveCount(0);
@@ -179,7 +179,7 @@ test("R1 / L4 : préinscription — pas de fiche aîné ; demande de rappel visi
   await expect(page.getByRole("link", { name: "Ajouter un aîné" })).toHaveCount(0);
   await expect(page.getByRole("navigation").getByRole("link", { name: "Visites" })).toHaveCount(0);
   await page.goto("/famille");
-  await expect(page.getByText(/Demande d'appel envoyée le/)).toBeVisible();
+  await expect(page.getByTestId("etat-appel")).toContainText(/Demande envoyée le/);
   await page.goto("/famille/visite-decouverte");
   await expect(page).toHaveURL(/\/famille\/formule$/);
 
@@ -201,4 +201,112 @@ test("L2 : en lancement, les services simulés sont fermés (page et webhook sim
   expect(sante.verifications.identite).toEqual({ adaptateur: "simule", ouvert: false });
   expect(sante.verifications.sms.ouvert).toBe(false);
   expect(sante.avertissements.join(" ")).toMatch(/ADAPTER_IDENTITY=simule en lancement/);
+});
+
+/** P1 : rien de « test », « fictif » ou « démo » dans ce que lit la famille ; aucune marque interne. */
+async function expectPublicWording(page: Page, testId: string) {
+  const text = (await page.getByTestId(testId).innerText()).toLowerCase();
+  expect(text).not.toMatch(/\btest\b|fictif|fictive|démo|vérifier\]/);
+}
+
+test("P1 : préinscription famille — place sur la liste, appel, visite guidée, liste locale, invitation", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  const email = `famille-p1-${uid()}@${E2E_DOMAIN}`;
+  await register(page, "FAMILLE", email);
+  await login(page, email, PASSWORD);
+  await expect(page).toHaveURL(/\/famille$/);
+
+  // 1. Place sur la liste d'ouverture et date visée (OUVERTURE_PREVUE du serveur de lancement).
+  const place = page.getByTestId("place-liste");
+  await expect(place.getByRole("heading", { level: 2 })).toHaveText(/^Vous êtes n°\s\d+ sur la liste d'ouverture en Guadeloupe\.$/);
+  await expect(page.getByTestId("ouverture-prevue")).toContainText(/Ouverture (prévue en \S+ \d{4}|: bientôt)\./);
+  await expect(page.getByTestId("prochaine-etape")).toHaveText("Parlez à un conseiller : il répond à vos questions.");
+  await expectPublicWording(page, "place-liste");
+
+  // 2. « Préparer l'arrivée » : gardé sur l'appareil (localStorage), après rechargement.
+  await expect(page.getByTestId("preparer-avancement")).toHaveText("0 sur 5 prêt");
+  await page.getByLabel(/Parlez de Koudmen à votre parent/).check();
+  await page.getByLabel(/Gardez le numéro de votre parent/).check();
+  await expect(page.getByTestId("preparer-avancement")).toHaveText("2 sur 5 prêts");
+  await page.reload();
+  await expect(page.getByTestId("preparer-avancement")).toHaveText("2 sur 5 prêts");
+  await expect(page.getByLabel(/Parlez de Koudmen à votre parent/)).toBeChecked();
+  expect(await page.evaluate(() => localStorage.getItem("koudmen.preparer-arrivee.v1"))).toBe('["accord","telephone"]');
+
+  // 3. « Inviter un proche » : lien d'inscription au site, copie ; aucun champ e-mail.
+  await expect(page.getByTestId("lien-invitation")).toHaveText(/\/inscription$/);
+  await expect(page.locator("#inviter input[type=email]")).toHaveCount(0);
+  await page.getByRole("button", { name: /Copier/ }).click();
+  await expect(page.getByText("Le lien est copié. Collez-le dans un message.")).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/\/inscription$/);
+
+  // 4. Demande d'appel depuis l'accueil, puis son état.
+  await page.getByRole("button", { name: "Demander un appel" }).click();
+  const form = page.getByRole("form", { name: "Demander un appel" });
+  await form.getByLabel(/^8 h – 11 h en Guadeloupe/).check();
+  await form.getByRole("button", { name: "Envoyer la demande" }).click();
+  await expect(page.getByText(/Demande envoyée/).first()).toBeVisible();
+  await page.reload();
+  await expect(page.getByTestId("etat-appel")).toContainText(/Demande envoyée le \d/);
+  await expect(page.getByTestId("etat-appel")).toContainText("Un conseiller vous appelle sur votre créneau : 8 h – 11 h en Guadeloupe");
+  await expect(page.getByTestId("prochaine-etape")).toHaveText("Un conseiller vous appelle sur votre créneau.");
+
+  // 5. « Découvrir Koudmen » : 5 écrans, exemples statiques, prix sur deux lignes.
+  await page.getByTestId("lien-decouvrir").click();
+  await expect(page).toHaveURL(/\/famille\/decouvrir$/);
+  const tour = page.getByTestId("visite-guidee");
+  await expect(page.getByTestId("visite-position")).toHaveText("Écran 1 sur 5");
+  await expect(page.getByRole("heading", { level: 2, name: "Après chaque visite, des nouvelles" })).toBeVisible();
+  await expect(tour.locator('[data-ecran="kaye"]').getByText("Exemple", { exact: true })).toBeVisible();
+  await expectPublicWording(page, "visite-guidee");
+  const titles = ["Vous savez quand l'accompagnant arrive", "Une carte chez votre parent prouve chaque visite", "Trois formules, sans surprise", "Trois étapes jusqu'à la première visite"];
+  for (const [i, title] of titles.entries()) {
+    await page.getByRole("button", { name: "Suivant" }).click();
+    await expect(page.getByTestId("visite-position")).toHaveText(`Écran ${i + 2} sur 5`);
+    const h = page.getByRole("heading", { level: 2, name: title });
+    await expect(h).toBeVisible();
+    await expect(h).toBeFocused();
+    await expectPublicWording(page, "visite-guidee");
+    if (i === 1) await expect(tour.getByRole("img", { name: /QR code signé du domicile/ })).toBeVisible();
+    if (i === 2) {
+      await expect(tour.getByText("Abonnement Koudmen : 39 € TTC par mois. Services numériques. Non éligible au crédit d'impôt.")).toBeVisible();
+      await expect(tour.getByText("Heures d'accompagnement : payées à part à l'accompagnant. Crédit d'impôt de 50 % si les conditions sont remplies.").first()).toBeVisible();
+    }
+  }
+  await expect(page.getByRole("button", { name: "Suivant" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Précédent" }).click();
+  await expect(page.getByTestId("visite-position")).toHaveText("Écran 4 sur 5");
+  await page.getByRole("button", { name: "Suivant" }).click();
+  await page.getByRole("link", { name: "Préparer l'arrivée" }).click();
+  await expect(page).toHaveURL(/\/famille#preparer$/);
+  await expect(page.getByTestId("preparer-avancement")).toHaveText("2 sur 5 prêts");
+});
+
+test("P1 : préinscription accompagnant — file de validation, étapes, « Découvrir le métier »", async ({ page }) => {
+  // Nouveau compte : pas encore dans la file.
+  const email = `accompagnant-p1-${uid()}@${E2E_DOMAIN}`;
+  await register(page, "ACCOMPAGNANT", email);
+  await login(page, email, PASSWORD);
+  await expect(page.getByTestId("place-file")).toContainText("Pas encore dans la file de validation");
+  await expect(page.getByRole("heading", { name: /^Votre parcours · 0 sur \d+$/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Répondre aux 5 questions" })).toBeVisible();
+
+  // Dossier envoyé : place dans la file, revenus calculés avec le tarif du profil.
+  await page.context().clearCookies();
+  const g = await createCaregiver({ firstName: "Murielle", status: "AUTO_ENTREPRENEUR_SAP", validation: "EN_ATTENTE", communes: ["SAINTE_ANNE"], avail: [[1, "MATIN"]] });
+  await login(page, g.user.email);
+  await expect(page.getByTestId("place-file").getByRole("heading", { level: 2 })).toHaveText(/^Vous êtes n°\s\d+ dans la file de validation\.$/);
+  await expect(page.getByTestId("place-file")).toContainText("Réponse en 7 jours environ.");
+  await page.getByTestId("lien-metier").click();
+  await expect(page).toHaveURL(/\/accompagnant\/decouvrir$/);
+  await expect(page.getByTestId("visite-position")).toHaveText("Écran 1 sur 4");
+  await expect(page.getByRole("heading", { level: 2, name: "Des visites près de chez vous" })).toBeVisible();
+  await page.getByRole("button", { name: "Suivant" }).click();
+  await page.getByRole("button", { name: "Suivant" }).click();
+  await expect(page.getByTestId("revenus-indicatifs")).toContainText("Revenu net estimé");
+  await expect(page.getByTestId("revenus-indicatifs")).toContainText(/15,00\s€ de l'heure/);
+  await expect(page.getByTestId("visite-guidee")).not.toContainText("VÉRIFIER");
+  await page.getByRole("button", { name: "Suivant" }).click();
+  await page.getByRole("link", { name: "Voir mon parcours" }).click();
+  await expect(page).toHaveURL(/\/accompagnant$/);
 });
