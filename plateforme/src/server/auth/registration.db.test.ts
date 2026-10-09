@@ -32,8 +32,8 @@ describe.runIf(enabled)("inscription et liens par e-mail (base réelle)", async 
     firstName: "Rose",
     lastName: "Lafleur",
     password: "Zebre-Lagon-2026",
-    phone: "+596 696 12 34 56",
-    commune: "FORT_DE_FRANCE",
+    phone: "+590 690 12 34 56",
+    commune: "POINTE_A_PITRE",
     location: null,
     city: null,
     birthDate: "1990-04-02",
@@ -63,7 +63,7 @@ describe.runIf(enabled)("inscription et liens par e-mail (base réelle)", async 
     expect(u.emailVerifiedAt).toBeNull();
     expect(u.cguAcceptedAt).not.toBeNull();
     expect(u.newsOptInAt).not.toBeNull();
-    expect(u.caregiverProfile).toMatchObject({ validation: "BROUILLON", communes: ["FORT_DE_FRANCE"] });
+    expect(u.caregiverProfile).toMatchObject({ validation: "BROUILLON", territoire: "GUADELOUPE", communes: ["POINTE_A_PITRE"] });
     expect(u.caregiverProfile!.birthDate!.toISOString().slice(0, 10)).toBe("1990-04-02");
     // R6 (J27) : l'inscription est gratuite pour l'accompagnant.
     expect(u.subscriptionsPaid).toHaveLength(0);

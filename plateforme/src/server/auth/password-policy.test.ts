@@ -14,7 +14,7 @@ describe("politique des mots de passe (L1)", () => {
   });
 
   it("refuse les mots de passe courants, même avec des chiffres ou des signes à la fin", () => {
-    for (const pw of ["motdepasse", "1234567890", "azertyuiop", "Martinique972", "MotDePasse123!", "Madinina2026", "Koudmen2026!!", "jetaime123"]) {
+    for (const pw of ["motdepasse", "1234567890", "azertyuiop", "Martinique972", "Guadeloupe971", "Gwadloup2026", "MotDePasse123!", "Madinina2026", "Koudmen2026!!", "jetaime123"]) {
       expect(passwordProblem(pw), pw).toBe("Ce mot de passe est trop courant. Choisissez-en un autre.");
     }
     expect(COMMON_PASSWORD_COUNT).toBeGreaterThan(90);

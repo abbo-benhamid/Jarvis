@@ -1,40 +1,26 @@
 /**
- * L2 (étude § 5.1) : numéros acceptés. Fonctions PURES.
- * On normalise toujours en E.164. « +696 » n'est pas un indicatif : 0696 12 34 56 → +596 696 12 34 56.
- * Tout autre pays est refusé en V1.1 (fraude au SMS surtaxé).
+ * L2 (étude § 5.1) et T1 (T5) : numéros acceptés. Fonctions PURES.
+ * On normalise toujours en E.164. « +690 » n'est pas un indicatif : 0690 12 34 56 → +590 690 12 34 56.
+ * Préfixes : ceux des 4 territoires de `src/lib/territoires.ts` (Guadeloupe, Martinique, Guyane, Hexagone).
+ * Tout autre pays ou territoire est refusé (fraude au SMS surtaxé).
  */
+import { TERRITOIRES, TERRITOIRES_CONFIG, TERRITOIRE_LANCEMENT, type CodeTerritoire } from "@/lib/territoires";
 
-export type Territoire = "MARTINIQUE" | "GUADELOUPE" | "GUYANE" | "REUNION_MAYOTTE" | "HEXAGONE";
+export type Territoire = CodeTerritoire;
 
 type PrefixRule = { prefix: string; territoire: Territoire; mobile: boolean };
 
-/** Préfixes E.164 acceptés. Une ligne fixe reçoit seulement l'appel vocal. */
-export const PHONE_PREFIXES: readonly PrefixRule[] = [
-  { prefix: "+596696", territoire: "MARTINIQUE", mobile: true },
-  { prefix: "+596697", territoire: "MARTINIQUE", mobile: true },
-  { prefix: "+596596", territoire: "MARTINIQUE", mobile: false },
-  { prefix: "+590690", territoire: "GUADELOUPE", mobile: true },
-  { prefix: "+590691", territoire: "GUADELOUPE", mobile: true },
-  { prefix: "+590590", territoire: "GUADELOUPE", mobile: false },
-  // [À VÉRIFIER] +594695 (nouvelle tranche mobile de Guyane).
-  { prefix: "+594694", territoire: "GUYANE", mobile: true },
-  { prefix: "+594594", territoire: "GUYANE", mobile: false },
-  { prefix: "+262692", territoire: "REUNION_MAYOTTE", mobile: true },
-  { prefix: "+262693", territoire: "REUNION_MAYOTTE", mobile: true },
-  { prefix: "+262639", territoire: "REUNION_MAYOTTE", mobile: true },
-  { prefix: "+262262", territoire: "REUNION_MAYOTTE", mobile: false },
-  { prefix: "+262269", territoire: "REUNION_MAYOTTE", mobile: false },
-  { prefix: "+336", territoire: "HEXAGONE", mobile: true },
-  { prefix: "+337", territoire: "HEXAGONE", mobile: true },
-  { prefix: "+331", territoire: "HEXAGONE", mobile: false },
-  { prefix: "+332", territoire: "HEXAGONE", mobile: false },
-  { prefix: "+333", territoire: "HEXAGONE", mobile: false },
-  { prefix: "+334", territoire: "HEXAGONE", mobile: false },
-  { prefix: "+335", territoire: "HEXAGONE", mobile: false },
-  { prefix: "+339", territoire: "HEXAGONE", mobile: false },
-];
+/** Préfixes E.164 acceptés (T5). Une ligne fixe reçoit seulement l'appel vocal. */
+export const PHONE_PREFIXES: readonly PrefixRule[] = TERRITOIRES.flatMap((t) => [
+  ...TERRITOIRES_CONFIG[t].prefixesMobiles.map((prefix) => ({ prefix, territoire: t, mobile: true })),
+  ...TERRITOIRES_CONFIG[t].prefixesFixes.map((prefix) => ({ prefix, territoire: t, mobile: false })),
+]);
 
-/** Numérotation nationale (0 + 9 chiffres) → indicatif du territoire. */
+/**
+ * Numérotation nationale (0 + 9 chiffres) → indicatif. L'ordre compte : l'outre-mer avant l'Hexagone.
+ * La Réunion et Mayotte (+262) restent ici pour être REFUSÉES (PREFIXE) et non prises pour un fixe de l'Hexagone.
+ * [À VÉRIFIER] 0695 (nouvelle tranche mobile de Guyane) : converti en +594, mais pas encore accepté.
+ */
 const NATIONAL: [RegExp, string][] = [
   [/^0(696|697|596)/, "+596"],
   [/^0(690|691|590)/, "+590"],
@@ -48,7 +34,8 @@ export type PhoneResult =
   | { ok: false; reason: "FORMAT" | "PREFIXE" };
 
 /**
- * `PHONE_ALLOWED_PREFIXES` (facultatif) : liste de préfixes E.164 séparés par des virgules. Elle RÉDUIT la liste par défaut.
+ * `PHONE_ALLOWED_PREFIXES` (facultatif) : liste de préfixes E.164 séparés par des virgules. Elle RÉDUIT la liste par
+ * défaut (les 4 territoires). Exemple : « +590 » = Guadeloupe seulement. Vide = les 4 territoires.
  */
 export function allowedPrefixes(env: Record<string, string | undefined> = process.env): readonly PrefixRule[] {
   const raw = env.PHONE_ALLOWED_PREFIXES?.trim();
@@ -80,7 +67,7 @@ function countryCodeLength(e164: string): number {
   return e164.startsWith("+33") ? 2 : 3;
 }
 
-/** « +596696123456 » → « +596 696 12 34 56 ». */
+/** « +590690123456 » → « +590 690 12 34 56 ». */
 export function formatPhone(e164: string): string {
   const cc = countryCodeLength(e164);
   const head = e164.slice(0, cc + 1);
@@ -89,15 +76,18 @@ export function formatPhone(e164: string): string {
   return `${head} ${rest.slice(0, 3)} ${rest.slice(3).match(/.{1,2}/g)?.join(" ") ?? ""}`.trim();
 }
 
-/** « +596 696 •• •• 56 » : assez pour reconnaître son numéro, pas assez pour le lire. */
+/** « +590 690 •• •• 56 » : assez pour reconnaître son numéro, pas assez pour le lire. */
 export function maskPhone(e164: string): string {
   const parts = formatPhone(e164).split(" ");
   return parts.map((p, i) => (i >= 2 && i < parts.length - 1 ? "••" : p)).join(" ");
 }
 
+/** « de Guadeloupe », « de Martinique », « de Guyane », « de l'Hexagone ». */
+const deNoms = TERRITOIRES.map((t) => TERRITOIRES_CONFIG[t].deNom);
+
 /** Messages STE pour l'accompagnant. */
 export const PHONE_MESSAGES = {
-  FORMAT: "Ce numéro n'est pas valide. Exemple : 0696 12 34 56.",
-  PREFIXE: "Koudmen accepte les numéros de Martinique, de Guadeloupe, de Guyane, de La Réunion, de Mayotte et de l'Hexagone.",
+  FORMAT: `Ce numéro n'est pas valide. Exemple : ${TERRITOIRES_CONFIG[TERRITOIRE_LANCEMENT].exempleTelephone}.`,
+  PREFIXE: `Koudmen accepte les numéros ${deNoms.slice(0, -1).join(", ")} et ${deNoms.at(-1)}.`,
   FIXE: "Ce numéro est une ligne fixe. Elle ne reçoit pas de SMS. Choisissez « Recevoir un appel ».",
 } as const;

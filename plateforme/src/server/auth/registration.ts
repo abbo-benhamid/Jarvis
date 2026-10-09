@@ -1,12 +1,13 @@
 import "server-only";
-import { Prisma, type FamilyLocation, type Role } from "@prisma/client";
+import { Prisma, type FamilyLocation, type Role, type Territoire } from "@prisma/client";
 import { db } from "@/server/db";
 import { hitRateLimit } from "@/server/rate-limit";
 import { appUrl } from "@/server/env";
 import { logAudit } from "@/server/audit";
 import { sendMail } from "@/server/mail";
 import { existingAccountEmail, passwordChangedEmail, passwordResetEmail, verificationEmail } from "@/server/mail/templates";
-import { COMMUNE_CODES } from "@/lib/communes";
+import { getCommune, isOuvert } from "@/lib/territoires";
+import { messageTerritoireFerme } from "@/server/territoires";
 import { CGU_VERSION } from "@/lib/legal-launch";
 import { ageInYears, MIN_CAREGIVER_AGE } from "@/server/rules/status-levels";
 import { hashPassword, verifyPasswordForUnknownAccount } from "./password";
@@ -29,8 +30,10 @@ export type RegistrationInput = {
   email: string;
   password: string;
   phone: string | null;
-  /** Accompagnant : commune de vie (obligatoire). */
+  /** Accompagnant : commune de la zone d'intervention (obligatoire, territoire OUVERT). */
   commune: string | null;
+  /** T1 : territoire choisi (app). Absent : déduit de la commune. */
+  territoire?: Territoire | null;
   /** Famille : lieu de vie (obligatoire) et ville. */
   location: FamilyLocation | null;
   city: string | null;
@@ -61,7 +64,12 @@ export function registrationProblem(input: RegistrationInput, now: Date = new Da
     const birth = parseIsoDate(input.birthDate);
     if (!birth || birth > now || birth.getUTCFullYear() < 1900) return fail("birthDate", "Saisissez votre date de naissance.");
     if (ageInYears(birth, now) < MIN_CAREGIVER_AGE) return fail("birthDate", `Il faut avoir ${MIN_CAREGIVER_AGE} ans ou plus pour accompagner des aînés.`);
-    if (!input.commune || !(COMMUNE_CODES as readonly string[]).includes(input.commune)) return fail("commune", "Choisissez votre commune.");
+    const commune = input.commune ? getCommune(input.commune) : undefined;
+    if (!commune) return fail("commune", "Choisissez votre commune.");
+    // T1 (T2, T5) : numéro libre, mais une zone d'intervention seulement dans un territoire OUVERT.
+    const t = input.territoire ?? commune.territoire;
+    if (commune.territoire !== t) return fail("commune", "Cette commune n'est pas dans le territoire choisi.");
+    if (!isOuvert(t)) return fail("commune", messageTerritoireFerme(t));
     if (!input.phone) return fail("phone", "Saisissez votre numéro de téléphone.");
   } else if (!input.location) {
     return fail("location", "Indiquez où vous habitez.");
@@ -163,7 +171,17 @@ async function createAccount(input: RegistrationInput, passwordHash: string, now
         newsOptInAt: input.newsOptIn ? now : null,
         ...(input.role === "FAMILLE"
           ? { familyProfile: { create: { location: input.location!, city: input.city } } }
-          : { caregiverProfile: { create: { allowedLevels: [], communes: [input.commune!], birthDate: parseIsoDate(input.birthDate) } } }),
+          : {
+              caregiverProfile: {
+                create: {
+                  allowedLevels: [],
+                  // T1 : la commune est contrôlée par registrationProblem (territoire OUVERT).
+                  territoire: getCommune(input.commune!)!.territoire,
+                  communes: [input.commune!],
+                  birthDate: parseIsoDate(input.birthDate),
+                },
+              },
+            }),
       },
       select: { id: true, role: true, firstName: true },
     });

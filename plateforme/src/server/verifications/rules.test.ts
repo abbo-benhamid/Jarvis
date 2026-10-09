@@ -17,7 +17,7 @@ import {
   requiredTypes,
 } from "./rules";
 import { addressesMatch, normalizeName, personNamesMatch, registryNameMatches } from "./name-match";
-import { formatPhone, maskPhone, normalizePhone, allowedPrefixes } from "./phone";
+import { formatPhone, maskPhone, normalizePhone, allowedPrefixes, PHONE_MESSAGES } from "./phone";
 import { apeExpected, normalizeSiret, siretChecksumOk } from "./siret";
 
 const OPTS = { addressProofRequired: true };
@@ -175,14 +175,17 @@ describe("L2 : noms et adresses", () => {
   });
 });
 
-describe("L2 : téléphone (étude § 5.1)", () => {
-  it("normalise les numéros des Antilles, de Guyane, de La Réunion et de l'Hexagone", () => {
+describe("L2 et T1 (T5) : téléphone", () => {
+  it("normalise les numéros des 4 territoires (Guadeloupe, Martinique, Guyane, Hexagone)", () => {
+    expect(normalizePhone("0690 12 34 56")).toEqual({ ok: true, e164: "+590690123456", territoire: "GUADELOUPE", mobile: true });
+    expect(normalizePhone("0691 12 34 56")).toMatchObject({ ok: true, e164: "+590691123456", territoire: "GUADELOUPE", mobile: true });
+    expect(normalizePhone("0590 12 34 56")).toMatchObject({ ok: true, e164: "+590590123456", territoire: "GUADELOUPE", mobile: false });
+    expect(normalizePhone("+590 690 12 34 56")).toMatchObject({ ok: true, e164: "+590690123456" });
     expect(normalizePhone("0696 12 34 56")).toEqual({ ok: true, e164: "+596696123456", territoire: "MARTINIQUE", mobile: true });
     expect(normalizePhone("+596 697 12 34 56")).toMatchObject({ ok: true, mobile: true });
     expect(normalizePhone("0596 12 34 56")).toMatchObject({ ok: true, e164: "+596596123456", mobile: false });
     expect(normalizePhone("0690 12 34 56")).toMatchObject({ ok: true, e164: "+590690123456", territoire: "GUADELOUPE" });
     expect(normalizePhone("0694 12 34 56")).toMatchObject({ ok: true, e164: "+594694123456", territoire: "GUYANE" });
-    expect(normalizePhone("0262 12 34 56")).toMatchObject({ ok: true, e164: "+262262123456", mobile: false });
     expect(normalizePhone("06 12 34 56 78")).toMatchObject({ ok: true, e164: "+33612345678", territoire: "HEXAGONE", mobile: true });
     expect(normalizePhone("01 23 45 67 89")).toMatchObject({ ok: true, mobile: false });
     expect(normalizePhone("0033 6 12 34 56 78")).toMatchObject({ ok: true, e164: "+33612345678" });
@@ -194,10 +197,20 @@ describe("L2 : téléphone (étude § 5.1)", () => {
     expect(normalizePhone("12")).toEqual({ ok: false, reason: "FORMAT" });
     expect(normalizePhone("+5966961234")).toEqual({ ok: false, reason: "FORMAT" });
   });
+  it("T5 : La Réunion et Mayotte ne sont pas des territoires Koudmen ; jamais pris pour un fixe de l'Hexagone", () => {
+    expect(normalizePhone("0262 12 34 56")).toEqual({ ok: false, reason: "PREFIXE" });
+    expect(normalizePhone("0692 12 34 56")).toEqual({ ok: false, reason: "PREFIXE" });
+    expect(normalizePhone("0695 12 34 56")).toEqual({ ok: false, reason: "PREFIXE" }); // [À VÉRIFIER] tranche mobile de Guyane
+    expect(PHONE_MESSAGES.PREFIXE).toBe("Koudmen accepte les numéros de Guadeloupe, de Martinique, de Guyane et de l'Hexagone.");
+    expect(PHONE_MESSAGES.FORMAT).toContain("0690 12 34 56");
+  });
   it("liste réduite par PHONE_ALLOWED_PREFIXES ; format et masque", () => {
-    const rules = allowedPrefixes({ PHONE_ALLOWED_PREFIXES: "+596" });
+    const rules = allowedPrefixes({ PHONE_ALLOWED_PREFIXES: "+590" });
     expect(normalizePhone("06 12 34 56 78", rules)).toEqual({ ok: false, reason: "PREFIXE" });
-    expect(normalizePhone("0696 12 34 56", rules).ok).toBe(true);
+    expect(normalizePhone("0696 12 34 56", rules)).toEqual({ ok: false, reason: "PREFIXE" });
+    expect(normalizePhone("0690 12 34 56", rules).ok).toBe(true);
+    expect(allowedPrefixes({ PHONE_ALLOWED_PREFIXES: "" })).toHaveLength(16);
+    expect(formatPhone("+590690123456")).toBe("+590 690 12 34 56");
     expect(formatPhone("+596696123456")).toBe("+596 696 12 34 56");
     expect(formatPhone("+33612345678")).toBe("+33 6 12 34 56 78");
     expect(maskPhone("+596696123456")).toBe("+596 696 •• •• 56");

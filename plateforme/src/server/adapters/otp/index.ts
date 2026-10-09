@@ -43,7 +43,7 @@ export class SimulatedOtpAdapter implements SmsOtpPort {
   }
 }
 
-/** Brevo exige le numéro sans « + » (ex. 596696123456) [À VÉRIFIER]. */
+/** Brevo exige le numéro sans « + » (ex. 590690123456) [À VÉRIFIER]. */
 export const BREVO_SMS_ENDPOINT = "https://api.brevo.com/v3/transactionalSMS/sms";
 
 export function otpSmsText(code: string): string {
