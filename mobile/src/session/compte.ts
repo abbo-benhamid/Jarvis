@@ -6,7 +6,7 @@ import type { Moi } from '@/api/types';
  * | État             | Condition (GET /me)                         | Écran                                          |
  * |------------------|---------------------------------------------|------------------------------------------------|
  * | `validation`     | `profilValide: false`                       | « Profil en cours de validation » (D15)        |
- * | `preinscription` | `profilValide: true`, `preinscription: true`| « Koudmen ouvre bientôt en Martinique »        |
+ * | `preinscription` | `profilValide: true`, `preinscription: true`| « Koudmen ouvre bientôt en Guadeloupe »       |
  * | `actif`          | sinon                                       | Visites (rappel si e-mail non vérifié)         |
  *
  * Revue UX M14 / D15 : un profil à valider suit TOUJOURS le même parcours (orientation, demande de vérification),

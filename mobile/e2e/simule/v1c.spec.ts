@@ -158,7 +158,7 @@ test.describe('V1c : profil et « À propos et confidentialité »', () => {
   test('à propos lisible depuis l’écran de connexion, sans compte', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('lien-a-propos-connexion').click();
-    await expect(page.getByTestId('ecran-a-propos')).toContainText('Koudmen ouvre bientôt en Martinique');
+    await expect(page.getByTestId('ecran-a-propos')).toContainText('Koudmen ouvre bientôt en Guadeloupe');
     await page.getByRole('button', { name: 'Retour', exact: true }).click();
     await expect(page.getByTestId('ecran-connexion')).toBeVisible();
   });

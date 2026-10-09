@@ -24,7 +24,7 @@ export default defineConfig({
     viewport: { width: 390, height: 844 },
     deviceScaleFactor: 2,
     locale: 'fr-FR',
-    timezoneId: 'America/Martinique',
+    timezoneId: 'America/Guadeloupe',
     trace: 'retain-on-failure',
   },
   webServer: [

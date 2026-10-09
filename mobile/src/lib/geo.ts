@@ -15,7 +15,7 @@ export function distanceMetres(a: Point, b: Point): number {
   return 2 * RAYON_TERRE_M * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
-/** Arrondit une coordonnée (3 décimales ≈ 110 m en latitude, ≈ 108 m en longitude en Martinique). */
+/** Arrondit une coordonnée (3 décimales ≈ 110 m en latitude, ≈ 107 m en longitude aux Antilles). */
 export function arrondir(valeur: number, decimales: number): number {
   const f = 10 ** decimales;
   return Math.round(valeur * f) / f;
